@@ -1,0 +1,142 @@
+{
+      "Unit" : [ 
+         {
+         "PutRequest": { 
+            "Item": {
+                "unit" : { "S" : "g" },
+                "slabel" : { "S" : "g" },
+                "llabel" : { "S": "gram" },
+                "desc" : { "S": "1000 grams per kilogram"}
+                }
+            }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                "unit" : { "S" : "kg" },
+                "slabel" : { "S" : "kg" },
+                "llabel" : { "S": "kilogram" }
+                }
+            }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                "unit" : { "S" : "tbsp" },
+                "slabel" : { "S" : "tbsp" },
+                "llabel" : { "S": "tablespoon" }
+                }
+            }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                "unit" : { "S" : "tsp" },
+                "slabel" : { "S" : "tsp" },
+                "llabel" : { "S": "teespoon" },
+                "desc" : { "S": "25g or 25ml of water is equivalent to 1 teespoon"}
+                }
+            }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                "unit" : { "S" : "l" },
+                "slabel" : { "S" : "l" },
+                "llabel" : { "S": "litre" }
+                }
+            }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                "unit" : { "S" : "ml" },
+                "slabel" : { "S" : "ml" },
+                "llabel" : { "S": "millilitre" }
+                }
+            }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                "unit" : { "S" : "mm" },
+                "slabel" : { "S" : "mm" },
+                "llabel" : { "S": "millimeter" }
+                }
+            }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                "unit" : { "S" : "cup" },
+                "slabel" : { "S" : "cup" },
+                "llabel" : { "S": "cup" },
+                "desc" : { "S": "one cup is equivalent to 250ml"}
+                }
+            }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                "unit" : { "S" : "cm" },
+                "slabel" : { "S" : "cm" },
+                "llabel" : { "S": "centimeter" }
+                }
+            }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                "unit" : { "S" : "m" },
+                "slabel" : { "S" : "m" },
+                "llabel" : { "S": "meter" }
+                }
+            }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                "unit" : { "S" : "C" },
+                "slabel" : { "S" : "C" },
+                "llabel" : { "S": "Celsius" }
+                }
+            }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                "unit" : { "S" : "F" },
+                "slabel" : { "S" : "F" },
+                "llabel" : { "S": "Fehrenhite" }
+                }
+            }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                "unit" : { "S" : "min" },
+                "slabel" : { "S" : "min" },
+                "llabel" : { "S": "minute" }
+                }
+            }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                "unit" : { "S" : "sec" },
+                "slabel" : { "S" : "sec" },
+                "llabel" : { "S": "second" }
+                }
+            }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                "unit" : { "S" : "hour" },
+                "slabel" : { "S" : "hour" },
+                "llabel" : { "S": "hour" }
+                }
+            }
+         }
+    ]
+}  

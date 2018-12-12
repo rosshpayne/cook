@@ -1,0 +1,360 @@
+{
+      "Activity" : [ 
+         {
+         "PutRequest": { 
+            "Item": { 
+               "rId" : { "S": "XYZ" },
+               "aId" : { "N": "5"},
+               "label" : { "S": "AddWater" },
+               "ovv" : { "S" : "Boil pototoes" },
+               "coord" : { "L" : [ {"N": "123" }, {"N": "123" } ]  },
+               "addToC" : { "SS" : [ "CookingPot" ] },
+               "prep" : { "M" :  {
+                                  "txt" : { "S" : "Add sufficient water to a pot to cook the pointers and bring to boil" },
+                                  "say" : { "S" : "Start by adding sufficient water to a pot to cook the pointers and bring to boil. While waiting for the water to boil,  source all your ingredients and measure them out into separate containers for convenience.  Once organised you are ready to start cooking.  Enjoy" },
+                                  "time" : { "N" : "15" },
+                                  "tplus" : { "N" : "5" },
+                                  "unit" : { "S" : "min" }
+                                    }
+                        },               
+                "next" : { "N" : "10" }
+                }
+            }
+         },
+         {
+            "PutRequest": { 
+            "Item": { 
+               "rId" : { "S": "XYZ" },
+               "aId" : { "N": "10"},
+               "label" : { "S": "AddSalt" },
+               "ingrd" : { "S" : "Salt" },
+               "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+               "addToC" : { "SS" : [ "CookingPot" ] },
+               "prep" : { "M" :  {
+                                  "txt" : { "S" : "Add salt to the boiling water" },
+                                  "say" : { "S" : "Add salt to the boiling water" },
+                                  "time" : { "N" : "0" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" }
+                                    }
+                        }
+                    }
+                }
+         },
+         {
+            "PutRequest": { 
+            "Item": { 
+               "rId" : { "S": "XYZ" },
+               "aId" : { "N": "30"},
+               "label" : { "S": "AddPotatoes" },
+               "ingrd" : { "S" : "Potatoes" },
+               "iQual" : { "S" : "Floury and white fleshed" },
+               "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+               "addToC" : { "SS" : [ "CookingPot" ] },
+               "prep" : { "M" :  {
+                                  "txt" : { "S" : "Peel and cut potatoes into large pieces" },
+                                  "say" : { "S" : "Peel and cut potatoes into large pieces" },
+                                  "time" : { "N" : "7" },
+                                  "unit" : { "S" : "min" }
+                                    }
+                        },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "500" } , 
+                                      "unit" : { "S" : "g" }  
+                                      }
+                            },
+                "act" : { "M" :  {
+                                  "txt" : { "S" : "Give the potatoes {time} to {tplus} {unit} to cook. They are done when tender enough to pierce effortlessly with skewer. While the potatoes cook start on cooking the fish." },
+                                  "say" : { "S" : "Give the potatoes {time} to {tplus} {unit} to cook. They are done when tender enough to pierce effortlessly with skewer. While the potatoes cook start on cooking the fish." },
+                                  "time" : { "N" : "15" },
+                                  "tplus" : { "N" : "5" },
+                                  "unit" : { "S" : "min" }
+                                    }
+                        }              
+                    }
+                }
+         },
+         {
+            "PutRequest": { 
+            "Item": { 
+               "rId" : { "S": "XYZ" },
+               "aId" : { "N": "60"},
+               "label" : { "S": "AddMilk" },
+               "ovv" : { "S" : "Simmer fish in milk" },
+               "ingrd" : { "S" : "Milk" },
+               "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+               "addToC" : { "SS" : [ "SimmeringPan" ] },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "400" } , 
+                                      "unit" : { "S" : "g" }  
+                                      }
+                         },
+                "act" : { "M" :  {
+                                  "txt" : { "S" : "Now for the fish.  Add {qty}{unit} milk to large cooking pan on medium heat." },
+                                  "say" : { "S" : "Now for the fish.  Add {qty} {unit} milk to large cooking pan on medium heat" },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" }
+                                    }
+                        }
+                }
+            }
+         },
+         {
+          "PutRequest": { 
+            "Item": { 
+               "rId" : { "S": "XYZ" },
+               "aId" : { "N": "70"},
+               "label" : { "S": "AddFish" },
+               "ingrd" : { "S" : "Fish" },
+               "iQual" : { "S" : "Hadock or Cod" },
+               "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+               "addToC" : { "SS" : [  "SimmeringPan" ] },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "500" } , 
+                                      "unit" : { "S" : "g" }  
+                                      }
+                         },
+                "act" : { "M" :  {
+                                  "txt" : { "S" : "Now add the fish pieces." },
+                                  "say" : { "S" : "Now add the fish pieces" },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" }
+                                    }
+                        }
+                }
+            }
+         },
+         {
+          "PutRequest": { 
+            "Item": { 
+               "rId" : { "S": "XYZ" },
+               "aId" : { "N": "80"},
+               "label" : { "S": "AddWater" },
+               "ingrd" : { "S" : "Water" },
+               "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+               "addToC" : { "SS" :  [ "SimmeringPan" ] },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "200" } , 
+                                      "unit" : { "S" : "ml" }  
+                                      }
+                         },
+                "act" : { "M" :  {
+                                  "txt" : { "S" : "add {qty}{unit} of {ingrd} to pan" },
+                                  "say" : { "S" : "add {qty} {unit} of {ingrd}  to pan" },
+                                  "time" : { "N" : "0.5" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" }
+                                    }
+                        }
+                    }   
+                }
+         },
+         {
+          "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "XYZ" },
+                "aId" : { "N": "90"},
+                "label" : { "S": "AddParsley" },
+                "ingrd" : { "S" : "parsley stalks" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "addToC" : { "SS" : [ "SimmeringPan" ] },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "6" }  
+                                      }
+                           },
+                "act" : { "M" :  {
+                                  "txt" : { "S" : "add the {qty} previously prepared parsley stalks to the  pan "},
+                                  "say" : { "S" : "add the {qty} previously prepared parsley stalks to the pan" },
+                                  "time" : { "N" : "0.5" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" }
+                                  }
+                        },
+                "prep" : { "M" :  {
+                                  "txt" : { "S" : "remove leaves from parsley and coarsely chop the stalks and finely chop the leaves. Set both aside. " },
+                                  "say" : { "S" : "remove leaves from parsley and coarsely chop the stalks and finely chop the leaves. Set both aside. " },
+                                  "time" : { "N" : "5" },
+                                  "unit" : { "S" : "min" }
+                                    }
+                        }
+                    }
+                }
+         },
+        {
+          "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "XYZ" },
+                "aId" : { "N": "110"},
+                "label" : { "S": "AddPepperCorns" },
+                "ingrd" : { "S" : "black peppercorns" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "addToC" : { "SS" :  [ "SimmeringPan"] },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "8" }  
+                                      }
+                         },
+                "act" : { "M" :  {
+                                  "txt" : { "S" : "add {qty} {ingrd} to the pan" },
+                                  "say" : { "S" : "add {qty} {ingrd} to the pan" },
+                                  "time" : { "N" : "0.5" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" }
+                                    }
+                          }
+                     }
+                }
+        },
+        {
+          "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "XYZ" },
+                "aId" : { "N": "120"},
+                "label" : { "S": "CookFish" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "useC" : { "SS" : [ "SimmeringPan" ] },
+                "act" : { "M" :  {
+                                  "txt" : { "S" : "To cook the fish bring the liquid to the boil, Lower the heat and leave to simmer for ?t minutes, or until the fish is lightly cooked. You should be able to pull the flakes apart with relative ease. When cooked remove the pan from the heat and set aside" },
+                                  "say" : { "S" : "To cook the fish bring the liquid to the boil, Lower the heat and leave to simmer for ?t minutes, or until the fish is lightly cooked. You should be able to pull the flakes apart with relative ease. When cooked remove the pan from the heat and set aside" },
+                                  "time" : { "N" : "10" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" }
+                                  }
+                         }
+                    }
+                }
+        },
+        {
+          "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "XYZ" },
+                "aId" : { "N": "130"},
+                "ovv" : { "S" : "Combine fish with potatoes and form into fish cakes" },
+                "label" : { "S": "MashPotatoe" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "useC" : { "SS" :  [ "CookingPot"  ] },
+                "useD" : { "S" :  "potatoe masher" },
+                "act" : { "M" :  {
+                                  "txt" : { "S" : "check the potatoes are cooked. If so mash them. It should be smooth but not gluey." },
+                                  "say" : { "S" : "check the potatoes are cooked. If so mash them. It should be smooth but not gluey." },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" }
+                                  }
+                         }
+                    }
+                }
+        },
+        {
+          "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "XYZ" },
+                "aId" : { "N": "150"},
+                "label" : { "S": "AddDill" },
+                "ingrd" : { "S" : "Dill" },
+                "iQual" : { "S" : "fronds" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "addToC" : { "SS" :  [ "CookingPot" ] },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "20" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                         },
+                "act" : { "M" :  {
+                                  "txt" : { "S" : "Finely chop the dill and add to the potato mash." },
+                                  "say" : { "S" : "Finely chop the dill and add to the potato mash" },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" }
+                                  }
+                         }
+                    }
+                }
+        },
+        {
+          "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "XYZ" },
+                "aId" : { "N": "160"},
+                "label" : { "S": "Combine" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "addToC" : { "SS" : [ "CookingPot" ] },
+                "sourceC" : { "SS" : [ "SimmeringPan" ] },
+                "act" : { "M" :  {
+                                  "txt" : { "S" : "Remove the fish from the milk, break into large flakes then combine lightly with the potato. Take care not to crush the fish" },
+                                  "say" : { "S" : "Remove the fish from the milk, break into large flakes then combine lightly with the potato. Take care not to crush the fish" },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" }
+                                  }
+                         }
+                    }
+                }
+        },
+        {
+          "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "XYZ" },
+                "aId" : { "N": "170"},
+                "label" : { "S": "RollMixture" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "addToC" : { "SS" : [ "FishCakes" ] },
+                "act" : { "M" :  {
+                                  "txt" : { "S" : "Wet your hands and roll the fish and potato mixture into 16 balls of approximately equal hasSize, place on a tray" },
+                                  "say" : { "S" : "Wet your hands and roll the fish and potato mixture into 16 balls of approximately equal hasSize, place on a tray" },
+                                  "tplus" : { "N" : "8" },
+                                  "unit" : { "S" : "min" }
+                                  }
+                         },
+                "link" : { "N" : "1" }
+                }
+             }
+        },
+        {
+          "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "XYZ" },
+                "aId" : { "N": "180"},
+                "label" : { "S": "TransferToFridge" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "useC" : { "SS" : [ "FishCakes" ] },
+                "act" : { "M" :  {
+                                  "txt" : { "S" : "Put tray containing rolled fishcakes in the refrigerator for half an hour." },
+                                  "say" : { "S" : "Put tray containing rolled fishcakes in the refrigerator for half an hour." },
+                                  "tplus" : { "N" : "1" },
+                                  "unit" : { "S" : "min" }
+                                  }
+                         },
+                 "link" : { "N" : "0" }
+                    }
+                }
+        },
+        {
+          "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "XYZ" },
+                "aId" : { "N": "190"},
+                "ovv" : { "S" : "Prepare fish cakes for frying" },
+                "label" : { "S": "AddBreadcrumbs" },
+                "ingrd" : { "S" : "breadcrumbs" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "addToC" : { "SS" : [ "BreadCrumbs " ] },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "100" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                         },
+                "act" : { "M" :  {
+                                  "txt" : { "S" : "Scatter {qty}{unit} of breadcrumbs on a plate" },
+                                  "say" : { "S" : "Scatter {qty} {unit} of breadcrumbs on a plate" },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" }
+                                  }
+                         }
+                    }
+                }
+        }
+    ]
+}    

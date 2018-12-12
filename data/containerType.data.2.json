@@ -1,0 +1,67 @@
+{
+      "ContainerType" : [ 
+           {
+            "PutRequest": { 
+               "Item": { 
+                  "Id" : { "S": "DutchOven" },
+                  "Label" : { "S": "dutch oven" },
+                  "Purpose" : { "S": "Cooking" }
+                  }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "Id" : { "S": "DoubleBoiler" },
+                  "Label" : { "S": "double boiler" },
+                  "Purpose" : { "S": "Cooking" }
+                  }
+                } 
+            },
+	    {
+            "PutRequest": { 
+               "Item": { 
+                  "Id" : { "S": "CakeTin" },
+                  "Label" : { "S": "Cake Tin" },
+                  "Purpose" : { "S": "Cooking" }
+                  }
+              }
+            },
+         {
+            "PutRequest": { 
+               "Item": { 
+                  "Id" : { "S": "ServingTray" },
+                  "Label" : { "S": "serving tray" },
+                  "Purpose" : { "S": "serving" }
+                  }
+              }
+            } ,
+         {
+            "PutRequest": { 
+               "Item": { 
+                  "Id" : { "S": "Plate" },
+                  "Label" : { "S": "plate" },
+                  "Purpose" : { "S": "holding" }
+                  }
+              }
+            } ,
+         {
+            "PutRequest": { 
+               "Item": { 
+                  "Id" : { "S": "BakingTray" },
+                  "Label" : { "S": "baking tray" },
+                  "Purpose" : { "S": "baking" }
+                  }
+              }
+            } ,
+         {
+            "PutRequest": { 
+               "Item": { 
+                  "Id" : { "S": "Bowel" },
+                  "Label" : { "S": "bowel" },
+                  "Purpose" : { "S": "holding" }
+                  }
+              }
+         } 
+      ]
+}

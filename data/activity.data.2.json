@@ -1,0 +1,241 @@
+{
+      "Activity" : [ 
+        {
+          "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "XYZ" },
+                "aId" : { "N": "200"},
+                "label" : { "S": "BeatEggs" },
+                "ingrd" : { "S" : "Eggs" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "addToC" : { "SS" : [  "BeatenEggs" ] },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "2" } ,
+                                      "size" : { "S" : "large" }
+                                      }
+                         },
+                "act" : { "M" :  {
+                                  "txt" : { "S" : "Break {qty} {size} eggs into a small mixing bowl and beat lightly" },
+                                  "say" : { "S" : "Break {qty} {size} eggs into a small mixing bowl and beat lightly" },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" }
+                                  }
+                         }
+                    }
+                }
+        },
+        {
+          "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "XYZ" },
+                "aId" : { "N": "210"},
+                "label" : { "S": "MeltButter" },
+                "ovv" : { "S" : "While the prepared fishcakes cool in refigerator, make a parsley sause" },
+                "ingrd" : { "S" : "Butter" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "addToC" : { "SS" : [ "CookingPan" ] },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "40" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                         },
+                "act" : { "M" :  {
+                                  "txt" : { "S" : "Melt {qty}{unit} of butter in a " },
+                                  "say" : { "S" : "Melt {qty} {unit} of butter in a " },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" }
+                                  }
+                         }
+                    }
+                }
+        },
+        {
+          "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "XYZ" },
+                "aId" : { "N": "220"},
+                "label" : { "S": "AddFlour" },
+                "ingrd" : { "S" : "Plan Flour" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "addToC" : { "SS" :  [ "CookingPan" ] },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "40" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                         },
+                "act" : { "M" :  {
+                                  "txt" : { "S" : "add {qty}{unit} of flour to pan and combine with butter" },
+                                  "say" : { "S" : "add {qty} {unit} of flour to pan and combine with butter and cook for {time} {unit}" },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" }
+                                  }
+                         }
+                    }
+                }
+       },
+       {
+          "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "XYZ" },
+                "aId" : { "N": "230"},
+                "label" : { "S": "AddWarmMilk" },
+                "ingrd" : { "S" : "Milk" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "sourceC" : { "SS" : [ "SimmeringPan" ] },
+                "addToC" : { "SS" : [ "CookingPan" ] },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "40" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                         },
+                "act" : { "M" :  {
+                                  "txt" : { "S" : "Pour in the reserved milk from cooking the fish, discarding the aromatics as you go. Bring to the boil, then lower the heat, stirring until you have a smooth sauce" },
+                                  "say" : { "S" : "Pour in the reserved milk from cooking the fish, discarding the aromatics as you go. Bring to the boil, then lower the heat, stirring until you have a smooth sauce" },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" }
+                                  }
+                         }
+                    }
+                }
+        },
+        {
+          "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "XYZ" },
+                "aId" : { "N": "235"},
+                "label" : { "S": "AddCream" },
+                "ingrd" : { "S" : "Double Cream" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "addToC" : { "SS" :  [ "CookingPan" ] },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "150" } ,
+                                      "unit" : { "S" : "ml" }
+                                      }
+                         },
+                "act" : { "M" :  {
+                                  "txt" : { "S" : "Pour in of cream and lower the heat" },
+                                  "say" : { "S" : "Pour in {qty} {unit} of cream and lower the heat" },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" }
+                                  }
+                         }
+                    }
+                }
+        },
+        {
+          "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "XYZ" },
+                "aId" : { "N": "240"},
+                "label" : { "S": "AddParsleyLeaves" },
+                "ingrd" : { "S" : "parsely" },
+                "iQual" : { "S" : "leaves" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "addToC" : { "SS" :  [ "CookingPan" ] },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "150" } ,
+                                      "unit" : { "S" : "ml" }
+                                      }
+                         },
+                "act" : { "M" :  {
+                                  "txt" : { "S" : "add chopped parsley leaves" },
+                                  "say" : { "S" : "add chopped parsley leaves" },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" }
+                                  }
+                         }
+                    }
+                }
+        },
+        {
+          "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "XYZ" },
+                "aId" : { "N": "250"},
+                "label" : { "S": "Season" },
+                "ingrd" : { "S" : "Salt, Pepper, Nutmeg" },
+                "iType" : { "S" : "Seasoning" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "addToC" : { "SS" : [ "CookingPan" ]  },
+                "act" : { "M" :  {
+                                  "txt" : { "S" : "season with {ingrd} to taste" },
+                                  "say" : { "S" : "season with {ingrd} to taste" },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" }
+                                  }
+                         }
+                    }
+                }
+        },
+        {
+          "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "XYZ" },
+                "aId" : { "N": "260"},
+                "label" : { "S": "Cover" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  }, 
+                "addToC" : { "SS" : [ "CookingPan" ] },
+                "useD" : { "S" : "baking paper or plastic film"  },
+                "act" : { "M" :  {
+                                  "txt" : { "S" : "cover to stop skin forming and set aside" },
+                                  "say" : { "S" : "cover to stop skin forming and set aside" },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" }
+                                  }
+                         }
+                    }
+                }
+        },
+        {
+          "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "XYZ" },
+                "aId" : { "N": "270"},
+                "label" : { "S": "Coat" },
+                "ovv" : { "S" : "Coat fishcakes for frying and serve" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  }, 
+                "addToC" : { "SS" :  [ "PreparedFishCakes" ] },
+                "sourceC" : { "SS" : [ "FishCakes" ] },
+                "useC" : { "SS" :  [ "BeatenEggs", "BreadCrumbs" ] }, 
+                "act" : { "M" :  {
+                                  "txt" : { "S" : "Remove fish cakes from fridge and one at a time, first into egg mixture and then into breadcrumbs. Place the crumbed balls onto a fresh tray" },
+                                  "say" : { "S" : "Remove fish cakes from fridge and one at a time, first into egg mixture and then into breadcrumbs. Place the crumbed balls onto a fresh tray" },
+                                  "time" : { "N" : "12" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" }
+                                  }
+                         }
+                    }
+                }
+        },
+        {
+          "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "XYZ" },
+                "aId" : { "N": "280"},
+                "label" : { "S": "Fry" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  } ,
+                "sourceC" : { "SS" :  [ "PreparedFishCakes" ] },
+                "useC"  : { "SS" :  [ "FryingPan" ] },
+                "addToC" : { "SS" :  [ "DrainPlate" ] },
+                "act" : { "M" :  {
+                                  "txt" : { "S" : "Add a layer or two of kitchen paper to a plat. Add the fishcakes to the frying pan without crowding the pan and let them color evenly moving them around the pan as necessary. Remove, drain briefly on the kitchen paper and serve with parsley sause" },
+                                  "say" : { "S" : "Add a layer or two of kitchen paper to a plat. Add the fishcakes to the frying pan without crowding the pan and let them color evenly moving them around the pan as necessary. Remove, drain briefly on the kitchen paper and serve with parsley sause" },
+                                  "time" : { "N" : "15" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" }
+                                  }
+                         }
+                    }
+                }
+        }
+    ]
+}    

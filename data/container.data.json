@@ -1,0 +1,330 @@
+{
+      "Container" : [ 
+        {
+          "PutRequest": { 
+               "Item": { 
+                  "rId" : { "S": "XYZ" },
+                  "cId" : { "S": "CookingPot" },
+                  "type" : { "S": "CookingPot" },
+                  "label" : { "S": "pototoePot" },
+                  "measure" : { "M" : { "size" : { "S" : "large" } } },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "contents" : { "S": "water+pototoe" },
+                  "purpose": { "S": "cooking" }
+                  }
+            }
+         },
+         {
+         "PutRequest": { 
+               "Item": { 
+                  "rId" : { "S": "XYZ" },
+                  "cId" : { "S": "SimmeringPan" },
+                  "type" : { "S": "Pan" },
+                  "label": { "S": "SimmingPan"},
+                  "measure" : { "M" : { "size" : { "S" : "large" } } },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "contents" : { "S": "fish" },
+                  "purpose": { "S": "cooking" }
+                  }
+            }
+         },
+         {
+         "PutRequest": { 
+               "Item": { 
+                  "rId" : { "S": "XYZ" },
+                  "cId" : { "S": "FishCakes" },
+                  "label" : { "S" : "RolledFCs" },
+                  "type" : { "S": "Plate" },
+                  "contents" : { "S": "rolled fishcakes" },
+                  "measure" : { "M" : { "size" : { "S" : "large" } } },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "purpose": { "S": "holding" }
+                  }
+            }
+         },
+         {
+         "PutRequest": { 
+               "Item": {
+                  "rId" : { "S": "XYZ" },
+                  "cId" : { "S": "BreadCrumbs" },
+                  "label" : { "S" : "Breadcrumbs" },
+                  "type" : { "S": "Plate" },
+                  "measure" : { "M" : { "size" : { "S" : "medium" } } },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "contents" : { "S": "breadcrumbs" },
+                  "purpose": { "S": "dipping" }
+                  }
+              }
+         },
+         {
+          "PutRequest": { 
+               "Item": {
+                  "rId" : { "S": "XYZ" },
+                  "cId" : { "S": "CookingPan" },
+                  "contents" : { "S": "ParsleySause" },
+                  "label" : { "S" : "Sausepan" },
+                  "type" : { "S": "Sausepan" },
+                  "measure" : { "M" : { "size" : { "S" : "large" } } },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "purpose": { "S": "cooking" }
+                  }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "rId" : { "S": "XYZ" },
+                  "cId" : { "S": "PreparedFishCakes" },
+                  "contains" : { "S": "coated fishcakes" },
+                  "label" : { "S" : "plate" },
+                  "type" : { "S": "Plate" },
+                  "measure" : { "M" : { "size" : { "S" : "large" } } },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "purpose": { "S": "holding" }
+                  }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "rId" : { "S": "XYZ" },
+                  "cId" : { "S": "FryingPan" },
+                  "contains" : { "S": "fishcakes" },
+                  "type" : { "S": "FryingPan" },
+                  "label" : { "S" : "fryingPan" },
+                  "measure" : { "M" : { "size" : { "S" : "large" } } },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "purpose" : { "S": "cooking" }
+                  }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "rId" : { "S": "XYZ" },
+                  "cId" : { "S": "DrainPlate" },
+                  "label" : { "S" : "DrainFCs" },
+                  "contains" : { "S": "fishcakes" },
+                  "type" : { "S": "Plate" },
+                  "measure" : { "M" : { "size" : { "S" : "large" } } },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "purpose" : { "S": "holding" }
+                  }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "rId" : { "S": "XBN" },
+                  "cId" : { "S": "ChocMix" },
+                  "label" : { "S" : "ChocMix" },
+                  "contains" : { "S": "chocolate" },
+                  "type" : { "S": "Bowl" },
+                  "measure" : { "M" : { "size" : { "S" : "large" } } },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "purpose" : {"S":"mixing"}
+                  }
+               }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+               "rId" : { "S": "XBN" },
+               "cId" : { "S": "EggWhites" },
+               "type" : { "S": "Bowl" },
+               "label" : { "S": "egg whites" },
+               "measure" : { "M" : { "size" : { "S" : "medium" } } },
+               "coord" : { "L" : [ {"N": "123" }, {"N": "123" } ]  },
+               "contents" : { "S": "egg whites" },
+               "purpose" : { "S": "whipping" }
+               }
+            }
+         },
+         {
+         "PutRequest": { 
+             "Item": { 
+                     "rId" : { "S": "XBN" },
+                     "cId" : { "S": "EggYolks" },
+                     "type" : { "S": "Bowl" },
+                     "label" : { "S": "egg yolks" },
+                     "measure" : { "M" : { "size" : { "S" : "small" } } },
+                     "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                     "contents" : { "S": "egg yolks" },
+                     "purpose" : { "S": "holding" }
+                     }
+               }
+         },
+         {
+          "PutRequest": { 
+               "Item": { 
+                  "rId" : { "S": "XYZ" },
+                  "cId" : { "S": "BeatenEggs" },
+                  "type" : { "S": "Bowl" },
+                  "label" : { "S": "pototoePot" },
+                  "measure" : { "M" : { "size" : { "S" : "medium" } } },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "contents" : { "S": "eggs" },
+                  "purpose": { "S": "holding" }
+                  }
+            }
+         },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "rId" : { "S": "XBN" },
+                  "cId" : { "S": "CakeTin" },
+                  "label" : { "S" : "Cake Tin" },
+                  "type" : { "S": "caketin" },
+                  "contains" : { "S": "cake mixture" },
+                  "measure" : { "M" : { 
+                                      "diameter" : { "N" : "30" } , 
+                                      "height"   : { "N" : "5"  } ,
+                                      "unit" : { "S" : "cm" }  
+                                      }
+                              },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "purpose" : {"S":"cooking"}
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "rId" : { "S": "1" },
+                  "cId" : { "S": "ChochMixBowl" },
+                  "type" : { "S": "Heatproof Glass Bowl" },
+                  "label" : { "S" : "glass bowl" },
+                  "contains" : { "S": "cake mixture" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "large" } 
+                                      }
+                              },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "purpose" : {"S":"Melting chocolate and mixing all ingredients"}
+                   }
+               }
+            } ,
+            {
+            "PutRequest": { 
+               "Item": {
+                  "rId" : { "S": "1" },
+                  "cId" : { "S": "WaterPan" },
+                  "type" : { "S": "Sausepan" },
+                  "label" : { "S" : "sausepan" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "medium" } 
+                                      }
+                              },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "purpose" : {"S":"simmering water to melt chocolate"}
+                   }
+               }
+            } ,
+            {
+            "PutRequest": { 
+               "Item": {
+                  "rId" : { "S": "1" },
+                  "cId" : { "S": "ButterPlate" },
+                  "label" : { "S" : "plate" },
+                  "type" : { "S": "plate or board" },
+                  "contains" : { "S": "cut up pieces of butter" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "large" } 
+                                      }
+                              },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "purpose" : {"S":"holding "}
+                   }
+               }
+            } ,
+            {
+            "PutRequest": { 
+               "Item": {
+                  "rId" : { "S": "1" },
+                  "cId" : { "S": "FlourBowl" },
+                  "label" : { "S" : "bowl" },                  
+                  "type" : { "S": "bowl" },
+                  "contains" : { "S": "dry ingredients" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "medium" } 
+                                      }
+                              },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "purpose" : {"S":"holding"}
+                   }
+               }
+            } ,
+             {
+            "PutRequest": { 
+               "Item": {
+                  "rId" : { "S": "1" },
+                  "cId" : { "S": "EggBowl" },
+                  "label" : { "S" : "bowl" },
+                  "type"  : { "S" : "bowl" },
+                  "contains" : { "S": "beaten eggs" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "small" } 
+                                      }
+                              },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "purpose" : {"S":"holding"}
+                   }
+               }
+            } ,
+            {
+            "PutRequest": { 
+               "Item": {
+                  "rId" : { "S": "1" },
+                  "cId" : { "S": "CoffeeBowl" },
+                  "label" : { "S" : "bowl" },
+                  "type" : { "S": "bowl" },
+                  "contains" : { "S": "disolved coffee" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "small" } 
+                                      }
+                              },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "purpose" : {"S":"holding"}
+                   }
+               }
+            } ,
+            {
+            "PutRequest": { 
+               "Item": {
+                  "rId" : { "S": "1" },
+                  "cId" : { "S": "CakeTin" },
+                  "label" : { "S" : "Cake Tin" },
+                  "type" : { "S": "cake tin" },
+                  "contains" : { "S": "cake mixture" },
+                  "measure" : { "M" : { 
+                                      "diameter" : { "N" : "23" } , 
+                                      "height"   : { "N" : "5"  } ,
+                                      "unit" : { "S" : "cm" }  
+                                      }
+                              },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "purpose" : {"S":"Cooking"}
+                   }
+               }         
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "rId" : { "S": "1" },
+                  "cId" : { "S": "XBowl" },
+                  "label" : { "S" : "XBowl" },
+                  "type" : { "S": "XTypical bowl" },
+                  "contains" : { "S": "Xcake mixture" },
+                  "measure" : { "M" : { 
+                                      "diameter" : { "N" : "23" } , 
+                                      "height"   : { "N" : "5"  } ,
+                                      "unit" : { "S" : "cm" }  
+                                      }
+                              },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "purpose" : {"S":"XCooking"}
+                   }
+               }
+            }
+      ]
+}

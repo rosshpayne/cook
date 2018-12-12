@@ -1,0 +1,40 @@
+{
+      "ContainerType" : [ 
+           {
+            "PutRequest": { 
+               "Item": { 
+                  "Id" : { "S": "SautePan" },
+                  "Label" : { "S": "saute pan" },
+                  "Purpose" : { "S": "Cooking" }
+                  }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "Id" : { "S": "Colander" },
+                  "Label" : { "S": "Colonder" },
+                  "Purpose" : { "S": "Cooking" }
+                  }
+                } 
+            },
+	    {
+            "PutRequest": { 
+               "Item": { 
+                  "Id" : { "S": "PalellaPan" },
+                  "Label" : { "S": "Palella Pan" },
+                  "Purpose" : { "S": "Cooking" }
+                  }
+              }
+            },
+         {
+            "PutRequest": { 
+               "Item": { 
+                  "Id" : { "S": "StockPot" },
+                  "Label" : { "S": "Stock Pot" },
+                  "Purpose" : { "S": "Cooking" }
+                  }
+              }
+            } 
+      ]
+}

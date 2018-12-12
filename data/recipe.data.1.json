@@ -1,0 +1,76 @@
+{
+      "Recipe" : [ 
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "BK-River Cafe" },
+                "SortK" : { "N": "0"},
+                "BkId"  : { "S" : "21" },
+                "Authors" : { "SS": [ "Ruth Rorgers","Rose Gray","Sian Wyn Owen","Joseph Trivelli"]},
+                "Publisher" : { "S" : "Ebury Press" }
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "BK-SWEET" },
+                "SortK" : { "N": "0"},
+                "BkId"  : { "S" : "20" },
+                "Authors" : { "SS": [ "Yotam Ottolenghi","Helen Goh"]},
+                "Publisher" : { "S" : "Ebury Press" }
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "R-20" },
+                "SortK" : { "N": "1"},
+                "RName" : { "S": "Take-home Chocolate Cake"},
+                "Cat" : { "S" : "Cake" }
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "R-20" },
+                "SortK" : { "N": "2"},
+                "RName" : { "S": "Pistachio and rose water semolina cake"},
+                "Cat" : { "S" : "Cake" }
+            }
+            }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "R-20" },
+                "SortK" : { "N": "3"},
+                "RName" : { "S": "Chocolate banana ripple cheesecake"},
+                "Cat" : { "S" : "Cake" }
+            }
+            }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "R-21" },
+                "SortK" : { "N": "1"},
+                "RName" : { "S": "Risotto with Roast Partridge"},
+                "Cat" : { "S" : "Roast" }
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "R-21" },
+                "SortK" : { "N": "2"},
+                "RName" : { "S": "Braised Cavolo Nero"},
+                "Cat" : { "S" : "Braised" }
+                }
+            }
+        }
+        ]
+}

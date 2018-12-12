@@ -1,0 +1,346 @@
+{
+      "Activity" : [ 
+        {
+          "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "1" },
+                "aId" : { "N": "10"},
+                "label" : { "S": "AddChocolate"},
+                "ingrd" : { "S" : "dark chocolate" },
+                "iQual" : { "S" : "70 percent Cocoa" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "200" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                         },
+                "task" : { "M" :  {
+                                  "txt" : { "S" : "Place a {Csize} {addToC} over a pot of simmering water and break {qty}{unit} of {ingrd}, atleast {iQual}, into small pieces and place in bowl and stir to help melt in the melting process" },
+                                  "say" : { "S" : "Place a {Csize} {addToC} over a pot of simmering water and break {qty} {unit} of {ingrd}, atleast {iQual}, into small pieces and place in bowl and stir to help melt in the melting process"},
+                                  "time" : { "N" : "6" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useC"  : { "SS" : [ "WaterPan"  ] },
+                                  "addToC" : { "SS" : [ "ChochMixBowl" ] }
+                                  }
+                         }
+                    }
+                }
+        },
+        {
+          "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "1" },
+                "aId" : { "N": "20"},
+                "label" : { "S": "AddButter"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "butter"},
+                "iQual" : { "S" : "unsalted" },
+                "Quali" : { "S" : "unsalted" },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "260" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                         },
+                "prep" : { "M" :  {
+                                  "txt" : { "S" : "cut {qty}{unit} of {ingrd} into small pieces and set aside" },
+                                  "say" : { "S" : "cut {qty} {unit} of {ingrd} into small pieces and set asid" },
+                                  "time" : { "N" : "8" },
+                                  "unit" : { "S" : "min" },
+                                  "parallel" : { "BOOL" : true },
+                                  "addToC" : { "SS" : [ "ButterPlate" ] }
+                                    }
+                        },
+                "task" : { "M" :  {
+                                  "txt" : { "S" : "Add {ingrd} into melted chocolate" },
+                                  "say" : { "S" : "Add {ingrd} into melted chocolate"},
+                                  "time" : { "N" : "3" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useD" : { "M" : {
+                                                "type" : { "S": "whisk" },
+                                                "purpose" : { "S":"mix cake ingredients"},
+                                                "alternate" : { "S" : "stand mixer" }
+                                        }
+                                    },
+                                  "sourceC": { "SS" : [ "ButterPlate" ] },
+                                  "addToC" : { "SS" : [ "ChochMixBowl" ] }
+                            }
+                        }
+                    }
+                 }
+        },
+        {
+            "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "1" },
+                "aId" : { "N": "45"},
+                "label" : { "S": "Coffee"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "instant coffee" },
+                "iQual" : { "S" : "disolved in 350ml of boiled water" },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "1.5" } ,
+                                      "unit" : { "S" : "tsp" }
+                                      } 
+                         },
+                "task" : { "M" : { 
+                                  "txt" : { "S" : "Disssolve {qty}{unit} of {ingrd} in 350ml of boiled water " },
+                                  "say" : { "S" : "Disolve {qty} {unit} of {ingrd} in 350 millileters of boiled water " },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useD" : { "M" : {
+                                                "type" : { "S": "kettle" },
+                                                "purpose" : { "S":"boil water to disolve coffee"},
+                                                "alternate" : { "S" : "sausepan" }
+                                        }
+                                    },
+                                  "addToC" : { "SS" : [ "CoffeeBowl" ] }
+                                }
+                         }
+                       }
+                }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "1" },
+                "aId" : { "N": "50"},
+                "label" : { "S": "AddCoffee"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "task" : { "M" :  {
+                                  "txt" : { "S" : "Add disolved coffee to chocolate mix and combine" },
+                                  "say" : { "S" : "Add disolved coffee to chocolate mix and combine"},
+                                  "time" : { "N" : "3" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "sourceC" : { "SS" : [ "CoffeeBowl"] },
+                                  "addToC" : { "SS" : [ "ChochMixBowl" ] }
+                                  }
+                         }
+                    }
+                }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "1" },
+                "aId" : { "N": "60"},
+                "label" : { "S": "AddSugar"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "sugar"},
+                "iQual" : { "S" : "caster"},
+                "quali" : { "S" : "caster"},
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "250" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                         },
+                "task" : { "M" :  {
+                                  "txt" : { "S" : "Whisk {ingrd} into chocolate mix until disolved" },
+                                  "say" : { "S" : "Whisk {ingrd} into chocolate mix until disolved"},
+                                  "time" : { "N" : "3" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "ChochMixBowl" ] }
+                                  }
+                         }
+                    }
+                }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "1" },
+                "aId" : { "N": "70"},
+                "label" : { "S": "AddEggs"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "eggs"},
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "2" } ,
+                                      "size" : { "S" : "large" }
+                                      }
+                         },
+                "prep" : { "M" :  {
+                                  "txt" : { "S" : "lightly beat {qty} {size} {ingrd}" },
+                                  "say" : { "S" : "lightly beat {qty} {size} {ingrd}" },
+                                  "time" : { "N" : "5" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : ["EggBowl"] }
+                                    }
+                        },
+                "task" : { "M" :  {
+                                  "txt" : { "S" : "Whisk beaten {ingrd} into chocolate mix" },
+                                  "say" : { "S" : "Whisk beaten {ingrd} into chocolate mix"},
+                                  "time" : { "N" : "3" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "sourceC": { "SS" : [ "EggBowl" ] },
+                                  "addToC" : { "SS" : [ "ChochMixBowl"  ] }
+                                  }
+                         }
+                   }
+                }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "1" },
+                "aId" : { "N": "80"},
+                "label" : { "S": "AddFlour"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "flour"},
+                "quali" : { "S" : "self raising"},
+                "iQual" : { "S" : "self raising"},
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "240" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                         },
+                "prep" : { "M" :  {
+                                  "txt" : { "S" : "sift {qty}{unit} of  {quali} {ingrd}" },
+                                  "say" : { "S" : "sift {qty} {unit} of {ingrd}" },
+                                  "time" : { "N" : "2" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "FlourBowl"] },
+                                  "useD" : { "M" : {
+                                               "type" : { "S": "sifter" },
+                                               "purpose" : { "S" : "sift ingredients"} 
+                                                }
+                                    },
+                                    "link" : { "BOOL" : true }
+                                    }
+                        },
+                "task" : { "M" :  {
+                                  "txt" : { "S" : "Combine the dry ingredients (the {ingrd} etc) prepared earlier and mix well." },
+                                  "say" : { "S" : "Combine the dry ingredients (the {ingrd} etc) prepared earlier and mix well."},
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "sourceC" : { "S"  : "FlourBowl" },
+                                  "addToC" : { "SS" : [ "ChochMixBowl" ] }
+                                  }
+                        }
+                    }
+                }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "1" },
+                "aId" : { "N": "90"},
+                "label" : { "S": "AddSalt"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "salt"},
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "1/4" } ,
+                                      "unit": { "S" : "tsp" }
+                                      }
+                         },
+                "prep" : { "M" :  {
+                                  "txt" : { "S" : "Add a {qty} {unit} of {ingrd} " },
+                                  "say" : { "S" : "add {qty} {unit} of {ingrd} add to flour" },
+                                  "addToC" : { "SS" : [ "FlourBowl" ] },
+                                  "link" : { "BOOL" : true },
+                                  "parallel" : { "BOOL" : true }
+                                  }
+                        }
+                    }
+                }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "1" },
+                "aId" : { "N": "95"},
+                "label" : { "S": "AddCocoa"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "Cocoa powder"},
+                "iQual" : { "S" : "Danish processed"},
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "30" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                         },
+                "prep" : { "M" :  {
+                                  "txt" : { "S" : "sift {qty}{unit} of {ingrd} and add to flour" },
+                                  "say" : { "S" : "sift {qty} {unit} of {iQual} {ingrd} and add to flour" },
+                                  "time" : { "N" : "22" },
+                                  "unit" : { "S" : "min" },
+                                  "useD" : { "M" : {
+                                               "type" : { "S": "sifter" },
+                                               "purpose" : { "S" : "sift ingredients"} 
+                                               }
+                                            },
+                                  "addToC" : { "SS" : [ "FlourBowl" ] },
+                                  "parallel" : { "BOOL" : false }
+                                  }
+                        }
+                    }
+                }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "1" },
+                "aId" : { "N": "170"},
+                "label" : { "S": "Transfer"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+
+                "prep" : { "M" :  {
+                                  "txt" : { "S" : "Grease and line caketin with baking parchment" },
+                                  "say" : { "S" : "Grease and line caketin with baking parchment"},
+                                  "time" : { "N" : "3" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "CakeTin" ] }
+                                  }
+                        },
+                "task" : { "M" :  {
+                                  "txt" : { "S" : "Transfer chocolate mix to cake tin and place in oven" },
+                                  "say" : { "S" : "Transfer chocolate mix to cake tin and place in oven"},
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "sourceC" : { "SS" : [ "ChochMixBowl"] }, 
+                                  "addToC" : { "SS" : [ "CakeTin" ] }
+                                  }
+                        }
+                    }
+                }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "rId" : { "S": "1" },
+                "aId" : { "N": "180"},
+                "label" : { "S": "Cook"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "prep" : { "M" :  {
+                                  "txt" : { "S" : "Set {device} to {temp}{unit} and allow {time} to {tplus} {unit} to reach the desired temperature" },
+                                  "say" : { "S" : "Set {device} to {temp} {unit}. While oven warms to set temperature proceed to next step"},
+                                  "time" : { "N" : "10" },
+                                  "tplus" : { "N" : "5" },
+                                  "unit" : { "S" : "min" },
+                                  "useD" : { "M" : {
+                                              "type" : { "S": "oven" },
+                                              "temp" : { "N" : "170" },
+                                               "unit" : { "S" : "C" },
+                                               "set"  : { "S" : "gas mark 4"}
+                                                 }
+                                            }
+                                    }
+                            },
+                "task" : { "M" :  {
+                                  "txt" : { "S" : "cook cake for {time} to {tplus} {unit}" },
+                                  "say" : { "S" : "cook cake for {time} to {tplus} {unit}"},
+                                  "time" : { "N" : "35" },
+                                  "tplus" : { "N" : "5" },
+                                  "unit" : { "S" : "min" }
+                                  }
+                        }
+                    }
+                }
+            }
+    ]
+}    
