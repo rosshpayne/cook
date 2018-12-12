@@ -1,0 +1,61 @@
+{
+    "AttributeDefinitions": [
+        {
+            "AttributeName": "", 
+            "AttributeType": "N"
+        }
+    ], 
+    "TableName": "", 
+    "KeySchema": [
+        {
+            "AttributeName": "", 
+            "KeyType": "RANGE"
+        }
+    ], 
+    "LocalSecondaryIndexes": [
+        {
+            "IndexName": "", 
+            "KeySchema": [
+                {
+                    "AttributeName": "", 
+                    "KeyType": "RANGE"
+                }
+            ], 
+            "Projection": {
+                "ProjectionType": "KEYS_ONLY", 
+                "NonKeyAttributes": [
+                    ""
+                ]
+            }
+        }
+    ], 
+    "GlobalSecondaryIndexes": [
+        {
+            "IndexName": "", 
+            "KeySchema": [
+                {
+                    "AttributeName": "", 
+                    "KeyType": "HASH"
+                }
+            ], 
+            "Projection": {
+                "ProjectionType": "ALL", 
+                "NonKeyAttributes": [
+                    ""
+                ]
+            }, 
+            "ProvisionedThroughput": {
+                "ReadCapacityUnits": 0, 
+                "WriteCapacityUnits": 0
+            }
+        }
+    ], 
+    "ProvisionedThroughput": {
+        "ReadCapacityUnits": 0, 
+        "WriteCapacityUnits": 0
+    }, 
+    "StreamSpecification": {
+        "StreamEnabled": true, 
+        "StreamViewType": "OLD_IMAGE"
+    }
+}

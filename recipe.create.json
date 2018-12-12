@@ -1,0 +1,97 @@
+{
+    "AttributeDefinitions": [
+        {
+            "AttributeName": "PKey", 
+            "AttributeType": "S"
+        },
+        {
+            "AttributeName": "SortK", 
+            "AttributeType": "N"
+        },
+        {
+            "AttributeName": "RName", 
+            "AttributeType": "S"
+        },
+        {
+            "AttributeName": "IngrdCat", 
+            "AttributeType": "S"
+        },
+        {
+            "AttributeName": "BkId", 
+            "AttributeType": "S"
+        }
+    ], 
+    "TableName": "Recipe", 
+    "KeySchema": [
+        {
+            "AttributeName": "PKey", 
+            "KeyType": "HASH"
+        },
+        {
+            "AttributeName": "SortK", 
+            "KeyType": "RANGE"
+        }
+    ],
+     "GlobalSecondaryIndexes": [
+        {
+            "IndexName": "RName-BkId", 
+            "KeySchema": [
+                {
+                    "AttributeName": "RName", 
+                    "KeyType": "HASH"
+                },
+                {
+                    "AttributeName": "PKey", 
+                    "KeyType": "RANGE"
+                }
+            ], 
+           "Projection": {
+              "NonKeyAttributes" : ["SortK","BkName","PKey"],
+                "ProjectionType": "INCLUDE"
+            }, 
+            "ProvisionedThroughput": {
+                "ReadCapacityUnits": 1, 
+                "WriteCapacityUnits": 1
+            }
+        },
+        { "IndexName": "Ingrd-BkName", 
+            "KeySchema": [
+                {
+                    "AttributeName": "IngrdCat", 
+                    "KeyType": "HASH"
+                },
+                {
+                    "AttributeName": "PKey", 
+                    "KeyType": "RANGE"
+                }
+            ], 
+           "Projection": {
+                "NonKeyAttributes" : ["RName","BkName","SortK"],
+                "ProjectionType": "INCLUDE"
+            }, 
+            "ProvisionedThroughput": {
+                "ReadCapacityUnits": 1, 
+                "WriteCapacityUnits": 1
+            }
+        },
+        { "IndexName": "BkId-BkName", 
+            "KeySchema": [
+                {
+                    "AttributeName": "BkId", 
+                    "KeyType": "HASH"
+                }
+            ], 
+           "Projection": {
+                "ProjectionType": "KEYS_ONLY"
+            }, 
+            "ProvisionedThroughput": {
+                "ReadCapacityUnits": 1, 
+                "WriteCapacityUnits": 1
+            }
+        }
+    ], 
+    "ProvisionedThroughput": {
+        "ReadCapacityUnits": 1, 
+        "WriteCapacityUnits": 1
+    }
+}
