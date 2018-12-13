@@ -641,107 +641,146 @@ func (s *sessCtx) getTaskRecById() (prepTaskRec, error) {
 // 	bkname string
 // }
 
-func (s *sessCtx) recipeNameLookup() ([]RnLkup, error) {
+func (s sessCtx) recipeIdLookup() (string, error) {
 	//
 	// query on recipe name to get RecipeId and optionally book name and Id if not requested
 	//
-	var (
-		result   *dynamodb.QueryOutput
-		allBooks bool
-	)
-	if len(s.reqBkName) > 0 {
-		// using Bookname and Id
-		//
-		kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value("R-"+s.reqBkId))
-		filter := expression.Equal(expression.Name("RName"), expression.Value(s.reqRName))
-		expr, err := expression.NewBuilder().WithKeyCondition(kcond).WithFilter(filter).Build()
-		if err != nil {
-			panic(err)
-		}
-		input := &dynamodb.QueryInput{
-			KeyConditionExpression:    expr.KeyCondition(),
-			FilterExpression:          expr.Filter(),
-			ExpressionAttributeNames:  expr.Names(),
-			ExpressionAttributeValues: expr.Values(),
-		}
-		input = input.SetTableName("Recipe").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
-		//
-		result, err = s.dynamodbSvc.Query(input)
-		if err != nil {
-			return nil, fmt.Errorf("Error: %s [%s] %s", "in Query of recipeNameLookup of Rname ", s.reqRName, err.Error())
-		}
-		if int(*result.Count) == 0 {
-			allBooks = true
-		}
+	type recT struct {
+		RName string
 	}
-	if len(s.reqBkName) == 0 || allBooks {
-		// query on GSI - across all books
-		kcond := expression.KeyEqual(expression.Key("RName"), expression.Value(s.reqRName))
-		expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
-		if err != nil {
-			panic(err)
-		}
-		input := &dynamodb.QueryInput{
-			KeyConditionExpression:    expr.KeyCondition(),
-			IndexName:                 aws.String("RName-BkId"),
-			FilterExpression:          expr.Filter(),
-			ExpressionAttributeNames:  expr.Names(),
-			ExpressionAttributeValues: expr.Values(),
-			//              ProjectionExpression:      expr.Projection(),
-		}
-		input = input.SetTableName("Recipe").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
-		//
-		result, err = s.dynamodbSvc.Query(input)
-		if err != nil {
-			return nil, fmt.Errorf("Error: %s [%s] %s", "in Query of recipeNameLookup of Rname ", s.reqRName, err.Error())
-		}
-		if int(*result.Count) == 0 {
-			switch allBooks {
-			case true:
-				return nil, fmt.Errorf(`Recipe [%s] not found in [%s] or library. Please notify support`, s.reqRName, s.reqBkName)
-			case false:
-				return nil, fmt.Errorf(`Recipe [%s] not found in library. Please notify support`, s.reqRName)
-			}
-		}
-	}
-	ridBkidName := make([]RnLkup, int(*result.Count))
-	err := dynamodbattribute.UnmarshalListOfMaps(result.Items, &ridBkidName)
-	if err != nil {
-		return nil, fmt.Errorf("Error: %s [%s] err", "in UnmarshalListMaps of recipeNameLookup ", s.reqRName, err.Error())
-	}
+	// using Bookname and Id
 	//
-	for i := 0; i < len(ridBkidName); i++ {
-		ridBkidName[i].BkId = ridBkidName[i].BkId[2:]
-		ridBkidName[i].bkname, err = s.bookNameLookup(ridBkidName[i].BkId) // trim "R-" prefix
-		if err != nil {
-			return nil, err
-		}
+	rId, err := strconv.Atoi(s.reqRId)
+	if err != nil {
+		return "", fmt.Errorf("Error: %s [%s] %s", "in Query of recipeIdLookup of Recipe Id ", s.reqRId, err.Error())
 	}
-	if allBooks && int(*result.Count) > 0 {
-		switch int(*result.Count) {
-		case 1:
-			s.msg = fmt.Sprintf("Alert: recipe not found in [%s], but was found in [%s]", s.reqBkName, ridBkidName[0].bkname)
-		default:
-			s.msg = fmt.Sprintf("Alert: recipe not found in [%s] but did occur in other books. See list", s.reqBkName)
-		}
-	} else {
-		if int(*result.Count) > 1 {
-			s.msg = fmt.Sprint("Alert: recipe found in multiple books. See list")
-		}
+	kcond := expression.KeyAnd(expression.Key("PKey").Equal(expression.Value("R-"+s.reqBkId)), expression.Key("SortK").Equal(expression.Value(rId)))
+	expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
+	if err != nil {
+		panic(err)
 	}
-	// update session context request fields
-	if len(s.reqBkName) == 0 {
-		s.reqBkName = ridBkidName[0].bkname
-		s.reqBkId = ridBkidName[0].BkId
+	input := &dynamodb.QueryInput{
+		KeyConditionExpression:    expr.KeyCondition(),
+		FilterExpression:          expr.Filter(),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
 	}
-	s.reqRId = strconv.Itoa(ridBkidName[0].RId)
-
-	return ridBkidName, nil // ridBkidName contains list of books containing the recipe. Useful in cases where there is more than one.
+	input = input.SetTableName("Recipe").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
+	//
+	result, err := s.dynamodbSvc.Query(input)
+	if err != nil {
+		return "", fmt.Errorf("Error: %s [%s] %s", "in Query of recipeNameLookup of Rname ", s.reqRName, err.Error())
+	}
+	if int(*result.Count) == 0 {
+		return "", fmt.Errorf("Error: %s [%s] %s [%s] - %s", "No recipe found in recipeIdLookup for book Id", s.reqBkId, " and recipe Id ", s.reqRId, err.Error())
+	}
+	rec := make([]recT, int(*result.Count))
+	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &rec)
+	if err != nil {
+		return "", fmt.Errorf("Error: %s [%s] err", "in UnmarshalListMaps of recipeNameLookup ", s.reqRName, err.Error())
+	}
+	return rec[0].RName, nil
 }
 
-func (s sessCtx) bookNameLookup(bkId string) (string, error) {
+// func (s *sessCtx) recipeNameLookup() ([]RnLkup, error) {
+// 	//
+// 	// query on recipe name to get RecipeId and optionally book name and Id if not requested
+// 	//
+// 	var (
+// 		result   *dynamodb.QueryOutput
+// 		allBooks bool
+// 	)
+// 	if len(s.reqBkName) > 0 {
+// 		// using Bookname and Id
+// 		//
+// 		kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value("R-"+s.reqBkId))
+// 		filter := expression.Equal(expression.Name("RName"), expression.Value(s.reqRName))
+// 		expr, err := expression.NewBuilder().WithKeyCondition(kcond).WithFilter(filter).Build()
+// 		if err != nil {
+// 			panic(err)
+// 		}
+// 		input := &dynamodb.QueryInput{
+// 			KeyConditionExpression:    expr.KeyCondition(),
+// 			FilterExpression:          expr.Filter(),
+// 			ExpressionAttributeNames:  expr.Names(),
+// 			ExpressionAttributeValues: expr.Values(),
+// 		}
+// 		input = input.SetTableName("Recipe").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
+// 		//
+// 		result, err = s.dynamodbSvc.Query(input)
+// 		if err != nil {
+// 			return nil, fmt.Errorf("Error: %s [%s] %s", "in Query of recipeNameLookup of Rname ", s.reqRName, err.Error())
+// 		}
+// 		if int(*result.Count) == 0 {
+// 			allBooks = true
+// 		}
+// 	}
+// 	if len(s.reqBkName) == 0 || allBooks {
+// 		// query on GSI - across all books
+// 		kcond := expression.KeyEqual(expression.Key("RName"), expression.Value(s.reqRName))
+// 		expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
+// 		if err != nil {
+// 			panic(err)
+// 		}
+// 		input := &dynamodb.QueryInput{
+// 			KeyConditionExpression:    expr.KeyCondition(),
+// 			IndexName:                 aws.String("RName-BkId"),
+// 			FilterExpression:          expr.Filter(),
+// 			ExpressionAttributeNames:  expr.Names(),
+// 			ExpressionAttributeValues: expr.Values(),
+// 			//              ProjectionExpression:      expr.Projection(),
+// 		}
+// 		input = input.SetTableName("Recipe").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
+// 		//
+// 		result, err = s.dynamodbSvc.Query(input)
+// 		if err != nil {
+// 			return nil, fmt.Errorf("Error: %s [%s] %s", "in Query of recipeNameLookup of Rname ", s.reqRName, err.Error())
+// 		}
+// 		if int(*result.Count) == 0 {
+// 			switch allBooks {
+// 			case true:
+// 				return nil, fmt.Errorf(`Recipe [%s] not found in [%s] or library. Please notify support`, s.reqRName, s.reqBkName)
+// 			case false:
+// 				return nil, fmt.Errorf(`Recipe [%s] not found in library. Please notify support`, s.reqRName)
+// 			}
+// 		}
+// 	}
+// 	ridBkidName := make([]RnLkup, int(*result.Count))
+// 	err := dynamodbattribute.UnmarshalListOfMaps(result.Items, &ridBkidName)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("Error: %s [%s] err", "in UnmarshalListMaps of recipeNameLookup ", s.reqRName, err.Error())
+// 	}
+// 	//
+// 	for i := 0; i < len(ridBkidName); i++ {
+// 		ridBkidName[i].BkId = ridBkidName[i].BkId[2:] // trim "R-" prefix
+// 		ridBkidName[i].bkname, err = s.bookNameLookup(ridBkidName[i].BkId)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 	}
+// 	if allBooks && int(*result.Count) > 0 {
+// 		switch int(*result.Count) {
+// 		case 1:
+// 			s.msg = fmt.Sprintf("Alert: recipe not found in [%s], but was found in [%s]. ", s.reqBkName, ridBkidName[0].bkname)
+// 		default:
+// 			s.msg = fmt.Sprintf("Alert: recipe not found in [%s] but did occur in other books. See list", s.reqBkName)
+// 		}
+// 	} else {
+// 		if int(*result.Count) > 1 {
+// 			s.msg = fmt.Sprint("Alert: recipe found in multiple books. See list")
+// 		}
+// 	}
+// 	// update Book details in session context. THis may or may not different from the original.
+// 	s.reqBkName = ridBkidName[0].bkname
+// 	s.reqBkId = ridBkidName[0].BkId
+// 	s.reqRId = strconv.Itoa(ridBkidName[0].RId)
 
-	kcond := expression.KeyEqual(expression.Key("BkId"), expression.Value(bkId))
+// 	return ridBkidName, nil // ridBkidName contains list of books containing the recipe. Useful in cases where there is more than one.
+// }
+
+func (s sessCtx) bookIdLookup() (string, error) {
+
+	kcond := expression.KeyEqual(expression.Key("BkId"), expression.Value(s.reqBkId))
 	expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
 	if err != nil {
 		panic(err)
@@ -757,13 +796,13 @@ func (s sessCtx) bookNameLookup(bkId string) (string, error) {
 	// while BkId is unique we are using a GSI so must use Query (I presume)
 	result, err := s.dynamodbSvc.Query(input)
 	if err != nil {
-		return "c", fmt.Errorf("Error: %s [%s] %s", "in Query in bookNameLookup of ", bkId, err.Error())
+		return "c", fmt.Errorf("Error: %s [%s] %s", "in Query in bookNameLookup of ", s.reqBkId, err.Error())
 	}
 	if int(*result.Count) == 0 {
-		return "c", fmt.Errorf("No data found in bookNameLookup, for bookId [%s]", bkId)
+		return "c", fmt.Errorf("No data found in bookNameLookup, for bookId [%s]", s.reqBkId)
 	}
 	if int(*result.Count) > 1 {
-		return "c", fmt.Errorf("Internal error in bookNameLookup. %s [%s]", "More than one book found for bookId ", bkId)
+		return "c", fmt.Errorf("Internal error in bookNameLookup. %s [%s]", "More than one book found for bookId ", s.reqBkId)
 	}
 	// define a slice of struct as Query expects to return 1 or more rows so the slice represents a row
 	// and we ue unmarshallistofmaps to handle a batch like select
@@ -774,39 +813,4 @@ func (s sessCtx) bookNameLookup(bkId string) (string, error) {
 	}
 	//
 	return bookName[0].PKey[3:], nil // trim "BK-" prefix
-}
-
-func (s sessCtx) bookIdLookup() (string, error) {
-	// retrieves book id given requeted book name
-	kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value("BK-"+s.reqBkName))
-	expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
-	if err != nil {
-		panic(err)
-	}
-	input := &dynamodb.QueryInput{
-		KeyConditionExpression:    expr.KeyCondition(),
-		FilterExpression:          expr.Filter(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-	}
-	input = input.SetTableName("Recipe").SetConsistentRead(false)
-	// while BkId is unique we are using a GSI so must use Query (I presume)
-	result, err := s.dynamodbSvc.Query(input)
-	if err != nil {
-		return "-", fmt.Errorf("Error: %s [%s] %s", "in Query in bookIdLookup of ", s.reqBkName, err.Error())
-	}
-	if int(*result.Count) == 0 {
-		return "-", fmt.Errorf("No data found in bookIdLookup, for book name [%s]", s.reqBkName)
-	}
-	if int(*result.Count) > 1 {
-		return "-", fmt.Errorf("More than one found in bookIdLookup [%s]", s.reqBkName)
-	}
-	// define a slice of struct as Query expects to return 1 or more rows so the slice represents a row
-	// and we ue unmarshallistofmaps to handle a batch like select
-	rec := make([]struct{ BkId string }, int(*result.Count))
-	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &rec)
-	if err != nil {
-		return "-", fmt.Errorf("Error: %s [%s] %s", "in UnmarshalMaps in bookIdLookup ", s.reqBkName, err.Error())
-	}
-	return rec[0].BkId, nil
 }

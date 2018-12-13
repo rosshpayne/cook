@@ -217,23 +217,6 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 			//
 			switch len(lastSess.BkId) {
 			case 0:
-				// no intialised book - first time a book requested for this session.
-				s.reqBkId, err = (*s).bookIdLookup()
-				if err != nil {
-					return err
-				}
-				// note: there cannot be a recipe defined.
-				// If there was then there would be an initialised Book defined and this case has no previous requested book.
-				// if len(lastSess.Name) > 0 {
-				// 	// then
-				// 	rId, err := s.recipeNameLookup()
-				// 	if err == nil && rId == nil {
-				// 		s.msg = `Recipe does not exist in this book. `
-				// 		s.abort = true
-				// 		return nil
-				// 	}
-				// 	s.reqRId = strconv.Itoa(rId[0].RId)
-				// }
 				//
 				s.eol = 0
 				_, err := (*s).updateSession()
@@ -248,10 +231,6 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 					switch len(lastSess.Rname) {
 					case 0:
 						// no active recipe. Just get book details
-						s.reqBkId, err = (*s).bookIdLookup()
-						if err != nil {
-							return err
-						}
 						s.msg = `Please state what recipe you would like from this book or I can list them if you like. Say "list" or recipe name.`
 						// Book initialises. No recipe provided. Persist.
 						s.eol = 0
@@ -268,10 +247,6 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 							s.msg = `You have specified a different book while having an active recipe from which you are currently listing. Do you want to swap to this book, "Yes" or "No" or "Cancel" for no?`
 							s.questionId = 21
 							// save book details to swap attributes in Session table
-							s.swapBkId, err = (*s).bookIdLookup()
-							if err != nil {
-								return err
-							}
 							s.swapBkName = s.reqBkName
 							//
 							//s.eol, s.reset = 0, true - depends on yes/no answer
@@ -282,22 +257,6 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 							return nil
 						} else {
 							// finished listing or no object selected, swap to this book
-							s.reqBkId, err = (*s).bookIdLookup()
-							if err != nil {
-								return err
-							}
-							// don't check recipe exists in book as its probably the case that user has finished with last recipe and
-							// requested a new book.
-							// bk, err := s.recipeNameLookup()
-							// if err == nil && bk == nil {
-							// 	s.msg = fmt.Sprintf(`Recipe, [%s] does not exist in this book. Please try another book or cancel book and look in all books`, lastSess.Rname)
-							// 	s.abort = true
-							// 	return nil
-							// }
-							// // book found
-							// s.reqRId = strconv.Itoa(rIdBkId[0].RId) // int in table, string in go
-							// s.reqBkId = rIdBkId[0].BkId
-							//
 							s.msg = `What recipe from this book might you be interested in. Please say a recipe name or I can list them to the display if you like if you "list".`
 							// new book selected, zero recipe etc
 							s.eol, s.reset, s.reqRId, s.reqRName = 0, true, "", ""
@@ -316,38 +275,6 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 						s.msg = `You have specified this book already. Please request a recipe from the book or say "list" and I will print the recipe names to the display.`
 						s.abort = true
 						return nil
-						// default:
-						// 	// same book requested with recipe
-						// 	s.reqRId = lastSess.RId
-						// 	s.reqRName = lastSess.Rname
-						// 	if len(s.reqRId) == 0 { // uninitialised,
-						// 		// find recipe in this book
-						// 		obkName:=s.reqBkName
-						// 		obkId:=s.req.BkId
-						// 		ridBkIdName, err := s.recipeNameLookup()
-						// 		if err != nil {
-						// 			return err
-						// 		}
-						// 		if s.reqBkName!=obkName {
-
-						// 		}
-						// 	} else {
-						// 		// both books and recipes have been initialised  - but does the recipe belong to the book??
-						// 		if s.eol > 0 {
-						// 			s.msg = `We have already opened recipe ` + s.reqRName + ` in this book. Please continue to list anything of interest or cancel`
-						// 		} else {
-						// 			s.msg = `We have already opened recipe ` + s.reqRName + ` in this book. Now choose which listing you would like. Containers, cooking tasks, utensils, or ingredients`
-						// 		}
-						// 		s.abort = true
-						// 		return nil
-						// 	}
-						// 	s.msg = `Ok, we have found the recipe in this book. Now choose which listing you would like. Containers, cooking tasks, utensils, or ingredients ` + s.reqRName
-						// 	_, err := (*s).updateSession()
-						// 	if err != nil {
-						// 		return err
-						// 	}
-						// 	s.abort = true
-						// 	return nil
 					}
 				}
 			}
@@ -366,39 +293,8 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 					// and initialised. ignore request matches current open recipe
 					s.msg = `This recipe is currently opened by you. You can list ingredients, cooking instructions, utensils or containers or cancel`
 					return nil
-				} else {
-					// TODO -is this confirmation really necessary
-					// different from last session
-					// if lastSess.EOL > 0 {
-					// 	// last recipe was listed in some way
-					// 	if len(lastSess.Obj) > 0 && s.eol != lastSess.RecId[objectMap[lastSess.Obj]] {
-					// 		// and in middle of listing
-					// 		s.msg = `Hang on. You have specified a new recipe while in the middle of listing another. Do you want go to the new recipe, Yes or No?`
-					// 		s.questionId = 23
-					// 		_, err := (*s).updateSession()
-					// 		if err != nil {
-					// 			return err
-					// 		}
-					// 		return nil
-					// 	}
-					// }
-					fmt.Println("Yes|No confirmation asked here...")
 				}
 				// change recipe
-				rIdBkId, err := s.recipeNameLookup()
-				if err != nil {
-					return err
-				}
-				if len(rIdBkId) != 1 {
-					// for all wierd edge cases
-					// persist s.reqRName only
-					s.reqRId, s.reqBkId, s.reqBkName = "", "", ""
-					_, err := (*s).updateSession()
-					if err != nil {
-						return err
-					}
-					return nil
-				}
 				s.eol, s.reset = 0, true
 				//
 				_, err = (*s).updateSession()
@@ -409,19 +305,6 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 			} else {
 				// first recipe for session.
 				// recipe lookup might reassign book so save current value
-				rIdBkId, err := s.recipeNameLookup()
-				if err != nil {
-					panic(err)
-				}
-				if len(rIdBkId) != 1 {
-					// for all wierd edge cases
-					// persist s.reqRName
-					_, err := (*s).updateSession()
-					if err != nil {
-						return err
-					}
-					return nil
-				}
 				s.eol, s.reset = 0, true
 				_, err = (*s).updateSession()
 				if err != nil {
@@ -614,7 +497,6 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 	sessctx := &sessCtx{
 		sessionId:   request.QueryStringParameters["sid"],
 		dynamodbSvc: dynamodbService(),
-		updateAdd:   1,
 	}
 	switch pathItem[0] {
 	case "load":
@@ -656,15 +538,23 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		sessctx.curreq = bookrecipe_
 		switch pathItem[0] {
 		case "book":
+			// book request data fully populated in this section
 			sessctx.request = "book"
-			sessctx.reqBkName = request.QueryStringParameters["bkname"]
+			sessctx.reqBkId = request.QueryStringParameters["bkid"]
+			sessctx.reqBkName, err = sessctx.bookIdLookup()
 		case "recipe":
-			sessctx.request = "recipe"
-			sessctx.reqRName = request.QueryStringParameters["rname"]
+			// both recipe and book request data fully populated in this section
+			p := strings.Split(request.QueryStringParameters["bkrid"], "-") // [bkid]-[rid]
+			sessctx.reqBkId = p[0]
+			sessctx.reqBkName, err = sessctx.bookIdLookup()
+			if err == nil {
+				sessctx.reqRId = p[1]
+				sessctx.reqRName, err = (*sessctx).recipeIdLookup()
+			}
+			// TODO provide a query to use BookID to list available recipes. May be need to include list of recipes as an OBject to list for the user.
+			// err = sessctx.saveRecipe()	//TODO this method woul be used when Recipes are being created not as part of the user request.
+			//	err = sessctx.mergeRecipeMetaData()
 		}
-		// TODO provide a query to use BookID to list available recipes. May be need to include list of recipes as an OBject to list for the user.
-		// err = sessctx.saveRecipe()	//TODO this method woul be used when Recipes are being created not as part of the user request.
-		//	err = sessctx.mergeRecipeMetaData()
 	case container_, task_: //ingredient_, utensil_
 		sessctx.object = pathItem[0]
 		sessctx.curreq = object_
