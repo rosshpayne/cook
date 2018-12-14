@@ -162,10 +162,6 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 			s.abort = true
 			return nil
 		}
-		// s.reqBkId, err = (*s).bookIdLookup()
-		// s.msg = `Please say what recipe you would like from this book or I can list them if you like. Say "list" or recipe name.`
-		// s.updateSession()
-		// return nil
 	}
 	lastSess := sessRecT{}
 	err = dynamodbattribute.UnmarshalMap(result.Item, &lastSess)
@@ -282,10 +278,7 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 			//
 			// recipe requested.       Note bookName(Id) can be empty which will force Recipe query to search across all books
 			//
-			// if len(lastSess.BKname) > 0 {
-			// 	s.reqBkName = lastSess.BKname
-			// 	s.reqBkId = lastSess.BkId // if bookname exists then so should its id, otherwise it would not be persisted. Not so for recipe.
-			// }
+
 			fmt.Printf("Here...1 - recipe: %s lastsess: %s", s.reqRName, lastSess.Rname)
 			if len(lastSess.Rname) > 0 {
 				// a recipe has already been requested
@@ -541,12 +534,12 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 			// book request data fully populated in this section
 			sessctx.request = "book"
 			sessctx.reqBkId = request.QueryStringParameters["bkid"]
-			sessctx.reqBkName, err = sessctx.bookIdLookup()
+			sessctx.reqBkName, err = (*sessctx).bookIdLookup()
 		case "recipe":
 			// both recipe and book request data fully populated in this section
 			p := strings.Split(request.QueryStringParameters["bkrid"], "-") // [bkid]-[rid]
 			sessctx.reqBkId = p[0]
-			sessctx.reqBkName, err = sessctx.bookIdLookup()
+			sessctx.reqBkName, err = (*sessctx).bookIdLookup()
 			if err == nil {
 				sessctx.reqRId = p[1]
 				sessctx.reqRName, err = (*sessctx).recipeIdLookup()
@@ -568,7 +561,11 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		case "goto":
 			var i int
 			i, err = strconv.Atoi(request.QueryStringParameters["goId"])
-			sessctx.gotoRecId = i
+			if err != nil {
+				err = fmt.Errorf("%s: %s", "Error in converting int of goto operation ", err.Error())
+			} else {
+				sessctx.gotoRecId = i
+			}
 		}
 		// case "yes":  check questions asked from last session (session table)
 		// case "no":

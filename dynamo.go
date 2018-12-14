@@ -645,41 +645,59 @@ func (s sessCtx) recipeIdLookup() (string, error) {
 	//
 	// query on recipe name to get RecipeId and optionally book name and Id if not requested
 	//
-	type recT struct {
-		RName string
+	type pKey struct {
+		PKey  string
+		SortK float64
 	}
-	// using Bookname and Id
-	//
+	type recT struct {
+		RName string `json:"RName"`
+	}
 	rId, err := strconv.Atoi(s.reqRId)
 	if err != nil {
-		return "", fmt.Errorf("Error: %s [%s] %s", "in Query of recipeIdLookup of Recipe Id ", s.reqRId, err.Error())
+		return "", fmt.Errorf("Error: in converting reqId  [%s] to int - %s", s.reqRId, err.Error())
 	}
-	kcond := expression.KeyAnd(expression.Key("PKey").Equal(expression.Value("R-"+s.reqBkId)), expression.Key("SortK").Equal(expression.Value(rId)))
-	expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
+	pkey := pKey{PKey: "R-" + s.reqBkId, SortK: float64(rId)}
+	av, err := dynamodbattribute.MarshalMap(&pkey)
 	if err != nil {
-		panic(err)
+		return "", fmt.Errorf("%s: %s", "Error in MarshalMap of recipeIdLookup", err.Error())
 	}
-	input := &dynamodb.QueryInput{
-		KeyConditionExpression:    expr.KeyCondition(),
-		FilterExpression:          expr.Filter(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
+	input := &dynamodb.GetItemInput{
+		Key:       av,
+		TableName: aws.String("Recipe"),
 	}
 	input = input.SetTableName("Recipe").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
 	//
-	result, err := s.dynamodbSvc.Query(input)
+	result, err := s.dynamodbSvc.GetItem(input)
 	if err != nil {
-		return "", fmt.Errorf("Error: %s [%s] %s", "in Query of recipeNameLookup of Rname ", s.reqRName, err.Error())
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case dynamodb.ErrCodeProvisionedThroughputExceededException:
+				fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
+			case dynamodb.ErrCodeResourceNotFoundException:
+				fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
+			//case dynamodb.ErrCodeRequestLimitExceeded:
+			//	fmt.Println(dynamodb.ErrCodeRequestLimitExceeded, aerr.Error())
+			case dynamodb.ErrCodeInternalServerError:
+				fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
+			default:
+				fmt.Println(aerr.Error())
+			}
+		} else {
+			// Print the error, cast err to awserr.Error to get the Code and
+			// Message from an error.
+			fmt.Println(err.Error())
+		}
+		return "", fmt.Errorf("%s: %s", "Error in GetItem of recipeIdLookup", err.Error())
 	}
-	if int(*result.Count) == 0 {
+	if len(result.Item) == 0 {
 		return "", fmt.Errorf("Error: %s [%s] %s [%s] - %s", "No recipe found in recipeIdLookup for book Id", s.reqBkId, " and recipe Id ", s.reqRId, err.Error())
 	}
-	rec := make([]recT, int(*result.Count))
-	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &rec)
+	rec := recT{}
+	err = dynamodbattribute.UnmarshalMap(result.Item, &rec)
 	if err != nil {
-		return "", fmt.Errorf("Error: %s [%s] err", "in UnmarshalListMaps of recipeNameLookup ", s.reqRName, err.Error())
+		return "", fmt.Errorf("Error: in UnmarshalMaps of recipeNameLookup [%s] err", s.reqRId, err.Error())
 	}
-	return rec[0].RName, nil
+	return rec.RName, nil
 }
 
 // func (s *sessCtx) recipeNameLookup() ([]RnLkup, error) {
