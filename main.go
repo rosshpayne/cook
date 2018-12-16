@@ -34,6 +34,7 @@ type sessCtx struct {
 	reqBkName      string // requested book name - query param
 	reqRId         string // Recipe Id - 0 means no recipe id has been assigned.  All RId's start at 1.
 	reqBkId        string
+	reqIngrdCat    string // user tries to find recipe using ingredients cat-subcat. Query ingredients table.
 	swapBkName     string
 	swapBkId       string
 	reset          bool // zeros []RecId in session table during changes to recipe, as []RecId is recipe dependent
@@ -168,12 +169,6 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("in merge.. - s.reqRName = %s\n", s.reqRName)
-	fmt.Printf("in merge.. - s.reqBkName = %s\n", s.reqBkName)
-	fmt.Printf("in merge.. -  lastSess.Rname = %s\n", lastSess.Rname)
-	fmt.Printf("in merge.. -  lastSess.BkName = %s\n", lastSess.BKname)
-	fmt.Printf("rows = %d\n", len(result.Item))
-	fmt.Printf("rows = %#v\n", lastSess)
 	//
 	// **************** come this far only if previous session exists *********************
 	//
@@ -207,6 +202,16 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 	//
 	if s.curreq == bookrecipe_ {
 		//
+		if s.request == "IngrdCat" {
+			// we have fully populated session context from previous session e.g. BkName etc, now lets see what recipes we find
+			s.ingredientLookup()
+			s.eol = 0
+			_, err := (*s).updateSession()
+			if err != nil {
+				return err
+			}
+			return nil
+		}
 		if s.request == "book" {
 			//
 			// book requested
@@ -527,7 +532,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 				"Content-Type": "application/json",
 			},
 		}, err
-	case "book", "recipe":
+	case "book", "recipe", "IngrdCat":
 		sessctx.curreq = bookrecipe_
 		switch pathItem[0] {
 		case "book":
@@ -535,18 +540,28 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 			sessctx.request = "book"
 			sessctx.reqBkId = request.QueryStringParameters["bkid"]
 			sessctx.reqBkName, err = (*sessctx).bookIdLookup()
+		case "IngrdCat":
+			sessctx.request = pathitem[0]
+			sessctx.reqIngrdCat = request.QueryStringParameters["ingrd"]
+			//s.ingredientLookup() - must examine previous session data
 		case "recipe":
-			// both recipe and book request data fully populated in this section
-			p := strings.Split(request.QueryStringParameters["bkrid"], "-") // [bkid]-[rid]
-			sessctx.reqBkId = p[0]
+			// both recipe and book session context  fully populated in this section
+			rn := strings.Split(request.QueryStringParameters["bkrid"], "-") // bkid-rid or AN-altName
+			// slot-type-id contains BkId-RId in request
+			sessctx.reqBkId = rn[0]
 			sessctx.reqBkName, err = (*sessctx).bookIdLookup()
 			if err == nil {
-				sessctx.reqRId = p[1]
-				sessctx.reqRName, err = (*sessctx).recipeIdLookup()
+				sessctx.reqRId = rn[1]
+				sessctx.reqRName, err = (*sessctx).recipeRLookup()
 			}
 			// TODO provide a query to use BookID to list available recipes. May be need to include list of recipes as an OBject to list for the user.
 			// err = sessctx.saveRecipe()	//TODO this method woul be used when Recipes are being created not as part of the user request.
 			//	err = sessctx.mergeRecipeMetaData()
+			//  response = [ s1, s2, s3 ,s4 ]
+			//     where s1 - verbal text
+			//			 s2 - display text - may contain multiple lines
+			//			 s3 - msg
+			//  in nodejs if s3 is not nil then prepend to s1 and s2
 		}
 	case container_, task_: //ingredient_, utensil_
 		sessctx.object = pathItem[0]

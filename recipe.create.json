@@ -13,10 +13,6 @@
             "AttributeType": "S"
         },
         {
-            "AttributeName": "IngrdCat", 
-            "AttributeType": "S"
-        },
-        {
             "AttributeName": "BkId", 
             "AttributeType": "S"
         }
@@ -33,48 +29,7 @@
         }
     ],
      "GlobalSecondaryIndexes": [
-        {
-            "IndexName": "RName-BkId", 
-            "KeySchema": [
-                {
-                    "AttributeName": "RName", 
-                    "KeyType": "HASH"
-                },
-                {
-                    "AttributeName": "PKey", 
-                    "KeyType": "RANGE"
-                }
-            ], 
-           "Projection": {
-              "NonKeyAttributes" : ["SortK","BkName","PKey"],
-                "ProjectionType": "INCLUDE"
-            }, 
-            "ProvisionedThroughput": {
-                "ReadCapacityUnits": 1, 
-                "WriteCapacityUnits": 1
-            }
-        },
-        { "IndexName": "Ingrd-BkName", 
-            "KeySchema": [
-                {
-                    "AttributeName": "IngrdCat", 
-                    "KeyType": "HASH"
-                },
-                {
-                    "AttributeName": "PKey", 
-                    "KeyType": "RANGE"
-                }
-            ], 
-           "Projection": {
-                "NonKeyAttributes" : ["RName","BkName","SortK"],
-                "ProjectionType": "INCLUDE"
-            }, 
-            "ProvisionedThroughput": {
-                "ReadCapacityUnits": 1, 
-                "WriteCapacityUnits": 1
-            }
-        },
-        { "IndexName": "BkId-BkName", 
+        { "IndexName": "BkId-Key", 
             "KeySchema": [
                 {
                     "AttributeName": "BkId", 
@@ -89,9 +44,4 @@
                 "WriteCapacityUnits": 1
             }
         }
-    ], 
-    "ProvisionedThroughput": {
-        "ReadCapacityUnits": 1, 
-        "WriteCapacityUnits": 1
-    }
 }

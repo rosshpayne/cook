@@ -6,8 +6,10 @@
                 "rId" : { "S": "1" },
                 "aId" : { "N": "10"},
                 "label" : { "S": "AddChocolate"},
-                "ingrd" : { "S" : "dark chocolate" },
+                "ingrd" : { "S" : "chocolate" },
+                "quali" : { "S" : "dark" },
                 "iQual" : { "S" : "70 percent Cocoa" },
+                "index" : { "BOOL" : true },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "200" } ,
@@ -35,7 +37,6 @@
                 "label" : { "S": "AddButter"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "butter"},
-                "iQual" : { "S" : "unsalted" },
                 "Quali" : { "S" : "unsalted" },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "260" } ,
@@ -77,7 +78,8 @@
                 "aId" : { "N": "45"},
                 "label" : { "S": "Coffee"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
-                "ingrd" : { "S" : "instant coffee" },
+                "ingrd" : { "S" : "coffee" },
+                "quali" : { "S" : "instant" }
                 "iQual" : { "S" : "disolved in 350ml of boiled water" },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "1.5" } ,
@@ -192,7 +194,6 @@
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "flour"},
                 "quali" : { "S" : "self raising"},
-                "iQual" : { "S" : "self raising"},
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "240" } ,
                                       "unit" : { "S" : "g" }
@@ -256,8 +257,8 @@
                 "aId" : { "N": "95"},
                 "label" : { "S": "AddCocoa"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
-                "ingrd" : { "S" : "Cocoa powder"},
-                "iQual" : { "S" : "Danish processed"},
+                "ingrd" : { "S" : "Cocoa"},
+                "iQual" : { "S" : "powder Danish processed"},
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "30" } ,
                                       "unit" : { "S" : "g" }
