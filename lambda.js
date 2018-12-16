@@ -3,6 +3,7 @@
 
 const Alexa = require('ask-sdk-core');
 var   recipe = { response :[] }
+
 // Options to be used by request 
 
 const LaunchRequestHandler = {
@@ -318,6 +319,65 @@ const RecipeIntentHandler = {
   },
 };
 
+const IngrdCatIntentHandler = {
+  canHandle(handlerInput) {
+    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+      && handlerInput.requestEnvelope.request.intent.name === 'IngrdCatIntent';
+  },
+  handle(handlerInput) {
+    var speechText = '';
+    const http = require('https');
+    const path_='&ingrd='+handlerInput.requestEnvelope.request.intent.slots.Ingredient.resolutions.resolutionsPerAuthority[0].values[0].value.name;
+    var params = {
+      host: '5h6o821oqg.execute-api.us-east-1.amazonaws.com',
+      port: '443',
+      path: '/Prod/IngrdCat?sid='+handlerInput.requestEnvelope.session.sessionId+path_
+    };
+    
+    // this is a get, so there's no post data
+    promise = new Promise((resolve, reject) => {
+        var req = http.request(params, function(res) {
+            // reject on bad status
+            if (res.statusCode < 200 || res.statusCode >= 300) {
+                return reject(new Error('statusCode=' + res.statusCode));
+            }
+            // cumulate data
+            var body = [];
+            res.on('data', function(chunk) {
+                body.push(chunk);
+                recipe = JSON.parse(body)
+                speechText=recipe.response[0] + ' ' + recipe.response[2]
+            });
+            // resolve on end
+            res.on('end', function() {
+                try {
+                    body = body;
+                } catch(e) {
+                    reject(e);
+                }
+                resolve(body);
+            });
+        });
+        // reject on request error
+        req.on('error', function(err) {
+            // This is not a "Second reject", just a different sort of failure
+            reject(err);
+        });
+        // IMPORTANT
+        req.end();
+    });
+    speechText="You will need the following containers. "+speechText
+    return promise.then((body) => {
+        return  handlerInput.responseBuilder
+                          .speak(speechText)
+                          .reprompt(speechText)
+                          .withSimpleCard('Instructions', speechText)
+                          .getResponse();
+      }).catch(function (err) { console.log(err) } );
+  
+  },
+};
+
 const BookIntentHandler = {
   canHandle(handlerInput) {
     return handlerInput.requestEnvelope.request.type === 'IntentRequest'
@@ -384,53 +444,27 @@ const TaskIntentHandler = {
   },
   handle(handlerInput) {
     var speechText = '';
-    const http = require('https');
+    var AWS = require('aws-sdk');
+    AWS.config.region = 'us-east-1';
+    var lambda = new AWS.Lambda();
     var params = {
-      host: '5h6o821oqg.execute-api.us-east-1.amazonaws.com',
-      port: '443',
-      path: '/Prod/task?sid='+handlerInput.requestEnvelope.session.sessionId 
+        FunctionName: 'test-lambda-stack-3-TestFunction-Z4VCSGXF6KBQ', // the lambda function we are going to invoke
+        InvocationType: 'RequestResponse',
+        LogType: 'Tail',
+        Payload: '{ "action" : "task" }'
     };
-    // this is a get, so there's no post data
-    promise = new Promise((resolve, reject) => {
-        var req = http.request(params, function(res) {
-            // reject on bad status
-            if (res.statusCode < 200 || res.statusCode >= 300) {
-                return reject(new Error('statusCode=' + res.statusCode));
-            }
-            // cumulate data
-            var body = [];
-            res.on('data', function(chunk) {
-                body.push(chunk);
-                recipe = JSON.parse(body)
-                speechText=recipe.response[0]+ ' ' + 'in task intent'; //recipe.task[0]
-            });
-            // resolve on end
-            res.on('end', function() {
-                try {
-                    body = body;
-                } catch(e) {
-                    reject(e);
-                }
-                resolve(body);
-            });
-        });
-        // reject on request error
-        req.on('error', function(err) {
-            // This is not a "Second reject", just a different sort of failure
-            reject(err);
-        });
-        // IMPORTANT
-        req.end();
-    });
-    speechText="You will need the following containers. "+speechText
-    return promise.then((body) => {
-        return  handlerInput.responseBuilder
+    
+    lambda.invoke(params, function(err, data) {
+      if (err) console.log(err, err.stack); // an error occurred
+      else     console.log(data);           // successful response
+      });
+
+
+    return  handlerInput.responseBuilder
                           .speak(speechText)
                           .reprompt(speechText)
                           .withSimpleCard('Instructions', speechText)
                           .getResponse();
-      }).catch(function (err) { console.log(err) } );
-  
   },
 };
 
@@ -561,6 +595,7 @@ exports.handler = skillBuilder
     TaskIntentHandler,
     NextIntentHandler,
     GotoIntentHandler,
+    IngrdCatIntentHandler,
     PrevIntentHandler,
     RepeatIntentHandler,
     ContainerIntentHandler,
