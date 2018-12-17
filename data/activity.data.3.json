@@ -79,7 +79,7 @@
                 "label" : { "S": "Coffee"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "coffee" },
-                "quali" : { "S" : "instant" }
+                "quali" : { "S" : "instant" },
                 "iQual" : { "S" : "disolved in 350ml of boiled water" },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "1.5" } ,

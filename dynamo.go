@@ -59,6 +59,14 @@ func (od prepTaskS) Len() int           { return len(od) }
 func (od prepTaskS) Less(i, j int) bool { return od[i].time > od[j].time }
 func (od prepTaskS) Swap(i, j int)      { od[i], od[j] = od[j], od[i] }
 
+type ingrdData struct {
+	SortK    string `json:"SortK"`
+	RName    string `json:"RName"`
+	BkName   string `json:"BkName"`
+	Authors  string `json:"Authors"`
+	Quantity string
+}
+
 func (a ContainerMap) saveContainerUsage(s *sessCtx) (string, error) {
 	type ctRow struct {
 		PKey  string
@@ -227,6 +235,125 @@ func (s *sessCtx) getContainerRecById() (ctRec, error) {
 // 	b.WriteString("] } ")
 // 	return b.String()
 // }
+
+func loadNonIngredientsMap(svc *dynamodb.DynamoDB) (map[string]bool, error) {
+	type recT struct {
+		SortK string
+	}
+	//kcond := expression.KeyBeginsWith(expression.Key("PKey"), "NI-")
+	kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value("NI"))
+	expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
+	if err != nil {
+		panic(err)
+	}
+	input := &dynamodb.QueryInput{
+		KeyConditionExpression:    expr.KeyCondition(),
+		FilterExpression:          expr.Filter(),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+	}
+	input = input.SetTableName("Ingredient").SetConsistentRead(false)
+	//
+	result, err := svc.Query(input)
+	if err != nil {
+		return nil, fmt.Errorf("Error: %s  %s", "in Query in loadNonIngredients  ", err.Error())
+	}
+	if int(*result.Count) == 0 {
+		fmt.Println("No Data Returned in Query in loadNonIngredients  ")
+	}
+	ingdS := make([]recT, int(*result.Count))
+	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &ingdS)
+	if err != nil {
+		return nil, fmt.Errorf("Error: %s", "in UnmarshalListMaps of loadNonIngredients  ", err.Error())
+	}
+	notIngrd := make(map[string]bool)
+	for _, v := range ingdS {
+		ingrd := v.SortK
+		if _, ok := notIngrd[ingrd]; !ok {
+			notIngrd[ingrd] = true
+		}
+	}
+	return notIngrd, nil
+
+}
+
+func (a Activities) IndexIngd(svc *dynamodb.DynamoDB, bkid string, bkname string, rname string, rid string, cat string, authorS []string) error {
+	//	   	err = aa.IndexIngd(s.dynamodbSvc,        s.reqBkId,   s.reqBkName, s . .reqRName,  s.reqRId, cat, authors)
+	type indexRecT struct {
+		PKey     string
+		SortK    string
+		PreQual  string
+		PostQual string
+		Quantity string
+		BkName   string
+		RName    string
+		Authors  string
+	}
+
+	doNotIndex, err := loadNonIngredientsMap(svc) // map[string]bool
+	if err != nil {
+		panic(err)
+	}
+	var indexRecS []indexRecT
+
+	loadIngdIndex := func() error {
+		for _, v := range indexRecS {
+			av, err := dynamodbattribute.MarshalMap(v)
+			if err != nil {
+				panic(fmt.Sprintf("failed in IndexIngd to marshal Record, %v", err))
+			}
+			_, err = svc.PutItem(&dynamodb.PutItemInput{
+				TableName: aws.String("Ingredient"),
+				Item:      av,
+			})
+			if err != nil {
+				return fmt.Errorf("failed in IndexIngd to PutItem into Ingredient table - %v", err)
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+		return nil
+	}
+	//
+	// populate indexT type, indexRecS
+	//
+	for _, ap := range a {
+		if len(ap.Ingredient) > 0 {
+			// ingredient exists for this activity
+			if _, ok := doNotIndex[strings.ToLower(ap.Ingredient)]; !ok {
+				fmt.Printf("here in IndexIngd - indexable ingredient  %s\n", ap.Ingredient)
+				// ingredient is indexable
+				irec := indexRecT{}
+				irec.PreQual = ap.QualiferIngrd
+				irec.PostQual = ap.IngrdQualifer
+				if len(ap.Measure.Size) > 0 {
+					irec.Quantity = ap.Measure.Quantity + " " + ap.Measure.Size
+				} else {
+					irec.Quantity = ap.Measure.Quantity + ap.Measure.Unit
+				}
+				if len(cat) == 0 {
+					cat = rname[strings.LastIndex(rname, " ")+1:]
+				}
+
+				irec.PKey = strings.ToLower(ap.Ingredient + " " + cat)
+				fmt.Println("PKey = ", irec.PKey)
+				irec.SortK = bkid + "-" + rid
+				irec.RName = rname
+				irec.BkName = bkname
+				for i, v := range authorS {
+					switch i {
+					case 0:
+						irec.Authors = v[strings.LastIndex(v, " ")+1:]
+					case 1:
+						irec.Authors += ", " + v[strings.LastIndex(v, " ")+1:]
+					}
+				}
+				indexRecS = append(indexRecS, irec)
+			}
+		}
+	}
+	err = loadIngdIndex()
+	return err
+}
 
 func (a Activities) GenerateTasks(pKey string) prepTaskS {
 	// Merge and Populate prepTask and then sort.
@@ -693,24 +820,20 @@ func (s sessCtx) recipeRLookup() (string, error) {
 	return rec.RName, nil
 }
 
-func (s *sessCtx) ingredientLookup() ([]RnLkup, error) {
+func (s *sessCtx) ingredientLookup() ([]ingrdData, error) {
 	//
 	// search for recipe by specifying ingredient and a category or sub-category.
 	// data must exist in this table for each recipe. Data is populated as part of the base activity processig.
 	//
-	type ingrdData struct {
-		BkName string `json:"BkName"`
-		BkId   string `json:"BkId"`
-		RName  string `json:"RName"`
-		RId    string `json:"RId"`
-	}
+
 	var (
 		result   *dynamodb.QueryOutput
 		allBooks bool
+		err      error
 	)
-	ic := strings.Split(s.reqIngrdCat, " ")
 	if len(s.reqBkId) > 0 {
-		kcond := expression.KeyEqual(expression.Key("PKey").expression.Value("I-" + ic[0] + "-" + ic[1] + s.reqBkId))
+		kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value(s.reqIngrdCat))
+		kcond = kcond.And(expression.KeyBeginsWith(expression.Key("SortK"), s.reqBkId+"-"))
 		expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
 		if err != nil {
 			panic(err)
@@ -721,18 +844,18 @@ func (s *sessCtx) ingredientLookup() ([]RnLkup, error) {
 			ExpressionAttributeNames:  expr.Names(),
 			ExpressionAttributeValues: expr.Values(),
 		}
-		input = input.SetTableName("Recipe").SetConsistentRead(false)
+		input = input.SetTableName("Ingredient").SetConsistentRead(false)
 		//
-		result, err := s.dynamodbSvc.Query(input)
+		result, err = s.dynamodbSvc.Query(input)
 		if err != nil {
-			return "c", fmt.Errorf("Error: %s [%s] %s", "in Query in ingredientLookup of ", s.reqBkId, err.Error())
+			return nil, fmt.Errorf("Error: %s [%s] %s", "in Query in ingredientLookup of ", s.reqBkId, err.Error())
 		}
 		if int(*result.Count) == 0 {
 			allBooks = true
 		}
 	}
 	if len(s.reqBkId) == 0 || allBooks {
-		kcond := expression.KeyBeginsWith(expression.Key("PKey").expression.Value("I-" + ic[0] + "-" + ic[1]))
+		kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value(s.reqIngrdCat))
 		expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
 		if err != nil {
 			panic(err)
@@ -743,11 +866,11 @@ func (s *sessCtx) ingredientLookup() ([]RnLkup, error) {
 			ExpressionAttributeNames:  expr.Names(),
 			ExpressionAttributeValues: expr.Values(),
 		}
-		input = input.SetTableName("Recipe").SetConsistentRead(false)
+		input = input.SetTableName("Ingredient").SetConsistentRead(false)
 		//
-		result, err := s.dynamodbSvc.Query(input)
+		result, err = s.dynamodbSvc.Query(input)
 		if err != nil {
-			return "c", fmt.Errorf("Error: %s [%s] %s", "in Query in ingredientLookup of ", s.reqBkId, err.Error())
+			return nil, fmt.Errorf("Error: %s [%s] %s", "in Query in ingredientLookup of ", s.reqBkId, err.Error())
 		}
 		if int(*result.Count) == 0 {
 			switch allBooks {
@@ -759,7 +882,7 @@ func (s *sessCtx) ingredientLookup() ([]RnLkup, error) {
 		}
 	}
 	ridBkidName := make([]ingrdData, int(*result.Count))
-	err := dynamodbattribute.UnmarshalListOfMaps(result.Items, &ridBkidName)
+	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &ridBkidName)
 	if err != nil {
 		return nil, fmt.Errorf("Error: %s [%s] err", "in UnmarshalListMaps of recipeNameLookup ", s.reqRName, err.Error())
 	}
@@ -767,7 +890,7 @@ func (s *sessCtx) ingredientLookup() ([]RnLkup, error) {
 	if allBooks && int(*result.Count) > 0 {
 		switch int(*result.Count) {
 		case 1:
-			s.msg = fmt.Sprintf("Alert: recipe not found in [%s], but was found in [%s]. ", s.reqBkName, ridBkidName[0].bkname)
+			s.msg = fmt.Sprintf("Alert: ingredient-cat not found in [%s], but was found in [%s]. ", s.reqRName, ridBkidName[0].BkName)
 		default:
 			s.msg = fmt.Sprintf("Alert: recipe not found in [%s] but did occur in other books. See list", s.reqBkName)
 		}
@@ -777,9 +900,11 @@ func (s *sessCtx) ingredientLookup() ([]RnLkup, error) {
 		}
 	}
 	// update Book details in session context. THis may or may not different from the original.
-	s.reqBkName = ridBkidName[0].Bkame
-	s.reqBkId = ridBkidName[0].BkId
-	s.reqRId = strconv.Itoa(ridBkidName[0].RId)
+	s.reqBkName = ridBkidName[0].BkName
+	s.reqRName = ridBkidName[0].RName
+	bkid_rid := strings.Split(ridBkidName[0].SortK, "-")
+	s.reqBkId = bkid_rid[0]
+	s.reqRId = bkid_rid[1]
 
 	return ridBkidName, nil // ridBkidName contains list of books containing the recipe. Useful in cases where there is more than one
 

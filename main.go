@@ -5,7 +5,8 @@ import (
 	_ "encoding/json"
 	"fmt"
 	"log"
-	"os"
+	"net/url"
+	_ "os"
 	"strconv"
 	"strings"
 
@@ -204,9 +205,13 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 		//
 		if s.request == "IngrdCat" {
 			// we have fully populated session context from previous session e.g. BkName etc, now lets see what recipes we find
-			s.ingredientLookup()
+			a, err := s.ingredientLookup()
+			if err != nil {
+				panic(err)
+			}
+			fmt.Printf("len(a) %d, %#v", len(a), a)
 			s.eol = 0
-			_, err := (*s).updateSession()
+			_, err = (*s).updateSession()
 			if err != nil {
 				return err
 			}
@@ -501,26 +506,35 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		sessctx.reqBkId = "20"
 		sessctx.object = "container"
 		sessctx.reqRId = "1"
-		a, err := readBaseRecipeForContainers(sessctx.dynamodbSvc, sessctx.reqRId)
-		if err != nil {
-			panic(err)
-		}
-		_, err = a.saveContainerUsage(sessctx)
-		if err != nil {
-			panic(err)
-		}
+		// a, err := readBaseRecipeForContainers(sessctx.dynamodbSvc, sessctx.reqRId)
+		// if err != nil {
+		// 	panic(err)
+		// }
+		// _, err = a.saveContainerUsage(sessctx)
+		// if err != nil {
+		// 	panic(err)
+		// }
 		sessctx.reqBkId = "20"
 		sessctx.object = "task"
 		sessctx.reqRId = "1"
+		sessctx.reqRName = "Take-Home Chocolate Cake"
+		sessctx.reqBkName = "SWEET"
+		authors := []string{"Yotam Ottolenghi", "Helen Goh"}
+		cat := ""
 		aa, err := readBaseRecipeForTasks(sessctx.dynamodbSvc, sessctx.reqRId)
 		if err != nil {
 			panic(err)
 		}
-		_, err = aa.saveTasks(sessctx)
+		// _, err = aa.saveTasks(sessctx)
+		// if err != nil {
+		// 	panic(err)
+		// }
+		s := sessctx
+		err = aa.IndexIngd(s.dynamodbSvc, s.reqBkId, s.reqBkName, s.reqRName, s.reqRId, cat, authors)
 		if err != nil {
 			panic(err)
 		}
-		os.Exit(0)
+		s.abort = true
 	// objec
 	case "clear":
 		_, err = sessctx.updateSession()
@@ -541,9 +555,13 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 			sessctx.reqBkId = request.QueryStringParameters["bkid"]
 			sessctx.reqBkName, err = (*sessctx).bookIdLookup()
 		case "IngrdCat":
-			sessctx.request = pathitem[0]
-			sessctx.reqIngrdCat = request.QueryStringParameters["ingrd"]
-			//s.ingredientLookup() - must examine previous session data
+			sessctx.request = pathItem[0]
+			sq, err := url.QueryUnescape(request.QueryStringParameters["ingrd"])
+			if err != nil {
+				panic(err)
+			}
+			sessctx.reqIngrdCat = sq
+			fmt.Printf("IngrdCat = [%s]\n\n", sessctx.reqIngrdCat)
 		case "recipe":
 			// both recipe and book session context  fully populated in this section
 			rn := strings.Split(request.QueryStringParameters["bkrid"], "-") // bkid-rid or AN-altName

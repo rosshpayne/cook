@@ -28,6 +28,10 @@
             "KeyType": "RANGE"
         }
     ],
+    "ProvisionedThroughput": {
+                "ReadCapacityUnits": 1, 
+                "WriteCapacityUnits": 1
+    },
      "GlobalSecondaryIndexes": [
         { "IndexName": "BkId-Key", 
             "KeySchema": [

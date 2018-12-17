@@ -58,7 +58,7 @@
                 "PKey" : { "S": "R-21" },
                 "SortK" : { "N": "1"},
                 "RName" : { "S": "Risotto with Roast Partridge"},
-                "Cat"  : { "risotto"  }   
+                "Cat"  : { "S": "risotto" }   
             }
         }
         },
@@ -70,6 +70,7 @@
                 "RName" : { "S": "Braised Cavolo Nero"}
                 }
             }
-        }
+        },
+        {
         ]
 }
