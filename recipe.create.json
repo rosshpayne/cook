@@ -47,5 +47,23 @@
                 "ReadCapacityUnits": 1, 
                 "WriteCapacityUnits": 1
             }
+        },
+        "GlobalSecondaryIndexes": [
+        { "IndexName": "RName-Key", 
+            "KeySchema": [
+                {
+                    "AttributeName": "RName", 
+                    "KeyType": "HASH"
+                }
+            ], 
+           "Projection": {
+                "ProjectionType": "KEYS_ONLY"
+            }, 
+            "ProvisionedThroughput": {
+                "ReadCapacityUnits": 1, 
+                "WriteCapacityUnits": 1
+            }
         }
+        ]
+    ]
 }
