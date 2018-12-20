@@ -170,7 +170,7 @@ type prepCtl struct {
 
 var prepctl prepCtl = prepCtl{}
 
-
+//func readBase(..) (interface{} , error)
 func readBaseRecipeForContainers(svc *dynamodb.DynamoDB, reqRId_ string) (ContainerMap, error) {
 	// var svc *dynamodb.DynamoDB
 	// var reqRId_ string
@@ -775,4 +775,4 @@ func readBaseRecipeForTasks(svc *dynamodb.DynamoDB, reqRId_ string) (Activities,
 	}
 	return ActivityS, nil
 
-} // readBaseRecipeForTasks
+} // 

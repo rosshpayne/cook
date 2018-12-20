@@ -33,7 +33,7 @@
                 "WriteCapacityUnits": 1
     },
      "GlobalSecondaryIndexes": [
-        { "IndexName": "BkId-Key", 
+        { "IndexName": "BkId-BkName", 
             "KeySchema": [
                 {
                     "AttributeName": "BkId", 
@@ -41,14 +41,14 @@
                 }
             ], 
            "Projection": {
-                "ProjectionType": "KEYS_ONLY"
+                "ProjectionType": "INCLUDE",
+                "NonKeyAttributes": ["PKey","Authors"]
             }, 
             "ProvisionedThroughput": {
                 "ReadCapacityUnits": 1, 
                 "WriteCapacityUnits": 1
             }
         },
-        "GlobalSecondaryIndexes": [
         { "IndexName": "RName-Key", 
             "KeySchema": [
                 {
@@ -65,5 +65,4 @@
             }
         }
         ]
-    ]
 }

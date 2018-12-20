@@ -55,8 +55,8 @@ type sessCtx struct {
 	// msg            string        // local (to this session only) state inf
 	// text           string        // text sent to Alexa display
 	// verbal         string        // text sent to Alexa voice
-	bkList     []BkT  // result from recipe name clashes. Holds displayed data. When user select a number we get data from here.
-	rbkList    []RBkT // result of ingredient search. Holds recipe name and book name, quantity of ingredient.
+	mChoice []mRecT // result from recipe name clashes. Holds displayed data. When user select a number we get data from here.
+	//	rbkList    []RBkT  // result of ingredient search. Holds recipe name and book name, quantity of ingredient.
 	dmsg       string
 	vmsg       string
 	ddata      string
@@ -78,8 +78,8 @@ type sessRecT struct {
 	RecId   []int  // current record in object list.
 	EOL     int    // last RecId of current list. Used to determine when last record is reached or exceeded in the case of goto operation
 	Dmsg    string
-	SrchLst []BkT
-	RnLst   []RBkT
+	//SrchLst []mRecT
+	RnLst []mRecT
 }
 
 const (
@@ -328,13 +328,8 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 				return nil
 			} else {
 				// first recipe for session.
-				// recipe lookup might reassign book so save current value
-				err = s.recipeNameLookup() // via GSI Rname-Key, assigns to s.Rid, RName, BkId, BkName
-				if err != nil {
-					return err
-				}
 				s.eol, s.reset = 0, true
-				_, err = (*s).updateSession()
+				_, err = s.updateSession()
 				if err != nil {
 					return err
 				}
@@ -541,14 +536,14 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		sessctx.reqBkId = "20"
 		sessctx.object = "container"
 		sessctx.reqRId = "1"
-		// a, err := readBaseRecipeForContainers(sessctx.dynamodbSvc, sessctx.reqRId)
-		// if err != nil {
-		// 	panic(err)
-		// }
-		// _, err = a.saveContainerUsage(sessctx)
-		// if err != nil {
-		// 	panic(err)
-		// }
+		a, err := readBaseRecipeForContainers(sessctx.dynamodbSvc, sessctx.reqRId)
+		if err != nil {
+			panic(err)
+		}
+		_, err = a.saveContainerUsage(sessctx)
+		if err != nil {
+			panic(err)
+		}
 		sessctx.reqBkId = "20"
 		sessctx.object = "task"
 		sessctx.reqRId = "1"
@@ -560,10 +555,10 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		if err != nil {
 			panic(err)
 		}
-		// _, err = aa.saveTasks(sessctx)
-		// if err != nil {
-		// 	panic(err)
-		// }
+		_, err = aa.saveTasks(sessctx)
+		if err != nil {
+			panic(err)
+		}
 		s := sessctx
 		err = aa.IndexIngd(s.dynamodbSvc, s.reqBkId, s.reqBkName, s.reqRName, s.reqRId, cat, authors)
 		if err != nil {
@@ -588,7 +583,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 			// book request data fully populated in this section
 			sessctx.request = "book"
 			sessctx.reqBkId = request.QueryStringParameters["bkid"]
-			sessctx.reqBkName, err = (*sessctx).bookNameLookup()
+			err = sessctx.bookNameLookup()
 		case "search":
 			sessctx.request = pathItem[0]
 			sq, err := url.QueryUnescape(request.QueryStringParameters["srch"])
@@ -597,10 +592,25 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 			}
 			sessctx.reqIngrdCat = sq
 		case "recipe": // must be Recipe Name not Ingredient-cat
-			// Alexa request: &rname:<slot-type-name>.
-			sessctx.reqRName, err = url.QueryUnescape(request.QueryStringParameters["rname"])
+			// Alexa request: query parameter format either BkId-RId or Recipe name as spoken ie. Alexa's slot-type name
+			var rcp string
+			rcp, err = url.QueryUnescape(request.QueryStringParameters["rcp"])
 			if err != nil {
 				panic(err)
+			}
+			// populate reqBkId, reqBkName, reqRId, reqRName
+			if _, err = strconv.Atoi(rcp[:2]); err != nil {
+				// must be a recipe name
+				sessctx.reqRName = rcp
+				err = sessctx.recipeNameLookup()
+			} else {
+				id := strings.Split(rcp, "-")
+				if len(id) == 1 {
+					err = fmt.Errorf(`Error: strings.Split did not find delimiter "-" in recipe slot-type id`)
+				} else {
+					sessctx.reqBkId, sessctx.reqRId = id[0], id[1]
+					err = sessctx.recipeRLookup()
+				}
 			}
 			// remainder of sessctx populated in mergeAndValidateWithLastSession
 		}
@@ -626,7 +636,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 			var i int
 			i, err = strconv.Atoi(request.QueryStringParameters["sId"])
 			if err != nil {
-				err = fmt.Errorf("%s: %s", "Error in converting int of goto operation ", err.Error())
+				err = fmt.Errorf("%s: %s", "Error in converting int of goto operation \n\n", err.Error())
 			} else {
 				sessctx.selectItem = i
 			}
@@ -635,7 +645,6 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		// case "no":
 	}
 	if err != nil {
-		//err := fmt.Errorf("%s: %s", "Error in converting int of goto operation ", err.Error())
 		return events.APIGatewayProxyResponse{
 			StatusCode: 500,
 			Headers: map[string]string{

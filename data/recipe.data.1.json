@@ -6,7 +6,7 @@
                 "PKey" : { "S": "BK-River Cafe" },
                 "SortK" : { "N": "0"},
                 "BkId"  : { "S" : "21" },
-                "Authors" : { "SS": [ "Ruth Rorgers","Rose Gray","Sian Wyn Owen","Joseph Trivelli"]},
+                "Authors" : { "L": [ {"S":"Ruth Rorgers"},{"S":"Rose Gray"},{"S":"Sian Wyn Owen"},{"S":"Joseph Trivelli"}]},
                 "Publisher" : { "S" : "Ebury Press" }
             }
         }
@@ -17,7 +17,18 @@
                 "PKey" : { "S": "BK-SWEET" },
                 "SortK" : { "N": "0"},
                 "BkId"  : { "S" : "20" },
-                "Authors" : { "SS": [ "Yotam Ottolenghi","Helen Goh"]},
+                "Authors" : { "L": [ {"S":"Yotam Ottolenghi"},{"S":"Helen Goh"}]},
+                "Publisher" : { "S" : "Ebury Press" }
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "BK-Salad" },
+                "SortK" : { "N": "0"},
+                "BkId"  : { "S" : "22" },
+                "Authors" : { "L": [ {"S":"Bruce Mclaren"}]},
                 "Publisher" : { "S" : "Ebury Press" }
             }
         }
@@ -72,5 +83,22 @@
             }
         },
         {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "R-21" },
+                "SortK" : { "N": "3"},
+                "RName" : { "S": "Take-home Chocolate Cake"}
+                }
+            }
+        } ,
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "R-22" },
+                "SortK" : { "N": "1"},
+                "RName" : { "S": "Take-home Chocolate Cake"}
+                }
+            }
+        }
         ]
 }

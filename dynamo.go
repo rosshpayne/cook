@@ -39,15 +39,23 @@ type RBkT struct {
 	Quantity string
 }
 
-type BkT struct {
-	PKey     string
-	RName    string `json:"RName"`
-	RId      string `json:"RId"`
-	BkId     string
-	BkName   string
-	Authors  []string `json:"Authors"`
-	Authors_ string
+type mRecT struct {
+	Id     int
+	RName  string
+	RId    string
+	BkName string
+	BkId   string
 }
+
+// type BkT struct {
+// 	PKey     string
+// 	RName    string `json:"RName"`
+// 	RId      string `json:"RId"`
+// 	BkId     string
+// 	BkName   string
+// 	Authors  []string `json:"Authors"`
+// 	Authors_ string
+// }
 
 // use this struct as key into map
 type mkey struct {
@@ -586,8 +594,15 @@ func (s sessCtx) updateSession() (int, error) {
 
 	updateC = updateC.Set(expression.Name("EOL"), expression.Value(s.eol)) //eol from get-RecId() associated with each Object
 
+	if len(s.reqRName) > 0 {
+		updateC = updateC.Set(expression.Name("Rname"), expression.Value(s.reqRName))
+	} else {
+		updateC = updateC.Set(expression.Name("Rname"), expression.Value(""))
+	}
 	if len(s.reqRId) > 0 {
 		updateC = updateC.Set(expression.Name("RId"), expression.Value(s.reqRId))
+	} else {
+		updateC = updateC.Set(expression.Name("RId"), expression.Value(""))
 	}
 	// will clear Book entries provided execution paths bypasses mergeAndValidate func.
 	if len(s.reqBkName) > 0 {
@@ -606,27 +621,32 @@ func (s sessCtx) updateSession() (int, error) {
 	}
 	if len(s.operation) > 0 {
 		updateC = updateC.Set(expression.Name("Oper"), expression.Value(s.operation)) // next,prev,repeat,modify,goto
+	} else {
+		updateC = updateC.Set(expression.Name("Oper"), expression.Value(""))
 	}
 	if len(s.object) > 0 {
 		updateC = updateC.Set(expression.Name("Obj"), expression.Value(s.object)) // ingredient,task,container,utensil
-	}
-	if len(s.reqRName) > 0 {
-		updateC = updateC.Set(expression.Name("Rname"), expression.Value(s.reqRName))
+	} else {
+		updateC = updateC.Set(expression.Name("Obj"), expression.Value(""))
 	}
 	if s.questionId > 0 {
 		updateC = updateC.Set(expression.Name("Qid"), expression.Value(s.questionId))
+	} else {
+		updateC = updateC.Set(expression.Name("Qid"), expression.Value(0))
 	}
 	if len(s.dbatchNum) > 0 {
 		updateC = updateC.Set(expression.Name("DBat"), expression.Value(s.dbatchNum))
 	}
-	if len(s.rbkList) > 0 {
-		updateC = updateC.Set(expression.Name("SrchLst"), expression.Value(s.rbkList)) // search
-	}
-	if len(s.bkList) > 0 {
-		updateC = updateC.Set(expression.Name("RnLst"), expression.Value(s.bkList)) //recipename
+	// if len(s.rbkList) > 0 {
+	// 	updateC = updateC.Set(expression.Name("SrchLst"), expression.Value(s.rbkList)) // search
+	// }
+	if len(s.mChoice) > 0 {
+		updateC = updateC.Set(expression.Name("RnLst"), expression.Value(s.mChoice)) //recipename
 	}
 	if len(s.dmsg) > 0 {
 		updateC = updateC.Set(expression.Name("Dmsg"), expression.Value(s.dmsg))
+	} else {
+		updateC = updateC.Set(expression.Name("Dmsg"), expression.Value(""))
 	}
 	updateC = updateC.Set(expression.Name("ATime"), expression.Value(time.Now().String()))
 	expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
@@ -782,7 +802,7 @@ func (s *sessCtx) getTaskRecById() (prepTaskRec, error) {
 	return taskRec, nil
 }
 
-func (s sessCtx) recipeRLookup() (string, error) {
+func (s *sessCtx) recipeRLookup() error {
 	//
 	// query on recipe name to get RecipeId and optionally book name and Id if not requested
 	//
@@ -791,16 +811,18 @@ func (s sessCtx) recipeRLookup() (string, error) {
 		SortK float64
 	}
 	type recT struct {
-		RName string `json:"RName"`
+		RName   string `json:"RName"`
+		Authors []string
 	}
 	rId, err := strconv.Atoi(s.reqRId)
 	if err != nil {
-		return "", fmt.Errorf("Error: in converting reqId  [%s] to int - %s", s.reqRId, err.Error())
+		return fmt.Errorf("Error: in recipeRLookup converting reqId  [%s] to int - %s", s.reqRId, err.Error())
 	}
 	pkey := pKey{PKey: "R-" + s.reqBkId, SortK: float64(rId)}
+	fmt.Printf("pkey in recipeRLookup [%#v]", pkey)
 	av, err := dynamodbattribute.MarshalMap(&pkey)
 	if err != nil {
-		return "", fmt.Errorf("%s: %s", "Error in MarshalMap of recipeIdLookup", err.Error())
+		return fmt.Errorf("%s: %s", "Error in MarshalMap of recipeIdLookup", err.Error())
 	}
 	input := &dynamodb.GetItemInput{
 		Key:       av,
@@ -828,17 +850,27 @@ func (s sessCtx) recipeRLookup() (string, error) {
 			// Message from an error.
 			fmt.Println(err.Error())
 		}
-		return "", fmt.Errorf("%s: %s", "Error in GetItem of recipeRLookup", err.Error())
+		return fmt.Errorf("%s: %s", "Error in GetItem of recipeRLookup", err.Error())
 	}
 	if len(result.Item) == 0 {
-		return "", fmt.Errorf("Error: %s [%s] %s [%s] - %s", "No recipe found in recipeRLookup for book Id", s.reqBkId, " and recipe Id ", s.reqRId, err.Error())
+		return fmt.Errorf("Error: %s [%s] %s [%s] - %s", "No recipe found in recipeRLookup for book Id", s.reqBkId, " and recipe Id ", s.reqRId, err.Error())
 	}
 	rec := recT{}
 	err = dynamodbattribute.UnmarshalMap(result.Item, &rec)
 	if err != nil {
-		return "", fmt.Errorf("Error: in UnmarshalMaps of recipeRLookup [%s] err", s.reqRId, err.Error())
+		return fmt.Errorf("Error: in UnmarshalMaps of recipeRLookup [%s] err", s.reqRId, err.Error())
 	}
-	return rec.RName, nil
+	// populate remaining req fields
+	s.reqRName = rec.RName
+	err = s.bookNameLookup()
+	if err != nil {
+		s.reqBkName = ""
+		return err
+	}
+	s.dmsg = s.reqRName + " in " + s.reqBkName + " by " + s.authors
+	s.vmsg = "Found " + s.reqRName + " in " + s.reqBkName + " by " + s.authors
+	s.vmsg += `What would you like to list?. Say "list container" or "List Ingredient" or "List Prep tasks" or "start Cooking" or "cancel"`
+	return nil
 }
 
 func (s *sessCtx) ingredientSearch() error {
@@ -932,7 +964,7 @@ func (s *sessCtx) ingredientSearch() error {
 	s.reqBkId = bkid_rid[0]
 	s.reqRId = bkid_rid[1]
 	//
-	s.rbkList = RBk // takes a copy of RBk's  light weight slice structure containing ptr to data, len and cap values. Doesn't copy data.
+	//s.rbkList = RBk // takes a copy of RBk's  light weight slice structure containing ptr to data, len and cap values. Doesn't copy data.
 	s.vmsg = "The following recipe, " + s.reqRName + "in book " + RBk[0].RName + ` by authors ` + RBk[0].Authors + ` contains the ingredient. You can list other ingredients or containers, utensils used in the recipe or list the prep tasks or you can start cooking`
 	s.vmsg = "The following recipe, " + s.reqRName + "in book " + RBk[0].RName + ` by authors ` + RBk[0].Authors + ` contains the ingredient. You can list other ingredients or containers, utensils used in the recipe or list the prep tasks or you can start cooking`
 
@@ -944,7 +976,11 @@ func (s *sessCtx) recipeNameLookup() error {
 	// user "opens <book>". Alexa provides associated slot-type-id BkId value.
 	//
 	// used in recipe name
-
+	type recT struct {
+		PKey  string
+		SortK int
+		RName string
+	}
 	kcond := expression.KeyEqual(expression.Key("RName"), expression.Value(s.reqRName))
 	expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
 	if err != nil {
@@ -968,37 +1004,18 @@ func (s *sessCtx) recipeNameLookup() error {
 	}
 	// define a slice of struct as Query expects to return 1 or more rows so the slice represents a row
 	// and we ue unmarshallistofmaps to handle a batch like select
-	bk := make([]BkT, int(*result.Count))
-	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &bk)
+	recS := make([]recT, int(*result.Count))
+	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &recS)
 	if err != nil {
 		return fmt.Errorf("Error: %s [%s] %s", "in UnmarshalMaps in recipeNameLookup ", s.reqRName, err.Error())
 	}
-	for _, r := range bk {
-		r.BkId = r.PKey[2:] // trim prefix "R-"
-		s.reqBkId = r.BkId
-		r.BkName, err = s.bookNameLookup()
-		if err != nil {
-			return fmt.Errorf("Error: %s - %s", "in bookNameLookup in recipeNameLookup ", s.reqRName, err.Error())
-		}
-		for i, v := range r.Authors {
-			switch i {
-			case 0:
-				r.Authors_ = v[strings.LastIndex(v, " ")+1:]
-			case 1:
-				r.Authors_ += ", " + v[strings.LastIndex(v, " ")+1:]
-				break
-			}
-		}
-	}
-	s.bkList = bk
-	switch len(bk) {
+	switch len(recS) {
 	case 1:
 		// single recipe-book found
-		s.reqBkName = bk[0].BkName
-		s.reqBkId = bk[0].BkId
-		s.reqRName = bk[0].RName
-		s.reqRId = bk[0].RId
-		s.authors = bk[0].Authors_
+		s.reqBkId = recS[0].PKey[2:] // trim prefix "R-"
+		s.reqRId = strconv.Itoa(recS[0].SortK)
+		s.reqRName = recS[0].RName
+		err = s.bookNameLookup()
 		//
 		s.dmsg = s.reqRName + " in " + s.reqBkName + " by " + s.authors
 		s.vmsg = "Found " + s.reqRName + " in " + s.reqBkName + " by " + s.authors
@@ -1007,49 +1024,79 @@ func (s *sessCtx) recipeNameLookup() error {
 		// more than one recipe-book found
 		s.dmsg = `Recipe appears in more than one book. Please make a selection from the list below. Say "select number\n" `
 		s.vmsg = `the recipe appears in more than one book. I will recite the first 6. Please say "next" to hear each one and "select" to choose or "cancel" to exit\n" `
-		for i, v := range bk {
-			s.ddata += strconv.Itoa(i+1) + ". " + v.RName + " in " + v.BkName + " by " + v.Authors_ + "\n"
+
+		for i := 0; i < len(recS); i++ {
+			s.reqBkId = recS[i].PKey[2:] // trim prefix "R-"
+			s.reqRId = strconv.Itoa(recS[i].SortK)
+			s.reqRName = recS[i].RName
+			err = s.bookNameLookup()
+			s.ddata += strconv.Itoa(i+1) + ". " + s.reqRName + " in " + s.reqBkName + " by " + s.authors + "\n"
+			rec := mRecT{Id: i + 1, RName: s.reqRName, RId: s.reqRId, BkName: s.reqBkName, BkId: s.reqBkId}
+			s.mChoice = append(s.mChoice, rec)
 		}
+		// zero request
+		s.reqBkId, s.reqRName, s.reqBkName, s.reqRId = "", "", "", ""
 	}
 	//
 	return nil
 }
 
-func (s sessCtx) bookNameLookup() (string, error) {
+func (s *sessCtx) bookNameLookup() error {
 	//
 	// user "opens <book>". Alexa provides associated slot-type-id BkId value.
 	//
-	kcond := expression.KeyEqual(expression.Key("BkId"), expression.Value(s.reqBkId)) // internally converts bookid string to int
-	expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
+	type recT struct {
+		PKey    string
+		Authors []string `json:"Authors"`
+	}
+	kcond := expression.KeyEqual(expression.Key("BkId"), expression.Value(s.reqBkId)) // must internally converts bookid string to int
+	proj := expression.NamesList(expression.Name("Authors"), expression.Name("PKey"))
+	expr, err := expression.NewBuilder().WithKeyCondition(kcond).WithProjection(proj).Build()
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("Error: %s [%s] - %s", "in NewBuilder in bookNameLookup, bookId ", s.reqBkId, err.Error())
 	}
 	input := &dynamodb.QueryInput{
 		KeyConditionExpression:    expr.KeyCondition(),
-		IndexName:                 aws.String("BkId-Key"),
+		IndexName:                 aws.String("BkId-BkName"),
 		FilterExpression:          expr.Filter(),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
+		ProjectionExpression:      expr.Projection(),
 	}
 	input = input.SetTableName("Recipe").SetConsistentRead(false)
 	// while BkId is unique we are using a GSI so must use Query (I presume)
 	result, err := s.dynamodbSvc.Query(input)
 	if err != nil {
-		return "c", fmt.Errorf("Error: %s [%s] %s", "in Query in bookIdLookup of ", s.reqBkId, err.Error())
+		return fmt.Errorf("Error: %s [%s] %s", "in Query in bookNameLookup of ", s.reqBkId, err.Error())
 	}
 	if int(*result.Count) == 0 {
-		return "c", fmt.Errorf("No data found in bookIdLookup, for bookId [%s]", s.reqBkId)
+		return fmt.Errorf("No data found in bookNameLookup, for bookId [%s]", s.reqBkId)
 	}
 	if int(*result.Count) > 1 {
-		return "c", fmt.Errorf("Internal error in bookIdLookup. %s [%s]", "More than one book found for bookId ", s.reqBkId)
+		return fmt.Errorf("Internal error in bookNameLookup. %s [%s]", "More than one book found for bookId ", s.reqBkId)
 	}
 	// define a slice of struct as Query expects to return 1 or more rows so the slice represents a row
 	// and we ue unmarshallistofmaps to handle a batch like select
-	bookName := make([]struct{ PKey string }, int(*result.Count))
-	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &bookName)
+
+	rec := make([]recT, int(*result.Count))
+	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &rec)
 	if err != nil {
-		return "c", fmt.Errorf("Error: %s [%s] %s", "in UnmarshalMaps in bookIdLookup ", s.reqRName, err.Error())
+		return fmt.Errorf("Error: %s [%s] %s", "in UnmarshalMaps in bookNameLookup ", s.reqRName, err.Error())
 	}
-	//
-	return bookName[0].PKey[3:], nil // trim "BK-" prefix
+	var authors string
+	for i, v := range rec[0].Authors {
+		switch i {
+		case 0:
+			authors = v[strings.LastIndex(v, " ")+1:]
+		case 1:
+			authors += ", " + v[strings.LastIndex(v, " ")+1:]
+			break
+		}
+	}
+	s.authors = authors
+	s.reqBkName = rec[0].PKey[3:] // trim "BK-" prefix
+	s.dmsg = s.reqBkName + " by " + s.authors
+	s.vmsg = "Found book" + s.reqBkName + " by " + s.authors
+	s.vmsg += `You can ask for a recipe in this book by saying "open at" recipe name or search for recipes by saying "search for " ingredient category e.g. chocolate cake`
+	return nil
 }
