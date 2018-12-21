@@ -45,22 +45,22 @@ type sessCtx struct {
 	curreq         int    // bookrecipe_, object_(ingredient,task,container,utensil), listing_(next,prev,goto,modify,repeat)
 	questionId     int    // what question is the user responding to with a yes|no.
 	dynamodbSvc    *dynamodb.DynamoDB
-	object         string //container,ingredient,instruction,utensil. Sourced from Sessions table or request
-	updateAdd      int    // dynamodb Update ADD. Operation dependent
-	gotoRecId      int    // sourced from request
-	recId          int    // current record id for object list (ingredient,task,container,utensil) - sourced from Sessions table (updateSession()
-	recIdNotExists bool   // determines whether to create []RecId set attribute in Session  table
-	abort          bool   // early return to Alexa
-	eol            int    // sourced from Sessions table
-	// msg            string        // local (to this session only) state inf
-	// text           string        // text sent to Alexa display
-	// verbal         string        // text sent to Alexa voice
-	mChoice []mRecT // result from recipe name clashes. Holds displayed data. When user select a number we get data from here.
-	//	rbkList    []RBkT  // result of ingredient search. Holds recipe name and book name, quantity of ingredient.
-	dmsg       string
-	vmsg       string
-	ddata      string
-	selectItem int // value selected by user of index in itemList
+	clearBook      bool
+	object         string  //container,ingredient,instruction,utensil. Sourced from Sessions table or request
+	updateAdd      int     // dynamodb Update ADD. Operation dependent
+	gotoRecId      int     // sourced from request
+	recId          int     // current record id for object list (ingredient,task,container,utensil) - sourced from Sessions table (updateSession()
+	recIdNotExists bool    // determines whether to create []RecId set attribute in Session  table
+	abort          bool    // early return to Alexa
+	eol            int     // sourced from Sessions table
+	mChoice        []mRecT // multi-choice select. Recipe name and ingredient searches can result in mutliple records being returned. Results are saved.
+	makeSelect     bool
+	vPreMsg        string
+	dPreMsg        string
+	dmsg           string
+	vmsg           string
+	ddata          string
+	selectItem     int // value selected by user of index in itemList
 }
 
 // Session table record
@@ -79,7 +79,8 @@ type sessRecT struct {
 	EOL     int    // last RecId of current list. Used to determine when last record is reached or exceeded in the case of goto operation
 	Dmsg    string
 	//SrchLst []mRecT
-	RnLst []mRecT
+	RnLst  []mRecT
+	Select bool
 }
 
 const (
@@ -211,6 +212,12 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 	if len(s.reqRId) == 0 {
 		s.reqRId = lastSess.RId
 	}
+	if len(lastSess.RnLst) > 0 && s.selectItem >= 0 {
+		p := lastSess.RnLst[s.selectItem]
+		s.reqRId, s.reqRName, s.reqBkId, s.reqBkName = p.RId, p.RName, p.BkId, p.BkName
+		s.dmsg = fmt.Sprintf(`Now that you have selected [%s] recipe would you like to list ingredients, cooking instructions, utensils or containers or cancel`, s.reqRName)
+		s.vmsg = fmt.Sprintf(`Now that you have selected {%s] recipe would you like to list ingredients, cooking instructions, utensils or containers or cancel`, s.reqRName)
+	}
 	//
 	// note:
 	// 1. ALL conditional paths return  and most update Sessions. Any updateSessions do not change RecId as current state is bookrecipe_.
@@ -227,7 +234,7 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 				panic(err)
 			}
 			s.eol = 0
-			_, err = (*s).updateSession()
+			_, err = s.updateSession()
 			if err != nil {
 				return err
 			}
@@ -281,6 +288,10 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 							return nil
 						} else {
 							// finished listing or no object selected, swap to this book
+							if s.clearBook {
+								s.reqBkId = ""
+								s.reqBkName = ""
+							}
 							s.vmsg = `What recipe from this book might you be interested in. Please say a recipe name or I can list them to the display if you like if you "list".`
 							s.dmsg = `What recipe from this book might you be interested in. Please say a recipe name or I can list them to the display if you like if you "list".`
 
@@ -389,11 +400,14 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 	//  Next task will be select the record from the object table based on the s.recId.
 	switch s.operation {
 	case "goto":
+		fmt.Printf("gotoRecId = %d  %d\n", s.gotoRecId, lastSess.EOL)
 		if s.gotoRecId > lastSess.EOL { //EOL of current object (ingredients,tasks..) data
 			// do a repeat operation ie. display current record and define new message
 			s.dmsg = "request goes beyond last item in list. Please say again"
 			s.vmsg = "request goes beyond last item in list. Please say again"
 			s.recId = lastSess.RecId[objectMap[s.object]]
+			fmt.Printf("gotoRecId = %d  %d %d\n", s.gotoRecId, lastSess.EOL, s.recId)
+			s.abort = true
 			return nil
 		} else {
 			// use updateAdd value to assign new recId during updateSession
@@ -405,7 +419,8 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 		return nil
 	case "prev":
 		if lastSess.RecId[objectMap[s.object]] == 1 {
-			s.dmsg = "at beginning.."
+			s.dPreMsg = "You are at the beginning. "
+			s.vPreMsg = "You are at the beginning. "
 			s.recId = lastSess.RecId[objectMap[s.object]]
 			return nil
 		}
@@ -414,16 +429,18 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 		if lastSess.EOL > 0 && len(lastSess.RecId) > 0 {
 			if lastSess.RecId[objectMap[s.object]] == lastSess.EOL {
 				s.recId = lastSess.EOL
-				s.dmsg = "at end.."
+				s.dPreMsg = "You have reached the end. "
+				s.vPreMsg = "You have reached the end. "
+				s.abort = true
 				return nil
 			}
 		}
 		s.updateAdd = 1
-	case "select":
-
 	}
 	// check if we have Dynamodb Recid Set defined, this will be useful in updateSession
+	fmt.Println("Check lastsess.Recid..")
 	if len(lastSess.RecId) == 0 {
+		fmt.Println("	recIdNotExists = true\n")
 		s.recIdNotExists = true
 	}
 	//
@@ -432,7 +449,7 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 	// Act of updating the table will generate a new record id (ADD in updateItem) which we assign to the session context field recId.
 	// We will use sessctx.recId to pick the next record for the response.
 	//
-	s.recId, err = (*s).updateSession()
+	s.recId, err = s.updateSession()
 	if err != nil {
 		return err
 	}
@@ -576,21 +593,25 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 				"Content-Type": "application/json",
 			},
 		}, err
-	case "book", "recipe", "IngrdCat":
+	case "book", "recipe", "IngrdCat", "select", "search":
 		sessctx.curreq = bookrecipe_
+		sessctx.request = pathItem[0]
 		switch pathItem[0] {
 		case "book":
 			// book request data fully populated in this section
-			sessctx.request = "book"
-			sessctx.reqBkId = request.QueryStringParameters["bkid"]
-			err = sessctx.bookNameLookup()
+			if sessctx.reqBkId == "clear" {
+				sessctx.clearBook = true
+			} else {
+				sessctx.reqBkId = request.QueryStringParameters["bkid"]
+				err = sessctx.bookNameLookup()
+			}
 		case "search":
-			sessctx.request = pathItem[0]
+			fmt.Println("Search...")
 			sq, err := url.QueryUnescape(request.QueryStringParameters["srch"])
 			if err != nil {
 				panic(err)
 			}
-			sessctx.reqIngrdCat = sq
+			sessctx.reqIngrdCat = strings.ToLower(sq)
 		case "recipe": // must be Recipe Name not Ingredient-cat
 			// Alexa request: query parameter format either BkId-RId or Recipe name as spoken ie. Alexa's slot-type name
 			var rcp string
@@ -602,15 +623,24 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 			if _, err = strconv.Atoi(rcp[:2]); err != nil {
 				// must be a recipe name
 				sessctx.reqRName = rcp
-				err = sessctx.recipeNameLookup()
+				err = sessctx.recipeNameSearch()
 			} else {
 				id := strings.Split(rcp, "-")
 				if len(id) == 1 {
 					err = fmt.Errorf(`Error: strings.Split did not find delimiter "-" in recipe slot-type id`)
 				} else {
 					sessctx.reqBkId, sessctx.reqRId = id[0], id[1]
-					err = sessctx.recipeRLookup()
+					err = sessctx.recipeRSearch()
 				}
+			}
+		case "select":
+			var i int
+			i, err = strconv.Atoi(request.QueryStringParameters["sId"])
+			fmt.Printf("\nin select : %d\n", i)
+			if err != nil {
+				err = fmt.Errorf("%s: %s", "Error in converting int of select operation \n\n", err.Error())
+			} else {
+				sessctx.selectItem = i - 1
 			}
 			// remainder of sessctx populated in mergeAndValidateWithLastSession
 		}
@@ -619,7 +649,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		sessctx.curreq = object_
 		sessctx.operation = "next"
 	// operation
-	case "next", "prev", "goto", "repeat", "modify", "select":
+	case "next", "prev", "goto", "repeat", "modify":
 		sessctx.operation = pathItem[0]
 		sessctx.curreq = listing_
 		// sessctx.object will depend on value from last session, which must exist for an operation.
@@ -631,14 +661,6 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 				err = fmt.Errorf("%s: %s", "Error in converting int of goto operation ", err.Error())
 			} else {
 				sessctx.gotoRecId = i
-			}
-		case "select":
-			var i int
-			i, err = strconv.Atoi(request.QueryStringParameters["sId"])
-			if err != nil {
-				err = fmt.Errorf("%s: %s", "Error in converting int of goto operation \n\n", err.Error())
-			} else {
-				sessctx.selectItem = i
 			}
 		}
 		// case "yes":  check questions asked from last session (session table)
@@ -665,7 +687,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		}, err
 	}
 	if sessctx.curreq == bookrecipe_ || sessctx.abort {
-		body = fmt.Sprintf("{ %q : [ %q, %q , %q] }", "response", sessctx.vmsg, sessctx.dmsg, sessctx.ddata)
+		body = fmt.Sprintf("{ %q : [ %q, %q, %q ] }", "response", sessctx.vPreMsg+sessctx.vmsg, sessctx.dPreMsg+sessctx.dmsg, sessctx.ddata)
 		return events.APIGatewayProxyResponse{
 			StatusCode: 200,
 			Body:       body,
@@ -687,7 +709,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 			},
 		}, err
 	}
-	body = fmt.Sprintf("{ %q : [ %q, %q, %q ] }", "response", sessctx.vmsg, sessctx.dmsg, sessctx.ddata)
+	body = fmt.Sprintf("{ %q : [ %q, %q, %q ] }", "response", sessctx.vPreMsg+sessctx.vmsg, sessctx.dPreMsg+sessctx.dmsg, sessctx.ddata)
 	//
 	// check URL and action it
 	//
