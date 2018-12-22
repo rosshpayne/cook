@@ -33,6 +33,7 @@ type ctRec struct {
 
 type mRecT struct {
 	Id       int
+	IngrdCat string
 	RName    string
 	RId      string
 	BkName   string
@@ -600,9 +601,9 @@ func (s sessCtx) updateSession() (int, error) {
 		updateC = updateC.Set(expression.Name("RId"), expression.Value(""))
 	}
 	// will clear Book entries provided execution paths bypasses mergeAndValidate func.
-	if len(s.reqBkName) > 0 {
+	if len(s.reqBkName) > 0 && s.reqBkName != "0" {
 		updateC = updateC.Set(expression.Name("BKname"), expression.Value(s.reqBkName))
-	} else {
+	} else if s.reqBkName != "0" {
 		updateC = updateC.Set(expression.Name("BKname"), expression.Value(""))
 	}
 	if len(s.reqBkId) > 0 {
@@ -637,8 +638,20 @@ func (s sessCtx) updateSession() (int, error) {
 	}
 	if len(s.dmsg) > 0 {
 		updateC = updateC.Set(expression.Name("Dmsg"), expression.Value(s.dmsg))
+		updateC = updateC.Set(expression.Name("DData"), expression.Value(s.ddata))
 	} else {
 		updateC = updateC.Set(expression.Name("Dmsg"), expression.Value(""))
+		updateC = updateC.Set(expression.Name("DData"), expression.Value(""))
+	}
+	if s.closeBook {
+		updateC = updateC.Set(expression.Name("closeB"), expression.Value(true))
+	} else {
+		updateC = updateC.Set(expression.Name("closeB"), expression.Value(false))
+	}
+	if len(s.vmsg) > 0 {
+		updateC = updateC.Set(expression.Name("Vmsg"), expression.Value(s.vmsg))
+	} else {
+		updateC = updateC.Set(expression.Name("Vmsg"), expression.Value(""))
 	}
 	updateC = updateC.Set(expression.Name("Select"), expression.Value(s.makeSelect)) // make a selection
 	updateC = updateC.Set(expression.Name("ATime"), expression.Value(time.Now().String()))
@@ -872,6 +885,7 @@ func (s *sessCtx) ingredientSearch() error {
 	// data must exist in this table for each recipe. Data is populated as part of the base activity processig.
 	//
 	type dynoRecT struct {
+		PKey     string
 		SortK    string `json:"SortK"`
 		RName    string `json:"RName"`
 		BkName   string `json:"BkName"`
@@ -944,7 +958,6 @@ func (s *sessCtx) ingredientSearch() error {
 		return fmt.Errorf("Error: %s [%s] err", "in UnmarshalListMaps of ingredientSearch ", s.reqRName, err.Error())
 	}
 	if allBooks {
-		fmt.Println("allbooks...3")
 		// case where active book did not contain recipe type so library searched.
 		switch int(*result.Count) {
 		case 0:
@@ -963,7 +976,7 @@ func (s *sessCtx) ingredientSearch() error {
 			for i, v := range recS {
 				sortk := strings.Split(v.SortK, "-")
 				s.ddata += strconv.Itoa(i+1) + ": " + v.BkName + " by " + v.Authors + ". Quantity: " + v.Quantity + "\n"
-				rec := mRecT{Id: i + 1, RName: v.RName, RId: sortk[1], BkName: v.BkName, BkId: sortk[0], Authors: v.Authors, Quantity: v.Quantity}
+				rec := mRecT{Id: i + 1, IngrdCat: v.PKey, RName: v.RName, RId: sortk[1], BkName: v.BkName, BkId: sortk[0], Authors: v.Authors, Quantity: v.Quantity}
 				s.mChoice = append(s.mChoice, rec)
 			}
 			s.reqRId, s.reqRName, s.reqBkId, s.reqBkName = "", "", "", ""

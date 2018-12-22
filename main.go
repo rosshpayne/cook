@@ -45,7 +45,7 @@ type sessCtx struct {
 	curreq         int    // bookrecipe_, object_(ingredient,task,container,utensil), listing_(next,prev,goto,modify,repeat)
 	questionId     int    // what question is the user responding to with a yes|no.
 	dynamodbSvc    *dynamodb.DynamoDB
-	clearBook      bool
+	closeBook      bool
 	object         string  //container,ingredient,instruction,utensil. Sourced from Sessions table or request
 	updateAdd      int     // dynamodb Update ADD. Operation dependent
 	gotoRecId      int     // sourced from request
@@ -55,6 +55,7 @@ type sessCtx struct {
 	eol            int     // sourced from Sessions table
 	mChoice        []mRecT // multi-choice select. Recipe name and ingredient searches can result in mutliple records being returned. Results are saved.
 	makeSelect     bool
+	showList       bool // show what ever is in the current list (books, recipes)
 	vPreMsg        string
 	dPreMsg        string
 	dmsg           string
@@ -68,7 +69,7 @@ type sessCtx struct {
 type sessRecT struct {
 	Obj     string // Object - to which operation (listing) apply
 	BkId    string // Book Id
-	BKname  string // Book name - saves a lookup under some circumstances
+	BkName  string // Book name - saves a lookup under some circumstances
 	Rname   string // Recipe name - saves a lookup under some circumstances
 	SwpBkNm string
 	SwpBkId string
@@ -78,6 +79,8 @@ type sessRecT struct {
 	RecId   []int  // current record in object list.
 	EOL     int    // last RecId of current list. Used to determine when last record is reached or exceeded in the case of goto operation
 	Dmsg    string
+	Vmsg    string
+	DData   string
 	//SrchLst []mRecT
 	RnLst  []mRecT
 	Select bool
@@ -204,7 +207,7 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 		s.reqBkId = lastSess.BkId
 	}
 	if len(s.reqBkName) == 0 {
-		s.reqBkName = lastSess.BKname
+		s.reqBkName = lastSess.BkName
 	}
 	if len(s.reqRName) == 0 {
 		s.reqRName = lastSess.Rname
@@ -212,8 +215,8 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 	if len(s.reqRId) == 0 {
 		s.reqRId = lastSess.RId
 	}
-	if len(lastSess.RnLst) > 0 && s.selectItem >= 0 {
-		p := lastSess.RnLst[s.selectItem]
+	if len(lastSess.RnLst) > 0 && s.selectItem > 0 {
+		p := lastSess.RnLst[s.selectItem-1]
 		s.reqRId, s.reqRName, s.reqBkId, s.reqBkName = p.RId, p.RName, p.BkId, p.BkName
 		s.dmsg = fmt.Sprintf(`Now that you have selected [%s] recipe would you like to list ingredients, cooking instructions, utensils or containers or cancel`, s.reqRName)
 		s.vmsg = fmt.Sprintf(`Now that you have selected {%s] recipe would you like to list ingredients, cooking instructions, utensils or containers or cancel`, s.reqRName)
@@ -240,30 +243,52 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 			}
 			return nil
 		}
+		if s.showList {
+			if len(lastSess.RnLst) > 0 {
+				for i, v := range lastSess.RnLst {
+					s.dmsg = s.dmsg + fmt.Sprintf("%d. Recipe [%s] in book [%s] by [%s] quantity %s\n", i+1, v.RName, v.BkName, v.Authors, v.Quantity)
+					s.vmsg = s.dmsg + fmt.Sprintf("%d. Recipe [%s] in book [%s] by [%s] quantity %s\n", i+1, v.RName, v.BkName, v.Authors, v.Quantity)
+				}
+			}
+			s.abort = true
+			return nil
+		}
 		if s.request == "book" {
 			//
 			// book requested
 			//
 			switch len(lastSess.BkId) {
 			case 0:
+				if s.closeBook {
+					s.dmsg = `Book is already closed.`
+					s.vmsg = `Book is already closed.`
+					s.reqBkId, s.reqBkName = "", ""
+				}
 				//
 				s.eol = 0
-				_, err := (*s).updateSession()
+				_, err := s.updateSession()
 				if err != nil {
 					return err
 				}
 				return nil
 			default:
 				// there is already an initialised book for this session
-				if s.reqBkName != lastSess.BKname {
+				if s.closeBook || s.reqBkName != lastSess.BkName {
 					// requested a different book
+
 					switch len(lastSess.Rname) {
 					case 0:
-						// no active recipe. Just get book details
-						s.vmsg = `Please state what recipe you would like from this book or I can list them if you like. Say "list" or recipe name.`
-						s.dmsg = `Please state what recipe you would like from this book or I can list them if you like. Say "list" or recipe name.`
+						if s.closeBook {
+							s.dmsg = fmt.Sprintf("Book %s is closed", lastSess.BkName)
+							s.vmsg = fmt.Sprintf("Book %s is closed", lastSess.BkName)
+							s.reqBkId, s.reqBkName = "", ""
+						} else {
+							// no active recipe. Just get book details
+							s.vmsg = `Please state what recipe you would like from this book or I can list them if you like. Say "list" or recipe name.`
+							s.dmsg = `Please state what recipe you would like from this book or I can list them if you like. Say "list" or recipe name.`
+						}
 						// Book initialises. No recipe provided. Persist.
-						s.eol = 0
+						s.eol, s.reset = 0, true
 						_, err := (*s).updateSession()
 						if err != nil {
 							return err
@@ -273,28 +298,35 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 						// different book with an active recipe.
 						//s.reqRName = lastSess.Rname
 						if len(lastSess.Obj) > 0 && s.eol != lastSess.RecId[objectMap[lastSess.Obj]] {
-							// currently listing
-							s.dmsg = `You have specified a different book while having an active recipe from which you are currently listing. Do you want to swap to this book, "Yes" or "No" or "Cancel" for no?`
-							s.vmsg = `You have specified a different book while having an active recipe from which you are currently listing. Do you want to swap to this book, "Yes" or "No" or "Cancel" for no?`
-							s.questionId = 21
+							if s.closeBook {
+								s.dmsg = fmt.Sprintf("There is a book open from which you are still listing. Do you still want to close %s?", lastSess.BkName)
+								s.vmsg = fmt.Sprintf("There is a book open from which you are still listing. Do you still want to close %s?", lastSess.BkName)
+								s.questionId = 20
+							} else {
+								// currently listing
+								s.dmsg = `You have specified a different book while having an active recipe from which you are currently listing. Do you want to swap to this book, "Yes" or "No" or "Cancel" for no?`
+								s.vmsg = `You have specified a different book while having an active recipe from which you are currently listing. Do you want to swap to this book, "Yes" or "No" or "Cancel" for no?`
+								s.questionId = 21
+								s.swapBkName = s.reqBkName
+							}
 							// save book details to swap attributes in Session table
-							s.swapBkName = s.reqBkName
-							//
 							//s.eol, s.reset = 0, true - depends on yes/no answer
-							_, err := (*s).updateSession()
+							_, err := s.updateSession()
 							if err != nil {
 								return err
 							}
 							return nil
 						} else {
 							// finished listing or no object selected, swap to this book
-							if s.clearBook {
+							if s.closeBook {
 								s.reqBkId = ""
 								s.reqBkName = ""
+								s.dmsg = `Book closed. `
+								s.vmsg = `Book closed. `
+							} else {
+								s.vmsg = `What recipe from this book might you be interested in. Please say a recipe name or I can list them to the display if you like if you "list".`
+								s.dmsg = `What recipe from this book might you be interested in. Please say a recipe name or I can list them to the display if you like if you "list".`
 							}
-							s.vmsg = `What recipe from this book might you be interested in. Please say a recipe name or I can list them to the display if you like if you "list".`
-							s.dmsg = `What recipe from this book might you be interested in. Please say a recipe name or I can list them to the display if you like if you "list".`
-
 							// new book selected, zero recipe etc
 							s.eol, s.reset, s.reqRId, s.reqRName = 0, true, "", ""
 							_, err := (*s).updateSession()
@@ -416,6 +448,8 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 	case "repeat":
 		// return - no need to updateSession as nothing has changed.  Select current recId.
 		s.recId = lastSess.RecId[objectMap[s.object]]
+		s.dmsg, s.vmsg, s.ddata = lastSess.Dmsg, lastSess.Vmsg, lastSess.DData
+		s.abort = true
 		return nil
 	case "prev":
 		if lastSess.RecId[objectMap[s.object]] == 1 {
@@ -593,20 +627,22 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 				"Content-Type": "application/json",
 			},
 		}, err
-	case "book", "recipe", "IngrdCat", "select", "search":
+	case "book", "recipe", "IngrdCat", "select", "search", "list":
 		sessctx.curreq = bookrecipe_
 		sessctx.request = pathItem[0]
 		switch pathItem[0] {
 		case "book":
 			// book request data fully populated in this section
-			if sessctx.reqBkId == "clear" {
-				sessctx.clearBook = true
+			if len(pathItem) > 1 && pathItem[1] == "close" {
+				sessctx.closeBook = true
+				sessctx.reqBkId, sessctx.reqBkName = "0", "0" //keep from being reassigned in merge func
 			} else {
 				sessctx.reqBkId = request.QueryStringParameters["bkid"]
 				err = sessctx.bookNameLookup()
 			}
+		case "list":
+			sessctx.showList = true
 		case "search":
-			fmt.Println("Search...")
 			sq, err := url.QueryUnescape(request.QueryStringParameters["srch"])
 			if err != nil {
 				panic(err)
@@ -636,11 +672,10 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		case "select":
 			var i int
 			i, err = strconv.Atoi(request.QueryStringParameters["sId"])
-			fmt.Printf("\nin select : %d\n", i)
 			if err != nil {
 				err = fmt.Errorf("%s: %s", "Error in converting int of select operation \n\n", err.Error())
 			} else {
-				sessctx.selectItem = i - 1
+				sessctx.selectItem = i
 			}
 			// remainder of sessctx populated in mergeAndValidateWithLastSession
 		}
@@ -687,7 +722,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		}, err
 	}
 	if sessctx.curreq == bookrecipe_ || sessctx.abort {
-		body = fmt.Sprintf("{ %q : [ %q, %q, %q ] }", "response", sessctx.vPreMsg+sessctx.vmsg, sessctx.dPreMsg+sessctx.dmsg, sessctx.ddata)
+		body = fmt.Sprintf("{ %q : [ %q, %q ] }", "response", sessctx.vPreMsg+sessctx.vmsg, sessctx.dPreMsg+sessctx.dmsg+sessctx.ddata)
 		return events.APIGatewayProxyResponse{
 			StatusCode: 200,
 			Body:       body,
@@ -709,7 +744,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 			},
 		}, err
 	}
-	body = fmt.Sprintf("{ %q : [ %q, %q, %q ] }", "response", sessctx.vPreMsg+sessctx.vmsg, sessctx.dPreMsg+sessctx.dmsg, sessctx.ddata)
+	body = fmt.Sprintf("{ %q : [ %q, %q] }", "response", sessctx.vPreMsg+sessctx.vmsg, sessctx.dPreMsg+sessctx.dmsg+sessctx.ddata)
 	//
 	// check URL and action it
 	//
