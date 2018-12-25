@@ -26,9 +26,13 @@ type RnLkup struct {
 }
 
 type ctRec struct {
-	Txt string `json="txt"`
-	Vbl string `json="vbl"`
-	EOL int
+	Text   string `json="txt"`
+	Verbal string `json="vbl"`
+	EOL    int
+}
+
+func (ct ctRec) Alexa() talk {
+	return talk{ct.Verbal, ct.Text, ct.EOL}
 }
 
 type mRecT struct {
@@ -41,16 +45,6 @@ type mRecT struct {
 	Authors  string
 	Quantity string
 }
-
-// type BkT struct {
-// 	PKey     string
-// 	RName    string `json:"RName"`
-// 	RId      string `json:"RId"`
-// 	BkId     string
-// 	BkName   string
-// 	Authors  []string `json:"Authors"`
-// 	Authors_ string
-// }
 
 // use this struct as key into map
 type mkey struct {
@@ -72,6 +66,10 @@ type prepTaskRec struct {
 	Text   string  // all Linked preps combined text into this field
 	Verbal string
 	EOL    int // End-Of-List. Max Id assigned to each record
+}
+
+func (pt prepTaskRec) Alexa() talk {
+	return talk{pt.Verbal, pt.Text, pt.EOL}
 }
 
 type prepTaskS []prepTaskRec
@@ -183,7 +181,7 @@ func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 	return output_
 }
 
-func (s *sessCtx) getContainerRecById() (ctRec, error) {
+func (s sessCtx) getContainerRecById() (alexaComms, error) {
 
 	type pKey struct {
 		PKey  string
@@ -235,19 +233,6 @@ func (s *sessCtx) getContainerRecById() (ctRec, error) {
 	}
 	return ctrec, nil
 }
-
-// func (a Activities) TasksVerbal() string {
-// 	var b strings.Builder
-// 	b.WriteString(fmt.Sprintf("{ %q : [ ", jsonKey))
-// 	for l, p := 0, taskctl.start; p != nil; l, p = l+1, p.nextTask {
-// 		b.WriteString(fmt.Sprintf("%q", p.Task.verbal))
-// 		if l < taskctl.cnt-1 {
-// 			b.WriteString(".")
-// 		}
-// 	}
-// 	b.WriteString("] } ")
-// 	return b.String()
-// }
 
 func loadNonIngredientsMap(svc *dynamodb.DynamoDB) (map[string]bool, error) {
 	type recT struct {
@@ -767,7 +752,7 @@ func (s *sessCtx) updateSessionEOL() error {
 	return nil
 }
 
-func (s *sessCtx) getTaskRecById() (prepTaskRec, error) {
+func (s sessCtx) getTaskRecById() (alexaComms, error) {
 
 	var taskRec prepTaskRec
 	pKey := "T-" + s.reqBkId + "-" + s.reqRId
@@ -874,7 +859,7 @@ func (s *sessCtx) recipeRSearch() error {
 		return err
 	}
 	s.dmsg = s.reqRName + " in " + s.reqBkName + " by " + s.authors
-	s.vmsg = "Found " + s.reqRName + " in " + s.reqBkName + " by " + s.authors
+	s.vmsg = "sFound " + s.reqRName + " in " + s.reqBkName + " by " + s.authors
 	s.vmsg += `What would you like to list?. Say "list container" or "List Ingredient" or "List Prep tasks" or "start Cooking" or "cancel"`
 	return nil
 }
@@ -961,21 +946,21 @@ func (s *sessCtx) ingredientSearch() error {
 		// case where active book did not contain recipe type so library searched.
 		switch int(*result.Count) {
 		case 0:
-			s.vmsg = fmt.Sprintf("Alert: %s not found in [%s] and all other books. ", s.reqIngrdCat, s.reqBkName)
-			s.dmsg = fmt.Sprintf("Alert: %s not found in [%s] and all other books. ", s.reqIngrdCat, s.reqBkName)
+			s.vmsg = fmt.Sprintf("%s not found in [%s] and all other books. ", s.reqIngrdCat, s.reqBkName)
+			s.dmsg = fmt.Sprintf("%s not found in [%s] and all other books. ", s.reqIngrdCat, s.reqBkName)
 			//s.reqRId, s.reqRName, s.reqBkId, s.reqBkName = "", "", "", ""
 		case 1:
-			s.vmsg = fmt.Sprintf("Alert: %s not found in [%s], but was found in [%s]. ", s.reqIngrdCat, recS[0].BkName)
-			s.dmsg = fmt.Sprintf("Alert: %s not found in [%s], but was found in [%s]. ", s.reqIngrdCat, recS[0].BkName)
+			s.vmsg = fmt.Sprintf("%s not found in [%s], but was found in [%s]. ", s.reqIngrdCat, s.reqBkName, recS[0].BkName)
+			s.dmsg = fmt.Sprintf("%s not found in [%s], but was found in [%s]. ", s.reqIngrdCat, s.reqBkName, recS[0].BkName)
 			sortk := strings.Split(recS[0].SortK, "-")
 			s.reqRId, s.reqRName, s.reqBkId, s.reqBkName = sortk[1], recS[0].RName, sortk[0], recS[0].BkName
 		default:
 			s.makeSelect = true
-			s.vmsg = fmt.Sprintf("Alert: recipe not found in [%s] but did occur in other books. See list", s.reqBkName)
-			s.dmsg = fmt.Sprintf("Alert: ingredient-cat not found in [%s], but was found in [%s]. ", s.reqRName, recS[0].BkName)
+			s.vmsg = fmt.Sprintf(`No %s recipes found in [%s] but where found in severalother  books. Please see list and select one by saying "select" followed by its number`, s.reqIngrdCat, s.reqBkName)
+			s.dmsg = fmt.Sprintf(`No %s recipes found in [%s], but were found in the following. Please select one. `, s.reqIngrdCat)
 			for i, v := range recS {
 				sortk := strings.Split(v.SortK, "-")
-				s.ddata += strconv.Itoa(i+1) + ": " + v.BkName + " by " + v.Authors + ". Quantity: " + v.Quantity + "\n"
+				s.ddata += strconv.Itoa(i+1) + ": " + v.BkName + " by " + v.Authors + ". Quantity: " + v.Quantity + "\n "
 				rec := mRecT{Id: i + 1, IngrdCat: v.PKey, RName: v.RName, RId: sortk[1], BkName: v.BkName, BkId: sortk[0], Authors: v.Authors, Quantity: v.Quantity}
 				s.mChoice = append(s.mChoice, rec)
 			}
@@ -987,8 +972,8 @@ func (s *sessCtx) ingredientSearch() error {
 	fmt.Printf("count of book... %d\n", int(*result.Count))
 	switch int(*result.Count) {
 	case 0:
-		s.vmsg = fmt.Sprintf("Alert: %s not found in all books. ", s.reqIngrdCat, s.reqBkName)
-		s.dmsg = fmt.Sprintf("Alert: %s not found in all books. ", s.reqIngrdCat, s.reqBkName)
+		s.vmsg = fmt.Sprintf("No %s found in any recipe book. ", s.reqIngrdCat)
+		s.dmsg = fmt.Sprintf("No %s found in any recipe book. ", s.reqIngrdCat)
 	case 1:
 		s.vmsg = "The following recipe, " + recS[0].RName + " in book " + recS[0].BkName + ` by authors ` + recS[0].Authors + ` contains the ingredient. You can list other ingredients or containers, utensils used in the recipe or list the prep tasks or you can start cooking`
 		s.dmsg = "The following recipe, " + recS[0].RName + " in book " + recS[0].BkName + ` by authors ` + recS[0].Authors + ` contains the ingredient. You can list other ingredients or containers, utensils used in the recipe or list the prep tasks or you can start cooking`
@@ -996,8 +981,8 @@ func (s *sessCtx) ingredientSearch() error {
 		s.reqRId, s.reqRName, s.reqBkId, s.reqBkName = sortk[1], recS[0].RName, sortk[0], recS[0].BkName
 	default:
 		s.makeSelect = true
-		s.vmsg = fmt.Sprintf("Alert: multiple %s found. See display", s.reqIngrdCat)
-		s.dmsg = fmt.Sprintf("Alert: multiple %s found. See list", s.reqIngrdCat)
+		s.vmsg = fmt.Sprintf("Multiple %s recipes found. See display", s.reqIngrdCat)
+		s.dmsg = fmt.Sprintf(`%s recipes. Please select one by saying "select [number-in-list]"\n`, s.reqIngrdCat)
 		for i, v := range recS {
 			sortk := strings.Split(v.SortK, "-")
 			s.ddata += strconv.Itoa(i+1) + ": " + v.BkName + " by " + v.Authors + ". Quantity: " + v.Quantity + "\n"
@@ -1019,8 +1004,17 @@ func (s *sessCtx) recipeNameSearch() error {
 		SortK int
 		RName string
 	}
+	var (
+		expr expression.Expression
+		err  error
+	)
 	kcond := expression.KeyEqual(expression.Key("RName"), expression.Value(s.reqRName))
-	expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
+	if len(s.reqBkId) > 0 {
+		filter := expression.Equal(expression.Name("PKey"), expression.Value("R-"+s.reqBkId))
+		expr, err = expression.NewBuilder().WithKeyCondition(kcond).WithFilter(filter).Build()
+	} else {
+		expr, err = expression.NewBuilder().WithKeyCondition(kcond).Build()
+	}
 	if err != nil {
 		panic(err)
 	}
@@ -1056,7 +1050,7 @@ func (s *sessCtx) recipeNameSearch() error {
 		err = s.bookNameLookup()
 		//
 		s.dmsg = s.reqRName + " in " + s.reqBkName + " by " + s.authors
-		s.vmsg = "Found " + s.reqRName + " in " + s.reqBkName + " by " + s.authors
+		s.vmsg = "yFound " + s.reqRName + " in " + s.reqBkName + " by " + s.authors
 		s.vmsg += `What would you like to list?. Say "list container" or "List Ingredient" or "List Prep tasks" or "start Cooking" or "cancel"`
 	default:
 		// more than one recipe-book found
@@ -1133,8 +1127,5 @@ func (s *sessCtx) bookNameLookup() error {
 	}
 	s.authors = authors
 	s.reqBkName = rec[0].PKey[3:] // trim "BK-" prefix
-	s.dmsg = s.reqBkName + " by " + s.authors
-	s.vmsg = "Found book" + s.reqBkName + " by " + s.authors
-	s.vmsg += `You can ask for a recipe in this book by saying "open at" recipe name or search for recipes by saying "search for " ingredient category e.g. chocolate cake`
 	return nil
 }
