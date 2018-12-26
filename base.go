@@ -376,11 +376,11 @@ func readBaseRecipeForContainers(svc *dynamodb.DynamoDB, reqRId_ string) (Contai
 	return ContainerM, nil
 }
 
-func readBaseRecipeForTasks(svc *dynamodb.DynamoDB, reqRId_ string) (Activities, error) {
+func readBaseRecipeForTasks(svc *dynamodb.DynamoDB, reqBkId_ string, reqRId_ string) (Activities, error) {
 	//
 	// Table:  Activity
 	//
-	kcond := expression.KeyEqual(expression.Key("rId"), expression.Value(reqRId_))
+	kcond := expression.KeyEqual(expression.Key("rId"), expression.Value(reqBkId_+"-"+reqRId_))
 	//kcond := expression.KeyAnd(expression.KeyEqual(expression.Key("rId"), expression.Value("XYZ")), expression.KeyLessThan(expression.Key("aId"), expression.Value(30)))
 	//	projection := expression.NamesList(expression.Name("coord[0]"), expression.Name("prep.txt"))
 	//fcond := expression.Equal(expression.Name("aId"), expression.Value(30))
@@ -775,4 +775,4 @@ func readBaseRecipeForTasks(svc *dynamodb.DynamoDB, reqRId_ string) (Activities,
 	}
 	return ActivityS, nil
 
-} // 
+} //

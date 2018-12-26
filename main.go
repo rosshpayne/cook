@@ -117,42 +117,20 @@ func init() {
 	}
 }
 
-type alexaComms interface {
-	Alexa() talk
+type alexaDialog interface {
+	Alexa() dialog
 }
-type talk struct {
+type dialog struct {
 	Verbal  string
 	Display string
 	EOL     int
 }
 
 func (s *sessCtx) mergeAndValidateWithLastSession() error {
-	// uses UpdateItem to:
-	// 1.  create a new session-state record if record not present. Returns Cid=1
-	// 2.  updates Cid attribute by 1 if record present. Returns incremented Cid.
 	// TODO - add TTL so records are removed automatically.
 	//
 	// Table:  Sessions
 	//
-	// get session and lastOperation or insert new session record with currentOPeration saved as lastOPeration
-	// If currentOp is either nextContainer or nextTask ADD 1 to id
-	// if currentOp is either repeatContainer or repeatTask ADD 0 to id.
-	// if currentOP is either prevContainer or prevTask ADD -1 to id - provided it not at 1 so no previous.
-	// if currentOp is none of the above then don't ADD 0 to id
-	// if context has flipped midstream ie. user issued cancel with intent to swap request e.g from containers to tasks.
-	//   SET id to 1 ie. iether container or task id is now 1, so first item will be returned.
-	// user issues "GOTO task <ingredient>|<number>" then SET id = <num> and lastOperation to listTask and return task <num>
-	// user issues Modify <QTY>|<TIME>|<TEXT>|<INGREDIENT>
-
-	// Operation has two parts.  Object: task|container  & Command: next|prev|goto (random access)
-	// so given above opertions each execution will require two queries on Session table
-	//   1.  Get lastOperation & compare with CurrentOperation
-	//   2.  If the same than ADD 1|0|-1 or SET ?  id depending on Command
-	//   3.  If different then its either flipped or one has finished and moved onto the next.
-	//
-	// **** Get last state of the session as we need to know its previous Object state if any.
-	// ****   NB. updateSession() cannot return previous state only NEW values so we must run a separate query to get old values
-	//            before they are updated.
 	type pKey struct {
 		Sid string
 	}
@@ -539,7 +517,7 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 
 func (s *sessCtx) getRecById() error {
 	var (
-		at  alexaComms
+		at  alexaDialog
 		err error
 	)
 	switch s.object {
@@ -636,14 +614,14 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		if err != nil {
 			panic(err)
 		}
-		sessctx.reqBkId = "20"
+		sessctx.reqBkId = "21"
 		sessctx.object = "task"
-		sessctx.reqRId = "1"
-		sessctx.reqRName = "Take-Home Chocolate Cake"
-		sessctx.reqBkName = "SWEET"
+		sessctx.reqRId = "3"
+		sessctx.reqRName = "Risotto ero with Swiss Chard"
+		sessctx.reqBkName = "River Cafe"
 		authors := []string{"Yotam Ottolenghi", "Helen Goh"}
 		cat := ""
-		aa, err := readBaseRecipeForTasks(sessctx.dynamodbSvc, sessctx.reqRId)
+		aa, err := readBaseRecipeForTasks(sessctx.dynamodbSvc, sessctx.reqBkId, sessctx.reqRId)
 		if err != nil {
 			panic(err)
 		}

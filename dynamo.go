@@ -31,8 +31,8 @@ type ctRec struct {
 	EOL    int
 }
 
-func (ct ctRec) Alexa() talk {
-	return talk{ct.Verbal, ct.Text, ct.EOL}
+func (ct ctRec) Alexa() dialog {
+	return dialog{ct.Verbal, ct.Text, ct.EOL}
 }
 
 type mRecT struct {
@@ -68,8 +68,8 @@ type prepTaskRec struct {
 	EOL    int // End-Of-List. Max Id assigned to each record
 }
 
-func (pt prepTaskRec) Alexa() talk {
-	return talk{pt.Verbal, pt.Text, pt.EOL}
+func (pt prepTaskRec) Alexa() dialog {
+	return dialog{pt.Verbal, pt.Text, pt.EOL}
 }
 
 type prepTaskS []prepTaskRec
@@ -181,7 +181,7 @@ func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 	return output_
 }
 
-func (s sessCtx) getContainerRecById() (alexaComms, error) {
+func (s sessCtx) getContainerRecById() (alexaDialog, error) {
 
 	type pKey struct {
 		PKey  string
@@ -752,7 +752,7 @@ func (s *sessCtx) updateSessionEOL() error {
 	return nil
 }
 
-func (s sessCtx) getTaskRecById() (alexaComms, error) {
+func (s sessCtx) getTaskRecById() (alexaDialog, error) {
 
 	var taskRec prepTaskRec
 	pKey := "T-" + s.reqBkId + "-" + s.reqRId
