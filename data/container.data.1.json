@@ -1,0 +1,158 @@
+{
+      "Ingredient" : [ 
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAP-S" },
+                  "label" : { "S" : "container" },
+                  "type" : { "S": "container" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "small" } 
+                                      }
+                              },
+                  "purpose" : {"S":"hold single ingredient"}
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAP-M" },
+                  "label" : { "S" : "container" },
+                  "type" : { "S": "container" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "medium" } 
+                                      }
+                              },
+                  "purpose" : {"S":"hold single ingredient"}
+                   }
+            }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAP-L" },
+                  "label" : { "S" : "container" },
+                  "type" : { "S": "container" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "large" } 
+                                      }
+                              },
+                  "purpose" : {"S":"hold single ingredient"}
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "Sausepan-L" },
+                  "label" : { "S" : "Sausepan" },
+                  "type" : { "S": "Sausepan" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "large" } 
+                                      }
+                              },
+                  "purpose" : {"S":"holding"}
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "Sausepan-M" },
+                  "label" : { "S" : "Sausepan" },
+                  "type" : { "S": "Sausepan" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "medium" } 
+                                      }
+                              },
+                  "purpose" : {"S":"holding"}
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "Sausepan-S" },
+                  "label" : { "S" : "Sausepan" },
+                  "type" : { "S": "Sausepan" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "small" } 
+                                      }
+                              },
+                  "purpose" : {"S":"holding"}
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "MC-S" },
+                  "label" : { "S" : "MeasuringCup" },
+                  "type" : { "S": "MeasuringCup" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "1.5 Cup" } 
+                                      }
+                              },
+                  "purpose" : {"S":"measuring"}
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "MC-M" },
+                  "label" : { "S" : "MeasuringCup" },
+                  "type" : { "S": "MeasuringCup" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "2.5 Cup" } 
+                                      }
+                              },
+                  "purpose" : {"S":"measuring"}
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "MC-L" },
+                  "label" : { "S" : "MeasuringBowel" },
+                  "type" : { "S": "MeasuringBowel" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "4.5 Cup" } 
+                                      }
+                              },
+                  "purpose" : {"S":"measuring"}
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-21-3" },
+                  "SortK" : { "S": "RisoPan" },
+                  "label" : { "S" : "Pan" },
+                  "type" : { "S": "Pan" },
+                  "contains" : { "S": "risotto ingredients" },
+                  "measure" : { "M" : { 
+                                      "diameter" : { "N" : "30" } , 
+                                      "height"   : { "N" : "2"  } ,
+                                      "unit" : { "S" : "cm" }  
+                                      }
+                              },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "purpose" : {"S":"Cooking"}
+                   }
+               }
+            }
+      ]
+}

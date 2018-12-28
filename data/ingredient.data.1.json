@@ -1,0 +1,53 @@
+{
+      "Ingredient" : [ 
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "NI" },
+                "SortK" : { "S": "sugar"}
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "NI" },
+                "SortK" : { "S": "butter"}
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "NI" },
+                "SortK" : { "S": "seasoning"}
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "NI" },
+                "SortK" : { "S": "flour"}
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "NI" },
+                "SortK" : { "S": "salt"}
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "NI" },
+                "SortK" : { "S": "vanilla"}
+            }
+        }
+        }
+        ]
+}
+

@@ -1,0 +1,27 @@
+{
+    "AttributeDefinitions": [
+        {
+            "AttributeName": "PKey", 
+            "AttributeType": "S"
+        },
+        {
+            "AttributeName": "SortK", 
+            "AttributeType": "S"
+        }
+    ], 
+    "TableName": "Ingredient", 
+    "KeySchema": [
+        {
+            "AttributeName": "PKey", 
+            "KeyType": "HASH"
+        },
+        {
+            "AttributeName": "SortK", 
+            "KeyType": "RANGE"
+        }
+    ],
+     "ProvisionedThroughput": {
+                "ReadCapacityUnits": 1, 
+                "WriteCapacityUnits": 1
+    }
+}
