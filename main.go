@@ -38,7 +38,10 @@ type sessCtx struct {
 	reqIngrdCat    string // user tries to find recipe using ingredients cat-subcat. Query ingredients table.
 	swapBkName     string
 	swapBkId       string
+	authorS        []string
 	authors        string // siRNames of the first two authors
+	cat            string // recipe category - used for indexing recipe
+	subcat         string // recipe subcategory - used for indexing recipe
 	dbatchNum      string // mulit-records sent to display in fixed batch sizes (6 say).
 	reset          bool   // zeros []RecId in session table during changes to recipe, as []RecId is recipe dependent
 	curreq         int    // bookrecipe_, object_(ingredient,task,container,utensil), listing_(next,prev,goto,modify,repeat)
@@ -603,36 +606,59 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 	}
 	switch pathItem[0] {
 	case "load":
-		sessctx.reqBkId = "20"
-		sessctx.object = "container"
-		sessctx.reqRId = "1"
-		a, err := readBaseRecipeForContainers(sessctx.dynamodbSvc, sessctx.reqRId)
+		// sessctx.reqRName = "Risotto ero with Swiss Chard"
+		// sessctx.reqBkName = "River Cafe"
+		// authors := []string{"Yotam Ottolenghi", "Helen Goh"}
+		sessctx.reqBkId = request.QueryStringParameters["bkid"]
+		sessctx.reqRId = request.QueryStringParameters["rid"]
+		//
+		// Populate recipe and book names
+		//
+		fmt.Println("recipeRSearch")
+		err = sessctx.recipeRSearch()
 		if err != nil {
-			panic(err)
+
+			fmt.Printf("error: %s", err.Error())
+			break
 		}
-		_, err = a.saveContainerUsage(sessctx)
-		if err != nil {
-			panic(err)
-		}
-		sessctx.reqBkId = "21"
 		sessctx.object = "task"
-		sessctx.reqRId = "3"
-		sessctx.reqRName = "Risotto ero with Swiss Chard"
-		sessctx.reqBkName = "River Cafe"
-		authors := []string{"Yotam Ottolenghi", "Helen Goh"}
-		cat := ""
-		aa, err := readBaseRecipeForTasks(sessctx.dynamodbSvc, sessctx.reqBkId, sessctx.reqRId)
+		fmt.Println("readBaseRecipeForTasks")
+		aa, err := sessctx.readBaseRecipeForTasks()
 		if err != nil {
-			panic(err)
+			fmt.Printf("error: %s", err.Error())
+			break
 		}
-		_, err = aa.saveTasks(sessctx)
+		fmt.Println("saveTasks")
+		taskList, err := aa.saveTasks(sessctx)
 		if err != nil {
-			panic(err)
+			fmt.Printf("error: %s", err.Error())
+			break
 		}
 		s := sessctx
-		err = aa.IndexIngd(s.dynamodbSvc, s.reqBkId, s.reqBkName, s.reqRName, s.reqRId, cat, authors)
+		fmt.Println("IndexIngd")
+		err = aa.IndexIngd(s.dynamodbSvc, s.reqBkId, s.reqBkName, s.reqRName, s.reqRId, s.cat, s.subcat, s.authors)
 		if err != nil {
-			panic(err)
+
+			fmt.Printf("error: %s", err.Error())
+			break
+		}
+		//
+		// Populate container and task records in recipe and ingredient table respectively
+		//
+		sessctx.object = "container"
+		fmt.Println("readBaseRecipeForContainers")
+		a, err := sessctx.readBaseRecipeForContainers(taskList)
+		if err != nil {
+
+			fmt.Printf("error: %s", err.Error())
+			break
+		}
+		fmt.Printf("after readBaseRecipeForContainers:  len %d   %#v", len(a), a)
+		_, err = a.saveContainerUsage(sessctx)
+		if err != nil {
+
+			fmt.Printf("error: %s", err.Error())
+			break
 		}
 		s.abort = true
 	//

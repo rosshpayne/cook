@@ -1,10 +1,10 @@
 {
-      "Container" : [ 
+      "Ingredient" : [ 
         {
           "PutRequest": { 
                "Item": { 
-                  "rId" : { "S": "XYZ" },
-                  "cId" : { "S": "CookingPot" },
+                  "PKey" : { "S": "C-XYZ" },
+                  "SortK" : { "S": "CookingPot" },
                   "type" : { "S": "CookingPot" },
                   "label" : { "S": "pototoePot" },
                   "measure" : { "M" : { "size" : { "S" : "large" } } },
@@ -17,8 +17,8 @@
          {
          "PutRequest": { 
                "Item": { 
-                  "rId" : { "S": "XYZ" },
-                  "cId" : { "S": "SimmeringPan" },
+                  "PKey" : { "S": "C-XYZ" },
+                  "SortK" : { "S": "SimmeringPan" },
                   "type" : { "S": "Pan" },
                   "label": { "S": "SimmingPan"},
                   "measure" : { "M" : { "size" : { "S" : "large" } } },
@@ -31,8 +31,8 @@
          {
          "PutRequest": { 
                "Item": { 
-                  "rId" : { "S": "XYZ" },
-                  "cId" : { "S": "FishCakes" },
+                  "PKey" : { "S": "C-XYZ" },
+                  "SortK" : { "S": "FishCakes" },
                   "label" : { "S" : "RolledFCs" },
                   "type" : { "S": "Plate" },
                   "contents" : { "S": "rolled fishcakes" },
@@ -45,8 +45,8 @@
          {
          "PutRequest": { 
                "Item": {
-                  "rId" : { "S": "XYZ" },
-                  "cId" : { "S": "BreadCrumbs" },
+                  "PKey" : { "S": "C-XYZ" },
+                  "SortK" : { "S": "BreadCrumbs" },
                   "label" : { "S" : "Breadcrumbs" },
                   "type" : { "S": "Plate" },
                   "measure" : { "M" : { "size" : { "S" : "medium" } } },
@@ -59,8 +59,8 @@
          {
           "PutRequest": { 
                "Item": {
-                  "rId" : { "S": "XYZ" },
-                  "cId" : { "S": "CookingPan" },
+                  "PKey" : { "S": "C-XYZ" },
+                  "SortK" : { "S": "CookingPan" },
                   "contents" : { "S": "ParsleySause" },
                   "label" : { "S" : "Sausepan" },
                   "type" : { "S": "Sausepan" },
@@ -73,8 +73,8 @@
             {
             "PutRequest": { 
                "Item": {
-                  "rId" : { "S": "XYZ" },
-                  "cId" : { "S": "PreparedFishCakes" },
+                  "PKey" : { "S": "C-XYZ" },
+                  "SortK" : { "S": "PreparedFishCakes" },
                   "contains" : { "S": "coated fishcakes" },
                   "label" : { "S" : "plate" },
                   "type" : { "S": "Plate" },
@@ -87,8 +87,8 @@
             {
             "PutRequest": { 
                "Item": {
-                  "rId" : { "S": "XYZ" },
-                  "cId" : { "S": "FryingPan" },
+                  "PKey" : { "S": "C-XYZ" },
+                  "SortK" : { "S": "FryingPan" },
                   "contains" : { "S": "fishcakes" },
                   "type" : { "S": "FryingPan" },
                   "label" : { "S" : "fryingPan" },
@@ -101,8 +101,8 @@
             {
             "PutRequest": { 
                "Item": {
-                  "rId" : { "S": "XYZ" },
-                  "cId" : { "S": "DrainPlate" },
+                  "PKey" : { "S": "C-XYZ" },
+                  "SortK" : { "S": "DrainPlate" },
                   "label" : { "S" : "DrainFCs" },
                   "contains" : { "S": "fishcakes" },
                   "type" : { "S": "Plate" },
@@ -115,8 +115,8 @@
             {
             "PutRequest": { 
                "Item": {
-                  "rId" : { "S": "XBN" },
-                  "cId" : { "S": "ChocMix" },
+                  "PKey" : { "S": "C-XBN" },
+                  "SortK" : { "S": "ChocMix" },
                   "label" : { "S" : "ChocMix" },
                   "contains" : { "S": "chocolate" },
                   "type" : { "S": "Bowl" },
@@ -129,8 +129,8 @@
             {
             "PutRequest": { 
             "Item": { 
-               "rId" : { "S": "XBN" },
-               "cId" : { "S": "EggWhites" },
+               "PKey" : { "S": "C-XBN" },
+               "SortK" : { "S": "EggWhites" },
                "type" : { "S": "Bowl" },
                "label" : { "S": "egg whites" },
                "measure" : { "M" : { "size" : { "S" : "medium" } } },
@@ -143,8 +143,8 @@
          {
          "PutRequest": { 
              "Item": { 
-                     "rId" : { "S": "XBN" },
-                     "cId" : { "S": "EggYolks" },
+                     "PKey" : { "S": "C-XBN" },
+                     "SortK" : { "S": "EggYolks" },
                      "type" : { "S": "Bowl" },
                      "label" : { "S": "egg yolks" },
                      "measure" : { "M" : { "size" : { "S" : "small" } } },
@@ -157,8 +157,8 @@
          {
           "PutRequest": { 
                "Item": { 
-                  "rId" : { "S": "XYZ" },
-                  "cId" : { "S": "BeatenEggs" },
+                  "PKey" : { "S": "C-XYZ" },
+                  "SortK" : { "S": "BeatenEggs" },
                   "type" : { "S": "Bowl" },
                   "label" : { "S": "pototoePot" },
                   "measure" : { "M" : { "size" : { "S" : "medium" } } },
@@ -171,8 +171,8 @@
             {
             "PutRequest": { 
                "Item": {
-                  "rId" : { "S": "XBN" },
-                  "cId" : { "S": "CakeTin" },
+                  "PKey" : { "S": "C-XBN" },
+                  "SortK" : { "S": "CakeTin" },
                   "label" : { "S" : "Cake Tin" },
                   "type" : { "S": "caketin" },
                   "contains" : { "S": "cake mixture" },
@@ -190,8 +190,8 @@
             {
             "PutRequest": { 
                "Item": {
-                  "rId" : { "S": "1" },
-                  "cId" : { "S": "ChochMixBowl" },
+                  "PKey" : { "S": "C-20-1" },
+                  "SortK" : { "S": "ChochMixBowl" },
                   "type" : { "S": "Heatproof Glass Bowl" },
                   "label" : { "S" : "glass bowl" },
                   "contains" : { "S": "cake mixture" },
@@ -207,8 +207,8 @@
             {
             "PutRequest": { 
                "Item": {
-                  "rId" : { "S": "1" },
-                  "cId" : { "S": "WaterPan" },
+                  "PKey" : { "S": "C-20-1" },
+                  "SortK" : { "S": "WaterPan" },
                   "type" : { "S": "Sausepan" },
                   "label" : { "S" : "sausepan" },
                   "measure" : { "M" : { 
@@ -223,8 +223,8 @@
             {
             "PutRequest": { 
                "Item": {
-                  "rId" : { "S": "1" },
-                  "cId" : { "S": "ButterPlate" },
+                  "PKey" : { "S": "C-20-1" },
+                  "SortK" : { "S": "ButterPlate" },
                   "label" : { "S" : "plate" },
                   "type" : { "S": "plate or board" },
                   "contains" : { "S": "cut up pieces of butter" },
@@ -240,8 +240,8 @@
             {
             "PutRequest": { 
                "Item": {
-                  "rId" : { "S": "1" },
-                  "cId" : { "S": "FlourBowl" },
+                  "PKey" : { "S": "C-20-1" },
+                  "SortK" : { "S": "FlourBowl" },
                   "label" : { "S" : "bowl" },                  
                   "type" : { "S": "bowl" },
                   "contains" : { "S": "dry ingredients" },
@@ -257,8 +257,8 @@
              {
             "PutRequest": { 
                "Item": {
-                  "rId" : { "S": "1" },
-                  "cId" : { "S": "EggBowl" },
+                  "PKey" : { "S": "C-20-1" },
+                  "SortK" : { "S": "EggBowl" },
                   "label" : { "S" : "bowl" },
                   "type"  : { "S" : "bowl" },
                   "contains" : { "S": "beaten eggs" },
@@ -274,8 +274,8 @@
             {
             "PutRequest": { 
                "Item": {
-                  "rId" : { "S": "1" },
-                  "cId" : { "S": "CoffeeBowl" },
+                  "PKey" : { "S": "C-20-1" },
+                  "SortK" : { "S": "CoffeeBowl" },
                   "label" : { "S" : "bowl" },
                   "type" : { "S": "bowl" },
                   "contains" : { "S": "disolved coffee" },
@@ -291,8 +291,8 @@
             {
             "PutRequest": { 
                "Item": {
-                  "rId" : { "S": "1" },
-                  "cId" : { "S": "CakeTin" },
+                  "PKey" : { "S": "C-20-1" },
+                  "SortK" : { "S": "CakeTin" },
                   "label" : { "S" : "Cake Tin" },
                   "type" : { "S": "cake tin" },
                   "contains" : { "S": "cake mixture" },
@@ -310,8 +310,8 @@
             {
             "PutRequest": { 
                "Item": {
-                  "rId" : { "S": "1" },
-                  "cId" : { "S": "XBowl" },
+                  "PKey" : { "S": "C-20-1" },
+                  "SortK" : { "S": "XBowl" },
                   "label" : { "S" : "XBowl" },
                   "type" : { "S": "XTypical bowl" },
                   "contains" : { "S": "Xcake mixture" },

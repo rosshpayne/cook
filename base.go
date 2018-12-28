@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -69,8 +71,8 @@ type taskT struct {
 }
 
 type Container struct {
-	Rid      string     `json:"rId"`
-	Cid      string     `json:"cId"`
+	// Rid      string     `json:"PKey"`
+	Cid      string     `json:"SortK"`
 	Label    string     `json:"label"`
 	Type     string     `json:"type"`
 	Purpose  string     `json:"purpose"`
@@ -78,7 +80,9 @@ type Container struct {
 	Measure  MeasureCT  `json:"measure"`
 	Contains string     `json:"contains"`
 	Message  string     `json:"message"`
-	Task     []taskT    // slice of tasks (Prep and Task activites) associated with container
+	start    int        // first id in recipe tasks where container is used
+	last     int        // last id in recipe tasks where container is sourced from or recipe is complete.
+	Activity []taskT    // slice of tasks (Prep and Task activites) associated with container
 }
 
 type DeviceT struct {
@@ -106,8 +110,8 @@ type PerformT struct {
 	Parallel  bool         `json:"parallel"`
 	Link      bool         `json:"link"`
 	AddToCp   []*Container // it is thought that only one addToC will be used per activity - but lets be flexible.
-	UseCp     []*Container
-	SourceCp  []*Container
+	UseCp     []*Container // ---"---
+	SourceCp  []*Container // ---"---
 }
 
 type MeasureT struct {
@@ -127,8 +131,8 @@ type IngredientT struct {
 }
 
 type Activity struct {
-	RId           string     `json:"rId"`
-	AId           int        `json:"aId"`
+	// Pkey          string     `json:"PKey"`
+	AId           int        `json:"SortK"`
 	Label         string     `json:"label"`
 	Ingredient    string     `json:"ingrd"`    //
 	IngrdQualifer string     `json:"iQual"`    // (append) to ingredient
@@ -170,14 +174,218 @@ type prepCtl struct {
 
 var prepctl prepCtl = prepCtl{}
 
+func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
+	type ctCount struct {
+		C   []*Container
+		num int
+	}
+	var b strings.Builder
+	output_ := []string{}
+	if len(cm) > 0 {
+		// map[Size Type]count
+		containerList := make(map[mkey]*ctCount)
+		// ContainerM - map[Cid]*Container
+		// group by  container type and size - as both represent attribues of a single physical container we want to count.
+		for _, v := range cm {
+			z := mkey{v.Measure.Size, v.Type}
+			if y, ok := containerList[z]; !ok {
+				// key does not exist, go returns zero value of *ctCount, ie. nil
+				// create new pointer value and assign values
+				y := new(ctCount)
+				y.num = 1
+				// zero value of slice is nil (metadata only), first append will allocate underlying array
+				y.C = append(y.C, v)
+				containerList[z] = y
+			} else {
+				y.num += 1
+				y.C = append(y.C, v)
+			}
+		}
+		// populate slice which satisfies sort interface. After sorting containers of same type together but of different sizes
+		// 2xlarge glass bowel 1xsmall glass bowel
+		clsorted := clsort{}
+		for k, _ := range containerList {
+			clsorted = append(clsorted, k)
+		}
+		// use sorted keys to access ma
+		sort.Sort(clsorted)
+		for _, v := range clsorted {
+			if containerList[v].num > 1 {
+				b.WriteString(fmt.Sprintf(" %d %s ", containerList[v].num, strings.Title(v.size+" "+v.typE+"s")))
+				for i, d := range containerList[v].C {
+					switch i {
+					case 0:
+						b.WriteString(fmt.Sprintf(" one for %s", d.Purpose+" "+d.Contains+" "))
+					default:
+						b.WriteString(fmt.Sprintf("%s ", " another for "+d.Purpose+" "+d.Contains))
+					}
+				}
+			} else {
+				c := containerList[v].C[0]
+				if len(v.size) != 0 {
+					b.WriteString(fmt.Sprintf(" %d %s ", containerList[v].num, strings.Title(v.size+" "+v.typE)))
+				} else {
+					b.WriteString(fmt.Sprintf(" %d %.0fx%.0f%s %s ", containerList[v].num, c.Measure.Diameter, c.Measure.Height, c.Measure.Unit, strings.Title(v.typE)))
+				}
+				for _, d := range containerList[v].C {
+					b.WriteString(fmt.Sprintf(" for %s ", d.Purpose+" "+d.Contains+"  "))
+				}
+			}
+			output_ = append(output_, b.String())
+			b.Reset()
+		}
+	}
+	// store number of records in recipe table
+	return output_
+}
+
+func (a Activities) GenerateTasks(pKey string) prepTaskS {
+	// Merge and Populate prepTask and then sort.
+	//  1. first load parrellelisable tasks identified by words or prep property "parallel" or device (=oven)
+	//  2. sort
+	//  3. add other tasks in order
+	//
+	var ptS prepTaskS // this type satisfies sort interface.
+	processed := make(map[int]bool, prepctl.cnt)
+	//
+	// sort parallelisable prep tasks
+	//
+	for p := prepctl.start; p != nil; p = p.nextPrep {
+		var add bool
+		var pp = p.Prep
+		if pp.UseDevice != nil {
+			if strings.ToLower(pp.UseDevice.Type) == "oven" {
+				add = true
+			}
+		}
+		if pp.Parallel && !pp.Link || add {
+			if p.prev != nil && p.prev.Prep != nil {
+				if p.prev.Prep.Link {
+					continue // exclude if part of linked activity
+				}
+			}
+			processed[p.AId] = true
+			pt := prepTaskRec{PKey: pKey, AId: p.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal}
+			ptS = append(ptS, pt)
+		}
+	}
+	sort.Sort(ptS)
+	//
+	// generate Task Ids
+	//
+	var i int = 1 // start at one as works better with UpateItem ADD semantics.
+	for j := 0; j < len(ptS); i++ {
+		ptS[j].SortK = i
+		j++
+	}
+	//
+	// append remaining prep tasks - these are serial tasks so order unimportant
+	//
+	for p := prepctl.start; p != nil; p = p.nextPrep {
+		if _, ok := processed[p.AId]; ok {
+			continue
+		}
+		pt := prepTaskRec{PKey: pKey, SortK: i, AId: p.AId, Type: 'P', time: p.Prep.Time, Text: p.Prep.text, Verbal: p.Prep.verbal}
+		ptS = append(ptS, pt)
+		i++
+	}
+	//
+	// append tasks
+	//
+	for p := taskctl.start; p != nil; p = p.nextTask {
+		pt := prepTaskRec{PKey: pKey, SortK: i, AId: p.AId, Type: 'T', time: p.Task.Time, Text: p.Task.text, Verbal: p.Task.verbal}
+		ptS = append(ptS, pt)
+		i++
+	}
+	// now that we know the size of the list assign End-Of-List field. This approach replaces MaxId[] set stored in Recipe table
+	// this mean each record knows how long the list is - helpful in a stateless Lambda app.
+	eol := len(ptS)
+	for i := range ptS {
+		ptS[i].EOL = eol
+	}
+	// store number of records in recipe table
+	return ptS
+}
+
+func (a Activities) PrintRecipe(rId string) (prepTaskS, string) {
+	// *** NB> . this currently only handles prep tasks - which may not be relevant in printed recipe. So this func may not be useful.
+	// Merge and Populate prepTask and then sort.
+	//  1. first load parrellelisable tasks identified by words or prep property "parallel" or device (=oven)
+	//  2. sort
+	//  3. add other tasks in order
+	//
+	var ptS prepTaskS
+	pid := 0                                     // index in prepOrder
+	processed := make(map[int]bool, prepctl.cnt) // set of tasks
+	//
+	// sort parallelisable prep tasks
+	//
+	for p := prepctl.start; p != nil; p = p.nextPrep {
+		var add bool
+		var pp = p.Prep
+		if pp.UseDevice != nil {
+			if strings.ToLower(pp.UseDevice.Type) == "oven" {
+				add = true
+			}
+		}
+		if pp.Parallel && !pp.Link || add {
+			if p.prev != nil && p.prev.Prep != nil {
+				if p.prev.Prep.Link {
+					continue // exclude if part of linked activity
+				}
+			}
+			processed[p.AId] = true
+			pt := prepTaskRec{time: pp.Time, Text: pp.text}
+			ptS = append(ptS, pt)
+		}
+	}
+	sort.Sort(ptS)
+	//
+	// append remaining prep tasks - these are serial tasks so order unimportant
+	//
+	for p := prepctl.start; p != nil; p = p.nextPrep {
+		if _, ok := processed[p.AId]; ok {
+			continue
+		}
+		var txt string
+		var stime float32
+		var count int
+		if p.Prep.Link {
+			for ; p.Prep.Link; p = p.nextPrep {
+				//handle Link prep tasks
+				txt += p.Prep.text + " and "
+				stime += p.Prep.Time
+				count++
+			}
+			txt += p.Prep.text
+			stime += p.Prep.Time
+			//
+			pt := prepTaskRec{time: stime, Text: txt}
+			ptS = append(ptS, pt)
+		} else {
+			pt := prepTaskRec{time: p.Prep.Time, Text: p.Prep.text}
+			ptS = append(ptS, pt)
+		}
+		pid++
+	}
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("{ %q : [", jsonKey))
+	for i, pt := range ptS {
+		b.WriteString(fmt.Sprintf("%q", pt.Text))
+		if i < len(ptS)-1 {
+			b.WriteString(",")
+		}
+	}
+	b.WriteString("] } ")
+	return ptS, b.String()
+} // PrintRecipe
+
 //func readBase(..) (interface{} , error)
-func readBaseRecipeForContainers(svc *dynamodb.DynamoDB, reqRId_ string) (ContainerMap, error) {
-	// var svc *dynamodb.DynamoDB
-	// var reqRId_ string
+func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, error) {
 	//
 	// Table:  Activity
 	//
-	kcond := expression.KeyEqual(expression.Key("rId"), expression.Value(reqRId_))
+	kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value("A-"+s.reqBkId+"-"+s.reqRId))
 	expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
 	if err != nil {
 		panic(err)
@@ -188,16 +396,15 @@ func readBaseRecipeForContainers(svc *dynamodb.DynamoDB, reqRId_ string) (Contai
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
 	}
-	input = input.SetTableName("Activity").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
+	input = input.SetTableName("Recipe").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
 	//*dynamodb.DynamoDB,
-	result, err := svc.Query(input)
+	result, err := s.dynamodbSvc.Query(input)
 	if err != nil {
 		log.Print("error from Query:  " + err.Error())
 		//return nil//, err
 	}
 	if int(*result.Count) == 0 {
-		fmt.Println("No activity data for reqRId " + reqRId_)
-		//return nil //, fmt.Errorf("No data found for reqRId %s", reqRId_)
+		return nil, fmt.Errorf("No data found for reqRId %s in readBaseRecipeForTasks for Activity - ", s.reqRId)
 	}
 	ActivityS := make([]Activity, int(*result.Count))
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &ActivityS)
@@ -212,9 +419,13 @@ func readBaseRecipeForContainers(svc *dynamodb.DynamoDB, reqRId_ string) (Contai
 		}
 	}
 	//
+	// Parse Activity and generate Containers
+	//  If C-0-0 type container then one its a single-activity-container (SAC) ie. a single-ingredient-container (SIC)
+	//  if not a member of C-0-0 then maybe shared amoung activities.
+	//
 	// Table:  Container
 	//
-	kcond = expression.KeyEqual(expression.Key("rId"), expression.Value(reqRId_))
+	kcond = expression.KeyEqual(expression.Key("PKey"), expression.Value("C-"+s.reqBkId+"-"+s.reqRId))
 	expr, err = expression.NewBuilder().WithKeyCondition(kcond).Build()
 	if err != nil {
 		panic(err)
@@ -226,9 +437,9 @@ func readBaseRecipeForContainers(svc *dynamodb.DynamoDB, reqRId_ string) (Contai
 		ExpressionAttributeValues: expr.Values(),
 		//		ProjectionExpression:      expr.Projection(),
 	}
-	input = input.SetTableName("Container").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
+	input = input.SetTableName("Ingredient").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
 	//
-	result, err = svc.Query(input)
+	result, err = s.dynamodbSvc.Query(input)
 	if err != nil {
 		fmt.Println()
 		//return nil //, fmt.Errorf("%s", "Error in Query of container table: "+err.Error())
@@ -243,11 +454,46 @@ func readBaseRecipeForContainers(svc *dynamodb.DynamoDB, reqRId_ string) (Contai
 		itemc = new(Container)
 		err = dynamodbattribute.UnmarshalMap(i, itemc)
 		if err != nil {
-			fmt.Println("Got error unmarshalling:")
 			fmt.Println(err.Error())
 			//return nil //, fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
 		}
+		fmt.Println("** Adding container: ", itemc.Cid)
 		ContainerM[itemc.Cid] = itemc
+	}
+	// common containers - not recipe specific
+	kcond = expression.KeyEqual(expression.Key("PKey"), expression.Value("C-0-0"))
+	expr, err = expression.NewBuilder().WithKeyCondition(kcond).Build()
+	if err != nil {
+		panic(err)
+	}
+	input = &dynamodb.QueryInput{
+		KeyConditionExpression:    expr.KeyCondition(),
+		FilterExpression:          expr.Filter(),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+		//		ProjectionExpression:      expr.Projection(),
+	}
+	input = input.SetTableName("Ingredient").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
+	//
+	result, err = s.dynamodbSvc.Query(input)
+	if err != nil {
+		fmt.Println()
+		//return nil //, fmt.Errorf("%s", "Error in Query of container table: "+err.Error())
+	}
+	if int(*result.Count) == 0 {
+		fmt.Println("No container data..")
+	}
+	ContainerSAM := make(ContainerMap, int(*result.Count))
+	for _, i := range result.Items {
+		itemc = new(Container)
+		err = dynamodbattribute.UnmarshalMap(i, itemc)
+		if err != nil {
+			fmt.Println(err.Error())
+			//return nil //, fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
+		}
+		fmt.Println("Add to ContainerSAM ", itemc.Cid)
+		ContainerSAM[itemc.Cid] = itemc
+		//ContainerM[itemc.Cid] = itemc
 	}
 	//
 	// Table:  Unit
@@ -265,7 +511,7 @@ func readBaseRecipeForContainers(svc *dynamodb.DynamoDB, reqRId_ string) (Contai
 		ProjectionExpression:      expr.Projection(),
 		TableName:                 aws.String("Unit"),
 	}
-	resultS, err := svc.Scan(params)
+	resultS, err := s.dynamodbSvc.Scan(params)
 	if err != nil {
 		fmt.Println()
 		//return nil //, fmt.Errorf("%s", "Error in scan of unit table: "+err.Error())
@@ -291,6 +537,8 @@ func readBaseRecipeForContainers(svc *dynamodb.DynamoDB, reqRId_ string) (Contai
 	//
 	// for all prep, tasks
 	//
+	// parse Activities for containers.  Add any single-activity containers to ContainerM.
+	//
 	for _, l := range []PrepTask{prep, task} {
 		for i, ap := 0, activityStart; ap != nil; ap = ap.next {
 			var p *PerformT
@@ -303,35 +551,107 @@ func readBaseRecipeForContainers(svc *dynamodb.DynamoDB, reqRId_ string) (Contai
 			if p == nil {
 				continue
 			}
+			// now compare contains defined in each activity with those registered for
+			// the recipe and those that are single-activity-containers
 			if len(p.AddToC) > 0 {
+				// activity containers are held in []string
 				for i := 0; i < len(p.AddToC); i++ {
-					if cId, ok := ContainerM[p.AddToC[i]]; !ok {
-						if cId, ok = ContainerM[strings.TrimSpace(p.AddToC[i])]; !ok {
+					// ContainerM contains registered containers
+					cId, ok := ContainerM[strings.TrimSpace(p.AddToC[i])]
+					if !ok {
+						// ContainerSAM contains single activity containers
+						if cId, ok = ContainerSAM[strings.TrimSpace(p.AddToC[i])]; !ok {
+							// is not a single ingredient container or not a registered container
 							fmt.Printf("Error:   Container [%s] not found for %s %d\n", strings.TrimSpace(p.AddToC[i]), ap.Label, ap.AId)
 							continue
 						}
-					} else {
-						// activity to container edge
-						p.AddToCp = append(p.AddToCp, cId)
-						// container to activity edge
-						associatedTask := taskT{Type: l, Activityp: ap}
-						cId.Task = append(cId.Task, associatedTask)
+						// Single-Activity-Containers are not pre-configured by the user into the Container repo - to make life easier.
+						// dynamically create a container with a new Cid, and add to ContainerM and update all references to it.
+						cs := p.AddToC[i] // original non-activity-specific container name
+						c := new(Container)
+						c.Cid = p.AddToC[i] + "-" + strconv.Itoa(ap.AId)
+						c.Contains = ap.Ingredient
+						c.Measure = cId.Measure
+						c.Label = cId.Label
+						c.Type = cId.Type
+						// register container by adding to map
+						ContainerM[c.Cid] = c
+						// update container id
+						p.AddToC[i] = c.Cid
+						// search for other references and change its name
+						if l == prep {
+							// update other reference before we get there.
+							for i := 0; i < len(ap.Task.SourceC); i++ {
+								if ap.Task.SourceC[i] == cs {
+									ap.Task.SourceC[i] = c.Cid
+									break
+								}
+							}
+							for i := 0; i < len(ap.Task.UseC); i++ {
+								if ap.Task.UseC[i] == cs {
+									ap.Task.UseC[i] = c.Cid
+									break
+								}
+							}
+						}
+						cId = c
 					}
+					fmt.Println("addToCp..append now")
+					// activity to container edge
+					p.AddToCp = append(p.AddToCp, cId)
+					// container to activity edge
+					associatedTask := taskT{Type: l, Activityp: ap}
+					cId.Activity = append(cId.Activity, associatedTask)
 				}
 			}
+
 			if len(p.UseC) > 0 {
 				for i := 0; i < len(p.UseC); i++ {
-					if cId, ok := ContainerM[p.UseC[i]]; !ok {
-						if cId, ok = ContainerM[strings.TrimSpace(p.UseC[i])]; !ok {
-							fmt.Printf("Error:   Container [%s] not found for %s %d\n", strings.TrimSpace(p.UseC[i]), ap.Label, ap.AId)
+					// ContainerM contains registered containers
+					cId, ok := ContainerM[strings.TrimSpace(p.UseC[i])]
+					if !ok {
+						// ContainerSAM contains single activity containers
+						if cId, ok = ContainerSAM[strings.TrimSpace(p.UseC[i])]; !ok {
+							// is not a single ingredient container or not a registered container
+							fmt.Printf("Error:   Container [%s] not found for %s %d\n", strings.TrimSpace(p.AddToC[i]), ap.Label, ap.AId)
 							continue
 						}
-					} else {
-						p.UseCp = append(p.UseCp, cId)
-						//cId.Activityp = append(cId.Activityp, t)
-						associatedTask := taskT{Type: l, Activityp: ap}
-						cId.Task = append(cId.Task, associatedTask)
+						// container referened in activity is a single-activity-container (SAP)
+						// manually create container and add to ContainerM and update all references to it.
+						cs := p.UseC[i] // original non-activity-specific container name
+						c := new(Container)
+						c.Cid = p.UseC[i] + "-" + strconv.Itoa(ap.AId)
+						c.Contains = ap.Ingredient
+						c.Measure = cId.Measure
+						c.Label = cId.Label
+						c.Type = cId.Type
+						// register container by adding to map
+						ContainerM[c.Cid] = c
+						// update name of container in Activity to <name>-AId
+						p.UseC[i] = c.Cid
+						// search for other references and change its name
+						if l == prep {
+							// update task based reference before we get there.
+							for i := 0; i < len(ap.Task.SourceC); i++ {
+								if ap.Task.SourceC[i] == cs {
+									ap.Task.SourceC[i] = c.Cid
+									break
+								}
+							}
+							for i := 0; i < len(ap.Task.UseC); i++ {
+								if ap.Task.UseC[i] == cs {
+									ap.Task.UseC[i] = c.Cid
+									break
+								}
+							}
+						}
+						cId = c
 					}
+					fmt.Println("UseCp..append now")
+					p.UseCp = append(p.UseCp, cId)
+					//cId.Activityp = append(cId.Activityp, t)
+					associatedTask := taskT{Type: l, Activityp: ap}
+					cId.Activity = append(cId.Activity, associatedTask)
 				}
 			}
 			if len(p.SourceC) > 0 {
@@ -344,7 +664,7 @@ func readBaseRecipeForContainers(svc *dynamodb.DynamoDB, reqRId_ string) (Contai
 					} else {
 						p.SourceCp = append(p.SourceCp, cId)
 						associatedTask := taskT{Type: l, Activityp: ap}
-						cId.Task = append(cId.Task, associatedTask)
+						cId.Activity = append(cId.Activity, associatedTask)
 					}
 				}
 			}
@@ -353,11 +673,49 @@ func readBaseRecipeForContainers(svc *dynamodb.DynamoDB, reqRId_ string) (Contai
 	}
 	// check container is associated with an activity. if not delete from container map.
 	for _, c := range ContainerM {
-		if len(c.Task) == 0 {
+		if len(c.Activity) == 0 {
 			delete(ContainerM, c.Cid)
 		}
 	}
-
+	// assign first index into ptS for each container
+	for _, v := range ContainerM {
+		v.start = 99999
+		// each container appears in a list prep tasks and tasks.
+		for _, t := range v.Activity {
+			// find first appearance in task list (typcially useC or addToC)
+			for l, r := range ptS {
+				l := l + 1
+				if r.AId == t.Activityp.AId {
+					if v.start > l {
+						ContainerM[v.Cid].start = l
+						break
+					}
+				}
+			}
+		}
+	}
+	// assign last index into ptS for each container.
+	for _, v := range ContainerM {
+		// each container appears in a list prep tasks and tasks.
+		for _, t := range v.Activity {
+			// find last appearance in task list (typcially useC or addToC)
+			for i := len(ptS) - 1; i >= 0; i-- {
+				// find last appearance (typically sourceC). Start at last ptS and work backwards
+				if ptS[i].AId == t.Activityp.AId {
+					if v.last < i+1 {
+						ContainerM[v.Cid].last = i + 1
+						break
+					}
+				}
+			}
+		}
+	}
+	for _, v := range ContainerM {
+		fmt.Printf("Container %#v\n", v)
+	}
+	//
+	// devices
+	//
 	devices := make(map[string]struct{})
 	for p := activityStart; p != nil; p = p.next {
 		if p.Task != nil {
@@ -376,11 +734,11 @@ func readBaseRecipeForContainers(svc *dynamodb.DynamoDB, reqRId_ string) (Contai
 	return ContainerM, nil
 }
 
-func readBaseRecipeForTasks(svc *dynamodb.DynamoDB, reqBkId_ string, reqRId_ string) (Activities, error) {
+func (s *sessCtx) readBaseRecipeForTasks() (Activities, error) {
 	//
 	// Table:  Activity
 	//
-	kcond := expression.KeyEqual(expression.Key("rId"), expression.Value(reqBkId_+"-"+reqRId_))
+	kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value("A-"+s.reqBkId+"-"+s.reqRId))
 	//kcond := expression.KeyAnd(expression.KeyEqual(expression.Key("rId"), expression.Value("XYZ")), expression.KeyLessThan(expression.Key("aId"), expression.Value(30)))
 	//	projection := expression.NamesList(expression.Name("coord[0]"), expression.Name("prep.txt"))
 	//fcond := expression.Equal(expression.Name("aId"), expression.Value(30))
@@ -396,22 +754,23 @@ func readBaseRecipeForTasks(svc *dynamodb.DynamoDB, reqBkId_ string, reqRId_ str
 		ExpressionAttributeValues: expr.Values(),
 		//		ProjectionExpression:      expr.Projection(),
 	}
-	input = input.SetTableName("Activity").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
+	input = input.SetTableName("Recipe").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
 	//
-	result, err := svc.Query(input)
+	result, err := s.dynamodbSvc.Query(input)
 	if err != nil {
 		log.Print("error from Query:  " + err.Error())
 		return nil, err
 	}
 	if int(*result.Count) == 0 {
 		//fmt.Println("No activity data for reqRId " + reqRId_)
-		return nil, fmt.Errorf("No data found for reqRId %s", reqRId_)
+		return nil, fmt.Errorf("No data found for reqRId %s", s.reqRId)
 	}
 	ActivityS := make([]Activity, int(*result.Count))
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &ActivityS)
 	//
 	activityStart = &ActivityS[0]
 	for _, v := range ActivityS {
+
 		if v.Task != nil {
 			fmt.Println("Activity data: ", v.AId, v.Task.Text)
 		}
@@ -464,7 +823,7 @@ func readBaseRecipeForTasks(svc *dynamodb.DynamoDB, reqBkId_ string, reqRId_ str
 	//
 	// Table:  Container
 	//
-	kcond = expression.KeyEqual(expression.Key("rId"), expression.Value(reqRId_))
+	kcond = expression.KeyEqual(expression.Key("PKey"), expression.Value("C-"+s.reqBkId+"-"+s.reqRId))
 	expr, err = expression.NewBuilder().WithKeyCondition(kcond).Build()
 	if err != nil {
 		panic(err)
@@ -477,9 +836,9 @@ func readBaseRecipeForTasks(svc *dynamodb.DynamoDB, reqBkId_ string, reqRId_ str
 		ExpressionAttributeValues: expr.Values(),
 		//		ProjectionExpression:      expr.Projection(),
 	}
-	input = input.SetTableName("Container").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
+	input = input.SetTableName("Ingredient").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
 	//
-	result, err = svc.Query(input)
+	result, err = s.dynamodbSvc.Query(input)
 	if err != nil {
 		log.Print(err)
 		return ActivityS, err
@@ -494,21 +853,46 @@ func readBaseRecipeForTasks(svc *dynamodb.DynamoDB, reqBkId_ string, reqRId_ str
 		itemc = new(Container)
 		err = dynamodbattribute.UnmarshalMap(i, itemc)
 		if err != nil {
-			fmt.Println("Got error unmarshalling:")
-			fmt.Println(err.Error())
 			return ActivityS, err
 		}
 		ContainerM[itemc.Cid] = itemc
 	}
-
+	// common containers - not recipe specific
+	kcond = expression.KeyEqual(expression.Key("PKey"), expression.Value("C-0-0"))
+	expr, err = expression.NewBuilder().WithKeyCondition(kcond).Build()
+	if err != nil {
+		panic(err)
+	}
+	input = &dynamodb.QueryInput{
+		KeyConditionExpression:    expr.KeyCondition(),
+		FilterExpression:          expr.Filter(),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+		//		ProjectionExpression:      expr.Projection(),
+	}
+	input = input.SetTableName("Ingredient").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
+	//
+	result, err = s.dynamodbSvc.Query(input)
+	if err != nil {
+		return nil, fmt.Errorf("%s", "Error in Query of container table: "+err.Error())
+	}
+	if int(*result.Count) == 0 {
+		fmt.Println("No container data..")
+	}
+	for _, i := range result.Items {
+		itemc = new(Container)
+		err = dynamodbattribute.UnmarshalMap(i, itemc)
+		if err != nil {
+			return nil, fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
+		}
+		ContainerM[itemc.Cid] = itemc
+	}
 	//
 	// Table:  Unit
 	//
 	proj := expression.NamesList(expression.Name("slabel"), expression.Name("llabel"), expression.Name("desc"))
 	expr, err = expression.NewBuilder().WithProjection(proj).Build()
 	if err != nil {
-		fmt.Println("Got error building expression:")
-		fmt.Println(err.Error())
 		return ActivityS, err
 	}
 	// Build the query input parameters
@@ -518,14 +902,11 @@ func readBaseRecipeForTasks(svc *dynamodb.DynamoDB, reqBkId_ string, reqRId_ str
 		ProjectionExpression:      expr.Projection(),
 		TableName:                 aws.String("Unit"),
 	}
-	resultS, err := svc.Scan(params)
+	resultS, err := s.dynamodbSvc.Scan(params)
 	if err != nil {
-		fmt.Println("Query API call failed:")
-		fmt.Println((err.Error()))
 		return ActivityS, err
 	}
 	if int(*result.Count) == 0 {
-		fmt.Println("No unit data..")
 		return ActivityS, fmt.Errorf("No Unit data found")
 	}
 	unitM := make(map[string]*Unit, int(*result.Count))
@@ -534,9 +915,7 @@ func readBaseRecipeForTasks(svc *dynamodb.DynamoDB, reqBkId_ string, reqRId_ str
 		unit = new(Unit)
 		err = dynamodbattribute.UnmarshalMap(i, unit)
 		if err != nil {
-			fmt.Println("Got error unmarshalling:")
-			fmt.Println(err.Error())
-			return ActivityS, err
+			return ActivityS, fmt.Errorf("Error: in readBaseRecipeForTasks UnmarshalMap for Units - %s", err.Error())
 		}
 		unitM[unit.Slabel] = unit
 	}
@@ -548,75 +927,6 @@ func readBaseRecipeForTasks(svc *dynamodb.DynamoDB, reqBkId_ string, reqRId_ str
 	//
 	doubleSpace := strings.NewReplacer("  ", " ")
 	//
-	// for all prep, tasks
-	//
-	for _, l := range []PrepTask{prep, task} {
-		for i, ap := 0, activityStart; ap != nil; ap = ap.next {
-			var p *PerformT
-			switch l {
-			case task:
-				p = ap.Task
-			case prep:
-				p = ap.Prep
-			}
-			if p == nil {
-				continue
-			}
-			//fmt.Println("Task: ", p.Text)
-			if len(p.AddToC) > 0 {
-				for i := 0; i < len(p.AddToC); i++ {
-					if cId, ok := ContainerM[p.AddToC[i]]; !ok {
-						if cId, ok = ContainerM[strings.TrimSpace(p.AddToC[i])]; !ok {
-							fmt.Printf("Error:   Container [%s] not found for %s %d\n", strings.TrimSpace(p.AddToC[i]), ap.Label, ap.AId)
-							continue
-						}
-					} else {
-						// activity to container edge
-						p.AddToCp = append(p.AddToCp, cId)
-						// container to activity edge
-						associatedTask := taskT{Type: l, Activityp: ap}
-						cId.Task = append(cId.Task, associatedTask)
-					}
-				}
-			}
-			if len(p.UseC) > 0 {
-				for i := 0; i < len(p.UseC); i++ {
-					if cId, ok := ContainerM[p.UseC[i]]; !ok {
-						if cId, ok = ContainerM[strings.TrimSpace(p.UseC[i])]; !ok {
-							fmt.Printf("Error:   Container [%s] not found for %s %d\n", strings.TrimSpace(p.UseC[i]), ap.Label, ap.AId)
-							continue
-						}
-					} else {
-						p.UseCp = append(p.UseCp, cId)
-						//cId.Activityp = append(cId.Activityp, t)
-						associatedTask := taskT{Type: l, Activityp: ap}
-						cId.Task = append(cId.Task, associatedTask)
-					}
-				}
-			}
-			if len(p.SourceC) > 0 {
-				for i := 0; i < len(p.SourceC); i++ {
-					if cId, ok := ContainerM[p.SourceC[i]]; !ok {
-						if cId, ok = ContainerM[strings.TrimSpace(p.SourceC[i])]; !ok {
-							fmt.Printf("Error:   Container [%s] not found for %s %d\n", strings.TrimSpace(p.SourceC[i]), ap.Label, ap.AId)
-							continue
-						}
-					} else {
-						p.SourceCp = append(p.SourceCp, cId)
-						associatedTask := taskT{Type: l, Activityp: ap}
-						cId.Task = append(cId.Task, associatedTask)
-					}
-				}
-			}
-			i++
-		}
-	}
-	// check container is associated with an activity. if not delete from container map.
-	for _, c := range ContainerM {
-		if len(c.Task) == 0 {
-			delete(ContainerM, c.Cid)
-		}
-	}
 	const (
 		time int = iota
 		measure
@@ -627,7 +937,7 @@ func readBaseRecipeForTasks(svc *dynamodb.DynamoDB, reqBkId_ string, reqRId_ str
 	var (
 		b       strings.Builder // supports io.Write write expanded text/verbal text to this buffer before saving to Task or Verbal fields
 		context int
-		s       string
+		str     string
 	)
 	//
 	//  replace all {tag} in text and verbal for each activity. Ignore Link'd activites - they are only relevant at print time
@@ -650,14 +960,14 @@ func readBaseRecipeForTasks(svc *dynamodb.DynamoDB, reqBkId_ string, reqRId_ str
 				}
 				switch interactionType {
 				case text:
-					s = pt.Text
+					str = pt.Text
 				case voice:
-					s = pt.Verbal
+					str = pt.Verbal
 				}
 				// if no {} then print and return to top of the loop
-				t1 := strings.IndexByte(s, '{')
+				t1 := strings.IndexByte(str, '{')
 				if t1 < 0 {
-					b.WriteString(s + " ")
+					b.WriteString(str + " ")
 					switch interactionType {
 					case text:
 						pt.text = doubleSpace.Replace(b.String())
@@ -667,11 +977,10 @@ func readBaseRecipeForTasks(svc *dynamodb.DynamoDB, reqBkId_ string, reqRId_ str
 					b.Reset()
 					continue
 				}
-				for tclose, topen := 0, strings.IndexByte(s, '{'); topen != -1; {
-					fmt.Println(s)
-					b.WriteString(s[tclose:topen])
-					tclose += strings.IndexByte(s[tclose:], '}')
-					switch strings.ToLower(s[topen+1 : tclose]) {
+				for tclose, topen := 0, strings.IndexByte(str, '{'); topen != -1; {
+					b.WriteString(str[tclose:topen])
+					tclose += strings.IndexByte(str[tclose:], '}')
+					switch strings.ToLower(str[topen+1 : tclose]) {
 					case "iqual":
 						{
 							fmt.Fprintf(&b, "%s", p.IngrdQualifer)
@@ -705,7 +1014,6 @@ func readBaseRecipeForTasks(svc *dynamodb.DynamoDB, reqBkId_ string, reqRId_ str
 							switch context {
 							case device:
 								if u, ok := unitM[pt.UseDevice.Unit]; !ok {
-									fmt.Printf("\n\n unit not defined %d %s ", p.AId, p.Measure.Unit)
 									panic(fmt.Errorf("unit not defined"))
 								} else {
 									switch interactionType {
@@ -717,7 +1025,6 @@ func readBaseRecipeForTasks(svc *dynamodb.DynamoDB, reqBkId_ string, reqRId_ str
 								}
 							case measure:
 								if u, ok := unitM[p.Measure.Unit]; !ok {
-									fmt.Printf("\n\n unit not defined %d %s ", p.AId, p.Measure.Unit)
 									panic(fmt.Errorf("unit not defined"))
 								} else {
 									switch interactionType {
@@ -729,7 +1036,6 @@ func readBaseRecipeForTasks(svc *dynamodb.DynamoDB, reqBkId_ string, reqRId_ str
 								}
 							case time:
 								if u, ok := unitM[pt.Unit]; !ok {
-									fmt.Printf("\n\n unit not defined %d %s ", p.AId, p.Measure.Unit)
 									panic(fmt.Errorf("unit not defined"))
 								} else {
 									switch interactionType {
@@ -755,9 +1061,9 @@ func readBaseRecipeForTasks(svc *dynamodb.DynamoDB, reqBkId_ string, reqRId_ str
 						}
 					}
 					tclose += 1
-					topen = strings.IndexByte(s[tclose:], '{')
+					topen = strings.IndexByte(str[tclose:], '{')
 					if topen == -1 {
-						b.WriteString(s[tclose:])
+						b.WriteString(str[tclose:])
 					} else {
 						topen += tclose
 					}

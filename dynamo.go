@@ -3,7 +3,6 @@ package main
 import (
 	_ "encoding/json"
 	"fmt"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -106,79 +105,8 @@ func (a ContainerMap) saveContainerUsage(s *sessCtx) (string, error) {
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	// update maxid set attribute in Recipe table associated with container object
-	//err := s.updateRecipe(objectMap[container_], rows) - don't use this approach replaced with EOL in session table
-	// if err != nil {
-	// 	return ctS[0], err
-	// }
-	// return first task
-	return ctS[0], nil
-}
 
-func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
-	type ctCount struct {
-		C   []*Container
-		num int
-	}
-	var b strings.Builder
-	output_ := []string{}
-	if len(cm) > 0 {
-		// map[Size Type]count
-		containerList := make(map[mkey]*ctCount)
-		//fmt.Printf("\nContainers:  %d  \n\n", len(ContainerM))
-		// ContainerM - map[Cid]*Container
-		// group by  container type and size - as both represent attribues of a single physical container we want to count.
-		for _, v := range cm {
-			z := mkey{v.Measure.Size, v.Type}
-			if y, ok := containerList[z]; !ok {
-				// key does not exist, go returns zero value of *ctCount, ie. nil
-				// create new pointer value and assign values
-				y := new(ctCount)
-				y.num = 1
-				// zero value of slice is nil (metadata only), first append will allocate underlying array
-				y.C = append(y.C, v)
-				containerList[z] = y
-			} else {
-				y.num += 1
-				y.C = append(y.C, v)
-			}
-		}
-		// populate slice which satisfies sort interface. After sorting containers of same type together but of different sizes
-		// 2xlarge glass bowel 1xsmall glass bowel
-		clsorted := clsort{}
-		for k, _ := range containerList {
-			clsorted = append(clsorted, k)
-		}
-		// use sorted keys to access ma
-		sort.Sort(clsorted)
-		for _, v := range clsorted {
-			if containerList[v].num > 1 {
-				b.WriteString(fmt.Sprintf(" %d %s ", containerList[v].num, strings.Title(v.size+" "+v.typE+"s")))
-				for i, d := range containerList[v].C {
-					switch i {
-					case 0:
-						b.WriteString(fmt.Sprintf(" one for %s", d.Purpose+" "+d.Contains+" "))
-					default:
-						b.WriteString(fmt.Sprintf("%s ", " another for "+d.Purpose+" "+d.Contains))
-					}
-				}
-			} else {
-				c := containerList[v].C[0]
-				if len(v.size) != 0 {
-					b.WriteString(fmt.Sprintf(" %d %s ", containerList[v].num, strings.Title(v.size+" "+v.typE)))
-				} else {
-					b.WriteString(fmt.Sprintf(" %d %.0fx%.0f%s %s ", containerList[v].num, c.Measure.Diameter, c.Measure.Height, c.Measure.Unit, strings.Title(v.typE)))
-				}
-				for _, d := range containerList[v].C {
-					b.WriteString(fmt.Sprintf(" for %s ", d.Purpose+" "+d.Contains+"  "))
-				}
-			}
-			output_ = append(output_, b.String())
-			b.Reset()
-		}
-	}
-	// store number of records in recipe table
-	return output_
+	return ctS[0], nil
 }
 
 func (s sessCtx) getContainerRecById() (alexaDialog, error) {
@@ -221,11 +149,6 @@ func (s sessCtx) getContainerRecById() (alexaDialog, error) {
 	}
 	if len(result.Item) == 0 {
 		return ctrec, fmt.Errorf("%s", "No data Found in GetItem in getContainerRecById")
-		// a, err := readBaseRecipeForContainers(s.dynamodbSvc, s.reqRId)
-		// if err != nil {
-		// 	return ctrec, fmt.Errorf("%s: %s", "Error in readBaseRecipeForContainers of getContainerRecById", err.Error())
-		// }
-		// return s.saveContainerUsage(a)
 	}
 	err = dynamodbattribute.UnmarshalMap(result.Item, &ctrec)
 	if err != nil {
@@ -275,7 +198,7 @@ func loadNonIngredientsMap(svc *dynamodb.DynamoDB) (map[string]bool, error) {
 
 }
 
-func (a Activities) IndexIngd(svc *dynamodb.DynamoDB, bkid string, bkname string, rname string, rid string, cat string, authorS []string) error {
+func (a Activities) IndexIngd(svc *dynamodb.DynamoDB, bkid string, bkname string, rname string, rid string, cat string, subcat string, authors string) error {
 	//	   	err = aa.IndexIngd(s.dynamodbSvc,        s.reqBkId,   s.reqBkName, s . .reqRName,  s.reqRId, cat, authors)
 	type indexRecT struct {
 		PKey     string
@@ -330,32 +253,30 @@ func (a Activities) IndexIngd(svc *dynamodb.DynamoDB, bkid string, bkname string
 		if len(ap.Ingredient) > 0 {
 			if _, ok := doNotIndex[strings.ToLower(ap.Ingredient)]; !ok {
 				// ingredient is indexable. Populate index record.
-				irec := indexRecT{}
-				irec.PreQual = ap.QualiferIngrd
-				irec.PostQual = ap.IngrdQualifer
-				if len(ap.Measure.Size) > 0 {
-					irec.Quantity = ap.Measure.Quantity + " " + ap.Measure.Size
-				} else {
-					irec.Quantity = ap.Measure.Quantity + ap.Measure.Unit
-				}
-				if len(cat) == 0 {
-					// take cat from last word in recipe title
-					cat = rname[strings.LastIndex(rname, " ")+1:]
-				}
-				irec.PKey = strings.ToLower(ap.Ingredient + " " + cat)
-				irec.SortK = bkid + "-" + rid
-				irec.RName = rname
-				irec.BkName = bkname
-				for i, v := range authorS {
-					switch i {
-					case 0:
-						irec.Authors = v[strings.LastIndex(v, " ")+1:]
-					case 1:
-						irec.Authors += ", " + v[strings.LastIndex(v, " ")+1:]
+				for i, v := range []string{cat, subcat} {
+					if len(v) == 0 && i == 1 {
+						// subcat is not defined
 						break
 					}
+					irec := indexRecT{}
+					irec.PreQual = ap.QualiferIngrd
+					irec.PostQual = ap.IngrdQualifer
+					if len(ap.Measure.Size) > 0 {
+						irec.Quantity = ap.Measure.Quantity + " " + ap.Measure.Size
+					} else {
+						irec.Quantity = ap.Measure.Quantity + ap.Measure.Unit
+					}
+					if len(v) == 0 && i == 0 {
+						// take cat from last word in recipe title
+						cat = rname[strings.LastIndex(rname, " ")+1:]
+					}
+					irec.PKey = strings.ToLower(ap.Ingredient + " " + v)
+					irec.SortK = bkid + "-" + rid
+					irec.RName = rname
+					irec.BkName = bkname
+					irec.Authors = authors
+					indexRecS = append(indexRecS, irec)
 				}
-				indexRecS = append(indexRecS, irec)
 			}
 		}
 	}
@@ -363,149 +284,7 @@ func (a Activities) IndexIngd(svc *dynamodb.DynamoDB, bkid string, bkname string
 	return err
 }
 
-func (a Activities) GenerateTasks(pKey string) prepTaskS {
-	// Merge and Populate prepTask and then sort.
-	//  1. first load parrellelisable tasks identified by words or prep property "parallel" or device (=oven)
-	//  2. sort
-	//  3. add other tasks in order
-	//
-	var ptS prepTaskS // this type satisfies sort interface.
-	processed := make(map[int]bool, prepctl.cnt)
-	//
-	// sort parallelisable prep tasks
-	//
-	for p := prepctl.start; p != nil; p = p.nextPrep {
-		var add bool
-		var pp = p.Prep
-		if pp.UseDevice != nil {
-			if strings.ToLower(pp.UseDevice.Type) == "oven" {
-				add = true
-			}
-		}
-		if pp.Parallel && !pp.Link || add {
-			if p.prev != nil && p.prev.Prep != nil {
-				if p.prev.Prep.Link {
-					continue // exclude if part of linked activity
-				}
-			}
-			processed[p.AId] = true
-			pt := prepTaskRec{PKey: pKey, AId: p.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal}
-			ptS = append(ptS, pt)
-		}
-	}
-	sort.Sort(ptS)
-	//
-	// generate Task Ids
-	//
-	var i int = 1 // start at one as works better with UpateItem ADD semantics.
-	for j := 0; j < len(ptS); i++ {
-		ptS[j].SortK = i
-		j++
-	}
-	//
-	// append remaining prep tasks - these are serial tasks so order unimportant
-	//
-	for p := prepctl.start; p != nil; p = p.nextPrep {
-		if _, ok := processed[p.AId]; ok {
-			continue
-		}
-		pt := prepTaskRec{PKey: pKey, SortK: i, AId: p.AId, Type: 'P', time: p.Prep.Time, Text: p.Prep.text, Verbal: p.Prep.verbal}
-		ptS = append(ptS, pt)
-		i++
-	}
-	//
-	// append tasks
-	//
-	for p := taskctl.start; p != nil; p = p.nextTask {
-		pt := prepTaskRec{PKey: pKey, SortK: i, AId: p.AId, Type: 'T', time: p.Task.Time, Text: p.Task.text, Verbal: p.Task.verbal}
-		ptS = append(ptS, pt)
-		i++
-	}
-	// now that we know the size of the list assign End-Of-List field. This approach replaces MaxId[] set stored in Recipe table
-	// this mean each record knows how long the list is - helpful in a stateless Lambda app.
-	eol := len(ptS)
-	for i := range ptS {
-		ptS[i].EOL = eol
-	}
-	// store number of records in recipe table
-	return ptS
-}
-
-func (a Activities) PrintRecipe(rId string) (prepTaskS, string) {
-	// *** NB> . this currently only handles prep tasks - which may not be relevant in printed recipe. So this func may not be useful.
-	// Merge and Populate prepTask and then sort.
-	//  1. first load parrellelisable tasks identified by words or prep property "parallel" or device (=oven)
-	//  2. sort
-	//  3. add other tasks in order
-	//
-	var ptS prepTaskS
-	pid := 0                                     // index in prepOrder
-	processed := make(map[int]bool, prepctl.cnt) // set of tasks
-	//
-	// sort parallelisable prep tasks
-	//
-	for p := prepctl.start; p != nil; p = p.nextPrep {
-		var add bool
-		var pp = p.Prep
-		if pp.UseDevice != nil {
-			if strings.ToLower(pp.UseDevice.Type) == "oven" {
-				add = true
-			}
-		}
-		if pp.Parallel && !pp.Link || add {
-			if p.prev != nil && p.prev.Prep != nil {
-				if p.prev.Prep.Link {
-					continue // exclude if part of linked activity
-				}
-			}
-			processed[p.AId] = true
-			pt := prepTaskRec{time: pp.Time, Text: pp.text}
-			ptS = append(ptS, pt)
-		}
-	}
-	sort.Sort(ptS)
-	//
-	// append remaining prep tasks - these are serial tasks so order unimportant
-	//
-	for p := prepctl.start; p != nil; p = p.nextPrep {
-		if _, ok := processed[p.AId]; ok {
-			continue
-		}
-		var txt string
-		var stime float32
-		var count int
-		if p.Prep.Link {
-			for ; p.Prep.Link; p = p.nextPrep {
-				//handle Link prep tasks
-				txt += p.Prep.text + " and "
-				stime += p.Prep.Time
-				count++
-			}
-			txt += p.Prep.text
-			stime += p.Prep.Time
-			//
-			pt := prepTaskRec{time: stime, Text: txt}
-			ptS = append(ptS, pt)
-		} else {
-			pt := prepTaskRec{time: p.Prep.Time, Text: p.Prep.text}
-			ptS = append(ptS, pt)
-		}
-		pid++
-	}
-	var b strings.Builder
-	b.WriteString(fmt.Sprintf("{ %q : [", jsonKey))
-	for i, pt := range ptS {
-		b.WriteString(fmt.Sprintf("%q", pt.Text))
-		if i < len(ptS)-1 {
-			b.WriteString(",")
-		}
-	}
-	b.WriteString("] } ")
-	return ptS, b.String()
-} // PrintRecipe
-
-// (s *sessCtx) saveTasks(a Activities) (prepTaskRec, error) {//TODO make method of Activities
-func (a Activities) saveTasks(s *sessCtx) (prepTaskRec, error) {
+func (a Activities) saveTasks(s *sessCtx) (prepTaskS, error) {
 	var rows int
 	// only prep & task verbal and its text equivalent are saved.
 	// Generate prep and tasks from Activities.
@@ -524,11 +303,11 @@ func (a Activities) saveTasks(s *sessCtx) (prepTaskRec, error) {
 			Item:      av,
 		})
 		if err != nil {
-			return prepTaskRec{}, fmt.Errorf("failed to put Record to DynamoDB, %v", err)
+			return []prepTaskRec{}, fmt.Errorf("failed to put Record to DynamoDB, %v", err)
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	return ptS[0], nil
+	return ptS, nil
 }
 
 func (s sessCtx) updateSession() (int, error) {
@@ -802,15 +581,15 @@ func (s *sessCtx) recipeRSearch() error {
 		SortK float64
 	}
 	type recT struct {
-		RName   string `json:"RName"`
-		Authors []string
+		RName  string `json:"RName"`
+		Cat    string `json:"cat"`
+		Subcat string `json:"subcat"`
 	}
 	rId, err := strconv.Atoi(s.reqRId)
 	if err != nil {
 		return fmt.Errorf("Error: in recipeRSearch converting reqId  [%s] to int - %s", s.reqRId, err.Error())
 	}
 	pkey := pKey{PKey: "R-" + s.reqBkId, SortK: float64(rId)}
-	fmt.Printf("pkey in recipeRSearch [%#v]", pkey)
 	av, err := dynamodbattribute.MarshalMap(&pkey)
 	if err != nil {
 		return fmt.Errorf("%s: %s", "Error in MarshalMap of recipeIdLookup", err.Error())
@@ -851,8 +630,10 @@ func (s *sessCtx) recipeRSearch() error {
 	if err != nil {
 		return fmt.Errorf("Error: in UnmarshalMaps of recipeRSearch [%s] err", s.reqRId, err.Error())
 	}
-	// populate remaining req fields
+	// populate session context fields
 	s.reqRName = rec.RName
+	s.cat = rec.Cat
+	s.subcat = rec.Subcat
 	err = s.bookNameLookup()
 	if err != nil {
 		s.reqBkName = ""
@@ -882,9 +663,8 @@ func (s *sessCtx) ingredientSearch() error {
 		allBooks bool
 		err      error
 	)
-	fmt.Println("in ingredientSearch..")
 	if len(s.reqBkId) > 0 {
-		// look for recipes in current book only
+		// look for recipes in current book only - reqIngrdCat in lower case before searching
 		fmt.Printf("in ingredientSearch..in book [%s] for [%s]\n", s.reqBkId, s.reqIngrdCat)
 		kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value(s.reqIngrdCat))
 		kcond = kcond.And(expression.KeyBeginsWith(expression.Key("SortK"), s.reqBkId+"-"))
@@ -1126,6 +906,7 @@ func (s *sessCtx) bookNameLookup() error {
 		}
 	}
 	s.authors = authors
+	s.authorS = rec[0].Authors
 	s.reqBkName = rec[0].PKey[3:] // trim "BK-" prefix
 	return nil
 }
