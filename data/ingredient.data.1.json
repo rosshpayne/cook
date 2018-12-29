@@ -47,6 +47,158 @@
                 "SortK" : { "S": "vanilla"}
             }
         }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "NI" },
+                "SortK" : { "S": "onion"}
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "NI" },
+                "SortK" : { "S": "salt and pepper"}
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "NI" },
+                "SortK" : { "S": "sea salt and pepper"}
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "NI" },
+                "SortK" : { "S": "red onion"}
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "NI" },
+                "SortK" : { "S": "wine"}
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "NI" },
+                "SortK" : { "S": "red wine"}
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "NI" },
+                "SortK" : { "S": "white wine"}
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "NI" },
+                "SortK" : { "S": "chilli"}
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "NI" },
+                "SortK" : { "S": "red chilli"}
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "NI" },
+                "SortK" : { "S": "parsely"}
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "NI" },
+                "SortK" : { "S": "rice"}
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "NI" },
+                "SortK" : { "S": "white rice"}
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "NI" },
+                "SortK" : { "S": "olive oil"}
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "NI" },
+                "SortK" : { "S": "oil"}
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "NI" },
+                "SortK" : { "S": "vegitable oil"}
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "NI" },
+                "SortK" : { "S": "garlic"}
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "NI" },
+                "SortK" : { "S": "parsley"}
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "NI" },
+                "SortK" : { "S": "tomatoe"}
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "NI" },
+                "SortK" : { "S": "tomatoes"}
+            }
+        }
         }
         ]
 }

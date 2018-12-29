@@ -1,6 +1,17 @@
 {
       "Recipe" : [ 
         {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "R-21" },
+                "SortK" : { "N": "3"},
+                "RName" : { "S": "Risotto Nero with Swiss Chard"},
+                "Cat"  : { "S": "risotto" } ,
+                "SubCat" : { "S": "rice" }
+            }
+        }
+        },
+        {
           "PutRequest": { 
             "Item": { 
                 "PKey" : { "S": "A-21-3" },
@@ -17,7 +28,8 @@
                                   "txt" : { "S" : "warm {qty}{ml} of {ingrd} in a large pan" },
                                   "say" : { "S" : "warm {qty} {ml} of {ingrd} in a large pan" },
                                   "time" : { "N" : "1" },
-                                  "unit" : { "S" : "min" },    
+                                  "unit" : { "S" : "min" }, 
+                                  "sourceC" : { "SS" : ["MC-S"] },
                                   "addToC" : { "SS" : [ "RisoPan" ] }
                                     }
                 }
@@ -233,7 +245,7 @@
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
-                                  "useC" : { "S" : "MC-S" },
+                                  "sourceC": { "SS" : [ "MC-S" ] },
                                   "addToC" : { "SS" : [ "RisoPan" ] }
                                 }
                 }

@@ -614,7 +614,6 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		//
 		// Populate recipe and book names
 		//
-		fmt.Println("recipeRSearch")
 		err = sessctx.recipeRSearch()
 		if err != nil {
 
@@ -622,41 +621,34 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 			break
 		}
 		sessctx.object = "task"
-		fmt.Println("readBaseRecipeForTasks")
 		aa, err := sessctx.readBaseRecipeForTasks()
 		if err != nil {
 			fmt.Printf("error: %s", err.Error())
 			break
 		}
-		fmt.Println("saveTasks")
 		taskList, err := aa.saveTasks(sessctx)
 		if err != nil {
 			fmt.Printf("error: %s", err.Error())
 			break
 		}
 		s := sessctx
-		fmt.Println("IndexIngd")
-		err = aa.IndexIngd(s.dynamodbSvc, s.reqBkId, s.reqBkName, s.reqRName, s.reqRId, s.cat, s.subcat, s.authors)
-		if err != nil {
+		// err = aa.IndexIngd(s.dynamodbSvc, s.reqBkId, s.reqBkName, s.reqRName, s.reqRId, s.cat, s.subcat, s.authors)
+		// if err != nil {
 
-			fmt.Printf("error: %s", err.Error())
-			break
-		}
+		// 	fmt.Printf("error: %s", err.Error())
+		// 	break
+		// }
 		//
 		// Populate container and task records in recipe and ingredient table respectively
 		//
 		sessctx.object = "container"
-		fmt.Println("readBaseRecipeForContainers")
 		a, err := sessctx.readBaseRecipeForContainers(taskList)
 		if err != nil {
-
 			fmt.Printf("error: %s", err.Error())
 			break
 		}
-		fmt.Printf("after readBaseRecipeForContainers:  len %d   %#v", len(a), a)
 		_, err = a.saveContainerUsage(sessctx)
 		if err != nil {
-
 			fmt.Printf("error: %s", err.Error())
 			break
 		}

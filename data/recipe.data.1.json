@@ -67,16 +67,6 @@
         "PutRequest": { 
             "Item": { 
                 "PKey" : { "S": "R-21" },
-                "SortK" : { "N": "1"},
-                "RName" : { "S": "Risotto with Roast Partridge"},
-                "Cat"  : { "S": "risotto" }   
-            }
-        }
-        },
-        {
-        "PutRequest": { 
-            "Item": { 
-                "PKey" : { "S": "R-21" },
                 "SortK" : { "N": "2"},
                 "RName" : { "S": "Braised Cavolo Nero"}
                 }

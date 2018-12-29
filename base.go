@@ -181,60 +181,91 @@ func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 	}
 	var b strings.Builder
 	output_ := []string{}
-	if len(cm) > 0 {
-		// map[Size Type]count
-		containerList := make(map[mkey]*ctCount)
-		// ContainerM - map[Cid]*Container
-		// group by  container type and size - as both represent attribues of a single physical container we want to count.
-		for _, v := range cm {
-			z := mkey{v.Measure.Size, v.Type}
-			if y, ok := containerList[z]; !ok {
-				// key does not exist, go returns zero value of *ctCount, ie. nil
-				// create new pointer value and assign values
-				y := new(ctCount)
-				y.num = 1
-				// zero value of slice is nil (metadata only), first append will allocate underlying array
-				y.C = append(y.C, v)
-				containerList[z] = y
+	if len(cm) == 0 {
+		return nil
+	}
+	// use map to group-by-container-type-and-size - map value contains list of identical containers and the number of them
+	identicalC := make(map[mkey]*ctCount)
+	//
+	done := make(map[string]bool)
+	for _, v := range cm {
+		// for each container aggregate based on type and size
+		z := mkey{v.Measure.Size, v.Type}
+		if y, ok := identicalC[z]; !ok {
+			// does not exist - create first one
+			y := new(ctCount)
+			y.num = 1
+			y.C = append(y.C, v)
+			identicalC[z] = y
+		} else {
+			// check if the container can be reused by examining other containers in the identical list
+			var reuse bool
+			if !done[v.Cid] {
+				// for containers not already checked
+				for _, oc := range y.C {
+					if oc.last <= v.start || v.last <= oc.start {
+						done[oc.Cid] = true // don't check for this Container again.
+						reuse = true
+						break
+					}
+				}
+				if reuse {
+					y.C = append(y.C, v)
+				} else {
+					y.num += 1
+					y.C = append(y.C, v)
+				}
 			} else {
 				y.num += 1
 				y.C = append(y.C, v)
 			}
+
 		}
-		// populate slice which satisfies sort interface. After sorting containers of same type together but of different sizes
-		// 2xlarge glass bowel 1xsmall glass bowel
-		clsorted := clsort{}
-		for k, _ := range containerList {
-			clsorted = append(clsorted, k)
-		}
-		// use sorted keys to access ma
-		sort.Sort(clsorted)
-		for _, v := range clsorted {
-			if containerList[v].num > 1 {
-				b.WriteString(fmt.Sprintf(" %d %s ", containerList[v].num, strings.Title(v.size+" "+v.typE+"s")))
-				for i, d := range containerList[v].C {
-					switch i {
-					case 0:
-						b.WriteString(fmt.Sprintf(" one for %s", d.Purpose+" "+d.Contains+" "))
-					default:
+	}
+	// populate slice which satisfies sort interface. After sorting containers of same size together but of different types.
+	// This compares with the map that aggregates containers by type and size.
+	// For display purposes I have chosen to group by size  - hence this sort.
+	clsorted := clsort{}
+	for k, _ := range identicalC {
+		clsorted = append(clsorted, k)
+	}
+	// use sorted key to index into container map - sorted by size attribute in container.measure.
+	sort.Sort(clsorted)
+	for _, v := range clsorted {
+		if identicalC[v].num > 1 {
+			b.WriteString(fmt.Sprintf(" %d %s ", identicalC[v].num, strings.Title(v.size+" "+v.typE+"s")))
+			for i, d := range identicalC[v].C {
+				switch i {
+				case 0:
+					b.WriteString(fmt.Sprintf(" one for %s", d.Purpose+" "+d.Contains+" "))
+				default:
+					var written bool
+					for _, oc := range identicalC[v].C {
+						if oc.last <= d.start || d.last <= oc.start {
+							b.WriteString(fmt.Sprintf("%s ", " and for "+d.Purpose+" "+d.Contains))
+							written = true
+						}
+					}
+					if !written {
 						b.WriteString(fmt.Sprintf("%s ", " another for "+d.Purpose+" "+d.Contains))
 					}
 				}
-			} else {
-				c := containerList[v].C[0]
-				if len(v.size) != 0 {
-					b.WriteString(fmt.Sprintf(" %d %s ", containerList[v].num, strings.Title(v.size+" "+v.typE)))
-				} else {
-					b.WriteString(fmt.Sprintf(" %d %.0fx%.0f%s %s ", containerList[v].num, c.Measure.Diameter, c.Measure.Height, c.Measure.Unit, strings.Title(v.typE)))
-				}
-				for _, d := range containerList[v].C {
-					b.WriteString(fmt.Sprintf(" for %s ", d.Purpose+" "+d.Contains+"  "))
-				}
 			}
-			output_ = append(output_, b.String())
-			b.Reset()
+		} else {
+			c := identicalC[v].C[0]
+			if len(v.size) != 0 {
+				b.WriteString(fmt.Sprintf(" %d %s ", identicalC[v].num, strings.Title(v.size+" "+v.typE)))
+			} else {
+				b.WriteString(fmt.Sprintf(" %d %.0fx%.0f%s %s ", identicalC[v].num, c.Measure.Diameter, c.Measure.Height, c.Measure.Unit, strings.Title(v.typE)))
+			}
+			for _, d := range identicalC[v].C {
+				b.WriteString(fmt.Sprintf(" for %s ", d.Purpose+" "+d.Contains+"  "))
+			}
 		}
+		output_ = append(output_, b.String())
+		b.Reset()
 	}
+
 	// store number of records in recipe table
 	return output_
 }
@@ -540,7 +571,7 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 	// parse Activities for containers.  Add any single-activity containers to ContainerM.
 	//
 	for _, l := range []PrepTask{prep, task} {
-		for i, ap := 0, activityStart; ap != nil; ap = ap.next {
+		for ap := activityStart; ap != nil; ap = ap.next {
 			var p *PerformT
 			switch l {
 			case task:
@@ -576,7 +607,7 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 						c.Type = cId.Type
 						// register container by adding to map
 						ContainerM[c.Cid] = c
-						// update container id
+						// update container id in activity
 						p.AddToC[i] = c.Cid
 						// search for other references and change its name
 						if l == prep {
@@ -596,7 +627,6 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 						}
 						cId = c
 					}
-					fmt.Println("addToCp..append now")
 					// activity to container edge
 					p.AddToCp = append(p.AddToCp, cId)
 					// container to activity edge
@@ -608,6 +638,7 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 			if len(p.UseC) > 0 {
 				for i := 0; i < len(p.UseC); i++ {
 					// ContainerM contains registered containers
+					fmt.Println("useC: ", p.UseC[i])
 					cId, ok := ContainerM[strings.TrimSpace(p.UseC[i])]
 					if !ok {
 						// ContainerSAM contains single activity containers
@@ -618,6 +649,7 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 						}
 						// container referened in activity is a single-activity-container (SAP)
 						// manually create container and add to ContainerM and update all references to it.
+						fmt.Println("useC: create new container for ", p.UseC[i])
 						cs := p.UseC[i] // original non-activity-specific container name
 						c := new(Container)
 						c.Cid = p.UseC[i] + "-" + strconv.Itoa(ap.AId)
@@ -647,30 +679,64 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 						}
 						cId = c
 					}
-					fmt.Println("UseCp..append now")
 					p.UseCp = append(p.UseCp, cId)
-					//cId.Activityp = append(cId.Activityp, t)
 					associatedTask := taskT{Type: l, Activityp: ap}
 					cId.Activity = append(cId.Activity, associatedTask)
 				}
 			}
 			if len(p.SourceC) > 0 {
+				// ContainerM contains registered containers
 				for i := 0; i < len(p.SourceC); i++ {
-					if cId, ok := ContainerM[p.SourceC[i]]; !ok {
-						if cId, ok = ContainerM[strings.TrimSpace(p.SourceC[i])]; !ok {
-							fmt.Printf("Error:   Container [%s] not found for %s %d\n", strings.TrimSpace(p.SourceC[i]), ap.Label, ap.AId)
+					fmt.Println("sourceC: ", p.SourceC[i])
+					cId, ok := ContainerM[strings.TrimSpace(p.SourceC[i])]
+					if !ok {
+						// ContainerSAM contains single activity containers
+						if cId, ok = ContainerSAM[strings.TrimSpace(p.SourceC[i])]; !ok {
+							// is not a single ingredient container or not a registered container
+							fmt.Printf("Error:   Container [%s] not found for %s %d\n", strings.TrimSpace(p.AddToC[i]), ap.Label, ap.AId)
 							continue
 						}
-					} else {
-						p.SourceCp = append(p.SourceCp, cId)
-						associatedTask := taskT{Type: l, Activityp: ap}
-						cId.Activity = append(cId.Activity, associatedTask)
+						// container referened in activity is a single-activity-container (SAP)
+						// manually create container and add to ContainerM and update all references to it.
+						fmt.Println("SourceC: create new container for ", p.SourceC[i])
+						cs := p.SourceC[i] // original non-activity-specific container name
+						c := new(Container)
+						c.Cid = p.SourceC[i] + "-" + strconv.Itoa(ap.AId)
+						fmt.Println("create container: ", c.Cid)
+						c.Contains = ap.Ingredient
+						c.Measure = cId.Measure
+						c.Label = cId.Label
+						c.Type = cId.Type
+						// register container by adding to map
+						ContainerM[c.Cid] = c
+						// update name of container in Activity to <name>-AId
+						p.SourceC[i] = c.Cid
+						// search for other references and change its name
+						if l == prep {
+							// update task based reference before we get there.
+							for i := 0; i < len(ap.Task.SourceC); i++ {
+								if ap.Task.SourceC[i] == cs {
+									ap.Task.SourceC[i] = c.Cid
+									break
+								}
+							}
+							for i := 0; i < len(ap.Task.SourceC); i++ {
+								if ap.Task.SourceC[i] == cs {
+									ap.Task.SourceC[i] = c.Cid
+									break
+								}
+							}
+						}
+						cId = c
 					}
+					p.SourceCp = append(p.SourceCp, cId)
+					associatedTask := taskT{Type: l, Activityp: ap}
+					cId.Activity = append(cId.Activity, associatedTask)
 				}
 			}
-			i++
 		}
 	}
+
 	// check container is associated with an activity. if not delete from container map.
 	for _, c := range ContainerM {
 		if len(c.Activity) == 0 {
@@ -680,7 +746,6 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 	// assign first index into ptS for each container
 	for _, v := range ContainerM {
 		v.start = 99999
-		// each container appears in a list prep tasks and tasks.
 		for _, t := range v.Activity {
 			// find first appearance in task list (typcially useC or addToC)
 			for l, r := range ptS {
@@ -696,9 +761,8 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 	}
 	// assign last index into ptS for each container.
 	for _, v := range ContainerM {
-		// each container appears in a list prep tasks and tasks.
 		for _, t := range v.Activity {
-			// find last appearance in task list (typcially useC or addToC)
+			// find last appearance in task list (typcially useC or sourceC)
 			for i := len(ptS) - 1; i >= 0; i-- {
 				// find last appearance (typically sourceC). Start at last ptS and work backwards
 				if ptS[i].AId == t.Activityp.AId {
@@ -709,9 +773,6 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 				}
 			}
 		}
-	}
-	for _, v := range ContainerM {
-		fmt.Printf("Container %#v\n", v)
 	}
 	//
 	// devices
@@ -769,12 +830,12 @@ func (s *sessCtx) readBaseRecipeForTasks() (Activities, error) {
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &ActivityS)
 	//
 	activityStart = &ActivityS[0]
-	for _, v := range ActivityS {
+	// for _, v := range ActivityS {
 
-		if v.Task != nil {
-			fmt.Println("Activity data: ", v.AId, v.Task.Text)
-		}
-	}
+	// 	if v.Task != nil {
+	// 		fmt.Println("Activity data: ", v.AId, v.Task.Text)
+	// 	}
+	// }
 	// link activities together via next, prev, nextTask, nextPrep pointers. Order in ActivityS is sorted from dynamodb sort key.
 	// not sure how useful have next, prev pointers will be but its easy to setup so keep for time being. Do use prev in other part of code.
 	for i := 0; i < len(ActivityS)-1; i++ {

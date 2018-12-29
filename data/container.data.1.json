@@ -95,8 +95,8 @@
                "Item": {
                   "PKey" : { "S": "C-0-0" },
                   "SortK" : { "S": "MC-S" },
-                  "label" : { "S" : "MeasuringCup" },
-                  "type" : { "S": "MeasuringCup" },
+                  "label" : { "S" : "Measuring Cup" },
+                  "type" : { "S": "Measuring Cup" },
                   "measure" : { "M" : { 
                                       "size" : { "S" : "1.5 Cup" } 
                                       }
@@ -110,8 +110,8 @@
                "Item": {
                   "PKey" : { "S": "C-0-0" },
                   "SortK" : { "S": "MC-M" },
-                  "label" : { "S" : "MeasuringCup" },
-                  "type" : { "S": "MeasuringCup" },
+                  "label" : { "S" : "Measuring Cup" },
+                  "type" : { "S": "Measuring Cup" },
                   "measure" : { "M" : { 
                                       "size" : { "S" : "2.5 Cup" } 
                                       }
@@ -125,8 +125,8 @@
                "Item": {
                   "PKey" : { "S": "C-0-0" },
                   "SortK" : { "S": "MC-L" },
-                  "label" : { "S" : "MeasuringBowel" },
-                  "type" : { "S": "MeasuringBowel" },
+                  "label" : { "S" : "Measuring Bowel" },
+                  "type" : { "S": "Measuring Bowel" },
                   "measure" : { "M" : { 
                                       "size" : { "S" : "4.5 Cup" } 
                                       }
