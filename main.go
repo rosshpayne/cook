@@ -632,12 +632,12 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 			break
 		}
 		s := sessctx
-		// err = aa.IndexIngd(s.dynamodbSvc, s.reqBkId, s.reqBkName, s.reqRName, s.reqRId, s.cat, s.subcat, s.authors)
-		// if err != nil {
+		err = aa.IndexIngd(s.dynamodbSvc, s.reqBkId, s.reqBkName, s.reqRName, s.reqRId, s.cat, s.subcat, s.authors)
+		if err != nil {
 
-		// 	fmt.Printf("error: %s", err.Error())
-		// 	break
-		// }
+			fmt.Printf("error: %s", err.Error())
+			break
+		}
 		//
 		// Populate container and task records in recipe and ingredient table respectively
 		//

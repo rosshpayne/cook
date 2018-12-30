@@ -236,60 +236,53 @@ func (a Activities) IndexIngd(svc *dynamodb.DynamoDB, bkid string, bkname string
 		return nil
 	}
 	//
-	// populate indexT type, indexRecS
-	//
-	// var totalgrams int
-	// for _, ap := range a {
-	// 	if len(ap.Ingredient) > 0 {
-	// 		if len(ap.Measure.Unit) > 0 {
-	// 			switch ap.Measure.Unit {
-	// 				case "g" : grams+= ap.Measure.Quantity
-	// 				case "kg": grams+= ap.Measure.Quantity*1000
-	// 			}
-	// 		}
-	// 	}
-	// }
-	fmt.Printf("doNotIndex %#v\n", doNotIndex)
+	row_ := make(map[string]bool)
 	for _, ap := range a {
 
 		if len(ap.Ingredient) > 0 {
-			ap.Ingredient = strings.ToLower(ap.Ingredient)
-			if !doNotIndex[ap.Ingredient] {
-				// ingredient is indexable. Populate index record.
-				for i, v := range []string{cat, subcat} {
-					// ingrd-cat and ingrd-subcat
-					for k := range []int{1, 2} {
-						// ingrd-cat and qualifier-ingrd-cat and ingrd-subcat, qualifier-ingrd-subcat
-						if len(v) == 0 && i == 1 {
-							// subcat is not defined
-							break
+			// make ingredient singular and lower case
+			ap.Ingredient = strings.TrimRight(strings.TrimRight(strings.ToLower(ap.Ingredient), " "), "s")
+			if !doNotIndex[strings.TrimRight(strings.ToLower(ap.Label), "s")] {
+				if !doNotIndex[ap.Ingredient] {
+					// ingredient is indexable. Populate index record.
+					for i, v := range []string{cat, subcat} {
+						// ingrd-cat and ingrd-subcat
+						for k := range []int{1, 2} {
+							// ingrd-cat and qualifier-ingrd-cat and ingrd-subcat, qualifier-ingrd-subcat
+							if len(v) == 0 && i == 1 {
+								// subcat is not defined
+								break
+							}
+							if strings.TrimRight(ap.Ingredient, "s") == strings.TrimRight(strings.ToLower(v), "s") {
+								// if ingredient name same as cat/subcat then index under cat/subcat name
+								ap.Ingredient = ""
+							}
+							irec := indexRecT{}
+							irec.PreQual = ap.QualiferIngrd
+							irec.PostQual = ap.IngrdQualifer
+							if len(ap.Measure.Size) > 0 {
+								irec.Quantity = ap.Measure.Quantity + " " + ap.Measure.Size
+							} else {
+								irec.Quantity = ap.Measure.Quantity + ap.Measure.Unit
+							}
+							if len(v) == 0 && i == 0 {
+								// take cat from last word in recipe title
+								cat = rname[strings.LastIndex(rname, " ")+1:]
+							}
+							if k == 0 {
+								irec.PKey = strings.TrimLeft(strings.ToLower(ap.Ingredient+" "+v), " ")
+							} else {
+								irec.PKey = strings.TrimLeft(strings.ToLower(ap.QualiferIngrd+" "+ap.Ingredient+" "+v), " ")
+							}
+							irec.SortK = bkid + "-" + rid
+							irec.RName = rname
+							irec.BkName = bkname
+							irec.Authors = authors
+							if !row_[irec.PKey] {
+								row_[irec.PKey] = true
+								indexRecS = append(indexRecS, irec)
+							}
 						}
-						if ap.Ingredient == strings.ToLower(v) {
-							// if ingredient name same as cat/subcat then index under cat/subcat name
-							ap.Ingredient = ""
-						}
-						irec := indexRecT{}
-						irec.PreQual = ap.QualiferIngrd
-						irec.PostQual = ap.IngrdQualifer
-						if len(ap.Measure.Size) > 0 {
-							irec.Quantity = ap.Measure.Quantity + " " + ap.Measure.Size
-						} else {
-							irec.Quantity = ap.Measure.Quantity + ap.Measure.Unit
-						}
-						if len(v) == 0 && i == 0 {
-							// take cat from last word in recipe title
-							cat = rname[strings.LastIndex(rname, " ")+1:]
-						}
-						if k == 0 {
-							irec.PKey = strings.ToLower(ap.Ingredient + " " + v)
-						} else {
-							irec.PKey = strings.ToLower(ap.QualiferIngrd + " " + ap.Ingredient + " " + v)
-						}
-						irec.SortK = bkid + "-" + rid
-						irec.RName = rname
-						irec.BkName = bkname
-						irec.Authors = authors
-						indexRecS = append(indexRecS, irec)
 					}
 				}
 			}
