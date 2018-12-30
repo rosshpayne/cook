@@ -1,13 +1,33 @@
 {
-      "Recipe" : [ 
+       "Ingredient" : [ 
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-21-3" },
+                  "SortK" : { "S": "RisoPan" },
+                  "label" : { "S" : "Pan" },
+                  "type" : { "S": "Pan" },
+                  "contains" : { "S": "risotto ingredients" },
+                  "measure" : { "M" : { 
+                                      "diameter" : { "N" : "30" } , 
+                                      "height"   : { "N" : "2"  } ,
+                                      "unit" : { "S" : "cm" }  
+                                      }
+                              },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "purpose" : {"S":"Cooking"}
+                   }
+               }
+            }
+        ],
+        "Recipe" : [ 
         {
         "PutRequest": { 
             "Item": { 
                 "PKey" : { "S": "R-21" },
                 "SortK" : { "N": "3"},
                 "RName" : { "S": "Risotto Nero with Swiss Chard"},
-                "Cat"  : { "S": "risotto" } ,
-                "SubCat" : { "S": "rice" }
+                "Cat"  : { "S": "risotto" } 
             }
         }
         },

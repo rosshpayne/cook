@@ -279,6 +279,7 @@ func (a Activities) IndexIngd(svc *dynamodb.DynamoDB, bkid string, bkname string
 							irec.BkName = bkname
 							irec.Authors = authors
 							if !row_[irec.PKey] {
+								// only append unique values..
 								row_[irec.PKey] = true
 								indexRecS = append(indexRecS, irec)
 							}

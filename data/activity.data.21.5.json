@@ -1,0 +1,238 @@
+{
+       "Ingredient" : [ 
+        {
+          "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-21-5" },
+                  "SortK" : { "S": "Pot" },
+                  "type" : { "S": "Pot" },
+                  "label" : { "S": "Pot" },
+                  "measure" : { "M" : { "size" : { "S" : "large" } } },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "contents" : { "S": "water" },
+                  "purpose": { "S": "blanching and cooking" }
+                  }
+            }
+         },
+        {
+          "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-21-5" },
+                  "SortK" : { "S": "Bowel" },
+                  "type" : { "S": "Bowel" },
+                  "label" : { "S": "Bowel" },
+                  "measure" : { "M" : { "size" : { "S" : "large" } } },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "contents" : { "S": "pasta" },
+                  "purpose": { "S": "blending" }
+                  }
+            }
+         }
+      ],
+      "Recipe" : [ 
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "R-21" },
+                "SortK" : { "N": "5"},
+                "RName" : { "S": "Rigatoni with Cavolo Nero and New Olive Oil"},
+                "Cat"  : { "S": "Pasta" } 
+            }
+        }
+        },
+        {
+          "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-21-5" },
+                "SortK" : { "N": "10"},
+                "label" : { "S": "cavolo leaves"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "cavolo nero leaves"},
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "1" } ,
+                                      "unit" : { "S" : "kg" }
+                                      }
+                },
+                "prep" : { "L" :  [ 
+                                { "M": {
+                                  "txt" : { "S" : "Fill a large pot half full of water and bring to a boil" },
+                                  "say" : { "S" : "Fill a large pot half full of water and bring to a boil" },
+                                  "time" : { "N" : "8" },
+                                  "unit" : { "S" : "min" }, 
+                                  "useC" : { "SS" : ["Pot"] },
+                                  "parallel" : {"BOOL" : true }   }
+                                },
+                                { "M": {
+                                  "txt" : { "S" : "Remove the stalks from the {ingrd}, but keep the leaves whole." },
+                                  "say" : { "S" : "Remove the stalks from the {ingrd}, but keep the leaves whole." },
+                                  "time" : { "N" : "1" },
+                                  "unit" : { "S" : "min" } ,
+                                  "UseDevice" : { "M" : { "type" : {"S": "knife" }} }
+                                   }
+                                }
+                                ]
+                },
+                "task" : { "L" : [ 
+                                { "M": {
+                                  "txt" : { "S" : "Once boiling, add a generous amount of salt to the pot of water" },
+                                  "say" : { "S" : "Once boiling, add a generous amount of salt to the pot of water" },
+                                  "time" : { "N" : "1" },
+                                  "unit" : { "S" : "min" }, 
+                                  "addToC" : { "SS" : ["Pot"] }
+                                    }
+                                },
+                                { "M": {
+                                  "txt" : { "S" : "blanch the {ingrd} in the pot of water and drain" },
+                                  "say" : { "S" : "blanch the {ingrd} in the pot of water and drain" },
+                                  "time" : { "N" : "6" },
+                                  "unit" : { "S" : "min" }, 
+                                  "UseDevice" : { "M" : { "type" : {"S": "Colander" }}},
+                                  "addToC" : { "SS" : ["Pot"] }
+                                    }
+                                }
+                                ]
+                }
+        }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-21-5" },
+                "SortK" : { "N": "20"},
+                "label" : { "S": "garlic"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "garlic" },
+                "iQual" : { "S" : "cloves" },
+                 "measure" : { "M" : { 
+                                      "qty" : { "S" : "2" },
+                                      "unit" : {"S" : "cloves" }
+                            }
+                 },
+                 "prep" : { "L" : [
+                                { "M" : { 
+                                  "txt" : { "S" : "Peel {qty}{unit} of {ingrd}, cut in half and remove the centre piece and set aside" },
+                                  "say" : { "S" : "Peel {qty}{unit} of {ingrd}, cut in half and remove the centre piece and set aside" },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "useC" : { "S" : "SAP-S"},
+                                  "unit" : { "S" : "min" },
+                                  "UseDevice" : { "M" : {"type" : {"S":"vegetable knife" }}}
+                                    }
+                                }
+                                ]
+                },
+                "task" : { "L" : [
+                                { "M" : { 
+                                  "txt" : { "S" : "Put the blanced cavolo nero and prepared {ingrd} {quali} into a food processor and pulse-chop to a puree" },
+                                  "say" : { "S" : "Put the blanced cavolo nero and prepared {ingrd} {quali} into a food processor and pulse-chop to a puree" },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "UseDevice" : { "M" : {"type" : {"S": "food processor" }}}
+                                }
+                                }
+                                ]
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-21-5" },
+                "SortK" : { "N": "30"},
+                "label" : { "S": "oil"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "olive oil" },
+                "iQual" : { "S" : "extra virgin" },
+                "iQual" : { "S" : "juice" },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "250" } ,
+                                      "unit" : { "S" : "ml"}
+                                      }
+                },
+                "task" : { "L" : [ 
+                                {"M" : { 
+                                  "txt" : { "S" : "Pulse the cavolo blend for a few more seconds while pouring in about {qty}{unit} of {quali} {ingrd}. This will make for a fairly liquid dark green puree " },
+                                  "say" : { "S" : "Pulse the cavolo blend for a few more seconds while pouring in about {qty}{unit} of {quali} {ingrd}. This will make for a fairly liquid dark green puree " },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" }
+                                }
+                                }
+                                ]
+                                         
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-21-5" },
+                "SortK" : { "N": "40"},
+                "label" : { "S": "pasta"},
+                "ingrd" : { "S" : "rigatoni" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "500" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                },
+                "task" : { "L" : [
+                                { "M" : {
+                                  "txt" : { "S" : "In the same pot that you used to blanch the cavolo cook the rigatoni and drain thoroughly" },
+                                  "say" : { "S" : "In the same pot that you used to blanch the cavolo cook the rigatoni and drain thoroughly" },
+                                  "time" : { "N" : "8" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "UseDevice" : { "M" : { "type" : {"S": "Colander" }}},
+                                  "addToC" : { "SS" : [ "Pot" ] }
+                                  }
+                                },
+                                { "M" : {
+                                  "txt" : { "S" : "once drained put the pasta into a bowel, add the sauce and stir until each piece is thickly coated." },
+                                  "say" : { "S" : "once drained put the pasta into a bowel, add the sauce and stir until each piece is thickly coated." },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "Bowel" ] }
+                                  }
+                                }
+                                ]
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-21-5" },
+                "SortK" : { "N": "50"},
+                "label" : { "S": "cheese"},
+                "ingrd" : { "S" : "parmesan" },
+                "quali" : { "S" : "freshly grated" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "500" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Pour over the remaining olive oil and serve with {quali} {ingrd}" },
+                                  "say" : { "S" : "Pour over the remaining olive oil and serve with {quali} {ingrd}" },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "Bowel" ] }
+                                  }
+                                }
+                                ]
+                }
+            }
+            }
+            }
+    ]
+}    

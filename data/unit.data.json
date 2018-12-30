@@ -137,6 +137,15 @@
                 "llabel" : { "S": "hour" }
                 }
             }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                "unit" : { "S" : "cloves" },
+                "slabel" : { "S" : "cloves" },
+                "llabel" : { "S": "cloves" }
+                }
+            }
          }
     ]
 }  

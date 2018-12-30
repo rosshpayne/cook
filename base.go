@@ -142,8 +142,8 @@ type Activity struct {
 	Measure       MeasureT   `json:"measure"`
 	Overview      string     `json:"ovv"`
 	Coord         [2]float32 // X,Y
-	Task          *PerformT  `json:"task"`
-	Prep          *PerformT  `json:"prep"`
+	Task          []PerformT `json:"task"`
+	Prep          []PerformT `json:"prep"`
 	next          *Activity
 	prev          *Activity
 	nextTask      *Activity
@@ -572,166 +572,172 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 	//
 	for _, l := range []PrepTask{prep, task} {
 		for ap := activityStart; ap != nil; ap = ap.next {
-			var p *PerformT
+			var p []PerformT
 			switch l {
 			case task:
 				p = ap.Task
 			case prep:
 				p = ap.Prep
 			}
-			if p == nil {
+			if len(p) == 0 {
 				continue
 			}
 			// now compare contains defined in each activity with those registered for
 			// the recipe and those that are single-activity-containers
-			if len(p.AddToC) > 0 {
-				// activity containers are held in []string
-				for i := 0; i < len(p.AddToC); i++ {
-					// ContainerM contains registered containers
-					cId, ok := ContainerM[strings.TrimSpace(p.AddToC[i])]
-					if !ok {
-						// ContainerSAM contains single activity containers
-						if cId, ok = ContainerSAM[strings.TrimSpace(p.AddToC[i])]; !ok {
-							// is not a single ingredient container or not a registered container
-							fmt.Printf("Error:   Container [%s] not found for %s %d\n", strings.TrimSpace(p.AddToC[i]), ap.Label, ap.AId)
-							continue
-						}
-						// Single-Activity-Containers are not pre-configured by the user into the Container repo - to make life easier.
-						// dynamically create a container with a new Cid, and add to ContainerM and update all references to it.
-						cs := p.AddToC[i] // original non-activity-specific container name
-						c := new(Container)
-						c.Cid = p.AddToC[i] + "-" + strconv.Itoa(ap.AId)
-						c.Contains = ap.Ingredient
-						c.Measure = cId.Measure
-						c.Label = cId.Label
-						c.Type = cId.Type
-						// register container by adding to map
-						ContainerM[c.Cid] = c
-						// update container id in activity
-						p.AddToC[i] = c.Cid
-						// search for other references and change its name
-						if l == prep {
-							// update other reference before we get there.
-							for i := 0; i < len(ap.Task.SourceC); i++ {
-								if ap.Task.SourceC[i] == cs {
-									ap.Task.SourceC[i] = c.Cid
-									break
+			for _, p := range p {
+				if len(p.AddToC) > 0 {
+					// activity containers are held in []string
+					for i := 0; i < len(p.AddToC); i++ {
+						// ContainerM contains registered containers
+						cId, ok := ContainerM[strings.TrimSpace(p.AddToC[i])]
+						if !ok {
+							// ContainerSAM contains single activity containers
+							if cId, ok = ContainerSAM[strings.TrimSpace(p.AddToC[i])]; !ok {
+								// is not a single ingredient container or not a registered container
+								fmt.Printf("Error:   Container [%s] not found for %s %d\n", strings.TrimSpace(p.AddToC[i]), ap.Label, ap.AId)
+								continue
+							}
+							// Single-Activity-Containers are not pre-configured by the user into the Container repo - to make life easier.
+							// dynamically create a container with a new Cid, and add to ContainerM and update all references to it.
+							cs := p.AddToC[i] // original non-activity-specific container name
+							c := new(Container)
+							c.Cid = p.AddToC[i] + "-" + strconv.Itoa(ap.AId)
+							c.Contains = ap.Ingredient
+							c.Measure = cId.Measure
+							c.Label = cId.Label
+							c.Type = cId.Type
+							// register container by adding to map
+							ContainerM[c.Cid] = c
+							// update container id in activity
+							p.AddToC[i] = c.Cid
+							// search for other references and change its name
+							if l == prep {
+								// update other reference before we get there.
+								if len(ap.Task) > 0 {
+									for _, t := range ap.Task {
+										for i := 0; i < len(t.SourceC); i++ {
+											if t.SourceC[i] == cs {
+												t.SourceC[i] = c.Cid
+												break
+											}
+										}
+										for i := 0; i < len(t.UseC); i++ {
+											if t.UseC[i] == cs {
+												t.UseC[i] = c.Cid
+												break
+											}
+										}
+									}
 								}
 							}
-							for i := 0; i < len(ap.Task.UseC); i++ {
-								if ap.Task.UseC[i] == cs {
-									ap.Task.UseC[i] = c.Cid
-									break
-								}
-							}
+							cId = c
 						}
-						cId = c
+						// activity to container edge
+						p.AddToCp = append(p.AddToCp, cId)
+						// container to activity edge
+						associatedTask := taskT{Type: l, Activityp: ap}
+						cId.Activity = append(cId.Activity, associatedTask)
 					}
-					// activity to container edge
-					p.AddToCp = append(p.AddToCp, cId)
-					// container to activity edge
-					associatedTask := taskT{Type: l, Activityp: ap}
-					cId.Activity = append(cId.Activity, associatedTask)
 				}
-			}
 
-			if len(p.UseC) > 0 {
-				for i := 0; i < len(p.UseC); i++ {
-					// ContainerM contains registered containers
-					fmt.Println("useC: ", p.UseC[i])
-					cId, ok := ContainerM[strings.TrimSpace(p.UseC[i])]
-					if !ok {
-						// ContainerSAM contains single activity containers
-						if cId, ok = ContainerSAM[strings.TrimSpace(p.UseC[i])]; !ok {
-							// is not a single ingredient container or not a registered container
-							fmt.Printf("Error:   Container [%s] not found for %s %d\n", strings.TrimSpace(p.AddToC[i]), ap.Label, ap.AId)
-							continue
-						}
-						// container referened in activity is a single-activity-container (SAP)
-						// manually create container and add to ContainerM and update all references to it.
-						fmt.Println("useC: create new container for ", p.UseC[i])
-						cs := p.UseC[i] // original non-activity-specific container name
-						c := new(Container)
-						c.Cid = p.UseC[i] + "-" + strconv.Itoa(ap.AId)
-						c.Contains = ap.Ingredient
-						c.Measure = cId.Measure
-						c.Label = cId.Label
-						c.Type = cId.Type
-						// register container by adding to map
-						ContainerM[c.Cid] = c
-						// update name of container in Activity to <name>-AId
-						p.UseC[i] = c.Cid
-						// search for other references and change its name
-						if l == prep {
-							// update task based reference before we get there.
-							for i := 0; i < len(ap.Task.SourceC); i++ {
-								if ap.Task.SourceC[i] == cs {
-									ap.Task.SourceC[i] = c.Cid
-									break
+				if len(p.UseC) > 0 {
+					for i := 0; i < len(p.UseC); i++ {
+						// ContainerM contains registered containers
+						fmt.Println("useC: ", p.UseC[i])
+						cId, ok := ContainerM[strings.TrimSpace(p.UseC[i])]
+						if !ok {
+							// ContainerSAM contains single activity containers
+							if cId, ok = ContainerSAM[strings.TrimSpace(p.UseC[i])]; !ok {
+								// is not a single ingredient container or not a registered container
+								fmt.Printf("Error:   Container [%s] not found for %s %d\n", strings.TrimSpace(p.AddToC[i]), ap.Label, ap.AId)
+								continue
+							}
+							// container referened in activity is a single-activity-container (SAP)
+							// manually create container and add to ContainerM and update all references to it.
+							fmt.Println("useC: create new container for ", p.UseC[i])
+							cs := p.UseC[i] // original non-activity-specific container name
+							c := new(Container)
+							c.Cid = p.UseC[i] + "-" + strconv.Itoa(ap.AId)
+							c.Contains = ap.Ingredient
+							c.Measure = cId.Measure
+							c.Label = cId.Label
+							c.Type = cId.Type
+							// register container by adding to map
+							ContainerM[c.Cid] = c
+							// update name of container in Activity to <name>-AId
+							p.UseC[i] = c.Cid
+							// search for other references and change its name
+							if l == prep {
+								// update task based reference before we get there.
+								for i := 0; i < len(ap.Task.SourceC); i++ {
+									if ap.Task.SourceC[i] == cs {
+										ap.Task.SourceC[i] = c.Cid
+										break
+									}
+								}
+								for i := 0; i < len(ap.Task.UseC); i++ {
+									if ap.Task.UseC[i] == cs {
+										ap.Task.UseC[i] = c.Cid
+										break
+									}
 								}
 							}
-							for i := 0; i < len(ap.Task.UseC); i++ {
-								if ap.Task.UseC[i] == cs {
-									ap.Task.UseC[i] = c.Cid
-									break
-								}
-							}
+							cId = c
 						}
-						cId = c
+						p.UseCp = append(p.UseCp, cId)
+						associatedTask := taskT{Type: l, Activityp: ap}
+						cId.Activity = append(cId.Activity, associatedTask)
 					}
-					p.UseCp = append(p.UseCp, cId)
-					associatedTask := taskT{Type: l, Activityp: ap}
-					cId.Activity = append(cId.Activity, associatedTask)
 				}
-			}
-			if len(p.SourceC) > 0 {
-				// ContainerM contains registered containers
-				for i := 0; i < len(p.SourceC); i++ {
-					fmt.Println("sourceC: ", p.SourceC[i])
-					cId, ok := ContainerM[strings.TrimSpace(p.SourceC[i])]
-					if !ok {
-						// ContainerSAM contains single activity containers
-						if cId, ok = ContainerSAM[strings.TrimSpace(p.SourceC[i])]; !ok {
-							// is not a single ingredient container or not a registered container
-							fmt.Printf("Error:   Container [%s] not found for %s %d\n", strings.TrimSpace(p.AddToC[i]), ap.Label, ap.AId)
-							continue
-						}
-						// container referened in activity is a single-activity-container (SAP)
-						// manually create container and add to ContainerM and update all references to it.
-						fmt.Println("SourceC: create new container for ", p.SourceC[i])
-						cs := p.SourceC[i] // original non-activity-specific container name
-						c := new(Container)
-						c.Cid = p.SourceC[i] + "-" + strconv.Itoa(ap.AId)
-						fmt.Println("create container: ", c.Cid)
-						c.Contains = ap.Ingredient
-						c.Measure = cId.Measure
-						c.Label = cId.Label
-						c.Type = cId.Type
-						// register container by adding to map
-						ContainerM[c.Cid] = c
-						// update name of container in Activity to <name>-AId
-						p.SourceC[i] = c.Cid
-						// search for other references and change its name
-						if l == prep {
-							// update task based reference before we get there.
-							for i := 0; i < len(ap.Task.SourceC); i++ {
-								if ap.Task.SourceC[i] == cs {
-									ap.Task.SourceC[i] = c.Cid
-									break
+				if len(p.SourceC) > 0 {
+					// ContainerM contains registered containers
+					for i := 0; i < len(p.SourceC); i++ {
+						fmt.Println("sourceC: ", p.SourceC[i])
+						cId, ok := ContainerM[strings.TrimSpace(p.SourceC[i])]
+						if !ok {
+							// ContainerSAM contains single activity containers
+							if cId, ok = ContainerSAM[strings.TrimSpace(p.SourceC[i])]; !ok {
+								// is not a single ingredient container or not a registered container
+								fmt.Printf("Error:   Container [%s] not found for %s %d\n", strings.TrimSpace(p.AddToC[i]), ap.Label, ap.AId)
+								continue
+							}
+							// container referened in activity is a single-activity-container (SAP)
+							// manually create container and add to ContainerM and update all references to it.
+							fmt.Println("SourceC: create new container for ", p.SourceC[i])
+							cs := p.SourceC[i] // original non-activity-specific container name
+							c := new(Container)
+							c.Cid = p.SourceC[i] + "-" + strconv.Itoa(ap.AId)
+							fmt.Println("create container: ", c.Cid)
+							c.Contains = ap.Ingredient
+							c.Measure = cId.Measure
+							c.Label = cId.Label
+							c.Type = cId.Type
+							// register container by adding to map
+							ContainerM[c.Cid] = c
+							// update name of container in Activity to <name>-AId
+							p.SourceC[i] = c.Cid
+							// search for other references and change its name
+							if l == prep {
+								// update task based reference before we get there.
+								for i := 0; i < len(ap.Task.SourceC); i++ {
+									if ap.Task.SourceC[i] == cs {
+										ap.Task.SourceC[i] = c.Cid
+										break
+									}
+								}
+								for i := 0; i < len(ap.Task.SourceC); i++ {
+									if ap.Task.SourceC[i] == cs {
+										ap.Task.SourceC[i] = c.Cid
+										break
+									}
 								}
 							}
-							for i := 0; i < len(ap.Task.SourceC); i++ {
-								if ap.Task.SourceC[i] == cs {
-									ap.Task.SourceC[i] = c.Cid
-									break
-								}
-							}
+							cId = c
 						}
-						cId = c
+						p.SourceCp = append(p.SourceCp, cId)
+						associatedTask := taskT{Type: l, Activityp: ap}
+						cId.Activity = append(cId.Activity, associatedTask)
 					}
-					p.SourceCp = append(p.SourceCp, cId)
-					associatedTask := taskT{Type: l, Activityp: ap}
-					cId.Activity = append(cId.Activity, associatedTask)
 				}
 			}
 		}

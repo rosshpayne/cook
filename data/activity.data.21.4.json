@@ -32,7 +32,7 @@
             "Item": { 
                 "PKey" : { "S": "A-21-4" },
                 "SortK" : { "N": "10"},
-                "label" : { "S": "green beans"},
+                "label" : { "S": "beans"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "beans"},
                 "iQual" : { "S" : "trimmed"},
@@ -121,7 +121,7 @@
                 "PKey" : { "S": "A-21-4" },
                 "SortK" : { "N": "50"},
                 "label" : { "S": "cheese"},
-                "ingrd" : { "S" : "paramesan" },
+                "ingrd" : { "S" : "parmesan" },
                 "iQual" : { "S" : "freshly grated" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
