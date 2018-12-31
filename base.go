@@ -446,8 +446,7 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 	//*dynamodb.DynamoDB,
 	result, err := s.dynamodbSvc.Query(input)
 	if err != nil {
-		log.Print("error from Query:  " + err.Error())
-		//return nil//, err
+		return nil, fmt.Errorf("Error: in readBaseRecipeForContainers Query - %s", err.Error())
 	}
 	if int(*result.Count) == 0 {
 		return nil, fmt.Errorf("No data found for reqRId %s in readBaseRecipeForTasks for Activity - ", s.reqRId)
@@ -487,8 +486,7 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 	//
 	result, err = s.dynamodbSvc.Query(input)
 	if err != nil {
-		fmt.Println()
-		//return nil //, fmt.Errorf("%s", "Error in Query of container table: "+err.Error())
+		return nil, fmt.Errorf("%s", "Error in Query of container table: "+err.Error())
 	}
 	if int(*result.Count) == 0 {
 		fmt.Println("No container data..")
@@ -500,10 +498,8 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 		itemc = new(Container)
 		err = dynamodbattribute.UnmarshalMap(i, itemc)
 		if err != nil {
-			fmt.Println(err.Error())
-			//return nil //, fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
+			return nil, fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
 		}
-		fmt.Println("** Adding container: ", itemc.Cid)
 		ContainerM[itemc.Cid] = itemc
 	}
 	// common containers - not recipe specific
@@ -523,8 +519,7 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 	//
 	result, err = s.dynamodbSvc.Query(input)
 	if err != nil {
-		fmt.Println()
-		//return nil //, fmt.Errorf("%s", "Error in Query of container table: "+err.Error())
+		return nil, fmt.Errorf("%s", "Error in Query of container table: "+err.Error())
 	}
 	if int(*result.Count) == 0 {
 		fmt.Println("No container data..")
@@ -534,8 +529,7 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 		itemc = new(Container)
 		err = dynamodbattribute.UnmarshalMap(i, itemc)
 		if err != nil {
-			fmt.Println(err.Error())
-			//return nil //, fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
+			return nil, fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
 		}
 		ContainerSAM[itemc.Cid] = itemc
 	}
@@ -545,8 +539,7 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 	proj := expression.NamesList(expression.Name("slabel"), expression.Name("llabel"), expression.Name("desc"))
 	expr, err = expression.NewBuilder().WithProjection(proj).Build()
 	if err != nil {
-		fmt.Println()
-		//return nil, fmt.Errorf("%s", "Error in expression build of unit table: "+err.Error())
+		return nil, fmt.Errorf("%s", "Error in expression build of unit table: "+err.Error())
 	}
 	// Build the query input parameters
 	params := &dynamodb.ScanInput{
@@ -557,12 +550,9 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 	}
 	resultS, err := s.dynamodbSvc.Scan(params)
 	if err != nil {
-		fmt.Println()
-		//return nil //, fmt.Errorf("%s", "Error in scan of unit table: "+err.Error())
-	}
-	if int(*result.Count) == 0 {
-		fmt.Println()
-		//return nil //, fmt.Errorf("%s", "no-data-found in unit table: "+err.Error())
+		return nil, fmt.Errorf("%s", "Error in scan of unit table: "+err.Error())
+	} else {
+		return nil, fmt.Errorf("%s", "no-data-found in unit table: "+err.Error())
 	}
 	unitM := make(map[string]*Unit, int(*result.Count))
 	var unit *Unit
@@ -570,9 +560,7 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 		unit = new(Unit)
 		err = dynamodbattribute.UnmarshalMap(i, unit)
 		if err != nil {
-			fmt.Println("Got error unmarshalling:")
-			fmt.Println(err.Error())
-			//return nil, fmt.Errorf("%s", "Error in UnmarshalMap of unit table: "+err.Error())
+			return nil, fmt.Errorf("%s", "Error in UnmarshalMap of unit table: "+err.Error())
 		}
 		unitM[unit.Slabel] = unit
 	}
@@ -1069,7 +1057,6 @@ func (s *sessCtx) readBaseRecipeForTasks() (Activities, error) {
 					case voice:
 						str = pt.Verbal
 					}
-					fmt.Println(str)
 					// if no {} then print and return to top of the loop
 					t1 := strings.IndexByte(str, '{')
 					if t1 < 0 {

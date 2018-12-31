@@ -331,7 +331,6 @@ func (s sessCtx) updateSession() (int, error) {
 		// for the first object request in a session the RecId set will not exist - we need to SET. All other times we will ADD.
 		//  we determine the first time using a len(recID) > 0 on the session query in the calling func.
 		if s.reset || s.recIdNotExists {
-			fmt.Println("SET RECID in sessions..for ", s.object)
 			s.recIdNotExists = false
 			// on insert build a prepopulated dynamodb set of int (internally float64 in dynamodb)
 			switch len(s.object) {
@@ -356,7 +355,6 @@ func (s sessCtx) updateSession() (int, error) {
 		} else {
 			// on update use ADD to increment an object related counter.
 			recid_ := fmt.Sprintf("RecId[%d]", objectMap[s.object])
-			fmt.Printf("recid in updateSession is: %s\n", recid_)
 			updateC = expression.Add(expression.Name(recid_), expression.Value(s.updateAdd))
 		}
 	}
@@ -674,7 +672,6 @@ func (s *sessCtx) ingredientSearch() error {
 	)
 	if len(s.reqBkId) > 0 {
 		// look for recipes in current book only - reqIngrdCat in lower case before searching
-		fmt.Printf("in ingredientSearch..in book [%s] for [%s]\n", s.reqBkId, s.reqIngrdCat)
 		kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value(s.reqIngrdCat))
 		kcond = kcond.And(expression.KeyBeginsWith(expression.Key("SortK"), s.reqBkId+"-"))
 		expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
@@ -698,7 +695,6 @@ func (s *sessCtx) ingredientSearch() error {
 		}
 	}
 	if len(s.reqBkId) == 0 || allBooks {
-		fmt.Println("allbooks...1")
 		// no active book or active book does not contain recipe type
 		kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value(s.reqIngrdCat))
 		expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
@@ -758,7 +754,6 @@ func (s *sessCtx) ingredientSearch() error {
 		return nil
 	}
 	// result of active book returning 1 record and library search
-	fmt.Printf("count of book... %d\n", int(*result.Count))
 	switch int(*result.Count) {
 	case 0:
 		s.vmsg = fmt.Sprintf("No %s found in any recipe book. ", s.reqIngrdCat)

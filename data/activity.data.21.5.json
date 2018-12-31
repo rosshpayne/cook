@@ -64,8 +64,8 @@
                                   "parallel" : {"BOOL" : true }   }
                                 },
                                 { "M": {
-                                  "txt" : { "S" : "Remove the stalks from the {ingrd}, but keep the leaves whole. Set aside" },
-                                  "say" : { "S" : "Remove the stalks from the {ingrd}, but keep the leaves whole. Set aside" },
+                                  "txt" : { "S" : "Remove the stalks from the {ingrd} {iQual}, but keep the {iQual} whole. Set aside" },
+                                  "say" : { "S" : "Remove the stalks from the {ingrd} {iQual}, but keep the {iQual} whole. Set aside" },
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" } ,
                                   "useC" : { "SS" : ["SAP-M"] },
@@ -84,8 +84,8 @@
                                     }
                                 },
                                 { "M": {
-                                  "txt" : { "S" : "blanch the {ingrd} in the pot of water and drain" },
-                                  "say" : { "S" : "blanch the {ingrd} in the pot of water and drain" },
+                                  "txt" : { "S" : "blanch the {ingrd} {iQual} in the pot of water and drain" },
+                                  "say" : { "S" : "blanch the {ingrd} {iQual} in the pot of water and drain" },
                                   "time" : { "N" : "6" },
                                   "unit" : { "S" : "min" }, 
                                   "UseDevice" : { "M" : { "type" : {"S": "Colander" }}},
