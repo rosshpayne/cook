@@ -616,7 +616,6 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		//
 		err = sessctx.recipeRSearch()
 		if err != nil {
-
 			fmt.Printf("error: %s", err.Error())
 			break
 		}
@@ -627,6 +626,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 			break
 		}
 		taskList, err := aa.saveTasks(sessctx)
+		//_, err = aa.saveTasks(sessctx)
 		if err != nil {
 			fmt.Printf("error: %s", err.Error())
 			break
@@ -634,7 +634,6 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		s := sessctx
 		err = aa.IndexIngd(s.dynamodbSvc, s.reqBkId, s.reqBkName, s.reqRName, s.reqRId, s.cat, s.subcat, s.authors)
 		if err != nil {
-
 			fmt.Printf("error: %s", err.Error())
 			break
 		}
@@ -652,7 +651,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 			fmt.Printf("error: %s", err.Error())
 			break
 		}
-		s.abort = true
+		sessctx.abort = true
 	//
 	case "book", "recipe", "select", "search", "list", "yesno":
 		sessctx.curreq = bookrecipe_

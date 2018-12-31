@@ -47,7 +47,8 @@
                 "SortK" : { "N": "10"},
                 "label" : { "S": "cavolo leaves"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
-                "ingrd" : { "S" : "cavolo nero leaves"},
+                "ingrd" : { "S" : "cavolo nero"},
+                "iQual" : { "S" : "leaves"},
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "1" } ,
                                       "unit" : { "S" : "kg" }
@@ -55,18 +56,19 @@
                 },
                 "prep" : { "L" :  [ 
                                 { "M": {
-                                  "txt" : { "S" : "Fill a large pot half full of water and bring to a boil" },
-                                  "say" : { "S" : "Fill a large pot half full of water and bring to a boil" },
+                                  "txt" : { "S" : "Fill a large pot to atleast half full of water and bring to a boil. Meanwhile.." },
+                                  "say" : { "S" : "Fill a large pot to atleast half full of water and bring to a boil. Meanwhile.." },
                                   "time" : { "N" : "8" },
                                   "unit" : { "S" : "min" }, 
                                   "useC" : { "SS" : ["Pot"] },
                                   "parallel" : {"BOOL" : true }   }
                                 },
                                 { "M": {
-                                  "txt" : { "S" : "Remove the stalks from the {ingrd}, but keep the leaves whole." },
-                                  "say" : { "S" : "Remove the stalks from the {ingrd}, but keep the leaves whole." },
+                                  "txt" : { "S" : "Remove the stalks from the {ingrd}, but keep the leaves whole. Set aside" },
+                                  "say" : { "S" : "Remove the stalks from the {ingrd}, but keep the leaves whole. Set aside" },
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" } ,
+                                  "useC" : { "SS" : ["SAP-M"] },
                                   "UseDevice" : { "M" : { "type" : {"S": "knife" }} }
                                    }
                                 }
@@ -74,8 +76,8 @@
                 },
                 "task" : { "L" : [ 
                                 { "M": {
-                                  "txt" : { "S" : "Once boiling, add a generous amount of salt to the pot of water" },
-                                  "say" : { "S" : "Once boiling, add a generous amount of salt to the pot of water" },
+                                  "txt" : { "S" : "Once the water in the pot is boiling, add a generous amount of salt" },
+                                  "say" : { "S" : "Once the water in the pot is boiling, add a generous amount of salt" },
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" }, 
                                   "addToC" : { "SS" : ["Pot"] }
@@ -87,6 +89,7 @@
                                   "time" : { "N" : "6" },
                                   "unit" : { "S" : "min" }, 
                                   "UseDevice" : { "M" : { "type" : {"S": "Colander" }}},
+                                  "sourceC" : { "SS" : ["SAP-M" ]},
                                   "addToC" : { "SS" : ["Pot"] }
                                     }
                                 }
@@ -115,9 +118,9 @@
                                   "say" : { "S" : "Peel {qty}{unit} of {ingrd}, cut in half and remove the centre piece and set aside" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
-                                  "useC" : { "S" : "SAP-S"},
+                                  "useC" : { "SS" : ["SAP-S"] },
                                   "unit" : { "S" : "min" },
-                                  "UseDevice" : { "M" : {"type" : {"S":"vegetable knife" }}}
+                                  "UseDevice" : { "M" : {"type" : {"S":"small knife" }}}
                                     }
                                 }
                                 ]
@@ -129,6 +132,7 @@
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
+                                  "sourceC" : { "SS" : [ "SAP-S"] },
                                   "UseDevice" : { "M" : {"type" : {"S": "food processor" }}}
                                 }
                                 }
@@ -192,8 +196,8 @@
                                   }
                                 },
                                 { "M" : {
-                                  "txt" : { "S" : "once drained put the pasta into a bowel, add the sauce and stir until each piece is thickly coated." },
-                                  "say" : { "S" : "once drained put the pasta into a bowel, add the sauce and stir until each piece is thickly coated." },
+                                  "txt" : { "S" : "once the pasta is drained put the pasta into a bowel, add the sauce and stir until each piece is thickly coated." },
+                                  "say" : { "S" : "once the pasta is drained put the pasta into a bowel, add the sauce and stir until each piece is thickly coated." },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },

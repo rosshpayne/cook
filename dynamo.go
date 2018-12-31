@@ -91,7 +91,7 @@ func (a ContainerMap) saveContainerUsage(s *sessCtx) (string, error) {
 	eol := len(ctS)
 	for i, v := range ctS {
 		rows++
-		ctd := ctRow{PKey: "C-" + s.reqRId + "-" + s.reqBkId, SortK: float64(i + 1), Txt: v, Vbl: v, EOL: eol}
+		ctd := ctRow{PKey: "C-" + s.reqBkId + "-" + s.reqRId, SortK: float64(i + 1), Txt: v, Vbl: v, EOL: eol}
 		av, err := dynamodbattribute.MarshalMap(ctd)
 		if err != nil {
 			return "", fmt.Errorf("%s: %s", "Error: failed to marshal Record in saveContainerUsage", err.Error())

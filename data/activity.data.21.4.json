@@ -42,27 +42,32 @@
                                       "unit" : { "S" : "g" }
                                       }
                 },
-                 "prep" : { "M" :  {
+                 "prep" : { "L" : [ 
+                                { "M" :  {
                                   "txt" : { "S" : "bring a large sausepan of water to a boil" },
                                   "say" : { "S" : "bring a large sausepan of water to a boil" },
                                   "time" : { "N" : "6" },
                                   "unit" : { "S" : "min" }, 
                                   "useC" : { "SS" : ["Sausepan"] },
                                   "parallel" : {"BOOL" : true }
-                                
-                                    }
-                },
-                "task" : { "M" :  {
+                                        }   
+                                }
+                                ]
+                 },
+                "task" : { "L" : [ 
+                                { "M" :  {
                                   "txt" : { "S" : "drop {qty}{unit} of {quali} {ingrd} into th water and cover the pot. When the water comes back to the boil, remove the lid and cook until the {ingrd} are al dente" },
                                   "say" : { "S" : "drop {qty}{unit} of {quali} {ingrd} into th water and cover the pot. When the water comes back to the boil, remove the lid and cook until the {ingrd} are al dente" },
                                   "time" : { "N" : "5" },
                                   "tplus" : { "N" : "1" },
                                   "unit" : { "S" : "min" }, 
                                   "addToC" : { "SS" : [ "Sausepan" ] }
-                                    }
-                }
-        }
-        }
+                                        }   
+                                }
+                                ]
+                            }
+            }
+          }
         },
         {
             "PutRequest": { 
@@ -77,17 +82,20 @@
                                       "qty" : { "S" : "generous drizzle" }
                             }
                  },
-                "task" : { "M" : { 
+                "task" : { "L" : [ 
+                                { "M" : { 
                                   "txt" : { "S" : "Drain the breans and return to the warm sausepan (off the heat) with a {qty} of {quali} {ingrd}." },
                                   "say" : { "S" : "Drain the breans and return to the warm sausepan (off the heat) with a {qty} of {quali} {ingrd}." },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
                                   "addToC" : { "SS" : [ "Sausepan" ] }
+                                    }
                                 }
+                                ]
                 }
             }
-            }
+            }                   
             },
             {
             "PutRequest": { 
@@ -103,14 +111,17 @@
                                       "qty" : { "S" : "1" } 
                                       }
                 },
-                "task" : { "M" : { 
+                "task" : { "L" : [ 
+                            { "M" : { 
                                   "txt" : { "S" : "Season with {quali} {iQual} of {qty} {ingrd}" },
                                   "say" : { "S" : "Season with {quali} {iQual} of {qty} {ingrd}" },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
                                   "addToC" : { "SS" : [ "Sausepan" ] }
-                                }
+                            }
+                            }
+                            ]
                 }
             }
             }
@@ -129,14 +140,17 @@
                                       "unit" : { "S" : "g" }
                                       }
                 },
-                "task" : { "M" :  {
-                                  "txt" : { "S" : "Grate the {ingrd} and stire in and keep stirringuntile the {ingrd} begins to go stringy and coats the beans. Server immediately" },
-                                  "say" : { "S" : "Grate the {ingrd} and stire in and keep stirringuntile the {ingrd} begins to go stringy and coats the beans. Server immediately" },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Grate the {ingrd} and stire in and keep stirring until the {ingrd} begins to go stringy and coats the beans. Server immediately" },
+                                  "say" : { "S" : "Grate the {ingrd} and stire in and keep stirring until the {ingrd} begins to go stringy and coats the beans. Server immediately" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
                                   "addToC" : { "SS" : [ "Sausepan" ] }
                                   }
+                                }
+                                ]
                 }
             }
             }

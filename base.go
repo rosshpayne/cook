@@ -67,6 +67,7 @@ type MeasureCT struct {
 
 type taskT struct {
 	Type      PrepTask // Prep or Task Activity
+	Idx       int      // slice index
 	Activityp *Activity
 }
 
@@ -132,18 +133,18 @@ type IngredientT struct {
 
 type Activity struct {
 	// Pkey          string     `json:"PKey"`
-	AId           int        `json:"SortK"`
-	Label         string     `json:"label"`
-	Ingredient    string     `json:"ingrd"`    //
-	IngrdQualifer string     `json:"iQual"`    // (append) to ingredient
-	QualiferIngrd string     `json:"quali"`    // prepend  to ingredient.
-	AltIngrd      []string   `json:"altIngrd"` // key into Ingredient table - used for alternate ingredients only
-	IngrdType     string     `json:"iType"`
-	Measure       MeasureT   `json:"measure"`
-	Overview      string     `json:"ovv"`
-	Coord         [2]float32 // X,Y
-	Task          []PerformT `json:"task"`
-	Prep          []PerformT `json:"prep"`
+	AId           int         `json:"SortK"`
+	Label         string      `json:"label"`
+	Ingredient    string      `json:"ingrd"`    //
+	IngrdQualifer string      `json:"iQual"`    // (append) to ingredient
+	QualiferIngrd string      `json:"quali"`    // prepend  to ingredient.
+	AltIngrd      []string    `json:"altIngrd"` // key into Ingredient table - used for alternate ingredients only
+	IngrdType     string      `json:"iType"`
+	Measure       MeasureT    `json:"measure"`
+	Overview      string      `json:"ovv"`
+	Coord         [2]float32  // X,Y
+	Task          []*PerformT `json:"task"`
+	Prep          []*PerformT `json:"prep"`
 	next          *Activity
 	prev          *Activity
 	nextTask      *Activity
@@ -276,28 +277,34 @@ func (a Activities) GenerateTasks(pKey string) prepTaskS {
 	//  2. sort
 	//  3. add other tasks in order
 	//
+	type atvTask struct {
+		AId int
+		TId int
+	}
 	var ptS prepTaskS // this type satisfies sort interface.
-	processed := make(map[int]bool, prepctl.cnt)
+	processed := make(map[atvTask]bool, prepctl.cnt)
 	//
 	// sort parallelisable prep tasks
 	//
 	for p := prepctl.start; p != nil; p = p.nextPrep {
 		var add bool
-		var pp = p.Prep
-		if pp.UseDevice != nil {
-			if strings.ToLower(pp.UseDevice.Type) == "oven" {
-				add = true
-			}
-		}
-		if pp.Parallel && !pp.Link || add {
-			if p.prev != nil && p.prev.Prep != nil {
-				if p.prev.Prep.Link {
-					continue // exclude if part of linked activity
+		for ia, pp := range p.Prep { // slice of tasks
+			//var pp = p.Prep
+			if pp.UseDevice != nil {
+				if strings.ToLower(pp.UseDevice.Type) == "oven" {
+					add = true
 				}
 			}
-			processed[p.AId] = true
-			pt := prepTaskRec{PKey: pKey, AId: p.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal}
-			ptS = append(ptS, pt)
+			if pp.Parallel && !pp.Link || add {
+				if p.prev != nil && len(p.prev.Prep) != 0 {
+					if p.prev.Prep[len(p.prev.Prep)-1].Link {
+						continue // exclude if part of linked activity in last prep task of previous activity
+					}
+				}
+				processed[atvTask{p.AId, ia}] = true
+				pt := prepTaskRec{PKey: pKey, AId: p.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal}
+				ptS = append(ptS, pt)
+			}
 		}
 	}
 	sort.Sort(ptS)
@@ -313,20 +320,24 @@ func (a Activities) GenerateTasks(pKey string) prepTaskS {
 	// append remaining prep tasks - these are serial tasks so order unimportant
 	//
 	for p := prepctl.start; p != nil; p = p.nextPrep {
-		if _, ok := processed[p.AId]; ok {
-			continue
+		for ia, pp := range p.Prep {
+			if _, ok := processed[atvTask{p.AId, ia}]; ok {
+				continue
+			}
+			pt := prepTaskRec{PKey: pKey, SortK: i, AId: p.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal}
+			ptS = append(ptS, pt)
+			i++
 		}
-		pt := prepTaskRec{PKey: pKey, SortK: i, AId: p.AId, Type: 'P', time: p.Prep.Time, Text: p.Prep.text, Verbal: p.Prep.verbal}
-		ptS = append(ptS, pt)
-		i++
 	}
 	//
 	// append tasks
 	//
 	for p := taskctl.start; p != nil; p = p.nextTask {
-		pt := prepTaskRec{PKey: pKey, SortK: i, AId: p.AId, Type: 'T', time: p.Task.Time, Text: p.Task.text, Verbal: p.Task.verbal}
-		ptS = append(ptS, pt)
-		i++
+		for _, pp := range p.Task {
+			pt := prepTaskRec{PKey: pKey, SortK: i, AId: p.AId, Type: 'T', time: pp.Time, Text: pp.text, Verbal: pp.verbal}
+			ptS = append(ptS, pt)
+			i++
+		}
 	}
 	// now that we know the size of the list assign End-Of-List field. This approach replaces MaxId[] set stored in Recipe table
 	// this mean each record knows how long the list is - helpful in a stateless Lambda app.
@@ -353,21 +364,23 @@ func (a Activities) PrintRecipe(rId string) (prepTaskS, string) {
 	//
 	for p := prepctl.start; p != nil; p = p.nextPrep {
 		var add bool
-		var pp = p.Prep
-		if pp.UseDevice != nil {
-			if strings.ToLower(pp.UseDevice.Type) == "oven" {
-				add = true
-			}
-		}
-		if pp.Parallel && !pp.Link || add {
-			if p.prev != nil && p.prev.Prep != nil {
-				if p.prev.Prep.Link {
-					continue // exclude if part of linked activity
+		for _, pp := range p.Prep {
+			if pp.UseDevice != nil {
+				if strings.ToLower(pp.UseDevice.Type) == "oven" {
+					add = true
+				}
+
+				if pp.Parallel && !pp.Link || add {
+					if p.prev != nil && len(p.prev.Prep) != 0 {
+						if p.prev.Prep[len(p.prev.Prep)-1].Link {
+							continue // exclude if part of linked activity in last prep task of previous activity
+						}
+					}
+					processed[p.AId] = true
+					pt := prepTaskRec{time: pp.Time, Text: pp.text}
+					ptS = append(ptS, pt)
 				}
 			}
-			processed[p.AId] = true
-			pt := prepTaskRec{time: pp.Time, Text: pp.text}
-			ptS = append(ptS, pt)
 		}
 	}
 	sort.Sort(ptS)
@@ -378,26 +391,28 @@ func (a Activities) PrintRecipe(rId string) (prepTaskS, string) {
 		if _, ok := processed[p.AId]; ok {
 			continue
 		}
-		var txt string
-		var stime float32
-		var count int
-		if p.Prep.Link {
-			for ; p.Prep.Link; p = p.nextPrep {
-				//handle Link prep tasks
-				txt += p.Prep.text + " and "
-				stime += p.Prep.Time
-				count++
+		for _, pp := range p.Prep {
+			var txt string
+			var stime float32
+			var count int
+			if pp.Link {
+				for ; pp.Link; p = p.nextPrep {
+					//handle Link prep tasks. Link tasks can only have a single prep task per activity
+					txt += p.Prep[0].text + " and "
+					stime += p.Prep[0].Time
+					count++
+				}
+				txt += pp.text
+				stime += pp.Time
+				//
+				pt := prepTaskRec{time: stime, Text: txt}
+				ptS = append(ptS, pt)
+			} else {
+				pt := prepTaskRec{time: pp.Time, Text: pp.text}
+				ptS = append(ptS, pt)
 			}
-			txt += p.Prep.text
-			stime += p.Prep.Time
-			//
-			pt := prepTaskRec{time: stime, Text: txt}
-			ptS = append(ptS, pt)
-		} else {
-			pt := prepTaskRec{time: p.Prep.Time, Text: p.Prep.text}
-			ptS = append(ptS, pt)
+			pid++
 		}
-		pid++
 	}
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("{ %q : [", jsonKey))
@@ -522,9 +537,7 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 			fmt.Println(err.Error())
 			//return nil //, fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
 		}
-		fmt.Println("Add to ContainerSAM ", itemc.Cid)
 		ContainerSAM[itemc.Cid] = itemc
-		//ContainerM[itemc.Cid] = itemc
 	}
 	//
 	// Table:  Unit
@@ -568,11 +581,11 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 	//
 	// for all prep, tasks
 	//
-	// parse Activities for containers.  Add any single-activity containers to ContainerM.
+	// parse Activities for containers.  Dynamically create single-activity containers and add to ContainerM as required.
 	//
 	for _, l := range []PrepTask{prep, task} {
 		for ap := activityStart; ap != nil; ap = ap.next {
-			var p []PerformT
+			var p []*PerformT
 			switch l {
 			case task:
 				p = ap.Task
@@ -584,7 +597,7 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 			}
 			// now compare contains defined in each activity with those registered for
 			// the recipe and those that are single-activity-containers
-			for _, p := range p {
+			for idx, p := range p {
 				if len(p.AddToC) > 0 {
 					// activity containers are held in []string
 					for i := 0; i < len(p.AddToC); i++ {
@@ -627,6 +640,12 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 												break
 											}
 										}
+										for i := 0; i < len(t.AddToC); i++ {
+											if t.AddToC[i] == cs {
+												t.AddToC[i] = c.Cid
+												break
+											}
+										}
 									}
 								}
 							}
@@ -635,7 +654,7 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 						// activity to container edge
 						p.AddToCp = append(p.AddToCp, cId)
 						// container to activity edge
-						associatedTask := taskT{Type: l, Activityp: ap}
+						associatedTask := taskT{Type: l, Activityp: ap, Idx: idx}
 						cId.Activity = append(cId.Activity, associatedTask)
 					}
 				}
@@ -668,24 +687,34 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 							p.UseC[i] = c.Cid
 							// search for other references and change its name
 							if l == prep {
-								// update task based reference before we get there.
-								for i := 0; i < len(ap.Task.SourceC); i++ {
-									if ap.Task.SourceC[i] == cs {
-										ap.Task.SourceC[i] = c.Cid
-										break
-									}
-								}
-								for i := 0; i < len(ap.Task.UseC); i++ {
-									if ap.Task.UseC[i] == cs {
-										ap.Task.UseC[i] = c.Cid
-										break
+								// update other reference before we get there.
+								if len(ap.Task) > 0 {
+									for _, t := range ap.Task {
+										for i := 0; i < len(t.SourceC); i++ {
+											if t.SourceC[i] == cs {
+												t.SourceC[i] = c.Cid
+												break
+											}
+										}
+										for i := 0; i < len(t.UseC); i++ {
+											if t.UseC[i] == cs {
+												t.UseC[i] = c.Cid
+												break
+											}
+										}
+										for i := 0; i < len(t.AddToC); i++ {
+											if t.AddToC[i] == cs {
+												t.AddToC[i] = c.Cid
+												break
+											}
+										}
 									}
 								}
 							}
 							cId = c
 						}
 						p.UseCp = append(p.UseCp, cId)
-						associatedTask := taskT{Type: l, Activityp: ap}
+						associatedTask := taskT{Type: l, Activityp: ap, Idx: idx}
 						cId.Activity = append(cId.Activity, associatedTask)
 					}
 				}
@@ -718,24 +747,34 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 							p.SourceC[i] = c.Cid
 							// search for other references and change its name
 							if l == prep {
-								// update task based reference before we get there.
-								for i := 0; i < len(ap.Task.SourceC); i++ {
-									if ap.Task.SourceC[i] == cs {
-										ap.Task.SourceC[i] = c.Cid
-										break
-									}
-								}
-								for i := 0; i < len(ap.Task.SourceC); i++ {
-									if ap.Task.SourceC[i] == cs {
-										ap.Task.SourceC[i] = c.Cid
-										break
+								// update other reference before we get there.
+								if len(ap.Task) > 0 {
+									for _, t := range ap.Task {
+										for i := 0; i < len(t.SourceC); i++ {
+											if t.SourceC[i] == cs {
+												t.SourceC[i] = c.Cid
+												break
+											}
+										}
+										for i := 0; i < len(t.UseC); i++ {
+											if t.UseC[i] == cs {
+												t.UseC[i] = c.Cid
+												break
+											}
+										}
+										for i := 0; i < len(t.AddToC); i++ {
+											if t.AddToC[i] == cs {
+												t.AddToC[i] = c.Cid
+												break
+											}
+										}
 									}
 								}
 							}
 							cId = c
 						}
 						p.SourceCp = append(p.SourceCp, cId)
-						associatedTask := taskT{Type: l, Activityp: ap}
+						associatedTask := taskT{Type: l, Activityp: ap, Idx: idx}
 						cId.Activity = append(cId.Activity, associatedTask)
 					}
 				}
@@ -785,16 +824,18 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 	//
 	devices := make(map[string]struct{})
 	for p := activityStart; p != nil; p = p.next {
-		if p.Task != nil {
-			if p.Task.UseDevice != nil {
-				if _, ok := devices[strings.Title(p.Task.UseDevice.Type)]; !ok {
-					devices[strings.Title(p.Task.UseDevice.Type)] = struct{}{}
+		for _, pp := range p.Task {
+			if pp.UseDevice != nil {
+				if _, ok := devices[strings.Title(pp.UseDevice.Type)]; !ok {
+					devices[strings.Title(pp.UseDevice.Type)] = struct{}{}
 				}
 			}
 		}
-		if p.Prep != nil && p.Prep.UseDevice != nil {
-			if _, ok := devices[strings.Title(p.Prep.UseDevice.Type)]; !ok {
-				devices[strings.Title(p.Prep.UseDevice.Type)] = struct{}{}
+		for _, pp := range p.Prep {
+			if pp.UseDevice != nil {
+				if _, ok := devices[strings.Title(pp.UseDevice.Type)]; !ok {
+					devices[strings.Title(pp.UseDevice.Type)] = struct{}{}
+				}
 			}
 		}
 	}
@@ -837,7 +878,8 @@ func (s *sessCtx) readBaseRecipeForTasks() (Activities, error) {
 	//
 	activityStart = &ActivityS[0]
 	// for _, v := range ActivityS {
-
+	// 	fmt.Printf("%#v\n\n", v)
+	// }
 	// 	if v.Task != nil {
 	// 		fmt.Println("Activity data: ", v.AId, v.Task.Text)
 	// 	}
@@ -860,7 +902,7 @@ func (s *sessCtx) readBaseRecipeForTasks() (Activities, error) {
 			j = i
 			taskctl.cnt++
 			for i := j + 1; i < len(ActivityS); i++ {
-				if ActivityS[i].Task != nil {
+				if len(ActivityS[i].Task) > 0 {
 					ActivityS[j].nextTask = &ActivityS[i]
 					j = i
 					taskctl.cnt++
@@ -878,7 +920,7 @@ func (s *sessCtx) readBaseRecipeForTasks() (Activities, error) {
 			j = i
 			prepctl.cnt++
 			for i := j + 1; i < len(ActivityS); i++ {
-				if ActivityS[i].Prep != nil {
+				if len(ActivityS[i].Prep) > 0 {
 					ActivityS[j].nextPrep = &ActivityS[i]
 					j = i
 					prepctl.cnt++
@@ -1009,139 +1051,137 @@ func (s *sessCtx) readBaseRecipeForTasks() (Activities, error) {
 	//
 	//  replace all {tag} in text and verbal for each activity. Ignore Link'd activites - they are only relevant at print time
 	//
-	var pt *PerformT
+	var pt []*PerformT
 	for _, taskType := range []PrepTask{prep, task} {
 		for _, interactionType := range []int{text, voice} {
 			for p := activityStart; p != nil; p = p.next {
 				switch taskType {
 				case prep:
 					pt = p.Prep
-					if p.Prep == nil {
-						continue
-					}
 				case task:
 					pt = p.Task
-					if p.Task == nil {
-						continue
-					}
 				}
-				switch interactionType {
-				case text:
-					str = pt.Text
-				case voice:
-					str = pt.Verbal
-				}
-				// if no {} then print and return to top of the loop
-				t1 := strings.IndexByte(str, '{')
-				if t1 < 0 {
-					b.WriteString(str + " ")
+				for _, pt := range pt {
+					// perform over slice of prep, task
 					switch interactionType {
 					case text:
-						pt.text = doubleSpace.Replace(b.String())
+						str = pt.Text
 					case voice:
-						pt.verbal = doubleSpace.Replace(b.String())
+						str = pt.Verbal
 					}
-					b.Reset()
-					continue
-				}
-				for tclose, topen := 0, strings.IndexByte(str, '{'); topen != -1; {
-					b.WriteString(str[tclose:topen])
-					tclose += strings.IndexByte(str[tclose:], '}')
-					switch strings.ToLower(str[topen+1 : tclose]) {
-					case "iqual":
-						{
-							fmt.Fprintf(&b, "%s", p.IngrdQualifer)
+					fmt.Println(str)
+					// if no {} then print and return to top of the loop
+					t1 := strings.IndexByte(str, '{')
+					if t1 < 0 {
+						b.WriteString(str + " ")
+						switch interactionType {
+						case text:
+							pt.text = doubleSpace.Replace(b.String())
+						case voice:
+							pt.verbal = doubleSpace.Replace(b.String())
 						}
-					case "csize":
-						{
-							fmt.Fprintf(&b, "%s", pt.AddToCp[0].Measure.Size)
-						}
-					case "addtoc":
-						{
-							fmt.Fprintf(&b, "%s", pt.AddToCp[0].Label)
-						}
-					case "qty":
-						{
-							context = measure
-							fmt.Fprintf(&b, "%s", p.Measure.Quantity)
-						}
-					case "size":
-						fmt.Fprintf(&b, "%s", p.Measure.Size)
-					case "device":
-						{
-							fmt.Fprintf(&b, "%s", pt.UseDevice.Type)
-							context = device
-						}
-					case "temp":
-						{
-							fmt.Fprintf(&b, "%s", pt.UseDevice.Temp)
-						}
-					case "unit":
-						{
-							switch context {
-							case device:
-								if u, ok := unitM[pt.UseDevice.Unit]; !ok {
-									panic(fmt.Errorf("unit not defined"))
-								} else {
-									switch interactionType {
-									case text:
-										fmt.Fprintf(&b, "%s", u.Slabel)
-									case voice:
-										fmt.Fprintf(&b, "%s", u.Llabel+"s")
+						b.Reset()
+						continue
+					}
+					for tclose, topen := 0, strings.IndexByte(str, '{'); topen != -1; {
+						b.WriteString(str[tclose:topen])
+						tclose += strings.IndexByte(str[tclose:], '}')
+						switch strings.ToLower(str[topen+1 : tclose]) {
+						case "iqual":
+							{
+								fmt.Fprintf(&b, "%s", p.IngrdQualifer)
+							}
+						case "csize":
+							{
+								fmt.Fprintf(&b, "%s", pt.AddToCp[0].Measure.Size)
+							}
+						case "addtoc":
+							{
+								fmt.Fprintf(&b, "%s", pt.AddToCp[0].Label)
+							}
+						case "qty":
+							{
+								context = measure
+								fmt.Fprintf(&b, "%s", p.Measure.Quantity)
+							}
+						case "size":
+							fmt.Fprintf(&b, "%s", p.Measure.Size)
+						case "device":
+							{
+								fmt.Fprintf(&b, "%s", pt.UseDevice.Type)
+								context = device
+							}
+						case "temp":
+							{
+								fmt.Fprintf(&b, "%s", pt.UseDevice.Temp)
+							}
+						case "unit":
+							{
+								switch context {
+								case device:
+									if u, ok := unitM[pt.UseDevice.Unit]; !ok {
+										panic(fmt.Errorf("unit not defined"))
+									} else {
+										switch interactionType {
+										case text:
+											fmt.Fprintf(&b, "%s", u.Slabel)
+										case voice:
+											fmt.Fprintf(&b, "%s", u.Llabel+"s")
+										}
 									}
-								}
-							case measure:
-								if u, ok := unitM[p.Measure.Unit]; !ok {
-									panic(fmt.Errorf("unit not defined"))
-								} else {
-									switch interactionType {
-									case text:
-										fmt.Fprintf(&b, "%s", u.Slabel)
-									case voice:
-										fmt.Fprintf(&b, "%s", u.Llabel+"s")
+								case measure:
+									if u, ok := unitM[p.Measure.Unit]; !ok {
+										panic(fmt.Errorf("unit not defined"))
+									} else {
+										switch interactionType {
+										case text:
+											fmt.Fprintf(&b, "%s", u.Slabel)
+										case voice:
+											fmt.Fprintf(&b, "%s", u.Llabel+"s")
+										}
 									}
-								}
-							case time:
-								if u, ok := unitM[pt.Unit]; !ok {
-									panic(fmt.Errorf("unit not defined"))
-								} else {
-									switch interactionType {
-									case text:
-										fmt.Fprintf(&b, "%s", u.Llabel+"s")
-									case voice:
-										fmt.Fprintf(&b, "%s", u.Llabel+"s")
+								case time:
+									if u, ok := unitM[pt.Unit]; !ok {
+										panic(fmt.Errorf("unit not defined"))
+									} else {
+										switch interactionType {
+										case text:
+											fmt.Fprintf(&b, "%s", u.Llabel+"s")
+										case voice:
+											fmt.Fprintf(&b, "%s", u.Llabel+"s")
+										}
 									}
 								}
 							}
+						case "ingrd":
+							fmt.Fprintf(&b, "%s", strings.ToLower(p.Ingredient))
+						case "time":
+							{
+								context = time
+								fmt.Fprintf(&b, "%2.0f", pt.Time)
+							}
+						case "tplus":
+							{
+								context = time
+								fmt.Fprintf(&b, "%2.0f", pt.Tplus+pt.Time)
+							}
 						}
-					case "ingrd":
-						fmt.Fprintf(&b, "%s", strings.ToLower(p.Ingredient))
-					case "time":
-						{
-							context = time
-							fmt.Fprintf(&b, "%2.0f", pt.Time)
-						}
-					case "tplus":
-						{
-							context = time
-							fmt.Fprintf(&b, "%2.0f", pt.Tplus+pt.Time)
+						tclose += 1
+						topen = strings.IndexByte(str[tclose:], '{')
+						if topen == -1 {
+							b.WriteString(str[tclose:])
+						} else {
+							topen += tclose
 						}
 					}
-					tclose += 1
-					topen = strings.IndexByte(str[tclose:], '{')
-					if topen == -1 {
-						b.WriteString(str[tclose:])
-					} else {
-						topen += tclose
+					switch interactionType {
+					case text:
+						pt.text = doubleSpace.Replace(b.String())
+						b.Reset()
+					case voice:
+						pt.verbal = doubleSpace.Replace(b.String())
+						b.Reset()
 					}
-				}
-				switch interactionType {
-				case text:
-					pt.text = doubleSpace.Replace(b.String())
-					b.Reset()
-				case voice:
-					pt.verbal = doubleSpace.Replace(b.String())
-					b.Reset()
 				}
 			}
 		}

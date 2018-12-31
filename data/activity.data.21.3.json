@@ -44,7 +44,8 @@
                                       "unit" : { "S" : "ml" }
                                       }
                 },
-                "task" : { "M" :  {
+                "task" : { "L" : [
+                                { "M" :  {
                                   "txt" : { "S" : "warm {qty}{ml} of {ingrd} in a large pan" },
                                   "say" : { "S" : "warm {qty} {ml} of {ingrd} in a large pan" },
                                   "time" : { "N" : "1" },
@@ -52,6 +53,8 @@
                                   "sourceC" : { "SS" : ["MC-S"] },
                                   "addToC" : { "SS" : [ "RisoPan" ] }
                                     }
+                                }
+                                ]
                 }
         }
         }
@@ -70,7 +73,8 @@
                                       "size" : { "S" : "medium" } 
                                       } 
                 },
-                "prep" : { "M" : { 
+                "prep" : { "L" : [
+                                { "M" : { 
                                   "txt" : { "S" : "Peel and finely chop {qty} {size} {ingrd} and set aside" },
                                   "say" : { "S" : "Peel and finely chop {qty} {size} {ingrd} and set aside"  },
                                   "time" : { "N" : "3" },
@@ -83,8 +87,11 @@
                                     },
                                   "useC" : { "SS" : [ "SAP-S" ] }
                                 }
+                                }
+                                ]
                 },
-                "task" : { "M" : { 
+                "task" : { "L" : [
+                                { "M" : { 
                                   "txt" : { "S" : "Add the chopped {ingrd} to the pan and fry until translucent" },
                                   "say" : { "S" : "Add the chopped {ingrd} to the pan and fry until translucent" },
                                   "time" : { "N" : "1" },
@@ -93,6 +100,8 @@
                                   "SourceC" : { "SS" : [ "SAP-S" ] },
                                   "addToC" : { "SS" : [ "RisoPan" ] }
                                 }
+                                }
+                                ]
                 }
             }
             }
@@ -111,7 +120,8 @@
                                       "size" : { "S" : "medium" } 
                                       } 
                 },
-                "task" : { "M" : { 
+                "task" : { "L" : [
+                                { "M" : { 
                                   "txt" : { "S" : "Peel and finely chop {qty} {size} {ingrd} cloves and add to pan" },
                                   "say" : { "S" : "Peel and finely chop {qty} {size} {ingrd} cloves and add to pan" },
                                   "time" : { "N" : "1" },
@@ -124,6 +134,8 @@
                                     },
                                   "addToC" : { "SS" : [ "RisoPan" ] }
                                 }
+                                }
+                                ]
                 }
             }
             }
@@ -142,7 +154,8 @@
                                       "qty" : { "S" : "1" }
                                       }
                 },
-                "prep" : { "M" :  {
+                "prep" :  { "L" : [
+                                { "M" :  {
                                  "txt" : { "S" : "Finely chop {qty} {size} {ingrd}. Keep the ink sacs intact if using and set both aside." },
                                   "say" : { "S" : "Finely chop {qty} {size} {ingrd}. Keep the ink sacs intact if using and set both aside" },
                                   "time" : { "N" : "3" },
@@ -150,8 +163,11 @@
                                   "unit" : { "S" : "min" },
                                   "useC"  : { "SS" : [ "SAP-L"  ] }
                                   }
+                                }
+                                ]
                 },
-                "task" : { "M" :  {
+                "task" :  { "L" : [
+                                { "M" :  {
                                   "txt" : { "S" : "Add the {ingrd} to the pan. Do not add the ink just yet." },
                                   "say" : { "S" : "Add the {ingrd} to the pan. Do not add the ink just yet." },
                                   "time" : { "N" : "0" },
@@ -160,6 +176,8 @@
                                   "SourceC"  : { "SS" : [ "SAP-L" ] },
                                   "addToC" : { "SS" : [ "RisoPan" ] }
                                   }
+                                }
+                                ]
                 }
             }
             }
@@ -178,7 +196,8 @@
                                       "qty" : {"S": "1" }
                                       } 
                 },
-                "task" : { "M" : { 
+                "task" :  { "L" : [
+                                { "M" : { 
                                   "txt" : { "S" : "Add {qty} {iQual} {ingrd} to pan" },
                                   "say" : { "S" : "Add {qty} {iQual} {ingrd} to pan" },
                                   "time" : { "N" : "0" },
@@ -186,6 +205,8 @@
                                   "unit" : { "S" : "min" },
                                   "addToC" : { "SS" : [ "RisoPan" ] }
                                 }
+                                }
+                                ]
                 }
             }
             }
@@ -199,13 +220,16 @@
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "seasoning" },
                 "iQual" : { "S" : ", sea salt and black pepper" },
-                "task" : { "M" : { 
+                "task" :  { "L" : [
+                                { "M" : { 
                                   "txt" : { "S" : "Add {ingrd}{iQual} to pan. Stir to combine." },
                                   "say" : { "S" : "Add {ingrd}{iQual} to pan. Stir to combine." },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "addToC" : { "SS" : [ "RisoPan" ] }
                                 }
+                                }
+                                ]
                 }
             }
             }
@@ -224,7 +248,8 @@
                                       "unit" : { "S" : "g" } 
                                       } 
                 },
-                "prep" : { "M" : { 
+                "prep" :  { "L" : [
+                                { "M" : { 
                                   "txt" : { "S" : "Measure out {qty}{unit} of {quali} {ingrd} and set aside" },
                                   "say" : { "S" : "Measure out {qty} {unit} of {quali} {ingrd} and set aside" },
                                   "time" : { "N" : "1" },
@@ -232,8 +257,11 @@
                                   "unit" : { "S" : "min" },
                                   "useC" : { "SS" : [ "SAP-M" ] }
                                 }
+                                }
+                                ]
                 },
-                "task" : { "M" : { 
+                "task" :  { "L" : [
+                            { "M" : { 
                                   "txt" : { "S" : "Now add the {ingrd} to the pan and stir to combine. Fry for {time} to {tplus} or until opaque" },
                                   "say" : { "S" : "Now add the {ingrd} to the pan and stir to combine. Fry for {time} to {tplus} or until opaque" },
                                   "time" : { "N" : "2" },
@@ -242,6 +270,8 @@
                                   "sourceC" : { "SS" : [ "SAP-M" ] },
                                   "addToC" : { "SS" : [ "RisoPan" ] }
                                 }
+                            }
+                            ]
                 }
             }
             }
@@ -259,7 +289,8 @@
                                       "unit" : { "S" : "ml" } 
                                       } 
                 },
-                "task" : { "M" : { 
+                "task" :  { "L" : [
+                                { "M" : { 
                                   "txt" : { "S" : "Add {qty}{unit} of {ingrd} to pan. Give contents a good stir." },
                                   "say" : { "S" : "Add {qty} {unit} of {ingrd} to pan. Give contents a good stir." },
                                   "time" : { "N" : "1" },
@@ -268,6 +299,8 @@
                                   "sourceC": { "SS" : [ "MC-S" ] },
                                   "addToC" : { "SS" : [ "RisoPan" ] }
                                 }
+                                }
+                                ]
                 }
             }
             }
@@ -286,7 +319,8 @@
                                       "qty" : { "S": "4" }
                                       } 
                 },
-                "prep" : { "M" : { 
+                "prep" :  { "L" : [
+                                { "M" : { 
                                   "txt" : { "S" : "Drain {ingrd}. Set aside." },
                                   "say" : { "S" :  "Drain {ingrd}. Set aside." },
                                   "time" : { "N" : "1" },
@@ -299,8 +333,11 @@
                                         }
                                     }
                                 }
+                                }
+                                ]
                 },
-                "task" : { "M" : { 
+                "task" :  { "L" : [
+                                { "M" : { 
                                   "txt" : { "S" : "Add  {ingrd}s to pan. Simmer until most of the liquid has been absorbed by the rice, stirring to prevent sticking" },
                                   "say" : { "S" : "Add  {ingrd}s to pan. Simmer until most of the liquid has been absorbed by the rice, stirring to prevent sticking" },
                                   "time" : { "N" : "1" },
@@ -314,6 +351,8 @@
                                     },
                                   "addToC" : { "SS" : [ "RisoPan" ] }
                                 }
+                                }
+                                ]
                 }
             }
             }
@@ -332,7 +371,8 @@
                                       } 
                 },
                 "alt" : { "S" : "use the saved ink sac from the cuttle fish" },
-                "task" : { "M" : { 
+                "task" :  { "L" : [
+                                { "M" : { 
                                   "txt" : { "S" : "Now add {qty} {unit} of {ingrd} {alt} to the pan and stir in. When each grain of rice has become black proceed to next task" },
                                   "say" : { "S" : "Now add {qty} {unit} of {ingrd} {alt} to the pan and stir in. When each grain of rice has become black proceed to next task" },
                                   "time" : { "N" : "2" },
@@ -340,6 +380,8 @@
                                   "unit" : { "S" : "min" },
                                   "addToC" : { "SS" : [ "RisoPan" ] }
                                 }
+                                }
+                                ]
                  }
             }
             }
@@ -358,7 +400,8 @@
                                       "unit" : { "S" : "l" } 
                                       }
                 },
-                "prep" : { "M" :  {
+                "prep" : {  "L" : [
+                                { "M" :  {
                                  "txt" : { "S" : "In a {size} {useC} sausepan, warm up the {ingrd} but do not bring to boil. Keep it warm until used" },
                                   "say" : { "S" : "In a {size} {useC} sausepan, warm up the {ingrd} but do not bring to boil. Keep it warm until used." },
                                   "time" : { "N" : "5" },
@@ -367,8 +410,11 @@
                                   "useC"  : { "SS" : [ "Sausepan-L"  ] },
                                   "parallel" : { "BOOL" : true }
                                   }
+                                }
+                                  ]
                 },
-                "task" : { "M" :  {
+                "task" :  { "L" : [
+                                { "M" :  {
                                  "txt" : { "S" : "Add the {ingrd} a ladleful at a time only adding more when the previous addition has been absorbed. Continue until the {ingrd} is cooked al dente" },
                                   "say" : { "S" : "Add the {ingrd} a ladleful at a time only adding more when the previous addition has been absorbed. Continue until the {ingrd} is cooked al dente" },
                                   "time" : { "N" : "6" },
@@ -377,6 +423,8 @@
                                   "sourceC" : { "SS" : [ "Sausepan-L"  ] },
                                   "addToC"  : { "SS" : [ "RisoPan"  ] }
                                   }
+                                }
+                                ]
                  }
             }
             }
@@ -396,7 +444,8 @@
                                       "unit" : { "S" : "tbsp" } 
                                       }
                 },
-                "prep" : { "M" :  {
+                "prep" :  { "L" : [
+                                { "M" :  {
                                  "txt" : { "S" : "Coarsely chop {qty} {unit} of {ingrd} and set aside" },
                                   "say" : { "S" : "Coarsely chop {qty} {unit} of {ingrd} and set aside"},
                                   "time" : { "N" : "1" },
@@ -404,8 +453,11 @@
                                   "unit" : { "S" : "min" },
                                   "useC"  : { "SS" : [ "SAP-S"  ] } 
                                   }
+                                }
+                                ]
                 },
-                "task" : { "M" :  {
+                "task" :  { "L" : [
+                                { "M" :  {
                                  "txt" : { "S" : "Remove from heat and add chopped {ingrd} and stir" },
                                   "say" : { "S" :  "Remove from heat and add chopped {ingrd} and stir" },
                                   "time" : { "N" : "0" },
@@ -414,6 +466,8 @@
                                   "sourceC" : { "SS" : ["SAP-S"] },
                                   "addToC"  : { "SS" : [ "RisoPan"  ] }
                                   }
+                                }
+                                ]
                 }
             }
             }
@@ -433,7 +487,8 @@
                                       "unit" : { "S" : "g" } 
                                       }
                 },
-                "prep" : { "M" :  {
+                "prep" :  { "L" : [
+                                { "M" :  {
                                   "txt" : { "S" : "Cook {qty}{unit} of {ingrd} for {time} {unit}, drain and then chop coarsely. Set aside" },
                                   "say" : { "S" : "Cook {qty} {unit} of {ingrd} for {time} {unit}, drain and then chop coarsely. Set aside" },
                                   "time" : { "N" : "2" },
@@ -441,8 +496,11 @@
                                   "unit" : { "S" : "min" },
                                   "useC"  : { "SS" : [ "SAP-M"  ] } 
                                   }
+                                }
+                                ]
                 },
-                "task" : { "M" :  {
+                "task" :  { "L" : [
+                                { "M" :  {
                                  "txt" : { "S" : "Add the {ingrd}, stir in and taste for sufficient seasoning" },
                                   "say" : { "S" : "Add the {ingrd}, stir in and taste for sufficient seasoning." },
                                   "time" : { "N" : "1" },
@@ -451,6 +509,8 @@
                                   "sourceC"  : { "SS" : [ "SAP-M"  ] } ,
                                   "addToC"  : { "SS" : [ "RisoPan"  ] }
                                   }
+                                }
+                                ]
                 }
             }
             }
@@ -468,7 +528,8 @@
                                       "unit" : { "S" : "g" } 
                                       }
                 },
-                "task" : { "M" :  {
+                "task" :  { "L" : [
+                                { "M" :  {
                                  "txt" : { "S" : "Chop {qty}{unit} of {ingrd} into 2 cm pieces and add to the risotto. Server immediately" },
                                   "say" : { "S" :"Chop {qty} {unit} of {ingrd} into 2 centimeter pieces and add to the risotto. Server immediately, yes now, quick" },
                                   "time" : { "N" : "1" },
@@ -476,6 +537,8 @@
                                   "unit" : { "S" : "min" },
                                   "addToC"  : { "SS" : [ "RisoPan"  ] }
                                   }
+                                }
+                                ]
                 }
             }
             }
