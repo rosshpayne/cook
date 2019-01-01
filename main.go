@@ -559,9 +559,10 @@ func (s *sessCtx) getRecById() error {
 //
 func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 
-	var pathItem []string
-	var err error
-
+	var (
+		pathItem []string
+		err      error
+	)
 	dynamodbService := func() *dynamodb.DynamoDB {
 		sess, err := session.NewSession(&aws.Config{
 			Region: aws.String("us-east-1"),
@@ -573,32 +574,31 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		return dynamodb.New(sess, aws.NewConfig())
 	}
 
-	fmt.Printf("Resource:  %s\n", request.Resource)
-	if len(request.Path) > 0 {
-		pathItem = strings.Split(request.Path[1:], "/")
-		for i, v := range pathItem {
-			fmt.Printf("pathItem: %d   %s\n", i, v)
-		}
-	}
+	// fmt.Printf("Resource:  %s\n", request.Resource)
+	// if len(request.Path) > 0 {
+	pathItem = strings.Split(request.Path[1:], "/")
+	// 	for i, v := range pathItem {
+	// 		fmt.Printf("pathItem: %d   %s\n", i, v)
+	// 	}
+	// }
 
-	log.Printf("\nHTTPMethod: %s", request.HTTPMethod)
-	log.Printf("\nBody: %s", request.Body)
-	for k, v := range request.Headers {
-		log.Printf("Header:  %s  %v", k, v)
-	}
+	// log.Printf("\nHTTPMethod: %s", request.HTTPMethod)
+	// log.Printf("\nBody: %s", request.Body)
+	// for k, v := range request.Headers {
+	// 	log.Printf("Header:  %s  %v", k, v)
+	// }
 
-	for k, v := range request.QueryStringParameters {
-		log.Printf("QueryString:  %s  %v", k, v)
-	}
-	for k, v := range request.PathParameters {
-		log.Printf("PathParameters:  %s  %s", k, v)
-	}
-	for k, v := range request.StageVariables {
-		log.Printf("StageVariable:  %s  %s", k, v)
-	}
+	// for k, v := range request.QueryStringParameters {
+	// 	log.Printf("QueryString:  %s  %v", k, v)
+	// }
+	// for k, v := range request.PathParameters {
+	// 	log.Printf("PathParameters:  %s  %s", k, v)
+	// }
+	// for k, v := range request.StageVariables {
+	// 	log.Printf("StageVariable:  %s  %s", k, v)
+	// }
 
 	var body string
-
 	// create a new session context and merge with last session data if present.
 	sessctx := &sessCtx{
 		sessionId:   request.QueryStringParameters["sid"],
@@ -616,39 +616,38 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		//
 		err = sessctx.recipeRSearch()
 		if err != nil {
-			fmt.Printf("error: %s", err.Error())
 			break
 		}
 		sessctx.object = "task"
-		aa, err := sessctx.readBaseRecipeForTasks()
+		var aa Activities
+		aa, err = sessctx.readBaseRecipeForTasks()
 		if err != nil {
-			fmt.Printf("error: %s", err.Error())
 			break
 		}
-		taskList, err := aa.saveTasks(sessctx)
-		//_, err = aa.saveTasks(sessctx)
-		if err != nil {
-			fmt.Printf("error: %s", err.Error())
-			break
-		}
+		// var taskList prepTaskS
 		s := sessctx
-		err = aa.IndexIngd(s.dynamodbSvc, s.reqBkId, s.reqBkName, s.reqRName, s.reqRId, s.cat, s.subcat, s.authors)
-		if err != nil {
-			fmt.Printf("error: %s", err.Error())
-			break
-		}
+		taskList := aa.GenerateTasks("T-" + s.reqBkId + "-" + s.reqRId)
+		//taskList, err = aa.saveTasks(sessctx)
+		// //_, err = aa.saveTasks(sessctx)
+		// if err != nil {
+		// 	break
+		// }
+		// s := sessctx
+		// err = aa.IndexIngd(s.dynamodbSvc, s.reqBkId, s.reqBkName, s.reqRName, s.reqRId, s.cat, s.subcat, s.authors)
+		// if err != nil {
+		// 	break
+		// }
 		//
 		// Populate container and task records in recipe and ingredient table respectively
 		//
 		sessctx.object = "container"
-		a, err := sessctx.readBaseRecipeForContainers(taskList)
+		var a ContainerMap
+		a, err = sessctx.readBaseRecipeForContainers(taskList)
 		if err != nil {
-			fmt.Printf("error: %s", err.Error())
 			break
 		}
 		_, err = a.saveContainerUsage(sessctx)
 		if err != nil {
-			fmt.Printf("error: %s", err.Error())
 			break
 		}
 		sessctx.abort = true

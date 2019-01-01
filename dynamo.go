@@ -58,7 +58,7 @@ func (cs clsort) Swap(i, j int)      { cs[i], cs[j] = cs[j], cs[i] }
 
 type prepTaskRec struct {
 	PKey   string // R-[BkId]
-	SortK  int    // monitically increaseing - task at which user is upto in recipe
+	SortK  int    // monotonically increasing - task at which user is upto in recipe
 	AId    int    // Activity Id
 	Type   byte
 	time   float32 // all Linked preps sum time components into this field

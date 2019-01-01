@@ -79,7 +79,7 @@ type Container struct {
 	Purpose  string     `json:"purpose"`
 	Coord    [2]float32 `json:"coord"`
 	Measure  MeasureCT  `json:"measure"`
-	Contains string     `json:"contains"`
+	Contains string     `json:"contents"`
 	Message  string     `json:"message"`
 	start    int        // first id in recipe tasks where container is used
 	last     int        // last id in recipe tasks where container is sourced from or recipe is complete.
@@ -97,22 +97,24 @@ type DeviceT struct {
 
 type PerformT struct {
 	//	type      PrepTask q // Prep or Task Activity
-	Text      string       `json:"txt"` // original from db - contains {tag}
-	text      string       // has {tag} replaced
-	Verbal    string       `json:"say"` // original from db - contains {tag}
-	verbal    string       // has {tag} replaced
-	Time      float32      `json:"time"`
-	Tplus     float32      `json:"tPlus"`
-	Unit      string       `json:"unit"`
-	UseDevice *DeviceT     `json:"useD"`
-	AddToC    []string     `json:"addToC"`
-	UseC      []string     `json:"useC"`
-	SourceC   []string     `json:"sourceC"`
-	Parallel  bool         `json:"parallel"`
-	Link      bool         `json:"link"`
-	AddToCp   []*Container // it is thought that only one addToC will be used per activity - but lets be flexible.
-	UseCp     []*Container // ---"---
-	SourceCp  []*Container // ---"---
+	Text      string   `json:"txt"` // original from db - contains {tag}
+	text      string   // has {tag} replaced
+	Verbal    string   `json:"say"` // original from db - contains {tag}
+	verbal    string   // has {tag} replaced
+	Time      float32  `json:"time"`
+	Tplus     float32  `json:"tPlus"`
+	Unit      string   `json:"unit"`
+	UseDevice *DeviceT `json:"useD"`
+	WaitOn    int      `json:"waitOn"`
+	//DeviceT
+	AddToC   []string     `json:"addToC"`
+	UseC     []string     `json:"useC"`
+	SourceC  []string     `json:"sourceC"`
+	Parallel bool         `json:"parallel"`
+	Link     bool         `json:"link"`
+	AddToCp  []*Container // it is thought that only one addToC will be used per activity - but lets be flexible.
+	UseCp    []*Container // ---"---
+	SourceCp []*Container // ---"---
 }
 
 type MeasureT struct {
@@ -140,7 +142,7 @@ type Activity struct {
 	QualiferIngrd string      `json:"quali"`    // prepend  to ingredient.
 	AltIngrd      []string    `json:"altIngrd"` // key into Ingredient table - used for alternate ingredients only
 	IngrdType     string      `json:"iType"`
-	Measure       MeasureT    `json:"measure"`
+	Measure       *MeasureT   `json:"measure"`
 	Overview      string      `json:"ovv"`
 	Coord         [2]float32  // X,Y
 	Task          []*PerformT `json:"task"`
@@ -238,17 +240,17 @@ func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 			for i, d := range identicalC[v].C {
 				switch i {
 				case 0:
-					b.WriteString(fmt.Sprintf(" one for %s", d.Purpose+" "+d.Contains+" "))
+					b.WriteString(fmt.Sprintf(" for %s", d.Purpose+" "+strings.Title(d.Contains)+" "))
 				default:
 					var written bool
 					for _, oc := range identicalC[v].C {
 						if oc.last <= d.start || d.last <= oc.start {
-							b.WriteString(fmt.Sprintf("%s ", " and for "+d.Purpose+" "+d.Contains))
+							b.WriteString(fmt.Sprintf("%s ", " and for "+strings.Title(d.Contains)))
 							written = true
 						}
 					}
 					if !written {
-						b.WriteString(fmt.Sprintf("%s ", " another for "+d.Purpose+" "+d.Contains))
+						b.WriteString(fmt.Sprintf(",%s ", strings.Title(d.Contains)))
 					}
 				}
 			}
@@ -288,19 +290,14 @@ func (a Activities) GenerateTasks(pKey string) prepTaskS {
 	//
 	for p := prepctl.start; p != nil; p = p.nextPrep {
 		var add bool
-		for ia, pp := range p.Prep { // slice of tasks
-			//var pp = p.Prep
+		for ia, pp := range p.Prep { // slice of prep tasks
 			if pp.UseDevice != nil {
 				if strings.ToLower(pp.UseDevice.Type) == "oven" {
 					add = true
 				}
 			}
-			if pp.Parallel && !pp.Link || add {
-				if p.prev != nil && len(p.prev.Prep) != 0 {
-					if p.prev.Prep[len(p.prev.Prep)-1].Link {
-						continue // exclude if part of linked activity in last prep task of previous activity
-					}
-				}
+			if pp.Parallel && pp.WaitOn == 0 || add {
+				add = false
 				processed[atvTask{p.AId, ia}] = true
 				pt := prepTaskRec{PKey: pKey, AId: p.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal}
 				ptS = append(ptS, pt)
@@ -311,7 +308,7 @@ func (a Activities) GenerateTasks(pKey string) prepTaskS {
 	//
 	// generate Task Ids
 	//
-	var i int = 1 // start at one as works better with UpateItem ADD semantics.
+	var i int = 1 // start at one as works better with Dynamodb UpateItem ADD semantics.
 	for j := 0; j < len(ptS); i++ {
 		ptS[j].SortK = i
 		j++
@@ -319,6 +316,21 @@ func (a Activities) GenerateTasks(pKey string) prepTaskS {
 	//
 	// append remaining prep tasks - these are serial tasks so order unimportant
 	//
+	for p := prepctl.start; p != nil; p = p.nextPrep {
+		for ia, pp := range p.Prep {
+			if pp.WaitOn > 0 {
+				continue
+			}
+			if _, ok := processed[atvTask{p.AId, ia}]; ok {
+				continue
+			}
+			processed[atvTask{p.AId, ia}] = true
+			pt := prepTaskRec{PKey: pKey, SortK: i, AId: p.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal}
+			ptS = append(ptS, pt)
+			i++
+		}
+	}
+	// now for all WaitOn prep tasks
 	for p := prepctl.start; p != nil; p = p.nextPrep {
 		for ia, pp := range p.Prep {
 			if _, ok := processed[atvTask{p.AId, ia}]; ok {
@@ -551,8 +563,6 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 	resultS, err := s.dynamodbSvc.Scan(params)
 	if err != nil {
 		return nil, fmt.Errorf("%s", "Error in scan of unit table: "+err.Error())
-	} else {
-		return nil, fmt.Errorf("%s", "no-data-found in unit table: "+err.Error())
 	}
 	unitM := make(map[string]*Unit, int(*result.Count))
 	var unit *Unit
@@ -607,6 +617,16 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 							c.Measure = cId.Measure
 							c.Label = cId.Label
 							c.Type = cId.Type
+							if l == prep {
+								switch c.Cid[0:3] {
+								case "MC-":
+									c.Purpose = "measuring"
+								case "SAP":
+									c.Purpose = "prepping"
+								case "Sau":
+									c.Purpose = "heating"
+								}
+							}
 							// register container by adding to map
 							ContainerM[c.Cid] = c
 							// update container id in activity
@@ -650,7 +670,6 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 				if len(p.UseC) > 0 {
 					for i := 0; i < len(p.UseC); i++ {
 						// ContainerM contains registered containers
-						fmt.Println("useC: ", p.UseC[i])
 						cId, ok := ContainerM[strings.TrimSpace(p.UseC[i])]
 						if !ok {
 							// ContainerSAM contains single activity containers
@@ -661,7 +680,6 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 							}
 							// container referened in activity is a single-activity-container (SAP)
 							// manually create container and add to ContainerM and update all references to it.
-							fmt.Println("useC: create new container for ", p.UseC[i])
 							cs := p.UseC[i] // original non-activity-specific container name
 							c := new(Container)
 							c.Cid = p.UseC[i] + "-" + strconv.Itoa(ap.AId)
@@ -669,6 +687,16 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 							c.Measure = cId.Measure
 							c.Label = cId.Label
 							c.Type = cId.Type
+							if l == prep {
+								switch c.Cid[0:3] {
+								case "MC-":
+									c.Purpose = "measuring"
+								case "SAP":
+									c.Purpose = "prepping"
+								case "Sau":
+									c.Purpose = "heating"
+								}
+							}
 							// register container by adding to map
 							ContainerM[c.Cid] = c
 							// update name of container in Activity to <name>-AId
@@ -709,7 +737,6 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 				if len(p.SourceC) > 0 {
 					// ContainerM contains registered containers
 					for i := 0; i < len(p.SourceC); i++ {
-						fmt.Println("sourceC: ", p.SourceC[i])
 						cId, ok := ContainerM[strings.TrimSpace(p.SourceC[i])]
 						if !ok {
 							// ContainerSAM contains single activity containers
@@ -720,15 +747,23 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 							}
 							// container referened in activity is a single-activity-container (SAP)
 							// manually create container and add to ContainerM and update all references to it.
-							fmt.Println("SourceC: create new container for ", p.SourceC[i])
 							cs := p.SourceC[i] // original non-activity-specific container name
 							c := new(Container)
 							c.Cid = p.SourceC[i] + "-" + strconv.Itoa(ap.AId)
-							fmt.Println("create container: ", c.Cid)
 							c.Contains = ap.Ingredient
 							c.Measure = cId.Measure
 							c.Label = cId.Label
 							c.Type = cId.Type
+							if l == prep {
+								switch c.Cid[0:3] {
+								case "MC-":
+									c.Purpose = "measuring"
+								case "SAP":
+									c.Purpose = "prepping"
+								case "Sau":
+									c.Purpose = "heating"
+								}
+							}
 							// register container by adding to map
 							ContainerM[c.Cid] = c
 							// update name of container in Activity to <name>-AId
@@ -865,6 +900,11 @@ func (s *sessCtx) readBaseRecipeForTasks() (Activities, error) {
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &ActivityS)
 	//
 	activityStart = &ActivityS[0]
+	ActivityM := make(map[string]*Activity)
+	for i, v := range ActivityS {
+		aid := strconv.Itoa(v.AId)
+		ActivityM[aid] = &ActivityS[i]
+	}
 	// for _, v := range ActivityS {
 	// 	fmt.Printf("%#v\n\n", v)
 	// }
@@ -1071,9 +1111,20 @@ func (s *sessCtx) readBaseRecipeForTasks() (Activities, error) {
 						continue
 					}
 					for tclose, topen := 0, strings.IndexByte(str, '{'); topen != -1; {
+						p := p
 						b.WriteString(str[tclose:topen])
+						//fmt.Printf("activity: %d\n", p.AId)
 						tclose += strings.IndexByte(str[tclose:], '}')
-						switch strings.ToLower(str[topen+1 : tclose]) {
+						tclose_ := tclose
+						if tdot := strings.IndexByte(str[topen+1:tclose], '.'); tdot > 0 {
+							// reference to noncurrent activity
+							//fmt.Printf("other activity: [%s] \n", str[topen+1+tdot+1:tclose])
+							p = ActivityM[str[topen+1+tdot+1:tclose]]
+							//fmt.Printf("other activity: Aid:   %d\n", p.AId)
+							tclose_ -= len(str[topen+1+tdot+1:tclose]) + 1
+						}
+						//fmt.Printf("switch: [%s]\n", str[topen+1:tclose_])
+						switch strings.ToLower(str[topen+1 : tclose_]) {
 						case "iqual":
 							{
 								fmt.Fprintf(&b, "%s", p.IngrdQualifer)
@@ -1089,25 +1140,37 @@ func (s *sessCtx) readBaseRecipeForTasks() (Activities, error) {
 						case "qty":
 							{
 								context = measure
+								if p.Measure == nil {
+									return nil, fmt.Errorf("in readBaseRecipeForTasks. Measure not defined for Activity [%d]\n", p.Measure.Unit, p.AId)
+								}
 								fmt.Fprintf(&b, "%s", p.Measure.Quantity)
 							}
 						case "size":
+							if p.Measure == nil {
+								return nil, fmt.Errorf("in readBaseRecipeForTasks. Measure not defined for Activity [%d]\n", p.Measure.Unit, p.AId)
+							}
 							fmt.Fprintf(&b, "%s", p.Measure.Size)
 						case "device":
-							{
-								fmt.Fprintf(&b, "%s", pt.UseDevice.Type)
-								context = device
+							if pt.UseDevice == nil {
+								return nil, fmt.Errorf("in readBaseRecipeForTasks. UseDevice attribute not defined for Activity [%d]\n", p.AId)
 							}
+							fmt.Fprintf(&b, "%s", pt.UseDevice.Type)
+							context = device
 						case "temp":
-							{
-								fmt.Fprintf(&b, "%s", pt.UseDevice.Temp)
+							if pt.UseDevice == nil {
+								return nil, fmt.Errorf("in readBaseRecipeForTasks. UseDevice attribute not defined for Activity [%d]\n", p.AId)
 							}
+							context = device
+							fmt.Fprintf(&b, "%s", pt.UseDevice.Temp)
 						case "unit":
 							{
 								switch context {
 								case device:
+									if pt.UseDevice == nil {
+										return nil, fmt.Errorf("in readBaseRecipeForTasks. UseDevice attribute not defined for Activity [%d]\n", p.AId)
+									}
 									if u, ok := unitM[pt.UseDevice.Unit]; !ok {
-										panic(fmt.Errorf("unit not defined"))
+										return nil, fmt.Errorf("in readBaseRecipeForTasks. Unit for device, [%s], not defined in unitM for Activity [%d]\n", p.Measure.Unit, p.AId)
 									} else {
 										switch interactionType {
 										case text:
@@ -1117,8 +1180,11 @@ func (s *sessCtx) readBaseRecipeForTasks() (Activities, error) {
 										}
 									}
 								case measure:
+									if p.Measure == nil {
+										return nil, fmt.Errorf("in readBaseRecipeForTasks. Measure not defined for Activity [%d]\n", p.Measure.Unit, p.AId)
+									}
 									if u, ok := unitM[p.Measure.Unit]; !ok {
-										panic(fmt.Errorf("unit not defined"))
+										return nil, fmt.Errorf("in readBaseRecipeForTasks. Unit for measure, [%s], not defined in unitM for Activity [%d]\n", p.Measure.Unit, p.AId)
 									} else {
 										switch interactionType {
 										case text:
@@ -1129,7 +1195,7 @@ func (s *sessCtx) readBaseRecipeForTasks() (Activities, error) {
 									}
 								case time:
 									if u, ok := unitM[pt.Unit]; !ok {
-										panic(fmt.Errorf("unit not defined"))
+										return nil, fmt.Errorf("in readBaseRecipeForTasks. Unit for time, [%s], not defined in unitM for Activity [%d]\n", pt.Unit, p.AId)
 									} else {
 										switch interactionType {
 										case text:

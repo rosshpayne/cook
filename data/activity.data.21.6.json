@@ -5,9 +5,9 @@
                "Item": { 
                   "PKey" : { "S": "C-21-6" },
                   "SortK" : { "S": "Pan" },
-                  "type" : { "S": "Pan" },
+                  "type" : { "S": "Pan " },
                   "label" : { "S": "Pan" },
-                  "measure" : { "M" : { "size" : { "S" : "large enough to fit 3 partridges side-by-side" } } },
+                  "measure" : { "M" : { "size" : { "S" : "large" }}},
                   "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
                   "contents" : { "S": "partridges" },
                   "purpose": { "S": "cooking" }
@@ -25,6 +25,20 @@
                   "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
                   "contents" : { "S": "rice" },
                   "purpose": { "S": "cooking" }
+                  }
+            }
+         },
+         {
+         "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-21-6" },
+                  "SortK" : { "S": "ButterPlate" },
+                  "type" : { "S": "Plate" },
+                  "label" : { "S": "Prep Plate" },
+                  "measure" : { "M" : { "size" : { "S" : "large" } } },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "contents" : { "S": "Butter" },
+                  "purpose": { "S": "holding" }
                   }
             }
          }
@@ -62,7 +76,7 @@
                                   "time" : { "N" : "20" },
                                   "tplus" : { "N" : "0" },
                                   "parallel" : {"BOOL" : true } ,
-                                  "useC" : { "SS" : [ "SAP-S"] },
+                                  "useC" : { "SS" : [ "ButterPlate"] },
                                   "unit" : { "S" : "min" }
                                     }
                                 } 
@@ -120,7 +134,7 @@
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
                                   "useD" : { "M" : { "type" : {"S": "knife" }}},
-                                  "useToC" : { "SS" : [ "SAP-S" ] }
+                                  "useC" : { "SS" : [ "SAP-S" ] }
                                   }
                                 }
                                 ]
@@ -164,7 +178,7 @@
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
                                   "useD" : { "M" : { "type" : {"S": "knife" }}},
-                                  "useToC" : { "SS" : [ "SAP-S" ] }
+                                  "useC" : { "SS" : [ "SAP-S" ] }
                                   }
                                 }
                                 ]
@@ -257,10 +271,12 @@
                                   "parallel" : {"BOOL" : true }   }
                                 },
                                 { "M": {
-                                  "txt" : { "S" : "Smother the {qty} {ingrd}s with the softened {ingrd:10} and season inside and out" },
-                                  "say" : { "S" : "Smother the {qty} {ingrd}s with the softened {ingrd:10} and season inside and out" },
+                                  "txt" : { "S" : "Smother the {qty} {ingrd}s with the softened {ingrd.10} and season inside and out" },
+                                  "say" : { "S" : "Smother the {qty} {ingrd}s with the softened {ingrd.10} and season inside and out" },
+                                  "waitOn" : { "N" : "10" },
                                   "time" : { "N" : "4" },
                                   "unit" : { "S" : "min" },
+                                  "sourceC" : { "SS" : ["ButterPlate"]},
                                   "useC" : { "SS" : [ "SAP-L" ] } }
                                 }
                                 ]
@@ -595,7 +611,7 @@
                                   "say" : { "S" : "in a medium sized sausepan heat the {ingrd} to almost boiling" },
                                   "time" : { "N" : "6" },
                                   "tplus" : { "N" : "0" },
-                                  "useC" :  { "SS" : [ "SAP-M" ] },
+                                  "useC" :  { "SS" : [ "Sausepan-M" ] },
                                   "unit" : { "S" : "min" },
                                   "parallel" : {"BOOL": true}
                                   }
@@ -609,7 +625,7 @@
                                   "time" : { "N" : "15" },
                                   "tplus" : { "N" : "5" },
                                   "unit" : { "S" : "min" },
-                                  "sourceC" :  { "SS" : [ "SAP-M" ] },
+                                  "sourceC" :  { "SS" : [ "Sausepan-M" ] },
                                   "useD" : { "M" : { "type" : {"S": "ladle" }}},
                                   "addToC" : { "SS" : [ "RisoPan" ] }
                                   }
