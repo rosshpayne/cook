@@ -253,6 +253,7 @@
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "partridge"},
                 "quali" : { "S" : "prepared grey-legged "},
+                "index": { "BOOL" : true},
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "3" } 
                                       }

@@ -606,9 +606,6 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 	}
 	switch pathItem[0] {
 	case "load":
-		// sessctx.reqRName = "Risotto ero with Swiss Chard"
-		// sessctx.reqBkName = "River Cafe"
-		// authors := []string{"Yotam Ottolenghi", "Helen Goh"}
 		sessctx.reqBkId = request.QueryStringParameters["bkid"]
 		sessctx.reqRId = request.QueryStringParameters["rid"]
 		//
@@ -627,26 +624,31 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		// var taskList prepTaskS
 		s := sessctx
 		taskList := aa.GenerateTasks("T-" + s.reqBkId + "-" + s.reqRId)
-		//taskList, err = aa.saveTasks(sessctx)
-		// //_, err = aa.saveTasks(sessctx)
-		// if err != nil {
-		// 	break
-		// }
-		// s := sessctx
-		// err = aa.IndexIngd(s.dynamodbSvc, s.reqBkId, s.reqBkName, s.reqRName, s.reqRId, s.cat, s.subcat, s.authors)
-		// if err != nil {
-		// 	break
-		// }
+		taskList, err = aa.saveTasks(sessctx)
+		//_, err = aa.saveTasks(sessctx)
+		if err != nil {
+			break
+		}
+		//s := sessctx
+		err = aa.IndexIngd(s.dynamodbSvc, s.reqBkId, s.reqBkName, s.reqRName, s.reqRId, s.cat, s.subcat, s.authors)
+		if err != nil {
+			break
+		}
 		//
 		// Populate container and task records in recipe and ingredient table respectively
 		//
 		sessctx.object = "container"
-		var a ContainerMap
-		a, err = sessctx.readBaseRecipeForContainers(taskList)
+		var c ContainerMap
+		var d DevicesMap
+		c, d, err = sessctx.readBaseRecipeForContainers(taskList)
 		if err != nil {
 			break
 		}
-		_, err = a.saveContainerUsage(sessctx)
+		_, err = c.saveContainerUsage(sessctx)
+		if err != nil {
+			break
+		}
+		err = d.saveDevices(sessctx)
 		if err != nil {
 			break
 		}

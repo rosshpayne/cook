@@ -6,7 +6,7 @@
                   "PKey" : { "S": "C-0-0" },
                   "SortK" : { "S": "SAP-S" },
                   "label" : { "S" : "container" },
-                  "type" : { "S": "container" },
+                  "type" : { "S": "bowl" },
                   "measure" : { "M" : { 
                                       "size" : { "S" : "small" } 
                                       }
@@ -21,7 +21,7 @@
                   "PKey" : { "S": "C-0-0" },
                   "SortK" : { "S": "SAP-M" },
                   "label" : { "S" : "container" },
-                  "type" : { "S": "container" },
+                  "type" : { "S": "bowl" },
                   "measure" : { "M" : { 
                                       "size" : { "S" : "medium" } 
                                       }
@@ -36,7 +36,7 @@
                   "PKey" : { "S": "C-0-0" },
                   "SortK" : { "S": "SAP-L" },
                   "label" : { "S" : "container" },
-                  "type" : { "S": "container" },
+                  "type" : { "S": "bowl" },
                   "measure" : { "M" : { 
                                       "size" : { "S" : "large" } 
                                       }

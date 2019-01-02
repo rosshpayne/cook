@@ -118,8 +118,11 @@ type PerformT struct {
 }
 
 type MeasureT struct {
+	type_     int    // 0 - normal qty being vol/weigth, 1 - qty being number of, 2 - qty being weight each, 3 - qty being vol each
 	Quantity  string `json:"qty"`
-	VerbalQty string `json:"verbalQty"`
+	VerbalQty string `json:"vQty"`
+	Weight    string `json:"wgt"`
+	Volume    string `json:"vol"`
 	Size      string `json:"size"`
 	Unit      string `json:"unit"`
 }
@@ -130,7 +133,7 @@ type IngredientT struct {
 	IngrdQualifer string `json:"iQual"` // (append) to ingredient
 	QualiferIngrd string `json:"quali"` // prepend  to ingredient.
 	Type          string `json:"iType"`
-	Measure       MeasureT
+	Measure       *MeasureT
 }
 
 type Activity struct {
@@ -141,6 +144,7 @@ type Activity struct {
 	IngrdQualifer string      `json:"iQual"`    // (append) to ingredient
 	QualiferIngrd string      `json:"quali"`    // prepend  to ingredient.
 	AltIngrd      []string    `json:"altIngrd"` // key into Ingredient table - used for alternate ingredients only
+	Index         []string    `json:"index"`
 	IngrdType     string      `json:"iType"`
 	Measure       *MeasureT   `json:"measure"`
 	Overview      string      `json:"ovv"`
@@ -156,6 +160,8 @@ type Activity struct {
 type ContainerMap map[string]*Container
 
 var ContainerM ContainerMap
+
+type DevicesMap map[string]string
 
 var activityStart *Activity
 
@@ -362,11 +368,6 @@ func (a Activities) GenerateTasks(pKey string) prepTaskS {
 }
 
 func (a Activities) PrintRecipe(rId string) (prepTaskS, string) {
-	// *** NB> . this currently only handles prep tasks - which may not be relevant in printed recipe. So this func may not be useful.
-	// Merge and Populate prepTask and then sort.
-	//  1. first load parrellelisable tasks identified by words or prep property "parallel" or device (=oven)
-	//  2. sort
-	//  3. add other tasks in order
 	//
 	var ptS prepTaskS
 	pid := 0                                     // index in prepOrder
@@ -438,8 +439,7 @@ func (a Activities) PrintRecipe(rId string) (prepTaskS, string) {
 	return ptS, b.String()
 } // PrintRecipe
 
-//func readBase(..) (interface{} , error)
-func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, error) {
+func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, DevicesMap, error) {
 	//
 	// Table:  Activity
 	//
@@ -458,10 +458,10 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 	//*dynamodb.DynamoDB,
 	result, err := s.dynamodbSvc.Query(input)
 	if err != nil {
-		return nil, fmt.Errorf("Error: in readBaseRecipeForContainers Query - %s", err.Error())
+		return nil, nil, fmt.Errorf("Error: in readBaseRecipeForContainers Query - %s", err.Error())
 	}
 	if int(*result.Count) == 0 {
-		return nil, fmt.Errorf("No data found for reqRId %s in readBaseRecipeForTasks for Activity - ", s.reqRId)
+		return nil, nil, fmt.Errorf("No data found for reqRId %s in readBaseRecipeForTasks for Activity - ", s.reqRId)
 	}
 	ActivityS := make([]Activity, int(*result.Count))
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &ActivityS)
@@ -498,7 +498,7 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 	//
 	result, err = s.dynamodbSvc.Query(input)
 	if err != nil {
-		return nil, fmt.Errorf("%s", "Error in Query of container table: "+err.Error())
+		return nil, nil, fmt.Errorf("%s", "Error in Query of container table: "+err.Error())
 	}
 	if int(*result.Count) == 0 {
 		fmt.Println("No container data..")
@@ -510,7 +510,7 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 		itemc = new(Container)
 		err = dynamodbattribute.UnmarshalMap(i, itemc)
 		if err != nil {
-			return nil, fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
+			return nil, nil, fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
 		}
 		ContainerM[itemc.Cid] = itemc
 	}
@@ -531,7 +531,7 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 	//
 	result, err = s.dynamodbSvc.Query(input)
 	if err != nil {
-		return nil, fmt.Errorf("%s", "Error in Query of container table: "+err.Error())
+		return nil, nil, fmt.Errorf("%s", "Error in Query of container table: "+err.Error())
 	}
 	if int(*result.Count) == 0 {
 		fmt.Println("No container data..")
@@ -541,7 +541,7 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 		itemc = new(Container)
 		err = dynamodbattribute.UnmarshalMap(i, itemc)
 		if err != nil {
-			return nil, fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
+			return nil, nil, fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
 		}
 		ContainerSAM[itemc.Cid] = itemc
 	}
@@ -551,7 +551,7 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 	proj := expression.NamesList(expression.Name("slabel"), expression.Name("llabel"), expression.Name("desc"))
 	expr, err = expression.NewBuilder().WithProjection(proj).Build()
 	if err != nil {
-		return nil, fmt.Errorf("%s", "Error in expression build of unit table: "+err.Error())
+		return nil, nil, fmt.Errorf("%s", "Error in expression build of unit table: "+err.Error())
 	}
 	// Build the query input parameters
 	params := &dynamodb.ScanInput{
@@ -562,7 +562,7 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 	}
 	resultS, err := s.dynamodbSvc.Scan(params)
 	if err != nil {
-		return nil, fmt.Errorf("%s", "Error in scan of unit table: "+err.Error())
+		return nil, nil, fmt.Errorf("%s", "Error in scan of unit table: "+err.Error())
 	}
 	unitM := make(map[string]*Unit, int(*result.Count))
 	var unit *Unit
@@ -570,7 +570,7 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 		unit = new(Unit)
 		err = dynamodbattribute.UnmarshalMap(i, unit)
 		if err != nil {
-			return nil, fmt.Errorf("%s", "Error in UnmarshalMap of unit table: "+err.Error())
+			return nil, nil, fmt.Errorf("%s", "Error in UnmarshalMap of unit table: "+err.Error())
 		}
 		unitM[unit.Slabel] = unit
 	}
@@ -845,24 +845,53 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, erro
 	//
 	// devices
 	//
-	devices := make(map[string]struct{})
+	DevicesM := make(DevicesMap)
 	for p := activityStart; p != nil; p = p.next {
-		for _, pp := range p.Task {
-			if pp.UseDevice != nil {
-				if _, ok := devices[strings.Title(pp.UseDevice.Type)]; !ok {
-					devices[strings.Title(pp.UseDevice.Type)] = struct{}{}
-				}
-			}
-		}
 		for _, pp := range p.Prep {
 			if pp.UseDevice != nil {
-				if _, ok := devices[strings.Title(pp.UseDevice.Type)]; !ok {
-					devices[strings.Title(pp.UseDevice.Type)] = struct{}{}
+				if _, ok := DevicesM[strings.Title(pp.UseDevice.Type)]; !ok {
+					var str string
+					pp := pp.UseDevice
+					if len(pp.Set) > 0 {
+						str = "Set to " + pp.Set + ". "
+					}
+					if len(pp.Temp) > 0 {
+						str = "Set to " + pp.Temp + " " + pp.Unit + ". "
+					}
+					if len(pp.Purpose) > 0 {
+						str += pp.Purpose
+					}
+					if len(pp.Alternate) > 0 {
+						str += "Alternative: " + pp.Alternate
+					}
+					DevicesM[strings.Title(pp.Type)] = str
 				}
 			}
 		}
+		for _, pp := range p.Task {
+			if pp.UseDevice != nil {
+				var str string
+				pp := pp.UseDevice
+				if _, ok := DevicesM[strings.Title(pp.Type)]; !ok {
+					if len(pp.Set) > 0 {
+						str = "Set to " + pp.Set + ". "
+					}
+					if len(pp.Temp) > 0 {
+						str = "Set to " + pp.Temp + " " + pp.Unit + ". "
+					}
+					if len(pp.Purpose) > 0 {
+						str += pp.Purpose
+					}
+					if len(pp.Alternate) > 0 {
+						str += "Alternative: " + pp.Alternate
+					}
+					DevicesM[strings.Title(pp.Type)] = str
+				}
+			}
+		}
+
 	}
-	return ContainerM, nil
+	return ContainerM, DevicesM, nil
 }
 
 func (s *sessCtx) readBaseRecipeForTasks() (Activities, error) {

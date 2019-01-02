@@ -25,8 +25,8 @@ type RnLkup struct {
 }
 
 type ctRec struct {
-	Text   string `json="txt"`
-	Verbal string `json="vbl"`
+	Text   string `json:"txt"`
+	Verbal string `json:"vbl"`
 	EOL    int
 }
 
@@ -211,11 +211,8 @@ func (a Activities) IndexIngd(svc *dynamodb.DynamoDB, bkid string, bkname string
 		Authors  string
 	}
 
-	doNotIndex, err := loadNonIngredientsMap(svc) // map[string]bool
-	if err != nil {
-		panic(err)
-	}
 	var indexRecS []indexRecT
+	row_ := make(map[string]bool)
 
 	saveIngdIndex := func() error {
 		for _, v := range indexRecS {
@@ -235,62 +232,89 @@ func (a Activities) IndexIngd(svc *dynamodb.DynamoDB, bkid string, bkname string
 		indexRecS = nil // free memory. Probably redundant as its local to this func so once func exists memory would be freed anyway.
 		return nil
 	}
-	//
-	row_ := make(map[string]bool)
-	for _, ap := range a {
+	// index by:
+	// cat
+	//  [ingrd, ingrd cat ] or [index property values]
+	indexCat := func(cat string) {
+		if len(cat) == 0 {
+			// cat not defined , take cat from last word in recipe title
+			cat = rname[strings.LastIndex(rname, " ")+1:]
+		}
+		//
+		irec := indexRecT{SortK: bkid + "-" + rid, BkName: bkname, RName: rname, Authors: authors}
+		irec.PKey = strings.TrimRight(strings.TrimLeft(strings.ToLower(cat), " "), " ")
+		indexRecS = append(indexRecS, irec)
+		row_[irec.PKey] = true
+	}
 
-		if len(ap.Ingredient) > 0 {
-			// make ingredient singular and lower case
-			ap.Ingredient = strings.TrimRight(strings.TrimRight(strings.ToLower(ap.Ingredient), " "), "s")
-			if !doNotIndex[strings.TrimRight(strings.ToLower(ap.Label), "s")] {
-				if !doNotIndex[ap.Ingredient] {
-					// ingredient is indexable. Populate index record.
-					for i, v := range []string{cat, subcat} {
-						// ingrd-cat and ingrd-subcat
-						for k := range []int{1, 2} {
-							// ingrd-cat and qualifier-ingrd-cat and ingrd-subcat, qualifier-ingrd-subcat
-							if len(v) == 0 && i == 1 {
-								// subcat is not defined
-								break
-							}
-							if strings.TrimRight(ap.Ingredient, "s") == strings.TrimRight(strings.ToLower(v), "s") {
-								// if ingredient name same as cat/subcat then index under cat/subcat name
-								ap.Ingredient = ""
-							}
-							irec := indexRecT{}
-							irec.PreQual = ap.QualiferIngrd
-							irec.PostQual = ap.IngrdQualifer
-							if len(ap.Measure.Size) > 0 {
-								irec.Quantity = ap.Measure.Quantity + " " + ap.Measure.Size
-							} else {
-								irec.Quantity = ap.Measure.Quantity + ap.Measure.Unit
-							}
-							if len(v) == 0 && i == 0 {
-								// take cat from last word in recipe title
-								cat = rname[strings.LastIndex(rname, " ")+1:]
-							}
-							if k == 0 {
-								irec.PKey = strings.TrimLeft(strings.ToLower(ap.Ingredient+" "+v), " ")
-							} else {
-								irec.PKey = strings.TrimLeft(strings.ToLower(ap.QualiferIngrd+" "+ap.Ingredient+" "+v), " ")
-							}
-							irec.SortK = bkid + "-" + rid
-							irec.RName = rname
-							irec.BkName = bkname
-							irec.Authors = authors
-							if !row_[irec.PKey] {
-								// only append unique values..
-								row_[irec.PKey] = true
-								indexRecS = append(indexRecS, irec)
-							}
-						}
+	makeIndexRecs := func(ap Activity) {
+		// for each index property value, add to index
+		for _, v := range ap.Index {
+			irec := indexRecT{SortK: bkid + "-" + rid, BkName: bkname, RName: rname, Authors: authors}
+			irec.PKey = strings.TrimRight(strings.TrimLeft(strings.ToLower(v), " "), " ")
+			m := ap.Measure
+			if m != nil {
+				if len(m.Quantity) > 0 && len(m.Unit) > 0 {
+					if len(m.Weight) > 0 {
+						irec.Quantity = m.Quantity + " " + ap.Ingredient + " of " + m.Weight + m.Unit + " each"
 					}
+					if len(m.Volume) > 0 {
+						irec.Quantity = m.Quantity + " " + ap.Ingredient + " of " + m.Volume + m.Unit + " each"
+					}
+					if len(m.Volume) == 0 && len(m.Weight) == 0 {
+						irec.Quantity = ap.Measure.Quantity + ap.Measure.Unit
+					}
+				} else {
+					irec.Quantity = m.Quantity + " " + m.Size
 				}
+				if len(m.Size) > 0 && len(m.Quantity) == 0 {
+					irec.Quantity = m.Size
+				}
+			}
+			if !row_[irec.PKey] {
+				// only append unique values..
+				row_[irec.PKey] = true
+				indexRecS = append(indexRecS, irec)
 			}
 		}
 	}
-	err = saveIngdIndex()
+	//
+	indexCat(cat)
+	for _, ap := range a {
+		if len(ap.Index) > 0 {
+			makeIndexRecs(ap)
+		}
+	}
+	err := saveIngdIndex()
 	return err
+}
+
+func (d DevicesMap) saveDevices(s *sessCtx) error {
+	var row int
+	//
+	type Pkey struct {
+		PKey    string `json:"PKey"`
+		SortK   int    `json:"SortK"`
+		Device  string `json:"Device"`
+		Comment string `json:"Comment"`
+	}
+	for k, v := range d {
+		r := &Pkey{PKey: "D-" + s.reqBkId + "-" + s.reqRId, SortK: row, Device: k, Comment: v}
+		row++
+		av, err := dynamodbattribute.MarshalMap(r)
+		if err != nil {
+			return fmt.Errorf("Error in saveDevices, MarshalMap - %s", err.Error())
+		}
+		_, err = s.dynamodbSvc.PutItem(&dynamodb.PutItemInput{
+			TableName: aws.String("Recipe"),
+			Item:      av,
+		})
+		if err != nil {
+			return fmt.Errorf("Error in saveDevices, failed to put Record to DynamoDB - %s", err.Error())
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	return nil
 }
 
 func (a Activities) saveTasks(s *sessCtx) (prepTaskS, error) {
