@@ -253,7 +253,7 @@
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "partridge"},
                 "quali" : { "S" : "prepared grey-legged "},
-                "index": { "BOOL" : true},
+                "index": { "SS" : ["partridge risotto","partridge"]},
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "3" } 
                                       }
@@ -475,10 +475,12 @@
                 "SortK" : { "N": "120"},
                 "label" : { "S": "celery"},
                 "ingrd" : { "S" : "celery heart" },
+                "index" : { "SS" : [ "celery risotto" ]},
                 "iQual" : { "S" : "finely chopped" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
-                                      "qty" : { "S" : "1" } 
+                                      "qty" : { "S" : "1" } ,
+                                      "unit" : { 
                                       }
                 },
                 "prep" : { "L" : [ 

@@ -77,7 +77,7 @@ func (od prepTaskS) Len() int           { return len(od) }
 func (od prepTaskS) Less(i, j int) bool { return od[i].time > od[j].time }
 func (od prepTaskS) Swap(i, j int)      { od[i], od[j] = od[j], od[i] }
 
-func (a ContainerMap) saveContainerUsage(s *sessCtx) (string, error) {
+func (a ContainerMap) saveContainerUsage(s *sessCtx) error {
 	type ctRow struct {
 		PKey  string
 		SortK float64
@@ -94,19 +94,19 @@ func (a ContainerMap) saveContainerUsage(s *sessCtx) (string, error) {
 		ctd := ctRow{PKey: "C-" + s.reqBkId + "-" + s.reqRId, SortK: float64(i + 1), Txt: v, Vbl: v, EOL: eol}
 		av, err := dynamodbattribute.MarshalMap(ctd)
 		if err != nil {
-			return "", fmt.Errorf("%s: %s", "Error: failed to marshal Record in saveContainerUsage", err.Error())
+			return fmt.Errorf("%s: %s", "Error: failed to marshal Record in saveContainerUsage", err.Error())
 		}
 		_, err = s.dynamodbSvc.PutItem(&dynamodb.PutItemInput{
 			TableName: aws.String("Recipe"),
 			Item:      av,
 		})
 		if err != nil {
-			return "", fmt.Errorf("%s: %s", "Error: failed to PutItem in saveContainerUsage", err.Error())
+			return fmt.Errorf("%s: %s", "Error: failed to PutItem in saveContainerUsage", err.Error())
 		}
-		time.Sleep(50 * time.Millisecond)
+		//time.Sleep(50 * time.Millisecond)
 	}
 
-	return ctS[0], nil
+	return nil
 }
 
 func (s sessCtx) getContainerRecById() (alexaDialog, error) {
@@ -198,7 +198,7 @@ func loadNonIngredientsMap(svc *dynamodb.DynamoDB) (map[string]bool, error) {
 
 }
 
-func (a Activities) IndexIngd(svc *dynamodb.DynamoDB, bkid string, bkname string, rname string, rid string, cat string, subcat string, authors string) error {
+func (a Activities) generateAndSaveIndex(svc *dynamodb.DynamoDB, bkid string, bkname string, rname string, rid string, cat string, subcat string, authors string) error {
 	//	   	err = aa.IndexIngd(s.dynamodbSvc,        s.reqBkId,   s.reqBkName, s . .reqRName,  s.reqRId, cat, authors)
 	type indexRecT struct {
 		PKey     string
@@ -227,7 +227,7 @@ func (a Activities) IndexIngd(svc *dynamodb.DynamoDB, bkid string, bkname string
 			if err != nil {
 				return fmt.Errorf("failed in IndexIngd to PutItem into Ingredient table - %v", err)
 			}
-			time.Sleep(50 * time.Millisecond)
+			//time.Sleep(50 * time.Millisecond)
 		}
 		indexRecS = nil // free memory. Probably redundant as its local to this func so once func exists memory would be freed anyway.
 		return nil
@@ -312,12 +312,12 @@ func (d DevicesMap) saveDevices(s *sessCtx) error {
 		if err != nil {
 			return fmt.Errorf("Error in saveDevices, failed to put Record to DynamoDB - %s", err.Error())
 		}
-		time.Sleep(50 * time.Millisecond)
+		//time.Sleep(50 * time.Millisecond)
 	}
 	return nil
 }
 
-func (a Activities) saveTasks(s *sessCtx) (prepTaskS, error) {
+func (a Activities) generateAndSaveTasks(s *sessCtx) (prepTaskS, error) {
 	var rows int
 	// only prep & task verbal and its text equivalent are saved.
 	// Generate prep and tasks from Activities.
@@ -336,9 +336,9 @@ func (a Activities) saveTasks(s *sessCtx) (prepTaskS, error) {
 			Item:      av,
 		})
 		if err != nil {
-			return []prepTaskRec{}, fmt.Errorf("failed to put Record to DynamoDB, %v", err)
+			return prepTaskS{}, fmt.Errorf("failed to put Record to DynamoDB, %v", err)
 		}
-		time.Sleep(50 * time.Millisecond)
+		//time.Sleep(50 * time.Millisecond)
 	}
 	return ptS, nil
 }

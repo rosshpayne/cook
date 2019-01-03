@@ -1,0 +1,238 @@
+{
+       "Ingredient" : [ 
+        {
+          "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-21-7" },
+                  "SortK" : { "S": "SoakingBowl" },
+                  "type" : { "S": "Bowl " },
+                  "label" : { "S": "Bowl" },
+                  "measure" : { "M" : { "size" : { "S" : "small" }}},
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "contents" : { "S": "capers" },
+                  "purpose": { "S": "soaking" }
+                  }
+            }
+         },
+         {
+         "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-21-7" },
+                  "SortK" : { "S": "OvenTray" },
+                  "type" : { "S": "Pan" },
+                  "label" : { "S": "Oven Tray" },
+                  "measure" : { "M" : { "size" : { "S" : "large" } } },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "contents" : { "S": "fish" },
+                  "purpose": { "S": "cooking" }
+                  }
+            }
+         }
+      ],
+      "Recipe" : [ 
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "R-21" },
+                "SortK" : { "N": "7"},
+                "RName" : { "S": "Dover Sole with Capers and Marjoram"},
+                "Cat"  : { "S": "Fish" }
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-21-7" },
+                "SortK" : { "N": "10"},
+                "label" : { "S": "capers"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "capers" },
+                "quali" : { "S" : "salted" },
+                 "measure" : { "M" : { 
+                                      "qty" : { "S" : "2" },
+                                      "unit" : {"S" : "tbsp" }
+                            }
+                 },
+                 "prep" : { "L" : [
+                                { "M" : { 
+                                  "txt" : { "S" : "Put {qty}{unit} of {quali} {ingrd} in a sieve and rinse under cold running water. Leave to soak in soak in cold water for {time} {unit}" },
+                                  "say" : { "S" : "Put {qty}{unit} of {quali} {ingrd} in a sieve and rinse under cold running water. Leave to soak in soak in cold water for {time} {unit}" },
+                                  "time" : { "N" : "40" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "parallel" : {"BOOL" : true } ,
+                                  "useD" : { "M" : { "type" : {"S": "Sieve" }}},
+                                  "addToC" : { "SS" : [ "SoakingBowl"] }
+                                    }
+                                },
+                                { "M" : { 
+                                  "txt" : { "S" : "Once the {ingrd} have been soaked, rinse them again and set aside." },
+                                  "say" : { "S" : "Once the {ingrd} have been soaked, rinse them again and set aside." },
+                                  "time" : { "N" : "30" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "useC" : { "SS" : [ "SoakingBowl"] }
+                                    }
+                                } 
+                                ]
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-21-7" },
+                "SortK" : { "N": "20"},
+                "label" : { "S": "oil"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "olive oil" },
+                "quali" : { "S" : "extra virgin" },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "drizzle" } 
+                                      }
+                },
+                "task" : { "L" : [ 
+                                {"M" : { 
+                                  "txt" : { "S" : "Brush a large, flat oven tray with {quali} {ingrd}." },
+                                  "say" : { "S" : "Brush a large, flat oven tray with {quali} {ingrd}." },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : {"SS" : ["OvenTray"] }
+                                }
+                                }
+                                ]
+                                         
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-21-7" },
+                "SortK" : { "N": "30"},
+                "label" : { "S": "marjoram"},
+                "ingrd" : { "S" : "marjoram" },
+                "quali" : { "S" : "fresh" },
+                "iQual" : { "S" : "leaves" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "bunch" } 
+                                      }
+                },
+               "task" : { "L" : [
+                                { "M" : {
+                                  "txt" : { "S" : "Scatter half of the {ingrd} {iQua} over the tray along wih some sea salt and black pepper" },
+                                  "say" : { "S" : "Scatter half of the {ingrd} {iQua} over the tray along wih some sea salt and black pepper " },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" }
+                                  }
+                                }
+                                ]
+               }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-21-7" },
+                "SortK" : { "N": "40"},
+                "label" : { "S": "Sole"},
+                "ingrd" : { "S" : "Sole" },
+                "quali" : { "S" : "whole Dover" },
+                "index" : { "SS" : ["sole", "dover sole"] },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "4" } ,
+                                      "wgt" : { "S" : "350-400" },
+                                      "unit" : { "S" : "g" }
+                                      }
+                },
+                "prep" : { "L" : [
+                                { "M" : {
+                                  "txt" : { "S" : "preheat the oven to {temp}{unit}." },
+                                  "say" : { "S" : "preheat the oven to {temp}{unit}." },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "parallel" : {"BOOL" : true} ,
+                                  "useD" : { "M" : { "type" : {"S": "oven" } ,
+                                                     "temp" : {"N":"230"} ,
+                                                    "unit" : {"S":"C"} 
+                                                    }  }
+                                  }
+                                }
+                                ]
+                },
+                "task" : { "L" : [
+                                { "M" : {
+                                  "txt" : { "S" : "place the fish on top, side by side. Season them with sea salt and black pepper." },
+                                  "say" : { "S" : "place the fish on top, side by side. Season them with sea salt and black pepper" },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "OvenTray" ] }
+                                  }
+                                },
+                                { "M" : {
+                                  "txt" : { "S" : "scatter the remaining {ingrd.30} and the {ingrd.10} over them" },
+                                  "say" : { "S" : "scatter the remaining {ingrd.30} and the {ingrd.10} over them" },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "OvenTray" ] }
+                                  }
+                                },
+                                { "M" : {
+                                  "txt" : { "S" : "Transfer the tray to the oven to bake for {time} to {tplus} {unit}. To test when the fish is cooked use the point of a sharp knife inserted into the centre of the thickest part of the {ingrd}. It is cooked when the flesh comes away from the bone" },
+                                  "say" : { "S" : "Transfer the tray to the oven to bake for {time} to {tplus} {unit}.To test when the fish is cooked use the point of a sharp knife inserted into the centre of the thickest part of the {ingrd}. It is cooked when the flesh comes away from the bone " },
+                                  "time" : { "N" : "15" },
+                                  "tplus" : { "N" : "5" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "OvenTray" ] },
+                                  "useD" : { "M" : { "type" : {"S": "small knife" },
+                                                    "purpose" : { "S" : "to test if fish is cooked" }
+                                  }
+                                  }
+                                  }
+                                }
+                                ]
+                }
+            }
+            }
+            },
+           {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-21-7" },
+                "SortK" : { "N": "50"},
+                "label" : { "S": "lemon"},
+                "ingrd" : { "S" : "lemon" },
+                "iQual" : { "S" : ", cat in half" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "1" } 
+                                      }
+                },
+               "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Squeeze the {ingrd} over the fish and serve with any juices from the pan and extra {ingrd.20}" },
+                                  "say" : { "S" : "Squeeze the {ingrd} over the fish and serve with any juices from the pan and extra {ingrd.20}" },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "sourceC" : { "SS" : [ "OvenTray" ] }
+                                  }
+                                }
+                                ]
+                }
+            }
+            }
+            }
+    ]
+}    

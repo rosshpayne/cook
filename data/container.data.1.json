@@ -1,11 +1,11 @@
 {
-      "Ingredient" : [ 
+      "Ingredient" : [
             {
-            "PutRequest": { 
+                           "PutRequest": { 
                "Item": {
                   "PKey" : { "S": "C-0-0" },
-                  "SortK" : { "S": "SAP-S" },
-                  "label" : { "S" : "container" },
+                  "SortK" : { "S": "SAB-S" },
+                  "label" : { "S" : "bowl" },
                   "type" : { "S": "bowl" },
                   "measure" : { "M" : { 
                                       "size" : { "S" : "small" } 
@@ -19,8 +19,8 @@
             "PutRequest": { 
                "Item": {
                   "PKey" : { "S": "C-0-0" },
-                  "SortK" : { "S": "SAP-M" },
-                  "label" : { "S" : "container" },
+                  "SortK" : { "S": "SAB-M" },
+                  "label" : { "S" : "bowl" },
                   "type" : { "S": "bowl" },
                   "measure" : { "M" : { 
                                       "size" : { "S" : "medium" } 
@@ -34,9 +34,99 @@
             "PutRequest": { 
                "Item": {
                   "PKey" : { "S": "C-0-0" },
-                  "SortK" : { "S": "SAP-L" },
-                  "label" : { "S" : "container" },
+                  "SortK" : { "S": "SAB-L" },
+                  "label" : { "S" : "bowl" },
                   "type" : { "S": "bowl" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "large" } 
+                                      }
+                              },
+                  "purpose" : {"S":"hold single ingredient"}
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAT-S" },
+                  "label" : { "S" : "tray" },
+                  "type" : { "S": "tray" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "small" } 
+                                      }
+                              },
+                  "purpose" : {"S":"hold single ingredient"}
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAT-M" },
+                  "label" : { "S" : "tray" },
+                  "type" : { "S": "tray" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "medium" } 
+                                      }
+                              },
+                  "purpose" : {"S":"hold single ingredient"}
+                   }
+            }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAT-L" },
+                  "label" : { "S" : "tray" },
+                  "type" : { "S": "tray" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "large" } 
+                                      }
+                              },
+                  "purpose" : {"S":"hold single ingredient"}
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAP-S" },
+                  "label" : { "S" : "plate" },
+                  "type" : { "S": "plate" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "small" } 
+                                      }
+                              },
+                  "purpose" : {"S":"hold single ingredient"}
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAP-M" },
+                  "label" : { "S" : "plate" },
+                  "type" : { "S": "plate" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "medium" } 
+                                      }
+                              },
+                  "purpose" : {"S":"hold single ingredient"}
+                   }
+            }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAP-L" },
+                  "label" : { "S" : "plate" },
+                  "type" : { "S": "plate" },
                   "measure" : { "M" : { 
                                       "size" : { "S" : "large" } 
                                       }

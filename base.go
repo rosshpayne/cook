@@ -4,7 +4,6 @@ import (
 	_ "encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"sort"
 	"strconv"
 	"strings"
@@ -23,6 +22,8 @@ var errFailValidation error = errors.New("Failed Session Validation")
 
 //TODO
 // change float32 to float64 as this is what dynamoAttribute.Unmarshal uses
+type PrepTask int
+
 const (
 	prep PrepTask = iota
 	task
@@ -32,8 +33,6 @@ const (
 	NOTEOT
 )
 const jsonKey string = "task"
-
-type PrepTask int
 
 func (p PrepTask) string() string {
 	switch p {
@@ -59,10 +58,10 @@ type Unit struct {
 
 type MeasureCT struct {
 	Quantity string `json:"qty"`
-	Size     string
-	Diameter float32
-	Height   float32
-	Unit     string
+	Size     string `json:"size"`
+	Diameter string `json:"diameter"`
+	Height   string `json:"height"`
+	Unit     string `json:"unit`
 }
 
 type taskT struct {
@@ -78,7 +77,7 @@ type Container struct {
 	Type     string     `json:"type"`
 	Purpose  string     `json:"purpose"`
 	Coord    [2]float32 `json:"coord"`
-	Measure  MeasureCT  `json:"measure"`
+	Measure  *MeasureCT `json:"measure"`
 	Contains string     `json:"contents"`
 	Message  string     `json:"message"`
 	start    int        // first id in recipe tasks where container is used
@@ -97,15 +96,17 @@ type DeviceT struct {
 
 type PerformT struct {
 	//	type      PrepTask q // Prep or Task Activity
-	Text      string   `json:"txt"` // original from db - contains {tag}
-	text      string   // has {tag} replaced
-	Verbal    string   `json:"say"` // original from db - contains {tag}
-	verbal    string   // has {tag} replaced
-	Time      float32  `json:"time"`
-	Tplus     float32  `json:"tPlus"`
-	Unit      string   `json:"unit"`
-	UseDevice *DeviceT `json:"useD"`
-	WaitOn    int      `json:"waitOn"`
+	Text        string   `json:"txt"` // original from db - contains {tag}
+	text        string   // has {tag} replaced
+	Verbal      string   `json:"say"` // original from db - contains {tag}
+	verbal      string   // has {tag} replaced
+	Label       string   `json:"label"`
+	IngredientS []string `json:"ingrd"` // case where ingredient prepping produces other ingredients e.g. separating eggs
+	Time        float32  `json:"time"`
+	Tplus       float32  `json:"tPlus"`
+	Unit        string   `json:"unit"`
+	UseDevice   *DeviceT `json:"useD"`
+	WaitOn      int      `json:"waitOn"` // depenency on other activity to complete
 	//DeviceT
 	AddToC   []string     `json:"addToC"`
 	UseC     []string     `json:"useC"`
@@ -144,8 +145,7 @@ type Activity struct {
 	IngrdQualifer string      `json:"iQual"`    // (append) to ingredient
 	QualiferIngrd string      `json:"quali"`    // prepend  to ingredient.
 	AltIngrd      []string    `json:"altIngrd"` // key into Ingredient table - used for alternate ingredients only
-	Index         []string    `json:"index"`
-	IngrdType     string      `json:"iType"`
+	Index         []string    `json:"index"`    // define index entries for ingredient
 	Measure       *MeasureT   `json:"measure"`
 	Overview      string      `json:"ovv"`
 	Coord         [2]float32  // X,Y
@@ -242,11 +242,11 @@ func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 	sort.Sort(clsorted)
 	for _, v := range clsorted {
 		if identicalC[v].num > 1 {
-			b.WriteString(fmt.Sprintf(" %d %s ", identicalC[v].num, strings.Title(v.size+" "+v.typE+"s")))
+			b.WriteString(fmt.Sprintf(" %d %s ", identicalC[v].num, strings.Title(v.size)))
 			for i, d := range identicalC[v].C {
 				switch i {
 				case 0:
-					b.WriteString(fmt.Sprintf(" for %s", d.Purpose+" "+strings.Title(d.Contains)+" "))
+					b.WriteString(fmt.Sprintf(" %s for %s", d.Label, d.Purpose+" "+strings.Title(d.Contains)+" "))
 				default:
 					var written bool
 					for _, oc := range identicalC[v].C {
@@ -263,12 +263,12 @@ func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 		} else {
 			c := identicalC[v].C[0]
 			if len(v.size) != 0 {
-				b.WriteString(fmt.Sprintf(" %d %s ", identicalC[v].num, strings.Title(v.size+" "+v.typE)))
+				b.WriteString(fmt.Sprintf(" %d %s ", identicalC[v].num, strings.Title(v.size)))
 			} else {
-				b.WriteString(fmt.Sprintf(" %d %.0fx%.0f%s %s ", identicalC[v].num, c.Measure.Diameter, c.Measure.Height, c.Measure.Unit, strings.Title(v.typE)))
+				b.WriteString(fmt.Sprintf(" %d %sxs%s %s ", identicalC[v].num, c.Measure.Diameter, c.Measure.Height, c.Measure.Unit, strings.Title(c.Label)))
 			}
 			for _, d := range identicalC[v].C {
-				b.WriteString(fmt.Sprintf(" for %s ", d.Purpose+" "+d.Contains+"  "))
+				b.WriteString(fmt.Sprintf(" %s for %s ", d.Label, d.Purpose+" "+d.Contains+"  "))
 			}
 		}
 		output_ = append(output_, b.String())
@@ -439,7 +439,7 @@ func (a Activities) PrintRecipe(rId string) (prepTaskS, string) {
 	return ptS, b.String()
 } // PrintRecipe
 
-func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, DevicesMap, error) {
+func (s *sessCtx) processBaseRecipe() error {
 	//
 	// Table:  Activity
 	//
@@ -458,15 +458,21 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, Devi
 	//*dynamodb.DynamoDB,
 	result, err := s.dynamodbSvc.Query(input)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Error: in readBaseRecipeForContainers Query - %s", err.Error())
+		return fmt.Errorf("Error: in readBaseRecipeForContainers Query - %s", err.Error())
 	}
 	if int(*result.Count) == 0 {
-		return nil, nil, fmt.Errorf("No data found for reqRId %s in readBaseRecipeForTasks for Activity - ", s.reqRId)
+		return fmt.Errorf("No data found for reqRId %s in processBaseRecipe for Activity - ", s.reqRId)
 	}
-	ActivityS := make([]Activity, int(*result.Count))
+	//ActivityS := make([]Activity, int(*result.Count))
+	ActivityS := make(Activities, int(*result.Count))
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &ActivityS)
 	//
 	activityStart = &ActivityS[0]
+	ActivityM := make(map[string]*Activity)
+	for i, v := range ActivityS {
+		aid := strconv.Itoa(v.AId)
+		ActivityM[aid] = &ActivityS[i]
+	}
 	// link activities together via next, prev, nextTask, nextPrep pointers. Order in ActivityS is sorted from dynamodb sort key.
 	// not sure how useful have next, prev pointers will be but its easy to setup so keep for time being. Do use prev in other part of code.
 	for i := 0; i < len(ActivityS)-1; i++ {
@@ -475,6 +481,44 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, Devi
 			ActivityS[i].prev = &ActivityS[i-1]
 		}
 	}
+	//
+	// link Task Activities - taskctl is a package variable.
+	//
+	var j int
+	for i, v := range ActivityS {
+		if v.Task != nil {
+			taskctl.start = &ActivityS[i]
+			j = i
+			taskctl.cnt++
+			for i := j + 1; i < len(ActivityS); i++ {
+				if len(ActivityS[i].Task) > 0 {
+					ActivityS[j].nextTask = &ActivityS[i]
+					j = i
+					taskctl.cnt++
+				}
+			}
+			break
+		}
+	}
+	//
+	// link Prep Activities - prepctl is a package variable.
+	//
+	for i, v := range ActivityS {
+		if v.Prep != nil {
+			prepctl.start = &ActivityS[i]
+			j = i
+			prepctl.cnt++
+			for i := j + 1; i < len(ActivityS); i++ {
+				if len(ActivityS[i].Prep) > 0 {
+					ActivityS[j].nextPrep = &ActivityS[i]
+					j = i
+					prepctl.cnt++
+				}
+			}
+			break
+		}
+	}
+	//
 	//
 	// Parse Activity and generate Containers
 	//  If C-0-0 type container then one its a single-activity-container (SAC) ie. a single-ingredient-container (SIC)
@@ -498,7 +542,7 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, Devi
 	//
 	result, err = s.dynamodbSvc.Query(input)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%s", "Error in Query of container table: "+err.Error())
+		return fmt.Errorf("%s", "Error in Query of container table: "+err.Error())
 	}
 	if int(*result.Count) == 0 {
 		fmt.Println("No container data..")
@@ -510,7 +554,7 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, Devi
 		itemc = new(Container)
 		err = dynamodbattribute.UnmarshalMap(i, itemc)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
+			return fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
 		}
 		ContainerM[itemc.Cid] = itemc
 	}
@@ -531,7 +575,7 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, Devi
 	//
 	result, err = s.dynamodbSvc.Query(input)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%s", "Error in Query of container table: "+err.Error())
+		return fmt.Errorf("%s", "Error in Query of container table: "+err.Error())
 	}
 	if int(*result.Count) == 0 {
 		fmt.Println("No container data..")
@@ -541,7 +585,7 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, Devi
 		itemc = new(Container)
 		err = dynamodbattribute.UnmarshalMap(i, itemc)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
+			return fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
 		}
 		ContainerSAM[itemc.Cid] = itemc
 	}
@@ -551,7 +595,7 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, Devi
 	proj := expression.NamesList(expression.Name("slabel"), expression.Name("llabel"), expression.Name("desc"))
 	expr, err = expression.NewBuilder().WithProjection(proj).Build()
 	if err != nil {
-		return nil, nil, fmt.Errorf("%s", "Error in expression build of unit table: "+err.Error())
+		return fmt.Errorf("%s", "Error in expression build of unit table: "+err.Error())
 	}
 	// Build the query input parameters
 	params := &dynamodb.ScanInput{
@@ -562,7 +606,7 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, Devi
 	}
 	resultS, err := s.dynamodbSvc.Scan(params)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%s", "Error in scan of unit table: "+err.Error())
+		return fmt.Errorf("%s", "Error in scan of unit table: "+err.Error())
 	}
 	unitM := make(map[string]*Unit, int(*result.Count))
 	var unit *Unit
@@ -570,7 +614,7 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, Devi
 		unit = new(Unit)
 		err = dynamodbattribute.UnmarshalMap(i, unit)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%s", "Error in UnmarshalMap of unit table: "+err.Error())
+			return fmt.Errorf("%s", "Error in UnmarshalMap of unit table: "+err.Error())
 		}
 		unitM[unit.Slabel] = unit
 	}
@@ -625,6 +669,8 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, Devi
 									c.Purpose = "prepping"
 								case "Sau":
 									c.Purpose = "heating"
+								default:
+									c.Purpose = "holding"
 								}
 							}
 							// register container by adding to map
@@ -695,6 +741,8 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, Devi
 									c.Purpose = "prepping"
 								case "Sau":
 									c.Purpose = "heating"
+								default:
+									c.Purpose = "holding"
 								}
 							}
 							// register container by adding to map
@@ -762,6 +810,8 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, Devi
 									c.Purpose = "prepping"
 								case "Sau":
 									c.Purpose = "heating"
+								default:
+									c.Purpose = "holding"
 								}
 							}
 							// register container by adding to map
@@ -811,285 +861,6 @@ func (s *sessCtx) readBaseRecipeForContainers(ptS prepTaskS) (ContainerMap, Devi
 			delete(ContainerM, c.Cid)
 		}
 	}
-	// assign first index into ptS for each container
-	for _, v := range ContainerM {
-		v.start = 99999
-		for _, t := range v.Activity {
-			// find first appearance in task list (typcially useC or addToC)
-			for l, r := range ptS {
-				l := l + 1
-				if r.AId == t.Activityp.AId {
-					if v.start > l {
-						ContainerM[v.Cid].start = l
-						break
-					}
-				}
-			}
-		}
-	}
-	// assign last index into ptS for each container.
-	for _, v := range ContainerM {
-		for _, t := range v.Activity {
-			// find last appearance in task list (typcially useC or sourceC)
-			for i := len(ptS) - 1; i >= 0; i-- {
-				// find last appearance (typically sourceC). Start at last ptS and work backwards
-				if ptS[i].AId == t.Activityp.AId {
-					if v.last < i+1 {
-						ContainerM[v.Cid].last = i + 1
-						break
-					}
-				}
-			}
-		}
-	}
-	//
-	// devices
-	//
-	DevicesM := make(DevicesMap)
-	for p := activityStart; p != nil; p = p.next {
-		for _, pp := range p.Prep {
-			if pp.UseDevice != nil {
-				if _, ok := DevicesM[strings.Title(pp.UseDevice.Type)]; !ok {
-					var str string
-					pp := pp.UseDevice
-					if len(pp.Set) > 0 {
-						str = "Set to " + pp.Set + ". "
-					}
-					if len(pp.Temp) > 0 {
-						str = "Set to " + pp.Temp + " " + pp.Unit + ". "
-					}
-					if len(pp.Purpose) > 0 {
-						str += pp.Purpose
-					}
-					if len(pp.Alternate) > 0 {
-						str += "Alternative: " + pp.Alternate
-					}
-					DevicesM[strings.Title(pp.Type)] = str
-				}
-			}
-		}
-		for _, pp := range p.Task {
-			if pp.UseDevice != nil {
-				var str string
-				pp := pp.UseDevice
-				if _, ok := DevicesM[strings.Title(pp.Type)]; !ok {
-					if len(pp.Set) > 0 {
-						str = "Set to " + pp.Set + ". "
-					}
-					if len(pp.Temp) > 0 {
-						str = "Set to " + pp.Temp + " " + pp.Unit + ". "
-					}
-					if len(pp.Purpose) > 0 {
-						str += pp.Purpose
-					}
-					if len(pp.Alternate) > 0 {
-						str += "Alternative: " + pp.Alternate
-					}
-					DevicesM[strings.Title(pp.Type)] = str
-				}
-			}
-		}
-
-	}
-	return ContainerM, DevicesM, nil
-}
-
-func (s *sessCtx) readBaseRecipeForTasks() (Activities, error) {
-	//
-	// Table:  Activity
-	//
-	kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value("A-"+s.reqBkId+"-"+s.reqRId))
-	//kcond := expression.KeyAnd(expression.KeyEqual(expression.Key("rId"), expression.Value("XYZ")), expression.KeyLessThan(expression.Key("aId"), expression.Value(30)))
-	//	projection := expression.NamesList(expression.Name("coord[0]"), expression.Name("prep.txt"))
-	//fcond := expression.Equal(expression.Name("aId"), expression.Value(30))
-	//expr, err := expression.NewBuilder().WithKeyCondition(kcond).WithProjection(projection).Build()
-	expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
-	if err != nil {
-		panic(err)
-	}
-	input := &dynamodb.QueryInput{
-		KeyConditionExpression:    expr.KeyCondition(),
-		FilterExpression:          expr.Filter(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-		//		ProjectionExpression:      expr.Projection(),
-	}
-	input = input.SetTableName("Recipe").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
-	//
-	result, err := s.dynamodbSvc.Query(input)
-	if err != nil {
-		log.Print("error from Query:  " + err.Error())
-		return nil, err
-	}
-	if int(*result.Count) == 0 {
-		//fmt.Println("No activity data for reqRId " + reqRId_)
-		return nil, fmt.Errorf("No data found for reqRId %s", s.reqRId)
-	}
-	ActivityS := make([]Activity, int(*result.Count))
-	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &ActivityS)
-	//
-	activityStart = &ActivityS[0]
-	ActivityM := make(map[string]*Activity)
-	for i, v := range ActivityS {
-		aid := strconv.Itoa(v.AId)
-		ActivityM[aid] = &ActivityS[i]
-	}
-	// for _, v := range ActivityS {
-	// 	fmt.Printf("%#v\n\n", v)
-	// }
-	// 	if v.Task != nil {
-	// 		fmt.Println("Activity data: ", v.AId, v.Task.Text)
-	// 	}
-	// }
-	// link activities together via next, prev, nextTask, nextPrep pointers. Order in ActivityS is sorted from dynamodb sort key.
-	// not sure how useful have next, prev pointers will be but its easy to setup so keep for time being. Do use prev in other part of code.
-	for i := 0; i < len(ActivityS)-1; i++ {
-		ActivityS[i].next = &ActivityS[i+1]
-		if i > 0 {
-			ActivityS[i].prev = &ActivityS[i-1]
-		}
-	}
-	//
-	// link Task Activities - taskctl is a package variable. It is being assigned here only.
-	//
-	var j int
-	for i, v := range ActivityS {
-		if v.Task != nil {
-			taskctl.start = &ActivityS[i]
-			j = i
-			taskctl.cnt++
-			for i := j + 1; i < len(ActivityS); i++ {
-				if len(ActivityS[i].Task) > 0 {
-					ActivityS[j].nextTask = &ActivityS[i]
-					j = i
-					taskctl.cnt++
-				}
-			}
-			break
-		}
-	}
-	//
-	// link Prep Activities - prepctl is a package variable. It is being assigned here only.
-	//
-	for i, v := range ActivityS {
-		if v.Prep != nil {
-			prepctl.start = &ActivityS[i]
-			j = i
-			prepctl.cnt++
-			for i := j + 1; i < len(ActivityS); i++ {
-				if len(ActivityS[i].Prep) > 0 {
-					ActivityS[j].nextPrep = &ActivityS[i]
-					j = i
-					prepctl.cnt++
-				}
-			}
-			break
-		}
-	}
-	//
-	// Table:  Container
-	//
-	kcond = expression.KeyEqual(expression.Key("PKey"), expression.Value("C-"+s.reqBkId+"-"+s.reqRId))
-	expr, err = expression.NewBuilder().WithKeyCondition(kcond).Build()
-	if err != nil {
-		panic(err)
-	}
-
-	input = &dynamodb.QueryInput{
-		KeyConditionExpression:    expr.KeyCondition(),
-		FilterExpression:          expr.Filter(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-		//		ProjectionExpression:      expr.Projection(),
-	}
-	input = input.SetTableName("Ingredient").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
-	//
-	result, err = s.dynamodbSvc.Query(input)
-	if err != nil {
-		log.Print(err)
-		return ActivityS, err
-	}
-	if int(*result.Count) == 0 {
-		fmt.Println("No container data..")
-	}
-	// Container lookup - given Cid give me pointer to the continer.
-	ContainerM = make(ContainerMap, int(*result.Count))
-	var itemc *Container
-	for _, i := range result.Items {
-		itemc = new(Container)
-		err = dynamodbattribute.UnmarshalMap(i, itemc)
-		if err != nil {
-			return ActivityS, err
-		}
-		ContainerM[itemc.Cid] = itemc
-	}
-	// common containers - not recipe specific
-	kcond = expression.KeyEqual(expression.Key("PKey"), expression.Value("C-0-0"))
-	expr, err = expression.NewBuilder().WithKeyCondition(kcond).Build()
-	if err != nil {
-		panic(err)
-	}
-	input = &dynamodb.QueryInput{
-		KeyConditionExpression:    expr.KeyCondition(),
-		FilterExpression:          expr.Filter(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-		//		ProjectionExpression:      expr.Projection(),
-	}
-	input = input.SetTableName("Ingredient").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
-	//
-	result, err = s.dynamodbSvc.Query(input)
-	if err != nil {
-		return nil, fmt.Errorf("%s", "Error in Query of container table: "+err.Error())
-	}
-	if int(*result.Count) == 0 {
-		fmt.Println("No container data..")
-	}
-	for _, i := range result.Items {
-		itemc = new(Container)
-		err = dynamodbattribute.UnmarshalMap(i, itemc)
-		if err != nil {
-			return nil, fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
-		}
-		ContainerM[itemc.Cid] = itemc
-	}
-	//
-	// Table:  Unit
-	//
-	proj := expression.NamesList(expression.Name("slabel"), expression.Name("llabel"), expression.Name("desc"))
-	expr, err = expression.NewBuilder().WithProjection(proj).Build()
-	if err != nil {
-		return ActivityS, err
-	}
-	// Build the query input parameters
-	params := &dynamodb.ScanInput{
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-		ProjectionExpression:      expr.Projection(),
-		TableName:                 aws.String("Unit"),
-	}
-	resultS, err := s.dynamodbSvc.Scan(params)
-	if err != nil {
-		return ActivityS, err
-	}
-	if int(*result.Count) == 0 {
-		return ActivityS, fmt.Errorf("No Unit data found")
-	}
-	unitM := make(map[string]*Unit, int(*result.Count))
-	var unit *Unit
-	for _, i := range resultS.Items {
-		unit = new(Unit)
-		err = dynamodbattribute.UnmarshalMap(i, unit)
-		if err != nil {
-			return ActivityS, fmt.Errorf("Error: in readBaseRecipeForTasks UnmarshalMap for Units - %s", err.Error())
-		}
-		unitM[unit.Slabel] = unit
-	}
-	// for k, v := range unitM {
-	// 	fmt.Println(k, *v)
-	// }
-	//
-	//  Post fetch processing - assign container pointers in Activity and validate that all containers referenced exist
 	//
 	doubleSpace := strings.NewReplacer("  ", " ")
 	//
@@ -1155,39 +926,57 @@ func (s *sessCtx) readBaseRecipeForTasks() (Activities, error) {
 						//fmt.Printf("switch: [%s]\n", str[topen+1:tclose_])
 						switch strings.ToLower(str[topen+1 : tclose_]) {
 						case "iqual":
-							{
-								fmt.Fprintf(&b, "%s", p.IngrdQualifer)
-							}
+							fmt.Fprintf(&b, "%s", p.IngrdQualifer)
 						case "csize":
-							{
-								fmt.Fprintf(&b, "%s", pt.AddToCp[0].Measure.Size)
+							if len(pt.AddToCp) > 0 {
+								if pt.AddToCp[0].Measure != nil {
+									m := pt.AddToCp[0].Measure
+									switch {
+									case len(m.Diameter) > 0 && len(m.Height) > 0:
+										fmt.Fprintf(&b, "%s", m.Diameter+"x"+m.Height+m.Unit)
+									case len(m.Diameter) > 0:
+										fmt.Fprintf(&b, "%s", m.Diameter+m.Unit)
+									case len(m.Size) > 0:
+										fmt.Fprintf(&b, "%s", m.Size)
+									}
+								} else {
+									fmt.Printf("%#v\n", p)
+									return fmt.Errorf("in processBaseRecipe. No measure defined for container in Activity [%d]\n", p.AId)
+								}
+							} else {
+								return fmt.Errorf("in processBaseRecipe. AddtoC not defined for prep/task in Activity [%d]\n", p.AId)
 							}
 						case "addtoc":
-							{
-								fmt.Fprintf(&b, "%s", pt.AddToCp[0].Label)
+							if pt.AddToCp[0].Measure != nil {
+								c := pt.AddToCp[0]
+								fmt.Fprintf(&b, "%s", c.Measure.Size+" "+c.Label)
 							}
 						case "qty":
-							{
-								context = measure
-								if p.Measure == nil {
-									return nil, fmt.Errorf("in readBaseRecipeForTasks. Measure not defined for Activity [%d]\n", p.Measure.Unit, p.AId)
-								}
-								fmt.Fprintf(&b, "%s", p.Measure.Quantity)
+							context = measure
+							if p.Measure == nil {
+								return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
 							}
+							fmt.Fprintf(&b, "%s", p.Measure.Quantity)
 						case "size":
 							if p.Measure == nil {
-								return nil, fmt.Errorf("in readBaseRecipeForTasks. Measure not defined for Activity [%d]\n", p.Measure.Unit, p.AId)
+								return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
 							}
 							fmt.Fprintf(&b, "%s", p.Measure.Size)
-						case "device":
+						case "device", "useD":
 							if pt.UseDevice == nil {
-								return nil, fmt.Errorf("in readBaseRecipeForTasks. UseDevice attribute not defined for Activity [%d]\n", p.AId)
+								return fmt.Errorf("in processBaseRecipe. UseDevice attribute not defined for Activity [%d]\n", p.AId)
 							}
 							fmt.Fprintf(&b, "%s", pt.UseDevice.Type)
 							context = device
+						case "alternate":
+							if pt.UseDevice == nil {
+								return fmt.Errorf("in processBaseRecipe. UseDevice attribute not defined for Activity [%d]\n", p.AId)
+							}
+							fmt.Fprintf(&b, "%s", pt.UseDevice.Alternate)
+							context = device
 						case "temp":
 							if pt.UseDevice == nil {
-								return nil, fmt.Errorf("in readBaseRecipeForTasks. UseDevice attribute not defined for Activity [%d]\n", p.AId)
+								return fmt.Errorf("in processBaseRecipe. UseDevice attribute not defined for Activity [%d]\n", p.AId)
 							}
 							context = device
 							fmt.Fprintf(&b, "%s", pt.UseDevice.Temp)
@@ -1196,10 +985,10 @@ func (s *sessCtx) readBaseRecipeForTasks() (Activities, error) {
 								switch context {
 								case device:
 									if pt.UseDevice == nil {
-										return nil, fmt.Errorf("in readBaseRecipeForTasks. UseDevice attribute not defined for Activity [%d]\n", p.AId)
+										return fmt.Errorf("in processBaseRecipe. UseDevice attribute not defined for Activity [%d]\n", p.AId)
 									}
 									if u, ok := unitM[pt.UseDevice.Unit]; !ok {
-										return nil, fmt.Errorf("in readBaseRecipeForTasks. Unit for device, [%s], not defined in unitM for Activity [%d]\n", p.Measure.Unit, p.AId)
+										return fmt.Errorf("in processBaseRecipe. Unit for device, [%s], not defined in unitM for Activity [%d]\n", p.Measure.Unit, p.AId)
 									} else {
 										switch interactionType {
 										case text:
@@ -1210,10 +999,10 @@ func (s *sessCtx) readBaseRecipeForTasks() (Activities, error) {
 									}
 								case measure:
 									if p.Measure == nil {
-										return nil, fmt.Errorf("in readBaseRecipeForTasks. Measure not defined for Activity [%d]\n", p.Measure.Unit, p.AId)
+										return fmt.Errorf("in processBaseRecipe. Measure not defined for Activity [%d]\n", p.AId)
 									}
 									if u, ok := unitM[p.Measure.Unit]; !ok {
-										return nil, fmt.Errorf("in readBaseRecipeForTasks. Unit for measure, [%s], not defined in unitM for Activity [%d]\n", p.Measure.Unit, p.AId)
+										return fmt.Errorf("in processBaseRecipe. Unit for measure, [%s], not defined in unitM for Activity [%d]\n", p.Measure.Unit, p.AId)
 									} else {
 										switch interactionType {
 										case text:
@@ -1224,7 +1013,7 @@ func (s *sessCtx) readBaseRecipeForTasks() (Activities, error) {
 									}
 								case time:
 									if u, ok := unitM[pt.Unit]; !ok {
-										return nil, fmt.Errorf("in readBaseRecipeForTasks. Unit for time, [%s], not defined in unitM for Activity [%d]\n", pt.Unit, p.AId)
+										return fmt.Errorf("in processBaseRecipe. Unit for time, [%s], not defined in unitM for Activity [%d]\n", pt.Unit, p.AId)
 									} else {
 										switch interactionType {
 										case text:
@@ -1268,6 +1057,107 @@ func (s *sessCtx) readBaseRecipeForTasks() (Activities, error) {
 			}
 		}
 	}
-	return ActivityS, nil
+	//
+	//  Generate and save metadata from base Activities to Dyanmodb
+	//
+	ptS, err := ActivityS.generateAndSaveTasks(s)
+	if err != nil {
+		return fmt.Errorf("Error in processBaseRecipe, after saveTasks() - %s", err.Error())
+	}
+	err = ActivityS.generateAndSaveIndex(s.dynamodbSvc, s.reqBkId, s.reqBkName, s.reqRName, s.reqRId, s.cat, s.subcat, s.authors)
+	if err != nil {
+		return fmt.Errorf("Error in readBaseRecipe after IndexIngd - %s", err.Error())
+	}
+	//
+	// Post processing of Containers  - assign first index into ptS for each container
+	//
+	for _, v := range ContainerM {
+		v.start = 99999
+		for _, t := range v.Activity {
+			// find first appearance in task list (typcially useC or addToC)
+			for l, r := range ptS {
+				l := l + 1
+				if r.AId == t.Activityp.AId {
+					if v.start > l {
+						ContainerM[v.Cid].start = l
+						break
+					}
+				}
+			}
+		}
+	}
+	// assign last index into ptS for each container.
+	for _, v := range ContainerM {
+		for _, t := range v.Activity {
+			// find last appearance in task list (typcially useC or sourceC)
+			for i := len(ptS) - 1; i >= 0; i-- {
+				// find last appearance (typically sourceC). Start at last ptS and work backwards
+				if ptS[i].AId == t.Activityp.AId {
+					if v.last < i+1 {
+						ContainerM[v.Cid].last = i + 1
+						break
+					}
+				}
+			}
+		}
+	}
+	//
+	// collect device usage
+	//
+	DevicesM := make(DevicesMap)
+	for p := activityStart; p != nil; p = p.next {
+		for _, pp := range p.Prep {
+			if pp.UseDevice != nil {
+				if _, ok := DevicesM[strings.Title(pp.UseDevice.Type)]; !ok {
+					var str string
+					pp := pp.UseDevice
+					if len(pp.Set) > 0 {
+						str = "Set to " + pp.Set + ". "
+					}
+					if len(pp.Temp) > 0 {
+						str = "Set to " + pp.Temp + " " + pp.Unit + ". "
+					}
+					if len(pp.Purpose) > 0 {
+						str += pp.Purpose
+					}
+					if len(pp.Alternate) > 0 {
+						str += "Alternative: " + pp.Alternate
+					}
+					DevicesM[strings.Title(pp.Type)] = str
+				}
+			}
+		}
+		for _, pp := range p.Task {
+			if pp.UseDevice != nil {
+				var str string
+				pp := pp.UseDevice
+				if _, ok := DevicesM[strings.Title(pp.Type)]; !ok {
+					if len(pp.Set) > 0 {
+						str = "Set to " + pp.Set + ". "
+					}
+					if len(pp.Temp) > 0 {
+						str = "Set to " + pp.Temp + " " + pp.Unit + ". "
+					}
+					if len(pp.Purpose) > 0 {
+						str += pp.Purpose
+					}
+					if len(pp.Alternate) > 0 {
+						str += "Alternative: " + pp.Alternate
+					}
+					DevicesM[strings.Title(pp.Type)] = str
+				}
+			}
+		}
+
+	}
+	err = ContainerM.saveContainerUsage(s)
+	if err != nil {
+		return fmt.Errorf("Error in readBaseRecipe after saveContainerUsage - %s", err.Error())
+	}
+	err = DevicesM.saveDevices(s)
+	if err != nil {
+		return fmt.Errorf("Error in readBaseRecipe after saveDevice - %s", err.Error())
+	}
+	return nil
 
 } //
