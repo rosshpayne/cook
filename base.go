@@ -140,7 +140,7 @@ type IngredientT struct {
 type Activity struct {
 	// Pkey          string     `json:"PKey"`
 	AId           int         `json:"SortK"`
-	Label         string      `json:"label"`
+	Label         string      `json:"label"`    // used in container listing rather than using ingredient
 	Ingredient    string      `json:"ingrd"`    //
 	IngrdQualifer string      `json:"iQual"`    // (append) to ingredient
 	QualiferIngrd string      `json:"quali"`    // prepend  to ingredient.
@@ -242,33 +242,46 @@ func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 	sort.Sort(clsorted)
 	for _, v := range clsorted {
 		if identicalC[v].num > 1 {
-			b.WriteString(fmt.Sprintf(" %d %s ", identicalC[v].num, strings.Title(v.size)))
+			// use typE as this is the attribute that is used to aggregated the containers
+			// and each container may have a different label. Not so if were dealing with just one container of course.
+			b.WriteString(fmt.Sprintf(" %d %s %s", identicalC[v].num, strings.Title(v.size), v.typE+"s"))
 			for i, d := range identicalC[v].C {
 				switch i {
 				case 0:
-					b.WriteString(fmt.Sprintf(" %s for %s", d.Label, d.Purpose+" "+strings.Title(d.Contains)+" "))
+					b.WriteString(fmt.Sprintf(" one for %s ", strings.ToLower(d.Contains)))
 				default:
 					var written bool
 					for _, oc := range identicalC[v].C {
 						if oc.last <= d.start || d.last <= oc.start {
-							b.WriteString(fmt.Sprintf("%s ", " and for "+strings.Title(d.Contains)))
+							b.WriteString(fmt.Sprintf("%s ", " and "+strings.ToLower(d.Contains)))
 							written = true
 						}
 					}
 					if !written {
-						b.WriteString(fmt.Sprintf(",%s ", strings.Title(d.Contains)))
+						b.WriteString(fmt.Sprintf(" another for %s ", strings.ToLower(d.Contains)))
+						written = false
 					}
 				}
 			}
 		} else {
+			// single container of this type and size
 			c := identicalC[v].C[0]
-			if len(v.size) != 0 {
-				b.WriteString(fmt.Sprintf(" %d %s ", identicalC[v].num, strings.Title(v.size)))
+			if len(v.size) > 0 {
+				b.WriteString(fmt.Sprintf(" %d %s %s", identicalC[v].num, strings.Title(v.size), strings.ToLower(c.Label)))
 			} else {
-				b.WriteString(fmt.Sprintf(" %d %sxs%s %s ", identicalC[v].num, c.Measure.Diameter, c.Measure.Height, c.Measure.Unit, strings.Title(c.Label)))
+				if len(c.Measure.Height) > 0 {
+					b.WriteString(fmt.Sprintf(" %d %sx%s%s %s ", identicalC[v].num, c.Measure.Diameter, c.Measure.Height, c.Measure.Unit, strings.ToLower(c.Label)))
+				} else {
+					b.WriteString(fmt.Sprintf(" %d %s%s %s ", identicalC[v].num, c.Measure.Diameter, c.Measure.Unit, strings.ToLower(c.Label)))
+
+				}
 			}
-			for _, d := range identicalC[v].C {
-				b.WriteString(fmt.Sprintf(" %s for %s ", d.Label, d.Purpose+" "+d.Contains+"  "))
+			if len(c.Purpose) > 0 {
+				if c.Purpose[0] == '_' {
+					b.WriteString(fmt.Sprintf(" for %s ", strings.ToLower(c.Contains+"  "+c.Purpose[1:]+" ")))
+				} else {
+					b.WriteString(fmt.Sprintf(" for %s ", strings.ToLower(c.Purpose+" "+c.Contains+"  ")))
+				}
 			}
 		}
 		output_ = append(output_, b.String())
@@ -640,6 +653,7 @@ func (s *sessCtx) processBaseRecipe() error {
 			// now compare contains defined in each activity with those registered for
 			// the recipe and those that are single-activity-containers
 			for idx, p := range p {
+				// a prep or task
 				if len(p.AddToC) > 0 {
 					// activity containers are held in []string
 					for i := 0; i < len(p.AddToC); i++ {
@@ -647,58 +661,56 @@ func (s *sessCtx) processBaseRecipe() error {
 						cId, ok := ContainerM[strings.TrimSpace(p.AddToC[i])]
 						if !ok {
 							// ContainerSAM contains single activity containers
-							if cId, ok = ContainerSAM[strings.TrimSpace(p.AddToC[i])]; !ok {
+							sac := strings.Split(strings.TrimSpace(p.AddToC[i]), ".")
+							p.AddToC[i] = sac[0]
+							if cId, ok = ContainerSAM[sac[0]]; !ok {
 								// is not a single ingredient container or not a registered container
 								fmt.Printf("Error:   Container [%s] not found for %s %d\n", strings.TrimSpace(p.AddToC[i]), ap.Label, ap.AId)
 								continue
 							}
 							// Single-Activity-Containers are not pre-configured by the user into the Container repo - to make life easier.
 							// dynamically create a container with a new Cid, and add to ContainerM and update all references to it.
-							cs := p.AddToC[i] // original non-activity-specific container name
+							cs := sac[0] // original non-activity-specific container name
 							c := new(Container)
 							c.Cid = p.AddToC[i] + "-" + strconv.Itoa(ap.AId)
-							c.Contains = ap.Ingredient
+							switch len(cId.Label) {
+							case 0:
+								c.Contains = ap.Ingredient
+							default:
+								c.Contains = ap.Label // prefer to use label as its bit more informative for container listing.
+							}
 							c.Measure = cId.Measure
 							c.Label = cId.Label
 							c.Type = cId.Type
-							if l == prep {
-								switch c.Cid[0:3] {
-								case "MC-":
-									c.Purpose = "measuring"
-								case "SAP":
-									c.Purpose = "prepping"
-								case "Sau":
-									c.Purpose = "heating"
-								default:
-									c.Purpose = "holding"
-								}
+							switch len(sac) {
+							case 1:
+								c.Purpose = cId.Purpose
+							default:
+								c.Purpose = sac[1]
 							}
 							// register container by adding to map
 							ContainerM[c.Cid] = c
 							// update container id in activity
 							p.AddToC[i] = c.Cid
 							// search for other references and change its name
-							if l == prep {
-								// update other reference before we get there.
-								if len(ap.Task) > 0 {
-									for _, t := range ap.Task {
-										for i := 0; i < len(t.SourceC); i++ {
-											if t.SourceC[i] == cs {
-												t.SourceC[i] = c.Cid
-												break
-											}
+							if len(ap.Task) > 0 {
+								for _, t := range ap.Task {
+									for i := 0; i < len(t.SourceC); i++ {
+										if t.SourceC[i] == cs {
+											t.SourceC[i] = c.Cid
+											break
 										}
-										for i := 0; i < len(t.UseC); i++ {
-											if t.UseC[i] == cs {
-												t.UseC[i] = c.Cid
-												break
-											}
+									}
+									for i := 0; i < len(t.UseC); i++ {
+										if t.UseC[i] == cs {
+											t.UseC[i] = c.Cid
+											break
 										}
-										for i := 0; i < len(t.AddToC); i++ {
-											if t.AddToC[i] == cs {
-												t.AddToC[i] = c.Cid
-												break
-											}
+									}
+									for i := 0; i < len(t.AddToC); i++ {
+										if t.AddToC[i] == cs {
+											t.AddToC[i] = c.Cid
+											break
 										}
 									}
 								}
@@ -719,58 +731,56 @@ func (s *sessCtx) processBaseRecipe() error {
 						cId, ok := ContainerM[strings.TrimSpace(p.UseC[i])]
 						if !ok {
 							// ContainerSAM contains single activity containers
-							if cId, ok = ContainerSAM[strings.TrimSpace(p.UseC[i])]; !ok {
+							sac := strings.Split(strings.TrimSpace(p.UseC[i]), ".")
+							p.UseC[i] = sac[0]
+							if cId, ok = ContainerSAM[sac[0]]; !ok {
 								// is not a single ingredient container or not a registered container
 								fmt.Printf("Error:   Container [%s] not found for %s %d\n", strings.TrimSpace(p.AddToC[i]), ap.Label, ap.AId)
 								continue
 							}
 							// container referened in activity is a single-activity-container (SAP)
 							// manually create container and add to ContainerM and update all references to it.
-							cs := p.UseC[i] // original non-activity-specific container name
+							cs := sac[0] // original non-activity-specific container name
 							c := new(Container)
 							c.Cid = p.UseC[i] + "-" + strconv.Itoa(ap.AId)
-							c.Contains = ap.Ingredient
+							switch len(cId.Label) {
+							case 0:
+								c.Contains = ap.Ingredient
+							default:
+								c.Contains = ap.Label // prefer to use label as its bit more informative for container listing.
+							}
 							c.Measure = cId.Measure
 							c.Label = cId.Label
 							c.Type = cId.Type
-							if l == prep {
-								switch c.Cid[0:3] {
-								case "MC-":
-									c.Purpose = "measuring"
-								case "SAP":
-									c.Purpose = "prepping"
-								case "Sau":
-									c.Purpose = "heating"
-								default:
-									c.Purpose = "holding"
-								}
+							switch len(sac) {
+							case 1:
+								c.Purpose = cId.Purpose
+							default:
+								c.Purpose = sac[1]
 							}
 							// register container by adding to map
 							ContainerM[c.Cid] = c
 							// update name of container in Activity to <name>-AId
 							p.UseC[i] = c.Cid
 							// search for other references and change its name
-							if l == prep {
-								// update other reference before we get there.
-								if len(ap.Task) > 0 {
-									for _, t := range ap.Task {
-										for i := 0; i < len(t.SourceC); i++ {
-											if t.SourceC[i] == cs {
-												t.SourceC[i] = c.Cid
-												break
-											}
+							if len(ap.Task) > 0 {
+								for _, t := range ap.Task {
+									for i := 0; i < len(t.SourceC); i++ {
+										if t.SourceC[i] == cs {
+											t.SourceC[i] = c.Cid
+											break
 										}
-										for i := 0; i < len(t.UseC); i++ {
-											if t.UseC[i] == cs {
-												t.UseC[i] = c.Cid
-												break
-											}
+									}
+									for i := 0; i < len(t.UseC); i++ {
+										if t.UseC[i] == cs {
+											t.UseC[i] = c.Cid
+											break
 										}
-										for i := 0; i < len(t.AddToC); i++ {
-											if t.AddToC[i] == cs {
-												t.AddToC[i] = c.Cid
-												break
-											}
+									}
+									for i := 0; i < len(t.AddToC); i++ {
+										if t.AddToC[i] == cs {
+											t.AddToC[i] = c.Cid
+											break
 										}
 									}
 								}
@@ -788,58 +798,56 @@ func (s *sessCtx) processBaseRecipe() error {
 						cId, ok := ContainerM[strings.TrimSpace(p.SourceC[i])]
 						if !ok {
 							// ContainerSAM contains single activity containers
-							if cId, ok = ContainerSAM[strings.TrimSpace(p.SourceC[i])]; !ok {
+							sac := strings.Split(strings.TrimSpace(p.SourceC[i]), ".")
+							p.SourceC[i] = sac[0]
+							if cId, ok = ContainerSAM[sac[0]]; !ok {
 								// is not a single ingredient container or not a registered container
 								fmt.Printf("Error:   Container [%s] not found for %s %d\n", strings.TrimSpace(p.AddToC[i]), ap.Label, ap.AId)
 								continue
 							}
 							// container referened in activity is a single-activity-container (SAP)
 							// manually create container and add to ContainerM and update all references to it.
-							cs := p.SourceC[i] // original non-activity-specific container name
+							cs := sac[0] // original non-activity-specific container name
 							c := new(Container)
 							c.Cid = p.SourceC[i] + "-" + strconv.Itoa(ap.AId)
-							c.Contains = ap.Ingredient
+							switch len(cId.Label) {
+							case 0:
+								c.Contains = ap.Ingredient
+							default:
+								c.Contains = ap.Label // prefer to use label as its bit more informative for container listing.
+							}
 							c.Measure = cId.Measure
 							c.Label = cId.Label
 							c.Type = cId.Type
-							if l == prep {
-								switch c.Cid[0:3] {
-								case "MC-":
-									c.Purpose = "measuring"
-								case "SAP":
-									c.Purpose = "prepping"
-								case "Sau":
-									c.Purpose = "heating"
-								default:
-									c.Purpose = "holding"
-								}
+							switch len(sac) {
+							case 1:
+								c.Purpose = cId.Purpose
+							default:
+								c.Purpose = sac[1]
 							}
 							// register container by adding to map
 							ContainerM[c.Cid] = c
 							// update name of container in Activity to <name>-AId
 							p.SourceC[i] = c.Cid
 							// search for other references and change its name
-							if l == prep {
-								// update other reference before we get there.
-								if len(ap.Task) > 0 {
-									for _, t := range ap.Task {
-										for i := 0; i < len(t.SourceC); i++ {
-											if t.SourceC[i] == cs {
-												t.SourceC[i] = c.Cid
-												break
-											}
+							if len(ap.Task) > 0 {
+								for _, t := range ap.Task {
+									for i := 0; i < len(t.SourceC); i++ {
+										if t.SourceC[i] == cs {
+											t.SourceC[i] = c.Cid
+											break
 										}
-										for i := 0; i < len(t.UseC); i++ {
-											if t.UseC[i] == cs {
-												t.UseC[i] = c.Cid
-												break
-											}
+									}
+									for i := 0; i < len(t.UseC); i++ {
+										if t.UseC[i] == cs {
+											t.UseC[i] = c.Cid
+											break
 										}
-										for i := 0; i < len(t.AddToC); i++ {
-											if t.AddToC[i] == cs {
-												t.AddToC[i] = c.Cid
-												break
-											}
+									}
+									for i := 0; i < len(t.AddToC); i++ {
+										if t.AddToC[i] == cs {
+											t.AddToC[i] = c.Cid
+											break
 										}
 									}
 								}

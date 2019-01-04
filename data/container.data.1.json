@@ -11,7 +11,7 @@
                                       "size" : { "S" : "small" } 
                                       }
                               },
-                  "purpose" : {"S":"hold single ingredient"}
+                  "purpose" : {"S":"holding"}
                    }
                }
             },
@@ -26,7 +26,7 @@
                                       "size" : { "S" : "medium" } 
                                       }
                               },
-                  "purpose" : {"S":"hold single ingredient"}
+                  "purpose" : {"S":"holding"}
                    }
             }
             },
@@ -41,7 +41,7 @@
                                       "size" : { "S" : "large" } 
                                       }
                               },
-                  "purpose" : {"S":"hold single ingredient"}
+                  "purpose" : {"S":"holding"}
                    }
                }
             },
@@ -56,7 +56,7 @@
                                       "size" : { "S" : "small" } 
                                       }
                               },
-                  "purpose" : {"S":"hold single ingredient"}
+                  "purpose" : {"S":"holding"}
                    }
                }
             },
@@ -71,7 +71,7 @@
                                       "size" : { "S" : "medium" } 
                                       }
                               },
-                  "purpose" : {"S":"hold single ingredient"}
+                  "purpose" : {"S":"holding"}
                    }
             }
             },
@@ -86,7 +86,7 @@
                                       "size" : { "S" : "large" } 
                                       }
                               },
-                  "purpose" : {"S":"hold single ingredient"}
+                  "purpose" : {"S":"holding"}
                    }
                }
             },
@@ -101,7 +101,7 @@
                                       "size" : { "S" : "small" } 
                                       }
                               },
-                  "purpose" : {"S":"hold single ingredient"}
+                  "purpose" : {"S":"holding"}
                    }
                }
             },
@@ -116,7 +116,7 @@
                                       "size" : { "S" : "medium" } 
                                       }
                               },
-                  "purpose" : {"S":"hold single ingredient"}
+                  "purpose" : {"S":"holding"}
                    }
             }
             },
@@ -131,7 +131,7 @@
                                       "size" : { "S" : "large" } 
                                       }
                               },
-                  "purpose" : {"S":"hold single ingredient"}
+                  "purpose" : {"S":"holding"}
                    }
                }
             },
@@ -139,14 +139,14 @@
             "PutRequest": { 
                "Item": {
                   "PKey" : { "S": "C-0-0" },
-                  "SortK" : { "S": "Sausepan-L" },
+                  "SortK" : { "S": "SAS-L" },
                   "label" : { "S" : "Sausepan" },
                   "type" : { "S": "Sausepan" },
                   "measure" : { "M" : { 
                                       "size" : { "S" : "large" } 
                                       }
                               },
-                  "purpose" : {"S":"holding"}
+                  "purpose" : {"S":"heating"}
                    }
                }
             },
@@ -154,14 +154,14 @@
             "PutRequest": { 
                "Item": {
                   "PKey" : { "S": "C-0-0" },
-                  "SortK" : { "S": "Sausepan-M" },
+                  "SortK" : { "S": "SAS-M" },
                   "label" : { "S" : "Sausepan" },
                   "type" : { "S": "Sausepan" },
                   "measure" : { "M" : { 
                                       "size" : { "S" : "medium" } 
                                       }
                               },
-                  "purpose" : {"S":"holding"}
+                  "purpose" : {"S":"heating"}
                    }
                }
             },
@@ -169,14 +169,14 @@
             "PutRequest": { 
                "Item": {
                   "PKey" : { "S": "C-0-0" },
-                  "SortK" : { "S": "Sausepan-S" },
+                  "SortK" : { "S": "SAS-S" },
                   "label" : { "S" : "Sausepan" },
                   "type" : { "S": "Sausepan" },
                   "measure" : { "M" : { 
                                       "size" : { "S" : "small" } 
                                       }
                               },
-                  "purpose" : {"S":"holding"}
+                  "purpose" : {"S":"heating"}
                    }
                }
             },
@@ -215,8 +215,8 @@
                "Item": {
                   "PKey" : { "S": "C-0-0" },
                   "SortK" : { "S": "MC-L" },
-                  "label" : { "S" : "Measuring Bowel" },
-                  "type" : { "S": "Measuring Bowel" },
+                  "label" : { "S" : "Measuring Bowl" },
+                  "type" : { "S": "Measuring Bowl" },
                   "measure" : { "M" : { 
                                       "size" : { "S" : "4.5 Cup" } 
                                       }

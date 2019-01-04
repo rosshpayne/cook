@@ -5,15 +5,13 @@
                "Item": { 
                   "PKey" : { "S": "C-21-8" },
                   "SortK" : { "S": "CakeTin" },
-                  "type" : { "S": "CakeTin " },
-                  "label" : { "S": "CakeTin" },
+                  "type" : { "S": "Cake Tin " },
+                  "label" : { "S": "Cake Tin" },
                   "measure" : { "M" : { "diameter" : { "S" : "30" },
                                         "height" : { "S" : "5" },
                                         "unit": {"S":"cm"} }
                   },
-                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
-                  "contents" : { "S": "cake mixture" },
-                  "purpose": { "S": "cooking" }
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  }
                   }
             }
          },
@@ -22,12 +20,12 @@
                "Item": { 
                   "PKey" : { "S": "C-21-8" },
                   "SortK" : { "S": "MixerBowl" },
-                  "type" : { "S": "MixerBowl" },
-                  "label" : { "S": "Mixing Bowl" },
+                  "type" : { "S": "Electric Mixer Bowl" },
+                  "label" : { "S": "Electric Mixer Bowl" },
                   "measure" : { "M" : {"size" : { "S" : "large" }  }},
                   "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
-                  "contents" : { "S": "butter-sugar mixture" },
-                  "purpose": { "S": "blending" }
+                  "contents" : { "S": "butter + sugar" },
+                  "purpose": { "S": "mixing" }
                   }
             }
          },
@@ -36,8 +34,8 @@
                "Item": { 
                   "PKey" : { "S": "C-21-8" },
                   "SortK" : { "S": "EggWhites" },
-                  "type" : { "S": "EggWhites" },
-                  "label" : { "S": "Bowel" },
+                  "type" : { "S": "Bowl" },
+                  "label" : { "S": "Bowl" },
                   "measure" : { "M" : { "size" : { "S" : "large" }  }},
                   "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
                   "contents" : { "S": "Egg Whites" },
@@ -50,11 +48,11 @@
                "Item": { 
                   "PKey" : { "S": "C-21-8" },
                   "SortK" : { "S": "RicoBowl" },
-                  "type" : { "S": "RicoBowl" },
-                  "label" : { "S": "Bowel" },
+                  "type" : { "S": "Bowl" },
+                  "label" : { "S": "Bowl" },
                   "measure" : { "M" : { "size" : { "S" : "large" }  }},
                   "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
-                  "contents" : { "S": "Cake mixture" },
+                  "contents" : { "S": "ricotta mixture" },
                   "purpose": { "S": "holding" }
                   }
             }
@@ -64,11 +62,10 @@
                "Item": { 
                   "PKey" : { "S": "C-21-8" },
                   "SortK" : { "S": "CakePlate" },
-                  "type" : { "S": "CakePlate " },
-                  "label" : { "S": "display plate" },
-                  "measure" : { "M" : {"size" : {"S": "large" },
-                                        "diameter" : { "S" : "35" },
-                                        "unit": {"S":"cm"}  }
+                  "type" : { "S": "Plate " },
+                  "label" : { "S": "plate" },
+                  "measure" : { "M" : {"diameter" : { "S" : "35" },
+                                       "unit": {"S":"cm"}  }
                   },
                   "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
                   "contents" : { "S": "cake" },
@@ -133,7 +130,7 @@
                                   "time" : { "N" : "10" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
-                                  "addToC" : {"SS" : ["SAT-M"] },
+                                  "addToC" : {"SS" : ["SAT-M.roasting"] },
                                   "label" : {"S" : "Bake nuts"},
                                   "useD" : { "M" : { "type" : {"S": "oven" }
                                   }}}
@@ -221,7 +218,7 @@
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
-                                  "addToC" : { "SS" : [ "SAP-M" ] },
+                                  "addToC" : { "SS" : [ "SAB-M" ] },
                                   "label" : {"S" : "measure sugar"}} }
                                 ]
                 },
@@ -264,7 +261,7 @@
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
                                   "ingrdS" : { "SS" : ["egg yolks","egg whites"] },
-                                  "addToC" : { "SS" : [ "EggWhites", "SAP-M" ] }
+                                  "addToC" : { "SS" : [ "EggWhites", "SAB-M" ] }
                                   }
                                 },
                                 { "M" :  {
@@ -287,7 +284,7 @@
                                   "time" : { "N" : "3" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
-                                  "sourceC" : { "SS" : [ "SAP-M"] },
+                                  "sourceC" : { "SS" : [ "SAB-M"] },
                                   "addToC" : { "SS" : ["MixerBowl"] },
                                   "useD" : { "M" : { "type" : {"S": "electric mixer" },
                                                      "purpose" : {"S" : "blend"} }}
@@ -303,7 +300,7 @@
             "Item": { 
                 "PKey" : { "S": "A-21-8" },
                 "SortK" : { "N": "60"},
-                "label" : { "S": "cheese"},
+                "label" : { "S": "Ricotta cheese"},
                 "ingrd" : { "S" : "Ricotta" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "index" : { "SS" : ["ricotta cake", "ricotta"] },
@@ -346,8 +343,8 @@
                 },
                "prep" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "finely grate the zest of {qty} {ingrd}s and set aside" },
-                                  "say" : { "S" : "finely grate the zest of {qty} {ingrd}s and set aside" },
+                                  "txt" : { "S" : "finely grate the {iQual} of {qty} {ingrd}s and set aside" },
+                                  "say" : { "S" : "finely grate the {iQual} of {qty} {ingrd}s and set aside" },
                                   "time" : { "N" : "3" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -489,7 +486,7 @@
                                   "time" : { "N" : "3" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
-                                  "addToC" : { "SS" :  ["SAP-L"]  }
+                                  "addToC" : { "SS" :  ["SAP-L.grating"]  }
                                   }
                                 },
                                 { "M" :  {
