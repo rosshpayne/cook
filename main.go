@@ -36,6 +36,7 @@ type sessCtx struct {
 	reqRId         string // Recipe Id - 0 means no recipe id has been assigned.  All RId's start at 1.
 	reqBkId        string
 	reqIngrdCat    string // user tries to find recipe using ingredients cat-subcat. Query ingredients table.
+	reqVersion     string // version id, starts at 0 which is blank??
 	swapBkName     string
 	swapBkId       string
 	authorS        []string
@@ -608,6 +609,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 	case "load":
 		sessctx.reqBkId = request.QueryStringParameters["bkid"]
 		sessctx.reqRId = request.QueryStringParameters["rid"]
+		sessctx.reqVersion = request.QueryStringParameters["ver"]
 		// fetch recipe name and book name
 		err = sessctx.recipeRSearch()
 		if err != nil {

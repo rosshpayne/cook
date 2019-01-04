@@ -162,6 +162,7 @@ type ContainerMap map[string]*Container
 var ContainerM ContainerMap
 
 type DevicesMap map[string]string
+type DeviceMap map[string]*DeviceT
 
 var activityStart *Activity
 
@@ -870,6 +871,30 @@ func (s *sessCtx) processBaseRecipe() error {
 		}
 	}
 	//
+	// populate device map using device type as key
+	//  TODO: issue when device referenced multiple times. Current reference will overwrite previous reference.
+	//         what is the point of this map - useful in Activity json to reference to a device in text e.g oven temperature.
+	//         but that is only useful if there is one temperature specified. What happens if there is many - only last one will be stored in map.
+	DeviceM := make(DeviceMap)
+	for p := activityStart; p != nil; p = p.next {
+		for _, pp := range p.Prep {
+			if pp.UseDevice != nil {
+				typ := strings.ToLower(pp.UseDevice.Type)
+				if _, ok := DeviceM[typ]; !ok {
+					DeviceM[typ] = pp.UseDevice
+				}
+			}
+		}
+		for _, pp := range p.Task {
+			if pp.UseDevice != nil {
+				typ := strings.ToLower(pp.UseDevice.Type)
+				if _, ok := DeviceM[typ]; !ok {
+					DeviceM[typ] = pp.UseDevice
+				}
+			}
+		}
+	}
+	//
 	doubleSpace := strings.NewReplacer("  ", " ")
 	//
 	const (
@@ -898,7 +923,7 @@ func (s *sessCtx) processBaseRecipe() error {
 					pt = p.Task
 				}
 				for _, pt := range pt {
-					// perform over slice of prep, task
+					// perform over slice of preps, tasks
 					switch interactionType {
 					case text:
 						str = pt.Text
@@ -919,22 +944,37 @@ func (s *sessCtx) processBaseRecipe() error {
 						continue
 					}
 					for tclose, topen := 0, strings.IndexByte(str, '{'); topen != -1; {
+						var el string
 						p := p
 						b.WriteString(str[tclose:topen])
-						//fmt.Printf("activity: %d\n", p.AId)
 						tclose += strings.IndexByte(str[tclose:], '}')
 						tclose_ := tclose
+						// examine tag to see if it references entities outside of current activity
+						//   currenlty only device oven and noncurrent activity is supported
 						if tdot := strings.IndexByte(str[topen+1:tclose], '.'); tdot > 0 {
-							// reference to noncurrent activity
-							//fmt.Printf("other activity: [%s] \n", str[topen+1+tdot+1:tclose])
-							p = ActivityM[str[topen+1+tdot+1:tclose]]
-							//fmt.Printf("other activity: Aid:   %d\n", p.AId)
-							tclose_ -= len(str[topen+1+tdot+1:tclose]) + 1
+							s := strings.Split(str[topen+1:tclose], ".")
+							if s[0] == "device" {
+								el = s[1]
+							} else {
+								// reference to noncurrent activity
+								p = ActivityM[str[topen+1+tdot+1:tclose]]
+								tclose_ -= len(str[topen+1+tdot+1:tclose]) + 1
+								el = str[topen+1 : tclose_]
+							}
+						} else {
+							el = str[topen+1 : tclose_]
 						}
-						//fmt.Printf("switch: [%s]\n", str[topen+1:tclose_])
-						switch strings.ToLower(str[topen+1 : tclose_]) {
+						switch strings.ToLower(el) {
+						case "oven":
+							if ov, ok := DeviceM["oven"]; !ok {
+								return fmt.Errorf("in processBaseRecipe. No oven device found \n")
+							} else {
+								fmt.Fprintf(&b, "%s", ov.Temp+" "+ov.Unit)
+							}
 						case "iqual":
 							fmt.Fprintf(&b, "%s", p.IngrdQualifer)
+						case "quali":
+							fmt.Fprintf(&b, "%s", p.QualiferIngrd)
 						case "csize":
 							if len(pt.AddToCp) > 0 {
 								if pt.AddToCp[0].Measure != nil {
@@ -965,18 +1005,30 @@ func (s *sessCtx) processBaseRecipe() error {
 								return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
 							}
 							fmt.Fprintf(&b, "%s", p.Measure.Quantity)
+						case "wgt":
+							context = measure
+							if p.Measure == nil {
+								return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
+							}
+							fmt.Fprintf(&b, "%s", p.Measure.Weight)
+						case "vol":
+							context = measure
+							if p.Measure == nil {
+								return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
+							}
+							fmt.Fprintf(&b, "%s", p.Measure.Volume)
 						case "size":
 							if p.Measure == nil {
 								return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
 							}
 							fmt.Fprintf(&b, "%s", p.Measure.Size)
-						case "device", "useD":
+						case "device", "used":
 							if pt.UseDevice == nil {
 								return fmt.Errorf("in processBaseRecipe. UseDevice attribute not defined for Activity [%d]\n", p.AId)
 							}
 							fmt.Fprintf(&b, "%s", pt.UseDevice.Type)
 							context = device
-						case "alternate":
+						case "alternate", "devicealt":
 							if pt.UseDevice == nil {
 								return fmt.Errorf("in processBaseRecipe. UseDevice attribute not defined for Activity [%d]\n", p.AId)
 							}
@@ -988,6 +1040,8 @@ func (s *sessCtx) processBaseRecipe() error {
 							}
 							context = device
 							fmt.Fprintf(&b, "%s", pt.UseDevice.Temp)
+						case "label":
+							fmt.Fprintf(&b, "%s", pt.Label)
 						case "unit":
 							{
 								switch context {
@@ -1109,14 +1163,38 @@ func (s *sessCtx) processBaseRecipe() error {
 			}
 		}
 	}
-	//
-	// collect device usage
-	//
+	err = ContainerM.saveContainerUsage(s)
+	if err != nil {
+		return fmt.Errorf("Error in readBaseRecipe after saveContainerUsage - %s", err.Error())
+	}
 	DevicesM := make(DevicesMap)
 	for p := activityStart; p != nil; p = p.next {
 		for _, pp := range p.Prep {
 			if pp.UseDevice != nil {
-				if _, ok := DevicesM[strings.Title(pp.UseDevice.Type)]; !ok {
+				typ := strings.ToLower(pp.UseDevice.Type)
+				if _, ok := DevicesM[typ]; !ok {
+					var str string
+					pp := pp.UseDevice
+					if len(pp.Set) > 0 {
+						str = "Set to " + pp.Set + ". "
+					}
+					if len(pp.Temp) > 0 {
+						str = "Set to " + pp.Temp + " " + pp.Unit + ". "
+					}
+					if len(pp.Purpose) > 0 {
+						str += pp.Purpose
+					}
+					if len(pp.Alternate) > 0 {
+						str += " Alternative: " + pp.Alternate
+					}
+					DevicesM[typ] = str
+				}
+			}
+		}
+		for _, pp := range p.Task {
+			if pp.UseDevice != nil {
+				typ := strings.ToLower(pp.UseDevice.Type)
+				if _, ok := DevicesM[typ]; !ok {
 					var str string
 					pp := pp.UseDevice
 					if len(pp.Set) > 0 {
@@ -1131,36 +1209,10 @@ func (s *sessCtx) processBaseRecipe() error {
 					if len(pp.Alternate) > 0 {
 						str += "Alternative: " + pp.Alternate
 					}
-					DevicesM[strings.Title(pp.Type)] = str
+					DevicesM[typ] = str
 				}
 			}
 		}
-		for _, pp := range p.Task {
-			if pp.UseDevice != nil {
-				var str string
-				pp := pp.UseDevice
-				if _, ok := DevicesM[strings.Title(pp.Type)]; !ok {
-					if len(pp.Set) > 0 {
-						str = "Set to " + pp.Set + ". "
-					}
-					if len(pp.Temp) > 0 {
-						str = "Set to " + pp.Temp + " " + pp.Unit + ". "
-					}
-					if len(pp.Purpose) > 0 {
-						str += pp.Purpose
-					}
-					if len(pp.Alternate) > 0 {
-						str += "Alternative: " + pp.Alternate
-					}
-					DevicesM[strings.Title(pp.Type)] = str
-				}
-			}
-		}
-
-	}
-	err = ContainerM.saveContainerUsage(s)
-	if err != nil {
-		return fmt.Errorf("Error in readBaseRecipe after saveContainerUsage - %s", err.Error())
 	}
 	err = DevicesM.saveDevices(s)
 	if err != nil {

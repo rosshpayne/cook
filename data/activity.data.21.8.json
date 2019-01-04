@@ -117,7 +117,7 @@
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "hazelnuts" },
                 "quali" : { "S" : "shelled" },
-                "index" : { "SS" : ["hazelnet cake", "hazelnet"] },
+                "index" : { "SS" : ["hazelnut cake", "hazelnut"] },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "250" } ,
                                       "unit" : { "S" : "g" }
@@ -131,9 +131,7 @@
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
                                   "addToC" : {"SS" : ["SAT-M.roasting"] },
-                                  "label" : {"S" : "Bake nuts"},
-                                  "useD" : { "M" : { "type" : {"S": "oven" }
-                                  }}}
+                                  "label" : {"S" : "Bake nuts"}}
                                 },
                                 {"M" : { 
                                   "txt" : { "S" : "Tip the hot nuts into a tea towl and rub to remove the skins." },
@@ -148,7 +146,7 @@
                                   }
                                 },
                                 {"M" : { 
-                                  "txt" : { "S" : "Coarsely chop the nuts using a {useD} or {alternate}." },
+                                  "txt" : { "S" : "Coarsely chop the {label} using a {useD} or {deviceAlt}." },
                                   "say" : { "S" : "Coarsely chop the nuts using a {useD} or {alternate}." },
                                   "time" : { "N" : "5" },
                                   "tplus" : { "N" : "0" },
@@ -213,8 +211,8 @@
                 },
                 "prep" : { "L" : [
                                 { "M" : {
-                                  "txt" : { "S" : "measure {qty}{unit} of {ingrd} into {addToC} and set aside" },
-                                  "say" : { "S" : "measure {qty}{unit} of {ingrd} into {addToC} and set aside" },
+                                  "txt" : { "S" : "measure {wgt}{unit} of {ingrd} into {addToC} and set aside" },
+                                  "say" : { "S" : "measure {wgt}{unit} of {ingrd} into {addToC} and set aside" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -355,8 +353,8 @@
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Add the {quali} and chopped {ingrd.20} " },
-                                  "say" : { "S" : "Add the {quali} and chopped {ingrd.20}" },
+                                  "txt" : { "S" : "Add the {quali} {ingrd} and chopped {ingrd.20} " },
+                                  "say" : { "S" : "Add the {quali} {ingrd} and chopped {ingrd.20}" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -446,8 +444,7 @@
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
                                   "addToC" : { "SS" : [ "CakeTin"] },
-                                  "sourceC" : { "SS" : ["RicoBowl"] },
-                                  "useD" : { "M" : { "type" : {"S": "oven" }}}
+                                  "sourceC" : { "SS" : ["RicoBowl"] }
                                   }
                                 }
                                 ]
@@ -463,7 +460,7 @@
                 "label" : { "S": "chocolate"},
                 "ingrd" : { "S" : "chocolate" },
                 "quali" : { "S" : "dark" },
-                "quali" : { "S" : "(70% cocoa solids) grated" },
+                "iQual" : { "S" : "(70% cocoa solids) grated" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "150" } ,
@@ -472,8 +469,8 @@
                 },
                "task" : { "L" : [
                                 { "M" :  {
-                                  "txt" : { "S" : "Once cooked, tranfer the cake from the tin to a {csize} plate and leave for {time} {unit}" },
-                                  "say" : { "S" : "Once cooked, transfer the cake from the tin to a {csize} plate and leave for {time} {unit}" },
+                                  "txt" : { "S" : "Once cooked, transfer the cake from the tin to a {csize} plate and leave for {time} {unit}. The temperature should be {device.oven.temp}" },
+                                  "say" : { "S" : "Once cooked, transfer the cake from the tin to a {csize} plate and leave for {time} {unit}. The temperature should be {device.oven.temp}" },
                                   "time" : { "N" : "5" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -481,8 +478,8 @@
                                   }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "While the cake is cooling, finely grate {qty}{unit} of {quali}{ingrd} onto a {csize} plate" },
-                                  "say" : { "S" : "While the cake is cooling, finely grate {qty}{unit} of {quali}{ingrd} onto a {csize} plate" },
+                                  "txt" : { "S" : "While the cake is cooling, finely grate {qty}{unit} of {quali} {ingrd} onto a {csize} plate" },
+                                  "say" : { "S" : "While the cake is cooling, finely grate {qty}{unit} of {quali} {ingrd} onto a {csize} plate" },
                                   "time" : { "N" : "3" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
