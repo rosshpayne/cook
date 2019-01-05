@@ -457,7 +457,7 @@ func (s *sessCtx) processBaseRecipe() error {
 	//
 	// Table:  Activity
 	//
-	kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value("A-"+s.reqBkId+"-"+s.reqRId))
+	kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value("A-"+s.pkey))
 	expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
 	if err != nil {
 		panic(err)
@@ -475,7 +475,7 @@ func (s *sessCtx) processBaseRecipe() error {
 		return fmt.Errorf("Error: in readBaseRecipeForContainers Query - %s", err.Error())
 	}
 	if int(*result.Count) == 0 {
-		return fmt.Errorf("No data found for reqRId %s in processBaseRecipe for Activity - ", s.reqRId)
+		return fmt.Errorf("No data found for reqRId %s in processBaseRecipe for Activity - ", s.pkey)
 	}
 	//ActivityS := make([]Activity, int(*result.Count))
 	ActivityS := make(Activities, int(*result.Count))
@@ -540,7 +540,7 @@ func (s *sessCtx) processBaseRecipe() error {
 	//
 	// Table:  Container
 	//
-	kcond = expression.KeyEqual(expression.Key("PKey"), expression.Value("C-"+s.reqBkId+"-"+s.reqRId))
+	kcond = expression.KeyEqual(expression.Key("PKey"), expression.Value("C-"+s.pkey))
 	expr, err = expression.NewBuilder().WithKeyCondition(kcond).Build()
 	if err != nil {
 		panic(err)
@@ -736,7 +736,7 @@ func (s *sessCtx) processBaseRecipe() error {
 							p.UseC[i] = sac[0]
 							if cId, ok = ContainerSAM[sac[0]]; !ok {
 								// is not a single ingredient container or not a registered container
-								fmt.Printf("Error:   Container [%s] not found for %s %d\n", strings.TrimSpace(p.AddToC[i]), ap.Label, ap.AId)
+								fmt.Printf("Error:   Container [%s] not found for %s %d\n", strings.TrimSpace(p.UseC[i]), ap.Label, ap.AId)
 								continue
 							}
 							// container referened in activity is a single-activity-container (SAP)
@@ -803,7 +803,7 @@ func (s *sessCtx) processBaseRecipe() error {
 							p.SourceC[i] = sac[0]
 							if cId, ok = ContainerSAM[sac[0]]; !ok {
 								// is not a single ingredient container or not a registered container
-								fmt.Printf("Error:   Container [%s] not found for %s %d\n", strings.TrimSpace(p.AddToC[i]), ap.Label, ap.AId)
+								fmt.Printf("Error:   Container [%s] not found for %s %d\n", strings.TrimSpace(p.SourceC[i]), ap.Label, ap.AId)
 								continue
 							}
 							// container referened in activity is a single-activity-container (SAP)
@@ -1126,7 +1126,7 @@ func (s *sessCtx) processBaseRecipe() error {
 	if err != nil {
 		return fmt.Errorf("Error in processBaseRecipe, after saveTasks() - %s", err.Error())
 	}
-	err = ActivityS.generateAndSaveIndex(s.dynamodbSvc, s.reqBkId, s.reqBkName, s.reqRName, s.reqRId, s.cat, s.subcat, s.authors)
+	err = ActivityS.generateAndSaveIndex(*s)
 	if err != nil {
 		return fmt.Errorf("Error in readBaseRecipe after IndexIngd - %s", err.Error())
 	}

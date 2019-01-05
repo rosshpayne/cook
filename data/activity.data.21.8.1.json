@@ -1,0 +1,529 @@
+{
+       "Ingredient" : [ 
+        {
+          "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-21-8-1" },
+                  "SortK" : { "S": "CakeTin" },
+                  "type" : { "S": "Cake Tin " },
+                  "label" : { "S": "Cake Tin" },
+                  "measure" : { "M" : { "diameter" : { "S" : "30" },
+                                        "height" : { "S" : "5" },
+                                        "unit": {"S":"cm"} }
+                  },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  }
+                  }
+            }
+         },
+         {
+         "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-21-8-1" },
+                  "SortK" : { "S": "MixerBowl" },
+                  "type" : { "S": "Electric Mixer Bowl" },
+                  "label" : { "S": "Electric Mixer Bowl" },
+                  "measure" : { "M" : {"size" : { "S" : "large" }  }},
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "purpose": { "S": "beating eggwhites and later for mixing butter + sugar" }
+                  }
+            }
+         },
+        {
+         "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-21-8-1" },
+                  "SortK" : { "S": "EggWhites" },
+                  "type" : { "S": "Bowl" },
+                  "label" : { "S": "Bowl" },
+                  "measure" : { "M" : { "size" : { "S" : "large" }  }},
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "contents" : { "S": "Egg Whites" },
+                  "purpose": { "S": "holding" }
+                  }
+            }
+         },
+        {
+         "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-21-8-1" },
+                  "SortK" : { "S": "RicoBowl" },
+                  "type" : { "S": "Bowl" },
+                  "label" : { "S": "Bowl" },
+                  "measure" : { "M" : { "size" : { "S" : "large" }  }},
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "contents" : { "S": "ricotta mixture" },
+                  "purpose": { "S": "holding" }
+                  }
+            }
+         },
+         {
+         "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-21-8-1" },
+                  "SortK" : { "S": "ButterBoard" },
+                  "type" : { "S": "board" },
+                  "label" : { "S": "board" },
+                  "measure" : { "M" : {"size" : { "S" : "large" }}
+                  },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "contents" : { "S": "butter" },
+                  "purpose": { "S": "prepping" }
+                  }
+            }
+         },
+         {
+         "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-21-8-1" },
+                  "SortK" : { "S": "CakePlate" },
+                  "type" : { "S": "Plate " },
+                  "label" : { "S": "plate" },
+                  "measure" : { "M" : {"diameter" : { "S" : "35" },
+                                       "unit": {"S":"cm"}  }
+                  },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "contents" : { "S": "cake" },
+                  "purpose": { "S": "presenting" }
+                  }
+            }
+         }
+      ],
+      "Recipe" : [ 
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-21-8-1"},
+                "SortK" : { "N": "10"},
+                "label" : { "S": "butter"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "Butter" },
+                "quali" : { "S" : "unsalted" },
+                 "prep" : { "L" : [
+                                { "M" : { 
+                                  "txt" : { "S" : "{ingrd} a {csize} round cake tin and line the base with greese proof paper" },
+                                  "say" : { "S" : "{ingrd} a {csize} round cake tin and line the base with greese proof paper" },
+                                  "time" : { "N" : "5" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "CakeTin"] }
+                                    }
+                                }
+                                ]
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-21-8-1"},
+                "SortK" : { "N": "20"},
+                "label" : { "S": "hazelnuts"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "hazelnuts" },
+                "quali" : { "S" : "shelled" },
+                "index" : { "SS" : ["hazelnut cake", "hazelnut"] },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "250" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                },
+                "prep" : { "L" : [             
+                                {"M" : { 
+                                  "txt" : { "S" : "Spread the {ingrd} in a small baking tin and toast in the oven for about {time} {unit} or until their skins are loosened" },
+                                  "say" : { "S" : "Spread the {ingrd} in a small baking tin and toast in the oven for about {time} {unit} or until their skins are loosened" },
+                                  "time" : { "N" : "10" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : {"SS" : ["SAT-M.roasting"] },
+                                  "label" : {"S" : "Bake nuts"}}
+                                }]
+                },             
+                "task" : { "L" : [              
+                                {"M" : { 
+                                  "txt" : { "S" : "Tip the hot nuts into a tea towl and rub to remove the skins." },
+                                  "say" : { "S" : "Tip the hot nuts into a tea towl and rub to remove the skins." },
+                                  "time" : { "N" : "3" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "label" : {"S" : "Remove skin"},
+                                  "sourceC" : {"SS" : ["SAT-M"] },
+                                  "useD" : { "M" : { "type" : {"S": "tea towel" },
+                                                     "purpose" : {"S" : "to remove skins from nuts"}}} 
+                                  }
+                                },
+                                {"M" : { 
+                                  "txt" : { "S" : "Coarsely crush the {ingrd} using a {useD} or {deviceAlt}." },
+                                  "say" : { "S" : "Coarsely crush the {ingrd} using a {useD} or {deviceAlt}." },
+                                  "time" : { "N" : "5" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "label" : {"S" : "Chop nuts"},
+                                  "useD" : { "M" : { "type" : {"S": "pestle and mortar" },
+                                                     "purpose" : {"S" : "to break nuts into small pieces"},
+                                                    "alternate" : {"S" : "food processor"}
+                                  }  }
+                                }
+                                }
+                                ]
+                                         
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-21-8-1"},
+                "SortK" : { "N": "25"},
+                "label" : { "S": "eggs"},
+                "ingrd" : { "S" : "Eggs" },
+                "iQual" : { "S" : "separated" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "8" } 
+                                      }
+                },
+               "task" : { "L" : [
+                            { "M" :  {
+                                  "txt" : { "S" : "Separate eggs, putting the egg whites into the electric mixer bowl" },
+                                  "say" : { "S" : "Separate eggs, putting the egg whites into the electric mixer bowl" },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "ingrdS" : { "SS" : ["egg yolks","egg whites"] },
+                                  "addToC" : { "SS" : ["SAB-M", "MixerBowl" ] }
+                                  }
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" : "Whisk egg whites using an {useD} so it forms stiff peaks." },
+                                  "say" : { "S" : "Whisk egg whites using an {useD} so it forms stiff peaks." },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useD" : { "M" : { "type" : {"S": "electric mixer" },
+                                                    "purpose" : { "S" : "to whisk egg whites" }
+                                  } },
+                                  "useC" : { "SS" : [ "MixerBowl"] }  }
+                                } ,
+                                { "M" :  {
+                                  "txt" : { "S" : "Transfer egg whites from mixer bowl to a spare bowl to free up the mixer bowl to do some serious mixing" },
+                                  "say" : { "S" : "Transfer egg whites from mixer bowl to a spare bowl to free up the mixer bowl to do some serious mixing" },
+                                  "time" : { "N" : "10" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "sourceC" : { "SS" : [ "MixerBowl"] },  
+                                  "addToC" : { "SS" : [ "EggWhites"] } }
+                                } ,
+                                { "M" :  {
+                                  "txt" : { "S" : "Give the mixer bowl a quick rinse and wip" },
+                                  "say" : { "S" : "Give the mixer bowl a quick rinse and wip" },
+                                  "time" : { "N" : "30" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "useC" : { "SS" : [ "MixerBowl"] }  
+                                  }
+                                }
+                                ]
+                } 
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-21-8-1"},
+                "SortK" : { "N": "30"},
+                "label" : { "S": "butter"},
+                "ingrd" : { "S" : "Butter" },
+                "quali" : { "S" : "unsalted" },
+                "iQual" : { "S" : ", softened" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "225" } ,
+                                      "unit": { "S": "g"}
+                                      }
+                },
+               "prep" : { "L" : [
+                                { "M" : {
+                                  "txt" : { "S" : "Dice {qty}{unit} of {quali} {ingrd} into small pieces onto a {addToC} and let it come to room temperature" },
+                                  "say" : { "S" : "Dice {qty}{unit} of {quali} {ingrd} into small pieces onto a {addToC} and let it come to room temperature" },
+                                  "time" : { "N" : "15" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "ButterBoard"] },
+                                  "label" : {"S" : "prep butter"}
+                                  }
+                                }
+                                ]
+               },
+               "task" : { "L" : [
+                                { "M" : {
+                                  "txt" : { "S" : "Transfer the {ingrd} to the {addToC} and attach the bowl to the mixer" },
+                                  "say" : { "S" : "Transfer the {ingrd} to the {addToC} and attach the bowl to the mixer" },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : ["MixerBowl"] },
+                                  "useD" : { "M" : { "type" : {"S": "electric mixer" }
+                                  }
+                                  }
+                                }}
+                                ]
+            }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-21-8-1"},
+                "SortK" : { "N": "40"},
+                "label" : { "S": "sugar"},
+                "ingrd" : { "S" : "sugar" },
+                "quali" : { "S" : "caster" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "wgt" : { "S" : "250" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                },
+                "prep" : { "L" : [
+                                { "M" : {
+                                  "txt" : { "S" : "measure {wgt}{unit} of {quali} {ingrd} into {addToC} and set aside" },
+                                  "say" : { "S" : "measure {wgt}{unit} of {quali} {ingrd} into {addToC} and set aside" },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "SAB-M" ] },
+                                  "label" : {"S" : "measure sugar"}} }
+                                ]
+                },
+                "task" : { "L" : [
+                                { "M" : {
+                                  "txt" : { "S" : "Beat the {ingrd.30} while slowly adding the {ingrd} until it is pale and light" },
+                                  "say" : { "S" : "Beat the {ingrd.30} while slowly adding the {ingrd} until it is pale and light"  },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "sourceC" : { "SS" : ["SAB-M" ] },
+                                  "useC" : { "SS" : ["MixerBowl"] }
+                                  }
+                                }
+                                ]
+                }
+            }
+            }
+            },
+           {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-21-8-1"},
+                "SortK" : { "N": "60"},
+                "label" : { "S": "Ricotta cheese"},
+                "ingrd" : { "S" : "Ricotta" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "index" : { "SS" : ["ricotta cake", "ricotta"] },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "250" }  ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                },
+               "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "in a separte {addToC}, beat the {ingrd} lightly with a fork. " },
+                                  "say" : { "S" : "in a separte {addToC}, beat the {ingrd} lightly with a fork. " },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : ["RicoBowl"] },
+                                  "useD" : { "M" : { "type" : {"S": "fork" },
+                                                     "purpose" : {"S" : "beat"} }
+                                  }
+                                  }
+                                }
+                                ]
+                }
+            }
+            }
+            },
+           {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-21-8-1"},
+                "SortK" : { "N": "70"},
+                "label" : { "S": "lemon zest"},
+                "ingrd" : { "S" : "lemon" },
+                "quali" : { "S" : "finely grated" },
+                "iQual" : { "S" : "zest" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "5" } 
+                                      }
+                },
+               "prep" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "finely grate the {iQual} of {qty} {ingrd}s and set aside" },
+                                  "say" : { "S" : "finely grate the {iQual} of {qty} {ingrd}s and set aside" },
+                                  "time" : { "N" : "3" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useC" : { "SS" : [ "SAB-S" ] }
+                                  }
+                                }
+                                ]
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Add the {quali} {ingrd} and crushed {ingrd.20} to the {ingrd.60} " },
+                                  "say" : { "S" : "Add the {quali} {ingrd} and crushed {ingrd.20} to the {ingrd.60}" },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : ["RicoBowl"] },
+                                  "sourceC" : { "SS" : [ "SAB-S" ] }
+                                  }
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" : "Fold the egg yolk and butter mixture into the {ingrd.60}." },
+                                  "say" : { "S" : "Fold the egg yolk and butter mixture into the {ingrd.60}." },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : ["RicoBowl"] },
+                                  "sourceC" : { "SS" : ["MixerBowl"] }
+                                  }
+                                }
+                                ]
+                }
+            }
+            }
+            },
+           {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-21-8-1"},
+                "SortK" : { "N": "80"},
+                "label" : { "S": "flour"},
+                "ingrd" : { "S" : "Flour" },
+                "iQual" : { "S" : "plan" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "65" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                },
+                "prep" : { "L" : [ 
+                                {"M" : { 
+                                  "txt" : { "S" : "Preheat {device} to {temp}{unit}" },
+                                  "say" : { "S" : "Preheat {device} to {temp}{unit}" },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "label" : {"S" : "heat oven"},
+                                  "parallel" : { "BOOL" : true },
+                                  "unit" : { "S" : "min" },
+                                  "useD" : { "M" : { "type" : {"S": "oven" },
+                                                     "temp" : { "S": "180" },
+                                                     "unit": {"S": "C"} }
+                                  }}
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" : "Sift {qty}{unit} of {iQual} {ingrd} and set aside" },
+                                  "say" : { "S" : "Sift {qty}{unit} of {iQual} {ingrd} and set aside" },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "sourceC" : { "SS" : [ "SAB-S" ] }
+                                  }
+                                }
+                                ]
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Fold the {ingrd} into the {ingrd.60}" },
+                                  "say" : { "S" : "Fold the {ingrd} into the {ingrd.60}" },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "sourceC" : { "SS" : [ "SAB-S" ] },
+                                  "addToC" : { "SS" : ["RicoBowl"] }
+                                  }
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" : "Fold in the egg whites into the {ingrd.60}" },
+                                  "say" : { "S" : "Fold in the egg whites into the {ingrd.60}"  },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "sourceC" : { "SS" : [ "EggWhites"] },
+                                  "addToC" : { "SS" : ["RicoBowl"] }
+                                  }
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" : "Transfer the cake mixture to the prepared cake tin and place in oven to bake for {time} {unit}. The temperature should be {device.oven.temp}" },
+                                  "say" : { "S" : "Transfer the cake mixture to the prepared cake tin and place in oven to bake for {time} {unit}.The temperature should be {device.oven.temp}"  },
+                                  "time" : { "N" : "35" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "CakeTin"] },
+                                  "sourceC" : { "SS" : ["RicoBowl"] }
+                                  }
+                                }
+                                ]
+                }
+            }
+            }
+            },
+           {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-21-8-1"},
+                "SortK" : { "N": "90"},
+                "label" : { "S": "chocolate"},
+                "ingrd" : { "S" : "chocolate" },
+                "quali" : { "S" : "dark" },
+                "iQual" : { "S" : "(70% cocoa solids) grated" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "150" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                },
+               "task" : { "L" : [
+                                { "M" :  {
+                                  "txt" : { "S" : "Once cooked, transfer the cake from the tin to a {csize} plate and leave for {time} {unit}. " },
+                                  "say" : { "S" : "Once cooked, transfer the cake from the tin to a {csize} plate and leave for {time} {unit}." },
+                                  "time" : { "N" : "5" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" :  ["CakePlate"]  }
+                                  }
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" : "While the cake is cooling, finely grate {qty}{unit} of {quali} {ingrd} onto a {csize} plate" },
+                                  "say" : { "S" : "While the cake is cooling, finely grate {qty}{unit} of {quali} {ingrd} onto a {csize} plate" },
+                                  "time" : { "N" : "3" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" :  ["SAP-L.grating"]  }
+                                  }
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" : "After the five minute cooling period, use a {useD} to scatter the {ingrd} over the cake. It will immediately start to melt and form a hard coating once cooled." },
+                                  "say" : { "S" : "After the five minute cooling period, use a {useD} to scatter the {ingrd} over the cake. It will immediately start to melt and form a hard coating once cooled." },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "sourceC" : { "SS" :  ["SAP-L"]  },
+                                  "useD" : { "M" : { "type" : {"S": "large spoon" },
+                                                     "purpose" : {"S" : "scattering chocolate"} }
+                                  }
+                                  }
+                                }
+                                ]
+                }
+            }
+            }
+            }
+    ]
+}  

@@ -91,7 +91,7 @@ func (a ContainerMap) saveContainerUsage(s *sessCtx) error {
 	eol := len(ctS)
 	for i, v := range ctS {
 		rows++
-		ctd := ctRow{PKey: "C-" + s.reqBkId + "-" + s.reqRId, SortK: float64(i + 1), Txt: v, Vbl: v, EOL: eol}
+		ctd := ctRow{PKey: "C-" + s.pkey, SortK: float64(i + 1), Txt: v, Vbl: v, EOL: eol}
 		av, err := dynamodbattribute.MarshalMap(ctd)
 		if err != nil {
 			return fmt.Errorf("%s: %s", "Error: failed to marshal Record in saveContainerUsage", err.Error())
@@ -116,7 +116,7 @@ func (s sessCtx) getContainerRecById() (alexaDialog, error) {
 		SortK float64
 	}
 	ctrec := ctRec{}
-	pkey := pKey{PKey: "C-" + s.reqRId + "-" + s.reqBkId, SortK: float64(s.recId)}
+	pkey := pKey{PKey: "C-" + s.pkey, SortK: float64(s.recId)}
 	av, err := dynamodbattribute.MarshalMap(&pkey)
 	if err != nil {
 		return ctrec, fmt.Errorf("%s: %s", "Error in MarshalMap of getContainerRecById", err.Error())
@@ -198,8 +198,7 @@ func loadNonIngredientsMap(svc *dynamodb.DynamoDB) (map[string]bool, error) {
 
 }
 
-func (a Activities) generateAndSaveIndex(svc *dynamodb.DynamoDB, bkid string, bkname string, rname string, rid string, cat string, subcat string, authors string) error {
-	//	   	err = aa.IndexIngd(s.dynamodbSvc,        s.reqBkId,   s.reqBkName, s . .reqRName,  s.reqRId, cat, authors)
+func (a Activities) generateAndSaveIndex(s sessCtx) error {
 	type indexRecT struct {
 		PKey     string
 		SortK    string
@@ -220,7 +219,7 @@ func (a Activities) generateAndSaveIndex(svc *dynamodb.DynamoDB, bkid string, bk
 			if err != nil {
 				panic(fmt.Sprintf("failed in IndexIngd to marshal Record, %v", err))
 			}
-			_, err = svc.PutItem(&dynamodb.PutItemInput{
+			_, err = s.dynamodbSvc.PutItem(&dynamodb.PutItemInput{
 				TableName: aws.String("Ingredient"),
 				Item:      av,
 			})
@@ -238,10 +237,10 @@ func (a Activities) generateAndSaveIndex(svc *dynamodb.DynamoDB, bkid string, bk
 	indexCat := func(cat string) {
 		if len(cat) == 0 {
 			// cat not defined , take cat from last word in recipe title
-			cat = rname[strings.LastIndex(rname, " ")+1:]
+			cat = s.reqRName[strings.LastIndex(s.reqRName, " ")+1:]
 		}
 		//
-		irec := indexRecT{SortK: bkid + "-" + rid, BkName: bkname, RName: rname, Authors: authors}
+		irec := indexRecT{SortK: s.reqBkId + "-" + s.reqRId, BkName: s.reqBkName, RName: s.reqRName, Authors: s.authors}
 		irec.PKey = strings.TrimRight(strings.TrimLeft(strings.ToLower(cat), " "), " ")
 		indexRecS = append(indexRecS, irec)
 		row_[irec.PKey] = true
@@ -250,7 +249,7 @@ func (a Activities) generateAndSaveIndex(svc *dynamodb.DynamoDB, bkid string, bk
 	makeIndexRecs := func(ap Activity) {
 		// for each index property value, add to index
 		for _, v := range ap.Index {
-			irec := indexRecT{SortK: bkid + "-" + rid, BkName: bkname, RName: rname, Authors: authors}
+			irec := indexRecT{SortK: s.reqBkId + "-" + s.reqRId, BkName: s.reqBkName, RName: s.reqRName, Authors: s.authors}
 			irec.PKey = strings.TrimRight(strings.TrimLeft(strings.ToLower(v), " "), " ")
 			m := ap.Measure
 			if m != nil {
@@ -279,7 +278,7 @@ func (a Activities) generateAndSaveIndex(svc *dynamodb.DynamoDB, bkid string, bk
 		}
 	}
 	//
-	indexCat(cat)
+	indexCat(s.cat)
 	for _, ap := range a {
 		if len(ap.Index) > 0 {
 			makeIndexRecs(ap)
@@ -299,7 +298,7 @@ func (d DevicesMap) saveDevices(s *sessCtx) error {
 		Comment string `json:"Comment"`
 	}
 	for k, v := range d {
-		r := &Pkey{PKey: "D-" + s.reqBkId + "-" + s.reqRId, SortK: row, Device: k, Comment: v}
+		r := &Pkey{PKey: "D-" + s.pkey, SortK: row, Device: k, Comment: v}
 		row++
 		av, err := dynamodbattribute.MarshalMap(r)
 		if err != nil {
@@ -321,7 +320,7 @@ func (a Activities) generateAndSaveTasks(s *sessCtx) (prepTaskS, error) {
 	var rows int
 	// only prep & task verbal and its text equivalent are saved.
 	// Generate prep and tasks from Activities.
-	ptS := a.GenerateTasks("T-" + s.reqBkId + "-" + s.reqRId)
+	ptS := a.GenerateTasks("T-" + s.pkey)
 	//
 	// Fast bulk load is not a priority - trickle insert will suffice atleast for the moment.
 	//
@@ -448,6 +447,11 @@ func (s sessCtx) updateSession() (int, error) {
 	} else {
 		updateC = updateC.Set(expression.Name("Vmsg"), expression.Value(""))
 	}
+	if len(s.reqVersion) > 0 {
+		updateC = updateC.Set(expression.Name("Ver"), expression.Value(s.reqVersion))
+	} else {
+		updateC = updateC.Set(expression.Name("Ver"), expression.Value(""))
+	}
 	updateC = updateC.Set(expression.Name("Select"), expression.Value(s.makeSelect)) // make a selection
 	updateC = updateC.Set(expression.Name("ATime"), expression.Value(time.Now().String()))
 	expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
@@ -565,7 +569,7 @@ func (s *sessCtx) updateSessionEOL() error {
 func (s sessCtx) getTaskRecById() (alexaDialog, error) {
 
 	var taskRec prepTaskRec
-	pKey := "T-" + s.reqBkId + "-" + s.reqRId
+	pKey := "T-" + s.pkey
 	keyC := expression.KeyEqual(expression.Key("PKey"), expression.Value(pKey)).And(expression.KeyEqual(expression.Key("SortK"), expression.Value(s.recId)))
 	expr, err := expression.NewBuilder().WithKeyCondition(keyC).Build()
 	if err != nil {

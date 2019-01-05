@@ -37,6 +37,7 @@ type sessCtx struct {
 	reqBkId        string
 	reqIngrdCat    string // user tries to find recipe using ingredients cat-subcat. Query ingredients table.
 	reqVersion     string // version id, starts at 0 which is blank??
+	pkey           string // primary key
 	swapBkName     string
 	swapBkId       string
 	authorS        []string
@@ -81,7 +82,8 @@ type sessRecT struct {
 	Oper    string // Operation (next, prev, repeat, modify)
 	Qid     int    // Question id
 	RecId   []int  // current record in object list.
-	EOL     int    // last RecId of current list. Used to determine when last record is reached or exceeded in the case of goto operation
+	Ver     string
+	EOL     int // last RecId of current list. Used to determine when last record is reached or exceeded in the case of goto operation
 	Dmsg    string
 	Vmsg    string
 	DData   string
@@ -255,6 +257,23 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 	if len(s.reqRId) == 0 {
 		s.reqRId = lastSess.RId
 	}
+	fmt.Printf("reqVersion: [%s]\n", s.reqVersion)
+	fmt.Println("len(s.reqVersion) = ", len(s.reqVersion))
+	if len(s.reqVersion) == 0 {
+		s.reqVersion = lastSess.Ver
+	}
+	//
+	// assign primary key - used for most dyamo accesses
+	//
+	s.pkey = s.reqBkId + "-" + s.reqRId
+	if len(s.reqVersion) > 0 {
+		if s.reqVersion != "0" {
+			s.pkey += "-" + s.reqVersion
+		} else {
+			s.reqVersion = ""
+		}
+	}
+	fmt.Println("PKEY = ", s.pkey)
 	//
 	// note:
 	// 1. ALL conditional paths return  and most update Sessions. Any updateSessions do not change RecId as current state is bookrecipe_.
@@ -610,19 +629,25 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		sessctx.reqBkId = request.QueryStringParameters["bkid"]
 		sessctx.reqRId = request.QueryStringParameters["rid"]
 		sessctx.reqVersion = request.QueryStringParameters["ver"]
+		//
+		sessctx.pkey = sessctx.reqBkId + "-" + sessctx.reqRId
+		if sessctx.reqVersion != "" {
+			sessctx.pkey += "-" + sessctx.reqVersion
+		}
 		// fetch recipe name and book name
 		err = sessctx.recipeRSearch()
 		if err != nil {
 			break
 		}
 		// read base recipe data and generate tasks, container and device usage and save to dynamodb.
+		fmt.Printf("sessCtx %#v\n", sessctx)
 		err = sessctx.processBaseRecipe()
 		if err != nil {
 			break
 		}
 		sessctx.abort = true
 	//
-	case "book", "recipe", "select", "search", "list", "yesno":
+	case "book", "recipe", "select", "search", "list", "yesno", "version":
 		sessctx.curreq = bookrecipe_
 		sessctx.request = pathItem[0]
 		switch pathItem[0] {
@@ -636,6 +661,8 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 			}
 		// case "yes", "no":
 		// 	sessctx.yesno = pathItem[0]
+		case "version":
+			sessctx.reqVersion = request.QueryStringParameters["ver"]
 		case "list":
 			sessctx.showList = true
 		case "search":
@@ -683,7 +710,8 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 			}
 			// remainder of sessctx populated in mergeAndValidateWithLastSession
 		}
-	case container_, task_: //ingredient_, utensil_
+	case container_, task_: //Object:  ingredient_, utensil_
+		sessctx.reqVersion = request.QueryStringParameters["ver"]
 		sessctx.object = pathItem[0]
 		sessctx.curreq = object_
 		sessctx.operation = "next"
