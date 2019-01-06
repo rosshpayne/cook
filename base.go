@@ -96,6 +96,7 @@ type DeviceT struct {
 
 type PerformT struct {
 	//	type      PrepTask q // Prep or Task Activity
+	id          int
 	Text        string   `json:"txt"` // original from db - contains {tag}
 	text        string   // has {tag} replaced
 	Verbal      string   `json:"say"` // original from db - contains {tag}
@@ -162,7 +163,7 @@ type ContainerMap map[string]*Container
 var ContainerM ContainerMap
 
 type DevicesMap map[string]string
-type DeviceMap map[string]*DeviceT
+type DeviceMap map[string]DeviceT
 
 var activityStart *Activity
 
@@ -870,30 +871,105 @@ func (s *sessCtx) processBaseRecipe() error {
 			delete(ContainerM, c.Cid)
 		}
 	}
+	// populate prep/task id
+	for i, p := 0, activityStart; p != nil; p = p.next {
+		for _, pp := range p.Prep {
+			i++
+			pp.id = i
+		}
+		for _, pp := range p.Task {
+			i++
+			pp.id = i
+		}
+	}
 	//
-	// populate device map using device type as key
-	//  TODO: issue when device referenced multiple times. Current reference will overwrite previous reference.
-	//         what is the point of this map - useful in Activity json to reference to a device in text e.g oven temperature.
-	//         but that is only useful if there is one temperature specified. What happens if there is many - only last one will be stored in map.
+	// populate device map using device type as key. Maintains latest attribute values for DeviceT which
+	// . can be referenced at any point in txt using {device.<deviceType>.<attribute>}
+	//
+	var ovenOn bool
 	DeviceM := make(DeviceMap)
+
 	for p := activityStart; p != nil; p = p.next {
 		for _, pp := range p.Prep {
 			if pp.UseDevice != nil {
-				typ := strings.ToLower(pp.UseDevice.Type)
-				if _, ok := DeviceM[typ]; !ok {
-					DeviceM[typ] = pp.UseDevice
+				dt := *pp.UseDevice
+				if dt.Type == "oven" {
+					ovenOn = true
 				}
+				typ := strings.ToLower(dt.Type)
+				if dt_, ok := DeviceM[typ]; ok {
+					// only preserve attributes that have values
+					// NB. DeviceM value is a struct not *struct
+					ppU := pp.UseDevice
+					if len(ppU.Set) > 0 {
+						dt_.Set = ppU.Set
+					}
+					if len(ppU.Purpose) > 0 {
+						dt_.Purpose = ppU.Purpose
+					}
+					if len(ppU.Alternate) > 0 {
+						dt_.Alternate = ppU.Alternate
+					}
+					if len(ppU.Temp) > 0 {
+						dt_.Temp = ppU.Temp
+					}
+					if len(ppU.Unit) > 0 {
+						dt_.Unit = ppU.Unit
+					}
+					DeviceM[typ] = dt_
+					dt = dt_
+				} else {
+					DeviceM[typ] = dt
+				}
+				// preserve state of Device for the prep/task id
+				key := strconv.Itoa(pp.id) + "-" + dt.Type
+				DeviceM[key] = dt
 			}
 		}
 		for _, pp := range p.Task {
+			if ovenOn {
+				key := strconv.Itoa(pp.id) + "-" + "oven"
+				DeviceM[key] = DeviceM["oven"]
+			}
 			if pp.UseDevice != nil {
-				typ := strings.ToLower(pp.UseDevice.Type)
-				if _, ok := DeviceM[typ]; !ok {
-					DeviceM[typ] = pp.UseDevice
+				dt := *pp.UseDevice
+				if dt.Type == "oven" {
+					ovenOn = true
 				}
+				typ := strings.ToLower(dt.Type)
+				if dt_, ok := DeviceM[typ]; ok {
+					// only preserve attributes that have values
+					// NB. DeviceM value is a struct not *struct
+					ppU := pp.UseDevice
+					if len(ppU.Set) > 0 {
+						dt_.Set = ppU.Set
+					}
+					if len(ppU.Purpose) > 0 {
+						dt_.Purpose = ppU.Purpose
+					}
+					if len(ppU.Alternate) > 0 {
+						dt_.Alternate = ppU.Alternate
+					}
+					if len(ppU.Temp) > 0 {
+						dt_.Temp = ppU.Temp
+					}
+					if len(ppU.Unit) > 0 {
+						dt_.Unit = ppU.Unit
+					}
+					DeviceM[typ] = dt_
+					dt = dt_
+				} else {
+					DeviceM[typ] = dt
+				}
+				// preserve state of Device for the Activity
+				key := strconv.Itoa(pp.id) + "-" + dt.Type
+				DeviceM[key] = dt
 			}
 		}
 	}
+	// for k, v := range DeviceM {
+	// 	fmt.Printf("DeviceM  %s %v\n", k, v)
+	// }
 	//
 	doubleSpace := strings.NewReplacer("  ", " ")
 	//
@@ -944,7 +1020,10 @@ func (s *sessCtx) processBaseRecipe() error {
 						continue
 					}
 					for tclose, topen := 0, strings.IndexByte(str, '{'); topen != -1; {
-						var el string
+						var (
+							el  string
+							el2 string
+						)
 						p := p
 						b.WriteString(str[tclose:topen])
 						tclose += strings.IndexByte(str[tclose:], '}')
@@ -952,24 +1031,34 @@ func (s *sessCtx) processBaseRecipe() error {
 						// examine tag to see if it references entities outside of current activity
 						//   currenlty only device oven and noncurrent activity is supported
 						if tdot := strings.IndexByte(str[topen+1:tclose], '.'); tdot > 0 {
-							s := strings.Split(str[topen+1:tclose], ".")
-							if s[0] == "device" {
-								el = s[1]
-							} else {
-								// reference to noncurrent activity
+							// dot notation used. Breakdown object being referenced.
+							s := strings.SplitN(str[topen+1:tclose], ".", 2)
+							el, el2 = s[0], s[1]
+							if el == "ingrd" {
+								// reference to attribute in noncurrent activity e.g. {ingrd.30}
 								p = ActivityM[str[topen+1+tdot+1:tclose]]
 								tclose_ -= len(str[topen+1+tdot+1:tclose]) + 1
-								el = str[topen+1 : tclose_]
+								//el = str[topen+1 : tclose_]
 							}
 						} else {
 							el = str[topen+1 : tclose_]
 						}
 						switch strings.ToLower(el) {
-						case "oven":
-							if ov, ok := DeviceM["oven"]; !ok {
-								return fmt.Errorf("in processBaseRecipe. No oven device found \n")
+						case "device":
+							s := strings.Split(el2, ".")
+							if ov, ok := DeviceM[strconv.Itoa(pt.id)+"-"+s[0]]; ok {
+								switch s[1] {
+								case "temp":
+									fmt.Fprintf(&b, "%s", ov.Temp+" "+ov.Unit)
+								case "set":
+									fmt.Fprintf(&b, "%s", ov.Set)
+								case "alternate":
+									fmt.Fprintf(&b, "%s", ov.Alternate)
+								case "purpose":
+									fmt.Fprintf(&b, "%s", ov.Purpose)
+								}
 							} else {
-								fmt.Fprintf(&b, "%s", ov.Temp+" "+ov.Unit)
+								return fmt.Errorf("in processBaseRecipe. No device [%s] found for activity [%d]\n", s[0], pt.id)
 							}
 						case "iqual":
 							fmt.Fprintf(&b, "%s", p.IngrdQualifer)
@@ -1022,7 +1111,7 @@ func (s *sessCtx) processBaseRecipe() error {
 								return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
 							}
 							fmt.Fprintf(&b, "%s", p.Measure.Size)
-						case "device", "used":
+						case "used":
 							if pt.UseDevice == nil {
 								return fmt.Errorf("in processBaseRecipe. UseDevice attribute not defined for Activity [%d]\n", p.AId)
 							}

@@ -88,7 +88,16 @@
             }
          }
       ],
-      "Recipe" : [ 
+      "Recipe" : [
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "V-21-8"},
+                "SortK" : { "N": "1"},
+                "Description" : { "S": "Uses Electric Mixer to beat egg whites as well as mix other ingredients"}
+            }
+        }
+        },
         {
         "PutRequest": { 
             "Item": { 
@@ -368,7 +377,8 @@
                                   "time" : { "N" : "3" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
-                                  "useC" : { "SS" : [ "SAB-S" ] }
+                                  "useC" : { "SS" : [ "SAB-S" ] },
+                                  "useD" : { "M" : { "type" : {"S": "grater" }}}
                                   }
                                 }
                                 ]
@@ -381,7 +391,8 @@
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
                                   "addToC" : { "SS" : ["RicoBowl"] },
-                                  "sourceC" : { "SS" : [ "SAB-S" ] }
+                                  "sourceC" : { "SS" : [ "SAB-S" ] },
+                                  "useD" : { "M" : { "type" : {"S": "large spoon" }}}
                                   }
                                 },
                                 { "M" :  {
@@ -391,7 +402,8 @@
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
                                   "addToC" : { "SS" : ["RicoBowl"] },
-                                  "sourceC" : { "SS" : ["MixerBowl"] }
+                                  "sourceC" : { "SS" : ["MixerBowl"] },
+                                  "useD" : { "M" : { "type" : {"S": "large spoon" }}}
                                   }
                                 }
                                 ]
@@ -415,8 +427,8 @@
                 },
                 "prep" : { "L" : [ 
                                 {"M" : { 
-                                  "txt" : { "S" : "Preheat {device} to {temp}{unit}" },
-                                  "say" : { "S" : "Preheat {device} to {temp}{unit}" },
+                                  "txt" : { "S" : "Preheat {used} to {temp}{unit}" },
+                                  "say" : { "S" : "Preheat {used} to {temp}{unit}" },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "label" : {"S" : "heat oven"},
@@ -433,41 +445,45 @@
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
-                                  "sourceC" : { "SS" : [ "SAB-S" ] }
+                                  "sourceC" : { "SS" : [ "SAB-S" ] },
+                                  "useD" : { "M" : { "type" : {"S": "sifter" }}}
                                   }
                                 }
                                 ]
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Fold the {ingrd} into the {ingrd.60}" },
-                                  "say" : { "S" : "Fold the {ingrd} into the {ingrd.60}" },
+                                  "txt" : { "S" : "Using {useD} fold the {ingrd} into the {ingrd.60}" },
+                                  "say" : { "S" : "Using {useD} fold the {ingrd} into the {ingrd.60}" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
                                   "sourceC" : { "SS" : [ "SAB-S" ] },
-                                  "addToC" : { "SS" : ["RicoBowl"] }
+                                  "addToC" : { "SS" : ["RicoBowl"] },
+                                  "useD" : { "M" : { "type" : {"S": "large spoon" }}}
                                   }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "Fold in the egg whites into the {ingrd.60}" },
-                                  "say" : { "S" : "Fold in the egg whites into the {ingrd.60}"  },
+                                  "txt" : { "S" : "Now fold the egg whites into the {ingrd.60} " },
+                                  "say" : { "S" : "Now fold the egg whites into the {ingrd.60} "  },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
                                   "sourceC" : { "SS" : [ "EggWhites"] },
-                                  "addToC" : { "SS" : ["RicoBowl"] }
+                                  "addToC" : { "SS" : ["RicoBowl"] },
+                                  "useD" : { "M" : { "type" : {"S": "large spoon" }}}
                                   }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "Transfer the cake mixture to the prepared cake tin and place in oven to bake for {time} {unit}. The temperature should be {device.oven.temp}" },
-                                  "say" : { "S" : "Transfer the cake mixture to the prepared cake tin and place in oven to bake for {time} {unit}.The temperature should be {device.oven.temp}"  },
+                                  "txt" : { "S" : "Using a {useD}, transfer the cake mixture to the prepared cake tin and place in oven to bake for {time} {unit}. The oven temperature should be {device.oven.temp}" },
+                                  "say" : { "S" : "Using a {useD}, transfer the cake mixture to the prepared cake tin and place in oven to bake for {time} {unit}. The oven temperature should be {device.oven.temp}"  },
                                   "time" : { "N" : "35" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
                                   "addToC" : { "SS" : [ "CakeTin"] },
-                                  "sourceC" : { "SS" : ["RicoBowl"] }
-                                  }
+                                  "sourceC" : { "SS" : ["RicoBowl"] },
+                                  "useD" : { "M" : { "type" : {"S": "spatula" }}}
+                                }
                                 }
                                 ]
                 }

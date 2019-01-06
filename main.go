@@ -35,7 +35,7 @@ type sessCtx struct {
 	reqBkName      string // requested book name - query param
 	reqRId         string // Recipe Id - 0 means no recipe id has been assigned.  All RId's start at 1.
 	reqBkId        string
-	reqIngrdCat    string // user tries to find recipe using ingredients cat-subcat. Query ingredients table.
+	reqIngrdCat    string // search for recipe. Query ingredients table.
 	reqVersion     string // version id, starts at 0 which is blank??
 	pkey           string // primary key
 	swapBkName     string
@@ -274,6 +274,14 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 		}
 	}
 	fmt.Println("PKEY = ", s.pkey)
+	// determine if recIds need to be reset to 1
+	if len(s.reqVersion) > 0 {
+		if len(lastSess.Ver) == 0 {
+			s.reset = true
+		} else if len(lastSess.Ver) > 0 && s.reqVersion != lastSess.Ver {
+			s.reset = true
+		}
+	}
 	//
 	// note:
 	// 1. ALL conditional paths return  and most update Sessions. Any updateSessions do not change RecId as current state is bookrecipe_.
@@ -306,8 +314,6 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 			s.abort = true
 			return nil
 		}
-		fmt.Printf("lastSess = %#v\n\n", lastSess)
-		fmt.Println(s.request)
 		if s.request == "book" {
 			//
 			// book requested
@@ -680,19 +686,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 				panic(err)
 			}
 			// populate reqBkId, reqBkName, reqRId, reqRName
-			// if _, err = strconv.Atoi(rcp[:2]); err != nil {
-			// must be a recipe name
 			sessctx.reqRName = rcp
-			//err = sessctx.recipeNameSearch()
-			// } else {
-			// 	id := strings.Split(rcp, "-")
-			// 	if len(id) == 1 {
-			// 		err = fmt.Errorf(`Error: strings.Split did not find delimiter "-" in recipe slot-type id`)
-			// 	} else {
-			// 		sessctx.reqBkId, sessctx.reqRId = id[0], id[1]
-			// 		err = sessctx.recipeRSearch()
-			// 	}
-			// }
 		case "yesno":
 			i := request.QueryStringParameters["yn"] // "1" yes, "0" no
 			fmt.Println("query parameter for yesno ", i)
