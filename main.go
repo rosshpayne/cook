@@ -1,7 +1,7 @@
 package main
 
 import (
-	"context"
+	_ "context"
 	_ "encoding/json"
 	"fmt"
 	"log"
@@ -17,7 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 
-	"github.com/aws/aws-lambda-go/events"
+	//"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	_ "github.com/aws/aws-lambda-go/lambdacontext"
 )
@@ -197,14 +197,14 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 				// close active book
 				//  as req struct fields still have their zero value they will clear session state during updateSession
 				s.reset = true
-				s.dmsg = fmt.Sprintf(`Book %s is closed. You can now search across all recipe books`, lastSess.BkName)
-				s.dmsg = fmt.Sprintf(`Book %s is closed. You can now search across all recipe books`, lastSess.BkName)
+				s.vmsg = fmt.Sprintf(`%s is closed. You can now search across all recipe books`, lastSess.BkName)
+				s.dmsg = fmt.Sprintf(`%s is closed. You can now search across all recipe books`, lastSess.BkName)
 				s.reqBkId, s.reqBkName, s.reqRName, s.reqRId, s.eol, s.reset = "", "", "", "", 0, true
 				_, err = s.updateSession()
 			case 21:
 				// swap book
 				s.reqBkId, s.reqBkName, s.reset = lastSess.SwpBkId, lastSess.SwpBkNm, true
-				s.dmsg = fmt.Sprintf(`Book [%s] is now open. You can now search or open a recipe within this book`, lastSess.BkName)
+				s.vmsg = fmt.Sprintf(`Book [%s] is now open. You can now search or open a recipe within this book`, lastSess.BkName)
 				s.dmsg = fmt.Sprintf(`Book [%s] is now open. You can now search or open a recipe within this book`, lastSess.BkName)
 				_, err = s.updateSession()
 			default:
@@ -425,7 +425,6 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 			//
 			// recipe requested.       Note bookName(Id) can be empty which will force Recipe query to search across all books
 			//
-			fmt.Printf("Here...1 - recipe: %s lastsess: %s\n", s.reqRName, lastSess.RName)
 			s.recipeNameSearch()
 			s.eol, s.reset = 0, true
 			_, err = s.updateSession()
@@ -580,15 +579,40 @@ func (s *sessCtx) getRecById() error {
 	return nil
 }
 
+type InputEvent struct {
+	Path                  string            `json:"Path"`
+	Param                 string            `json:"Param"`
+	QueryStringParameters map[string]string `json:"-"`
+	PathItem              []string          `json:"-"`
+}
+
+func (r *InputEvent) init() {
+	r.QueryStringParameters = make(map[string]string)
+	params := strings.Split(r.Param, "&")
+	for _, v := range params {
+		param := strings.Split(v, "=")
+		r.QueryStringParameters[param[0]] = param[1]
+	}
+	r.PathItem = strings.Split(r.Path, "/")
+}
+
+type RespEvent struct {
+	Text   string `json:"Text"`
+	Verbal string `json:"Verbal"`
+}
+
 //
 //  handler executed via API Gateway via ALexa Lambda
 //
-func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func handler(request InputEvent) (RespEvent, error) {
 
 	var (
 		pathItem []string
 		err      error
 	)
+
+	(&request).init()
+
 	dynamodbService := func() *dynamodb.DynamoDB {
 		sess, err := session.NewSession(&aws.Config{
 			Region: aws.String("us-east-1"),
@@ -600,36 +624,15 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		return dynamodb.New(sess, aws.NewConfig())
 	}
 
-	// fmt.Printf("Resource:  %s\n", request.Resource)
-	// if len(request.Path) > 0 {
-	pathItem = strings.Split(request.Path[1:], "/")
-	// 	for i, v := range pathItem {
-	// 		fmt.Printf("pathItem: %d   %s\n", i, v)
-	// 	}
-	// }
+	pathItem = request.PathItem
 
-	// log.Printf("\nHTTPMethod: %s", request.HTTPMethod)
-	// log.Printf("\nBody: %s", request.Body)
-	// for k, v := range request.Headers {
-	// 	log.Printf("Header:  %s  %v", k, v)
-	// }
-
-	// for k, v := range request.QueryStringParameters {
-	// 	log.Printf("QueryString:  %s  %v", k, v)
-	// }
-	// for k, v := range request.PathParameters {
-	// 	log.Printf("PathParameters:  %s  %s", k, v)
-	// }
-	// for k, v := range request.StageVariables {
-	// 	log.Printf("StageVariable:  %s  %s", k, v)
-	// }
-
-	var body string
+	//var body string
 	// create a new session context and merge with last session data if present.
 	sessctx := &sessCtx{
 		sessionId:   request.QueryStringParameters["sid"],
 		dynamodbSvc: dynamodbService(),
 	}
+	fmt.Println("pathItem : ", pathItem[0])
 	switch pathItem[0] {
 	case "load":
 		sessctx.reqBkId = request.QueryStringParameters["bkid"]
@@ -660,6 +663,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		case "book": // user reponse "open book" "close book"
 			// book id and name  populated in this section
 			if len(pathItem) > 1 && pathItem[1] == "close" {
+				fmt.Println("** closeBook.")
 				sessctx.closeBook = true
 			} else {
 				sessctx.reqBkId = request.QueryStringParameters["bkid"]
@@ -693,6 +697,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 			sessctx.yesno = "no"
 			if i == "1" {
 				sessctx.yesno = "yes"
+				fmt.Println("Yes..")
 			}
 		case "select":
 			var i int
@@ -704,8 +709,9 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 			}
 			// remainder of sessctx populated in mergeAndValidateWithLastSession
 		}
-	case container_, task_: //Object:  ingredient_, utensil_
-		sessctx.reqVersion = request.QueryStringParameters["ver"]
+	// object ingredient_, utensil_
+	case container_, task_:
+		fmt.Printf(" pathItem [%#v]\n", pathItem)
 		sessctx.object = pathItem[0]
 		sessctx.curreq = object_
 		sessctx.operation = "next"
@@ -728,61 +734,28 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		// case "no":
 	}
 	if err != nil {
-		return events.APIGatewayProxyResponse{
-			StatusCode: 500,
-			Headers: map[string]string{
-				"Content-Type": "application/json",
-			},
-		}, err
+		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata}, err
 	}
 	//
 	// compare with last session if it exists and update remaining session data
 	//
 	err = sessctx.mergeAndValidateWithLastSession()
 	if err != nil {
-		return events.APIGatewayProxyResponse{
-			StatusCode: 500,
-			Headers: map[string]string{
-				"Content-Type": "application/json",
-			},
-		}, err
+		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata}, err
 	}
 	if sessctx.curreq == bookrecipe_ || sessctx.abort {
-		body = fmt.Sprintf("{ %q : [ %q, %q ] }", "response", sessctx.vmsg, sessctx.dmsg+sessctx.ddata)
-		return events.APIGatewayProxyResponse{
-			StatusCode: 200,
-			Body:       body,
-			Headers: map[string]string{
-				"Content-Type": "application/json",
-			},
-		}, nil
+		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata}, nil
 	}
 	//
 	// session ctx validated and fully populated - now fetch required record
 	//
 	err = sessctx.getRecById() // returns [text, verbal] response
 	if err != nil {
-		err := fmt.Errorf("%s: %s", "Error from getRecById: ", err.Error())
-		return events.APIGatewayProxyResponse{
-			StatusCode: 500,
-			Headers: map[string]string{
-				"Content-Type": "application/json",
-			},
-		}, err
+		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata}, err
 	}
-	body = fmt.Sprintf("{ %q : [ %q, %q] }", "response", sessctx.vmsg, sessctx.dmsg+sessctx.ddata)
 	//
-	// check URL and action it
-	//
-	return events.APIGatewayProxyResponse{
-		StatusCode: 200,
-		Body:       body,
-		Headers: map[string]string{
-			"Content-Type": "application/json",
-		},
-	}, nil
-
-} //  handler
+	return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata}, nil
+}
 
 func main() {
 	lambda.Start(handler)
