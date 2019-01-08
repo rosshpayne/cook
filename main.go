@@ -425,7 +425,12 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 			//
 			// recipe requested.       Note bookName(Id) can be empty which will force Recipe query to search across all books
 			//
-			s.recipeNameSearch()
+			fmt.Printf("ABout to search for recipe for [%s]\n", s.reqRName)
+			err := s.recipeNameSearch()
+			if err != nil {
+				return err
+			}
+			fmt.Printf("Did not error in recipeNameSearch for recipe for [%s]\n", s.reqRName)
 			s.eol, s.reset = 0, true
 			_, err = s.updateSession()
 			if err != nil {
@@ -599,6 +604,7 @@ func (r *InputEvent) init() {
 type RespEvent struct {
 	Text   string `json:"Text"`
 	Verbal string `json:"Verbal"`
+	Error  string `json:"Error"`
 }
 
 //
@@ -690,6 +696,7 @@ func handler(request InputEvent) (RespEvent, error) {
 				panic(err)
 			}
 			// populate reqBkId, reqBkName, reqRId, reqRName
+			fmt.Printf("in main: rname [%s]\n", rcp)
 			sessctx.reqRName = rcp
 		case "yesno":
 			i := request.QueryStringParameters["yn"] // "1" yes, "0" no
@@ -734,14 +741,14 @@ func handler(request InputEvent) (RespEvent, error) {
 		// case "no":
 	}
 	if err != nil {
-		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata}, err
+		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata, Error: err.Error()}, nil
 	}
 	//
 	// compare with last session if it exists and update remaining session data
 	//
 	err = sessctx.mergeAndValidateWithLastSession()
 	if err != nil {
-		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata}, err
+		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata, Error: err.Error()}, nil
 	}
 	if sessctx.curreq == bookrecipe_ || sessctx.abort {
 		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata}, nil
@@ -751,7 +758,7 @@ func handler(request InputEvent) (RespEvent, error) {
 	//
 	err = sessctx.getRecById() // returns [text, verbal] response
 	if err != nil {
-		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata}, err
+		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata, Error: err.Error()}, nil
 	}
 	//
 	return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata}, nil

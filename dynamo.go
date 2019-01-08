@@ -820,6 +820,8 @@ func (s *sessCtx) recipeNameSearch() error {
 		expr expression.Expression
 		err  error
 	)
+	fmt.Printf("in recipeNameSearch . RecipeName = [%s]/n", s.reqRName)
+
 	kcond := expression.KeyEqual(expression.Key("RName"), expression.Value(s.reqRName))
 	if len(s.reqBkId) > 0 {
 		filter := expression.Equal(expression.Name("PKey"), expression.Value("R-"+s.reqBkId))
@@ -844,10 +846,11 @@ func (s *sessCtx) recipeNameSearch() error {
 		return fmt.Errorf("Error: %s [%s] - %s", "in Query in recipeNameSearch of ", s.reqRName, err.Error())
 	}
 	if int(*result.Count) == 0 {
-		return fmt.Errorf("No data found in recipeNameSearch, for rname [%s]", s.reqRName)
+		return fmt.Errorf("No recipe found in recipeNameSearch, for rname [%s]", s.reqRName)
 	}
 	// define a slice of struct as Query expects to return 1 or more rows so the slice represents a row
 	// and we ue unmarshallistofmaps to handle a batch like select
+	fmt.Println("here.4")
 	recS := make([]dynoRecT, int(*result.Count))
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &recS)
 	if err != nil {

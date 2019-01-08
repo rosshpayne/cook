@@ -4,7 +4,7 @@
 const Alexa = require('ask-sdk-core');
 var AWS = require('aws-sdk');
 
-var   recipe = { Response :[] };
+//var   recipe = { Response :[] };
 var   invokeParams = {
         FunctionName: 'apigw-lambda-stack-3-TestFunction-1W27R33Q8ONM2',
         Qualifier: 'dev'
@@ -20,7 +20,7 @@ const LaunchRequestHandler = {
   },
   
   handle(handlerInput) {
-    var speechText = 'Hi. Do you want to search for a recipe based on ingredient or open a recipe? Say "open at" to select a recipe or search for recipes by saying search for chocolate cake recipes to display a list of recipes of chocolate cakes.';
+    var speechText = 'Hi. I do. i Do. Do you want to search for a recipe based on ingredient or open a recipe? Say "open at" to select a recipe or search for recipes by saying search for chocolate cake recipes to display a list of recipes of chocolate cakes.';
     var displayText = 'Hi. Do you want to search for a recipe based on ingredient or open a recipe? Say "open at" to select a recipe or search for recipes by saying search for chocolate cake recipes to display a list of recipes of chocolate cakes.';
 
         return  handlerInput.responseBuilder
@@ -45,21 +45,25 @@ const SelectIntentHandler = {
     const selid='&sId='+handlerInput.requestEnvelope.request.intent.slots.integerValue.resolutions.resolutionsPerAuthority[0].values[0].value.id;
     invokeParams.Payload = '{ "Path" : "select" ,"Param" : "'+sid+selid+'" }';
 
-    lambda.invoke(invokeParams, function(err, data) {
-      if (err) {
-        console.log(err, err.stack); // an error occurred
-      } else {
-        console.log(data.Payload);  
-        recipe = JSON.parse(data.Payload);
-        speechText=recipe.Text ;
-        displayText = recipe.Verbal;
+    promise = new Promise((resolve, reject) => {
+      lambda.invoke(invokeParams, function(err, data) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data.Payload)  }
+        });
+    });
+    
+    return promise.then((body) => {
+          recipe = JSON.parse(body);
+          speechText=recipe.Text ;
+          displayText = recipe.Verbal;
         return  handlerInput.responseBuilder
                           .speak(speechText)
                           .reprompt(speechText)
                           .withSimpleCard('Instructions', displayText)
                           .getResponse();
-      }
-      });
+      }).catch(function (err) { console.log(err, err.stack);  } );
   
   },
 };
@@ -79,21 +83,25 @@ const GotoIntentHandler = {
     const goId='&goId='+handlerInput.requestEnvelope.request.intent.slots.gotoId.resolutions.resolutionsPerAuthority[0].values[0].value.id;
     invokeParams.Payload = '{ "Path" : "goto" ,"Param" : "'+sid+goId+'" }';
 
-    lambda.invoke(invokeParams, function(err, data) {
-      if (err) {
-        console.log(err, err.stack); // an error occurred
-      } else {
-        console.log(data.Payload);  
-        recipe = JSON.parse(data.Payload);
-        speechText=recipe.Text ;
-        displayText = recipe.Verbal;
+    promise = new Promise((resolve, reject) => {
+      lambda.invoke(invokeParams, function(err, data) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data.Payload)  }
+        });
+    });
+    
+    return promise.then((body) => {
+          recipe = JSON.parse(body);
+          speechText=recipe.Text ;
+          displayText = recipe.Verbal;
         return  handlerInput.responseBuilder
                           .speak(speechText)
                           .reprompt(speechText)
                           .withSimpleCard('Instructions', displayText)
                           .getResponse();
-      }
-      });
+      }).catch(function (err) { console.log(err, err.stack);  } );
   
   },
 };
@@ -112,21 +120,25 @@ const NextIntentHandler = {
     const sid='sid='+handlerInput.requestEnvelope.session.sessionId;
     invokeParams.Payload = '{ "Path" : "next" ,"Param" : "'+sid+'" }';
 
-    lambda.invoke(invokeParams, function(err, data) {
-      if (err) {
-        console.log(err, err.stack); // an error occurred
-      } else {
-        console.log(data.Payload);  
-        recipe = JSON.parse(data.Payload);
-        speechText=recipe.Text ;
-        displayText = recipe.Verbal;
+    promise = new Promise((resolve, reject) => {
+      lambda.invoke(invokeParams, function(err, data) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data.Payload)  }
+        });
+    });
+    
+    return promise.then((body) => {
+          recipe = JSON.parse(body);
+          speechText=recipe.Text ;
+          displayText = recipe.Verbal;
         return  handlerInput.responseBuilder
                           .speak(speechText)
                           .reprompt(speechText)
                           .withSimpleCard('Instructions', displayText)
                           .getResponse();
-      }
-      });
+      }).catch(function (err) { console.log(err, err.stack);  } );
   
   },
 };
@@ -143,21 +155,25 @@ const RepeatIntentHandler = {
     const sid='sid='+handlerInput.requestEnvelope.session.sessionId;
     invokeParams.Payload = '{ "Path" : "repeat" ,"Param" : "'+sid+'" }';
 
-    lambda.invoke(invokeParams, function(err, data) {
-      if (err) {
-        console.log(err, err.stack); // an error occurred
-      } else {
-        console.log(data.Payload);  
-        recipe = JSON.parse(data.Payload);
-        speechText=recipe.Text ;
-        displayText = recipe.Verbal;
+    promise = new Promise((resolve, reject) => {
+      lambda.invoke(invokeParams, function(err, data) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data.Payload)  }
+        });
+    });
+    
+    return promise.then((body) => {
+          recipe = JSON.parse(body);
+          speechText=recipe.Text ;
+          displayText = recipe.Verbal;
         return  handlerInput.responseBuilder
                           .speak(speechText)
                           .reprompt(speechText)
                           .withSimpleCard('Instructions', displayText)
                           .getResponse();
-      }
-      });
+      }).catch(function (err) { console.log(err, err.stack);  } );
   
   },
 };
@@ -174,21 +190,25 @@ const PrevIntentHandler = {
     const sid='sid='+handlerInput.requestEnvelope.session.sessionId;
     invokeParams.Payload = '{ "Path" : "prev" ,"Param" : "'+sid+'" }';
 
-    lambda.invoke(invokeParams, function(err, data) {
-      if (err) {
-        console.log(err, err.stack); // an error occurred
-      } else {
-        console.log(data.Payload);  
-        recipe = JSON.parse(data.Payload);
-        speechText=recipe.Text ;
-        displayText = recipe.Verbal;
+    promise = new Promise((resolve, reject) => {
+      lambda.invoke(invokeParams, function(err, data) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data.Payload)  }
+        });
+    });
+    
+    return promise.then((body) => {
+          recipe = JSON.parse(body);
+          speechText=recipe.Text ;
+          displayText = recipe.Verbal;
         return  handlerInput.responseBuilder
                           .speak(speechText)
                           .reprompt(speechText)
                           .withSimpleCard('Instructions', displayText)
                           .getResponse();
-      }
-      });
+      }).catch(function (err) { console.log(err, err.stack);  } );
   
   },
 };
@@ -203,30 +223,34 @@ const RecipeIntentHandler = {
     var displayText;
     var recipe ;
     const querystring = require("querystring");
-    const bkIdRId = handlerInput.requestEnvelope.request.intent.slots.recipe.resolutions.resolutionsPerAuthority[0].values[0].value.id;
+    //const bkIdRId = handlerInput.requestEnvelope.request.intent.slots.recipe.resolutions.resolutionsPerAuthority[0].values[0].value.id;
     const rname = querystring.escape(handlerInput.requestEnvelope.request.intent.slots.recipe.resolutions.resolutionsPerAuthority[0].values[0].value.name);
     const sid='sid='+handlerInput.requestEnvelope.session.sessionId;
-    var path_='&rcp='+bkIdRId
-    if ( bkIdRId.length == 0 ) {
-      path_='&rcp='+querystring.escape(rname);
-    }
-    invokeParams.Payload = '{ "Path" : "recipe ,"Param" : "'+sid+path_+'" }';
+    //var path_='&rcp='+bkIdRId
+    //if ( bkIdRId.length == 0 ) {
+      path_='&rcp='+rname;
+    //}
+    invokeParams.Payload = '{ "Path" : "recipe" ,"Param" : "'+sid+path_+'" }';
 
-    lambda.invoke(invokeParams, function(err, data) {
-      if (err) {
-        console.log(err, err.stack); // an error occurred
-      } else {
-        console.log(data.Payload);  
-        recipe = JSON.parse(data.Payload);
-        speechText=recipe.Text ;
-        displayText = recipe.Verbal;
+    promise = new Promise((resolve, reject) => {
+      lambda.invoke(invokeParams, function(err, data) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data.Payload)  }
+        });
+    });
+    
+    return promise.then((body) => {
+          recipe = JSON.parse(body);
+          speechText=recipe.Text ;
+          displayText = recipe.Verbal;
         return  handlerInput.responseBuilder
                           .speak(speechText)
                           .reprompt(speechText)
                           .withSimpleCard('Instructions', displayText)
                           .getResponse();
-      }
-      });
+      }).catch(function (err) { console.log(err, err.stack);  } );
   },
 };
 
@@ -245,21 +269,60 @@ const SearchIntentHandler = {
     const sid="sid="+handlerInput.requestEnvelope.session.sessionId;
     invokeParams.Payload = '{ "Path" : "search" ,"Param" : "'+sid+srch+'" }';
 
-    lambda.invoke(invokeParams, function(err, data) {
-      if (err) {
-        console.log(err, err.stack); // an error occurred
-      } else {
-        console.log(data.Payload);  
-        recipe = JSON.parse(data.Payload);
-        speechText=recipe.Text ;
-        displayText = recipe.Verbal;
+    promise = new Promise((resolve, reject) => {
+      lambda.invoke(invokeParams, function(err, data) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data.Payload)  }
+        });
+    });
+    
+    return promise.then((body) => {
+          recipe = JSON.parse(body);
+          speechText=recipe.Text ;
+          displayText = recipe.Verbal;
         return  handlerInput.responseBuilder
                           .speak(speechText)
                           .reprompt(speechText)
                           .withSimpleCard('Instructions', displayText)
                           .getResponse();
-      }
-      });
+      }).catch(function (err) { console.log(err, err.stack);  } );
+  },
+};
+
+const VersionIntentHandler = {
+  canHandle(handlerInput) {
+    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+      && handlerInput.requestEnvelope.request.intent.name === 'VersionIntent';
+  },
+  handle(handlerInput) {
+    var speechText;
+    var displayText;
+    var recipe ;
+    const sid='sid='+handlerInput.requestEnvelope.session.sessionId;
+    const ver='&ver='+handlerInput.requestEnvelope.request.intent.slots.version.resolutions.resolutionsPerAuthority[0].values[0].value.name;
+    invokeParams.Payload = '{ "Path" : "version" ,"Param" : "'+sid+ver+'" }';
+
+    promise = new Promise((resolve, reject) => {
+      lambda.invoke(invokeParams, function(err, data) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data.Payload)  }
+        });
+    });
+    
+    return promise.then((body) => {
+          recipe = JSON.parse(body);
+          speechText=recipe.Text ;
+          displayText = recipe.Verbal;
+        return  handlerInput.responseBuilder
+                          .speak(speechText)
+                          .reprompt(speechText)
+                          .withSimpleCard('Instructions', displayText)
+                          .getResponse();
+      }).catch(function (err) { console.log(err, err.stack);  } );
   },
 };
 
@@ -275,22 +338,26 @@ const BookIntentHandler = {
     const sid="sid="+handlerInput.requestEnvelope.session.sessionId;
     const bkid='&bkid='+handlerInput.requestEnvelope.request.intent.slots.BookName.resolutions.resolutionsPerAuthority[0].values[0].value.id;
     invokeParams.Payload = '{ "Path" : "book" ,"Param" : "'+sid+bkid+'" }';
-
-    lambda.invoke(invokeParams, function(err, data) {
-      if (err) {
-        console.log(err, err.stack); // an error occurred
-      } else {
-        console.log(data.Payload);  
-        recipe = JSON.parse(data.Payload);
-        speechText=recipe.Text ;
-        displayText = recipe.Verbal;
+    
+    promise = new Promise((resolve, reject) => {
+      lambda.invoke(invokeParams, function(err, data) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data.Payload)  }
+        });
+    });
+    
+    return promise.then((body) => {
+          recipe = JSON.parse(body);
+          speechText=recipe.Text ;
+          displayText = recipe.Verbal;
         return  handlerInput.responseBuilder
                           .speak(speechText)
                           .reprompt(speechText)
                           .withSimpleCard('Instructions', displayText)
                           .getResponse();
-      }
-      });
+      }).catch(function (err) { console.log(err, err.stack);  } );
   },
 };
 
@@ -306,21 +373,25 @@ const CloseBookIntentHandler = {
     var sid="sid="+handlerInput.requestEnvelope.session.sessionId;
     invokeParams.Payload = '{ "Path" : "book/close" ,"Param" : "'+sid+'" }';
 
-    lambda.invoke(invokeParams, function(err, data) {
-      if (err) {
-        console.log(err, err.stack); // an error occurred
-      } else {
-        console.log(data.Payload);  
-        recipe = JSON.parse(data.Payload);
-        speechText=recipe.Text ;
-        displayText = recipe.Verbal;
+    promise = new Promise((resolve, reject) => {
+      lambda.invoke(invokeParams, function(err, data) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data.Payload)  }
+        });
+    });
+    
+    return promise.then((body) => {
+          recipe = JSON.parse(body);
+          speechText=recipe.Text ;
+          displayText = recipe.Verbal;
         return  handlerInput.responseBuilder
                           .speak(speechText)
                           .reprompt(speechText)
                           .withSimpleCard('Instructions', displayText)
                           .getResponse();
-      }
-      });
+      }).catch(function (err) { console.log(err, err.stack);  } );
   },
 };
 
@@ -337,22 +408,25 @@ const YesNoIntentHandler = {
     var yesno='&yn='+handlerInput.requestEnvelope.request.intent.slots.YesNo.resolutions.resolutionsPerAuthority[0].values[0].value.id;
     invokeParams.Payload = '{ "Path" : "yesno" ,"Param" : "'+sid+yesno+'" }';
 
-    lambda.invoke(invokeParams, function(err, data) {
-      if (err) {
-        console.log(err, err.stack); // an error occurred
-      } else {
-        console.log(data.Payload);  
-        recipe = JSON.parse(data.Payload);
-        speechText=recipe.Text ;
-        displayText = recipe.Verbal;
+    promise = new Promise((resolve, reject) => {
+      lambda.invoke(invokeParams, function(err, data) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data.Payload)  }
+        });
+    });
+    
+    return promise.then((body) => {
+          recipe = JSON.parse(body);
+          speechText=recipe.Text ;
+          displayText = recipe.Verbal;
         return  handlerInput.responseBuilder
                           .speak(speechText)
                           .reprompt(speechText)
                           .withSimpleCard('Instructions', displayText)
                           .getResponse();
-      }
-      });
-  
+      }).catch(function (err) { console.log(err, err.stack);  } );
   },
 };
 
@@ -369,21 +443,25 @@ const TaskIntentHandler = {
     var sid="sid="+handlerInput.requestEnvelope.session.sessionId;
     invokeParams.Payload = '{ "Path" : "task" ,"Param" : "'+sid+'" }';
 
-    lambda.invoke(invokeParams, function(err, data) {
-      if (err) {
-        console.log(err, err.stack); // an error occurred
-      } else {
-        //console.log(data.Payload);  
-        recipe = JSON.parse(data.Payload);
-        speechText=recipe.Text ;
-        displayText = recipe.Verbal;
+    promise = new Promise((resolve, reject) => {
+      lambda.invoke(invokeParams, function(err, data) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data.Payload)  }
+        });
+    });
+    
+    return promise.then((body) => {
+          recipe = JSON.parse(body);
+          speechText=recipe.Text ;
+          displayText = recipe.Verbal;
         return  handlerInput.responseBuilder
                           .speak(speechText)
                           .reprompt(speechText)
                           .withSimpleCard('Instructions', displayText)
                           .getResponse();
-      }
-      });
+      }).catch(function (err) { console.log(err, err.stack);  } );
   },
 };
 
@@ -399,21 +477,25 @@ const ContainerIntentHandler = {
     var sid="sid="+handlerInput.requestEnvelope.session.sessionId;
     invokeParams.Payload = '{ "Path" : "container" ,"Param" : "'+sid+'" }';
 
-    lambda.invoke(invokeParams, function(err, data) {
-      if (err) {
-        console.log(err, err.stack); // an error occurred
-      } else {
-        //console.log(data.Payload);  
-        recipe = JSON.parse(data.Payload);
-        speechText=recipe.Text ;
-        displayText = recipe.Verbal;
+    promise = new Promise((resolve, reject) => {
+      lambda.invoke(invokeParams, function(err, data) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data.Payload)  }
+        });
+    });
+    
+    return promise.then((body) => {
+          recipe = JSON.parse(body);
+          speechText=recipe.Text ;
+          displayText = recipe.Verbal;
         return  handlerInput.responseBuilder
                           .speak(speechText)
                           .reprompt(speechText)
                           .withSimpleCard('Instructions', displayText)
                           .getResponse();
-      }
-      });
+      }).catch(function (err) { console.log(err, err.stack);  } );
   },
 };
 
@@ -483,6 +565,7 @@ exports.handler = skillBuilder
     BookIntentHandler,
     CloseBookIntentHandler,
     RecipeIntentHandler,
+    VersionIntentHandler,
     TaskIntentHandler,
     NextIntentHandler,
     YesNoIntentHandler,
