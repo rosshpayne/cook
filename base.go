@@ -146,7 +146,6 @@ type Activity struct {
 	IngrdQualifer string      `json:"iQual"`    // (append) to ingredient
 	QualiferIngrd string      `json:"quali"`    // prepend  to ingredient.
 	AltIngrd      []string    `json:"altIngrd"` // key into Ingredient table - used for alternate ingredients only
-	Index         []string    `json:"index"`    // define index entries for ingredient
 	Measure       *MeasureT   `json:"measure"`
 	Overview      string      `json:"ovv"`
 	Coord         [2]float32  // X,Y
@@ -454,6 +453,149 @@ func (a Activities) PrintRecipe(rId string) (prepTaskS, string) {
 	return ptS, b.String()
 } // PrintRecipe
 
+// Recipe table
+type PkeysT1 struct {
+	PKey  string `json="PKey"`
+	SortK int    `json='SortK"`
+}
+
+// Ingredient table
+type PkeysT2 struct {
+	PKey  string `json="PKey"`
+	SortK string `json='SortK"`
+}
+
+// contains meta-data that defines what is purged
+type purge struct {
+	prefix string
+	table  string
+}
+
+func (s *sessCtx) purgeRecipe() error {
+	//
+	items := []purge{
+		{prefix: "A-", table: "Recipe"},     // explicitly defined activities
+		{prefix: "T-", table: "Recipe"},     // task list
+		{prefix: "D-", table: "Recipe"},     // device list
+		{prefix: "C-", table: "Recipe"},     // container list
+		{prefix: "R-", table: "Recipe"},     // recipe name
+		{prefix: "C-", table: "Ingredient"}, // explicitly defined containers that span activities
+	}
+	var kcond expression.KeyConditionBuilder
+	for _, p := range items {
+		if p.prefix == "R-" {
+			rid, _ := strconv.Atoi(s.reqRId)
+			kcond = expression.KeyAnd(expression.Key("PKey").Equal(expression.Value(p.prefix+s.reqBkId)), expression.Key("SortK").Equal(expression.Value(rid)))
+		} else {
+			kcond = expression.KeyEqual(expression.Key("PKey"), expression.Value(p.prefix+s.pkey))
+		}
+		proj := expression.NamesList(expression.Name("PKey"), expression.Name("SortK"))
+		expr, err := expression.NewBuilder().WithKeyCondition(kcond).WithProjection(proj).Build()
+		if err != nil {
+			panic(err)
+		}
+		input := &dynamodb.QueryInput{
+			KeyConditionExpression:    expr.KeyCondition(),
+			FilterExpression:          expr.Filter(),
+			ExpressionAttributeNames:  expr.Names(),
+			ExpressionAttributeValues: expr.Values(),
+			ProjectionExpression:      expr.Projection(),
+		}
+		input = input.SetTableName(p.table).SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
+		//*dynamodb.DynamoDB,
+		result, err := s.dynamodbSvc.Query(input)
+		if err != nil {
+			return fmt.Errorf("Error: in purgeRecipe Query - %s", err.Error())
+		}
+		switch p.table {
+		case "Recipe":
+			purgeKeyS := make([]PkeysT1, int(*result.Count))
+			err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &purgeKeyS)
+			if err != nil {
+				return fmt.Errorf("** Error during UnmarshalListOfMaps in purgeRecipe - %s", err.Error())
+			}
+			for _, v := range purgeKeyS {
+				pk := PkeysT1{PKey: v.PKey, SortK: v.SortK}
+				av, err := dynamodbattribute.MarshalMap(pk)
+				if err != nil {
+					return fmt.Errorf("%s: %s", "Error: failed to marshal Record in purgeRecipe", err.Error())
+				}
+				_, err = s.dynamodbSvc.DeleteItem(&dynamodb.DeleteItemInput{
+					TableName: aws.String(p.table),
+					Key:       av,
+				})
+				if err != nil {
+					return fmt.Errorf("%s: %s", "Error: failed to DeleteItem in purgeRecipe", err.Error())
+				}
+			}
+			//
+		case "Ingredient":
+			purgeKeyS := make([]PkeysT2, int(*result.Count))
+			err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &purgeKeyS)
+			if err != nil {
+				return fmt.Errorf("** Error during UnmarshalListOfMaps in purgeRecipe - %s", err.Error())
+			}
+			for _, v := range purgeKeyS {
+				pk := PkeysT2{PKey: v.PKey, SortK: v.SortK}
+				av, err := dynamodbattribute.MarshalMap(pk)
+				if err != nil {
+					return fmt.Errorf("%s: %s", "Error: failed to marshal Record in purgeRecipe", err.Error())
+				}
+				_, err = s.dynamodbSvc.DeleteItem(&dynamodb.DeleteItemInput{
+					TableName: aws.String(p.table),
+					Key:       av,
+				})
+				if err != nil {
+					return fmt.Errorf("%s: %s", "Error: failed to DeleteItem in purgeRecipe", err.Error())
+				}
+			}
+		}
+	}
+	//
+	// purge indexed entries
+	//
+	fcond := expression.Equal(expression.Name("SortK"), expression.Value(s.pkey))
+	proj := expression.NamesList(expression.Name("PKey"), expression.Name("SortK"))
+	expr, err := expression.NewBuilder().WithProjection(proj).WithFilter(fcond).Build()
+	if err != nil {
+		return fmt.Errorf("%s", "Error: failed to NewBuilder for ingredient purge in purgeRecipe "+err.Error())
+	}
+	//
+	// purge recipe search entries (as defined by Index attribute in Attributes)
+	//
+	params := &dynamodb.ScanInput{
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+		ProjectionExpression:      expr.Projection(),
+		FilterExpression:          expr.Filter(),
+		TableName:                 aws.String("Ingredient"),
+	}
+	result, err := s.dynamodbSvc.Scan(params)
+	if err != nil {
+		return fmt.Errorf("%s", "Error in scan of unit table: "+err.Error())
+	}
+	purgeKeyS := make([]PkeysT2, int(*result.Count))
+	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &purgeKeyS)
+	if err != nil {
+		return fmt.Errorf("Error during UnmarshalListOfMaps of Ingredient in purgeRecipe - %s", err.Error())
+	}
+	for _, v := range purgeKeyS {
+		pk := PkeysT2{PKey: v.PKey, SortK: v.SortK}
+		av, err := dynamodbattribute.MarshalMap(pk)
+		if err != nil {
+			return fmt.Errorf("%s: %s", "Error: failed to MarshalMap  of Ingredient in purgeRecipe", err.Error())
+		}
+		_, err = s.dynamodbSvc.DeleteItem(&dynamodb.DeleteItemInput{
+			TableName: aws.String("Ingredient"),
+			Key:       av,
+		})
+		if err != nil {
+			return fmt.Errorf("%s: %s", "Error: failed to DeleteItem of Ingredient in purgeRecipe", err.Error())
+		}
+	}
+	return nil
+}
+
 func (s *sessCtx) processBaseRecipe() error {
 	//
 	// Table:  Activity
@@ -481,12 +623,31 @@ func (s *sessCtx) processBaseRecipe() error {
 	//ActivityS := make([]Activity, int(*result.Count))
 	ActivityS := make(Activities, int(*result.Count))
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &ActivityS)
+	if err != nil {
+		return fmt.Errorf("** Error during UnmarshalListOfMaps in processBaseRecipe - %s", err.Error())
+	}
+	//
+	// Create maps based on AId, Ingredient (plural and singular) and Label (plural and singular)
 	//
 	activityStart = &ActivityS[0]
 	ActivityM := make(map[string]*Activity)
+	IngredientM := make(map[string]*Activity)
+	LabelM := make(map[string]*Activity)
 	for i, v := range ActivityS {
 		aid := strconv.Itoa(v.AId)
 		ActivityM[aid] = &ActivityS[i]
+		ingrd := strings.ToLower(v.Ingredient)
+		IngredientM[ingrd] = &ActivityS[i]
+		if ingrd[len(ingrd)-1] == 's' {
+			// make singular entry as well
+			IngredientM[ingrd[:len(ingrd)-1]] = &ActivityS[i]
+		}
+		label := strings.ToLower(v.Label)
+		IngredientM[label] = &ActivityS[i]
+		if label[len(label)-1] == 's' {
+			// make singular entry as well
+			IngredientM[label[:len(label)-1]] = &ActivityS[i]
+		}
 	}
 	// link activities together via next, prev, nextTask, nextPrep pointers. Order in ActivityS is sorted from dynamodb sort key.
 	// not sure how useful have next, prev pointers will be but its easy to setup so keep for time being. Do use prev in other part of code.
@@ -1058,7 +1219,7 @@ func (s *sessCtx) processBaseRecipe() error {
 									fmt.Fprintf(&b, "%s", ov.Purpose)
 								}
 							} else {
-								return fmt.Errorf("in processBaseRecipe. No device [%s] found for activity [%d]\n", s[0], pt.id)
+								return fmt.Errorf("in processBaseRecipe. No device [%s] found for activity [%d, %d]\n", s[0], p.AId, pt.id)
 							}
 						case "iqual":
 							fmt.Fprintf(&b, "%s", p.IngrdQualifer)
@@ -1077,7 +1238,6 @@ func (s *sessCtx) processBaseRecipe() error {
 										fmt.Fprintf(&b, "%s", m.Size)
 									}
 								} else {
-									fmt.Printf("%#v\n", p)
 									return fmt.Errorf("in processBaseRecipe. No measure defined for container in Activity [%d]\n", p.AId)
 								}
 							} else {
@@ -1215,7 +1375,7 @@ func (s *sessCtx) processBaseRecipe() error {
 	if err != nil {
 		return fmt.Errorf("Error in processBaseRecipe, after saveTasks() - %s", err.Error())
 	}
-	err = ActivityS.generateAndSaveIndex(*s)
+	err = s.generateAndSaveIndex(LabelM, IngredientM)
 	if err != nil {
 		return fmt.Errorf("Error in readBaseRecipe after IndexIngd - %s", err.Error())
 	}

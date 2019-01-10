@@ -41,13 +41,12 @@ type sessCtx struct {
 	swapBkName     string
 	swapBkId       string
 	authorS        []string
-	authors        string // siRNames of the first two authors
-	cat            string // recipe category - used for indexing recipe
-	subcat         string // recipe subcategory - used for indexing recipe
-	dbatchNum      string // mulit-records sent to display in fixed batch sizes (6 say).
-	reset          bool   // zeros []RecId in session table during changes to recipe, as []RecId is recipe dependent
-	curreq         int    // bookrecipe_, object_(ingredient,task,container,utensil), listing_(next,prev,goto,modify,repeat)
-	questionId     int    // what question is the user responding to with a yes|no.
+	authors        string   // siRNames of the first two authors
+	index          []string // entries under which recipe is indexed. Sourced from recipe not ingredient.
+	dbatchNum      string   // mulit-records sent to display in fixed batch sizes (6 say).
+	reset          bool     // zeros []RecId in session table during changes to recipe, as []RecId is recipe dependent
+	curreq         int      // bookrecipe_, object_(ingredient,task,container,utensil), listing_(next,prev,goto,modify,repeat)
+	questionId     int      // what question is the user responding to with a yes|no.
 	dynamodbSvc    *dynamodb.DynamoDB
 	closeBook      bool
 	object         string  //container,ingredient,instruction,utensil. Sourced from Sessions table or request
@@ -318,10 +317,8 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 			//
 			// book requested
 			//
-			fmt.Println("Here...BkId = ", lastSess.BkId)
 			switch len(lastSess.BkId) {
 			case 0:
-				fmt.Println("Here...BkId = ", lastSess.BkId)
 				if s.closeBook {
 					s.dmsg = `Book is already closed.`
 					s.vmsg = `Book is already closed.`
@@ -425,12 +422,10 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 			//
 			// recipe requested.       Note bookName(Id) can be empty which will force Recipe query to search across all books
 			//
-			fmt.Printf("ABout to search for recipe for [%s]\n", s.reqRName)
 			err := s.recipeNameSearch()
 			if err != nil {
 				return err
 			}
-			fmt.Printf("Did not error in recipeNameSearch for recipe for [%s]\n", s.reqRName)
 			s.eol, s.reset = 0, true
 			_, err = s.updateSession()
 			if err != nil {
@@ -532,7 +527,6 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 	}
 	// check if we have Dynamodb Recid Set defined, this will be useful in updateSession
 	if len(lastSess.RecId) == 0 {
-		fmt.Println("	recIdNotExists = true\n")
 		s.recIdNotExists = true
 	}
 	//
@@ -624,7 +618,6 @@ func handler(request InputEvent) (RespEvent, error) {
 			Region: aws.String("us-east-1"),
 		})
 		if err != nil {
-			fmt.Println("Error creating session:")
 			log.Panic(err)
 		}
 		return dynamodb.New(sess, aws.NewConfig())
@@ -638,8 +631,28 @@ func handler(request InputEvent) (RespEvent, error) {
 		sessionId:   request.QueryStringParameters["sid"],
 		dynamodbSvc: dynamodbService(),
 	}
-	fmt.Println("pathItem : ", pathItem[0])
 	switch pathItem[0] {
+	case "purge":
+		sessctx.reqBkId = request.QueryStringParameters["bkid"]
+		sessctx.reqRId = request.QueryStringParameters["rid"]
+		sessctx.reqVersion = request.QueryStringParameters["ver"]
+		//
+		sessctx.pkey = sessctx.reqBkId + "-" + sessctx.reqRId
+		if sessctx.reqVersion != "" {
+			sessctx.pkey += "-" + sessctx.reqVersion
+		}
+		// fetch recipe name and book name
+		err = sessctx.recipeRSearch()
+		if err != nil {
+			break
+		}
+		// read base recipe data and generate tasks, container and device usage and save to dynamodb.
+		err = sessctx.purgeRecipe()
+		if err != nil {
+			break
+		}
+		sessctx.abort = true
+	//
 	case "load":
 		sessctx.reqBkId = request.QueryStringParameters["bkid"]
 		sessctx.reqRId = request.QueryStringParameters["rid"]
@@ -655,7 +668,6 @@ func handler(request InputEvent) (RespEvent, error) {
 			break
 		}
 		// read base recipe data and generate tasks, container and device usage and save to dynamodb.
-		fmt.Printf("sessCtx %#v\n", sessctx)
 		err = sessctx.processBaseRecipe()
 		if err != nil {
 			break
@@ -696,15 +708,12 @@ func handler(request InputEvent) (RespEvent, error) {
 				panic(err)
 			}
 			// populate reqBkId, reqBkName, reqRId, reqRName
-			fmt.Printf("in main: rname [%s]\n", rcp)
 			sessctx.reqRName = rcp
 		case "yesno":
 			i := request.QueryStringParameters["yn"] // "1" yes, "0" no
-			fmt.Println("query parameter for yesno ", i)
 			sessctx.yesno = "no"
 			if i == "1" {
 				sessctx.yesno = "yes"
-				fmt.Println("Yes..")
 			}
 		case "select":
 			var i int
@@ -718,7 +727,6 @@ func handler(request InputEvent) (RespEvent, error) {
 		}
 	// object ingredient_, utensil_
 	case container_, task_:
-		fmt.Printf(" pathItem [%#v]\n", pathItem)
 		sessctx.object = pathItem[0]
 		sessctx.curreq = object_
 		sessctx.operation = "next"

@@ -198,7 +198,7 @@ func loadNonIngredientsMap(svc *dynamodb.DynamoDB) (map[string]bool, error) {
 
 }
 
-func (a Activities) generateAndSaveIndex(s sessCtx) error {
+func (s sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[string]*Activity) error {
 	type indexRecT struct {
 		PKey     string
 		SortK    string
@@ -234,11 +234,7 @@ func (a Activities) generateAndSaveIndex(s sessCtx) error {
 	// index by:
 	// cat
 	//  [ingrd, ingrd cat ] or [index property values]
-	indexCat := func(cat string) {
-		if len(cat) == 0 {
-			// cat not defined , take cat from last word in recipe title
-			cat = s.reqRName[strings.LastIndex(s.reqRName, " ")+1:]
-		}
+	indexEntry := func(cat string) {
 		//
 		irec := indexRecT{SortK: s.reqBkId + "-" + s.reqRId, BkName: s.reqBkName, RName: s.reqRName, Authors: s.authors}
 		irec.PKey = strings.TrimRight(strings.TrimLeft(strings.ToLower(cat), " "), " ")
@@ -246,42 +242,63 @@ func (a Activities) generateAndSaveIndex(s sessCtx) error {
 		row_[irec.PKey] = true
 	}
 
-	makeIndexRecs := func(ap Activity) {
+	makeIndexRecs := func(entry string, ap *Activity) {
 		// for each index property value, add to index
-		for _, v := range ap.Index {
-			irec := indexRecT{SortK: s.reqBkId + "-" + s.reqRId, BkName: s.reqBkName, RName: s.reqRName, Authors: s.authors}
-			irec.PKey = strings.TrimRight(strings.TrimLeft(strings.ToLower(v), " "), " ")
-			m := ap.Measure
-			if m != nil {
-				if len(m.Quantity) > 0 && len(m.Unit) > 0 {
-					if len(m.Weight) > 0 {
-						irec.Quantity = m.Quantity + " " + ap.Ingredient + " of " + m.Weight + m.Unit + " each"
-					}
-					if len(m.Volume) > 0 {
-						irec.Quantity = m.Quantity + " " + ap.Ingredient + " of " + m.Volume + m.Unit + " each"
-					}
-					if len(m.Volume) == 0 && len(m.Weight) == 0 {
-						irec.Quantity = ap.Measure.Quantity + ap.Measure.Unit
-					}
-				} else {
-					irec.Quantity = m.Quantity + " " + m.Size
+		irec := indexRecT{SortK: s.reqBkId + "-" + s.reqRId, BkName: s.reqBkName, RName: s.reqRName, Authors: s.authors}
+		irec.PKey = entry
+		m := ap.Measure
+		if m != nil {
+			if len(m.Quantity) > 0 && len(m.Unit) > 0 {
+				if len(m.Weight) > 0 {
+					irec.Quantity = m.Quantity + " " + ap.Ingredient + " of " + m.Weight + m.Unit + " each"
 				}
-				if len(m.Size) > 0 && len(m.Quantity) == 0 {
-					irec.Quantity = m.Size
+				if len(m.Volume) > 0 {
+					irec.Quantity = m.Quantity + " " + ap.Ingredient + " of " + m.Volume + m.Unit + " each"
 				}
+				if len(m.Volume) == 0 && len(m.Weight) == 0 {
+					irec.Quantity = ap.Measure.Quantity + ap.Measure.Unit
+				}
+			} else {
+				irec.Quantity = m.Quantity + " " + m.Size
 			}
-			if !row_[irec.PKey] {
-				// only append unique values..
-				row_[irec.PKey] = true
-				indexRecS = append(indexRecS, irec)
+			if len(m.Size) > 0 && len(m.Quantity) == 0 {
+				irec.Quantity = m.Size
 			}
+			if len(ap.IngrdQualifer) > 0 {
+				irec.PreQual = ap.IngrdQualifer
+			}
+			if len(ap.QualiferIngrd) > 0 {
+				irec.PostQual = ap.QualiferIngrd
+			}
+		}
+		if !row_[irec.PKey] {
+			// only append unique values..
+			row_[irec.PKey] = true
+			indexRecS = append(indexRecS, irec)
 		}
 	}
 	//
-	indexCat(s.cat)
-	for _, ap := range a {
-		if len(ap.Index) > 0 {
-			makeIndexRecs(ap)
+	// source index entries from recipe index attribute (saved to sessctx)
+	//  check each word in entry against label and ingredient to add quantity data
+	//  if not present just add recipe name and book data to index entry
+	//
+	for _, entry := range s.index {
+		entry := strings.TrimRight(strings.TrimLeft(strings.ToLower(entry), " "), " ")
+		for _, w := range strings.Split(entry, " ") {
+			// for each word in index entry
+			if a, ok := labelM[strings.ToLower(w)]; ok {
+				delete(row_, entry)
+				makeIndexRecs(entry, a)
+				break
+			}
+			if a, ok := ingrdM[strings.ToLower(w)]; ok {
+				delete(row_, entry)
+				makeIndexRecs(entry, a)
+				break
+			}
+		}
+		if !row_[entry] {
+			indexEntry(entry)
 		}
 	}
 	err := saveIngdIndex()
@@ -616,9 +633,8 @@ func (s *sessCtx) recipeRSearch() error {
 		SortK float64
 	}
 	type recT struct {
-		RName  string `json:"RName"`
-		Cat    string `json:"cat"`
-		Subcat string `json:"subcat"`
+		RName string   `json:"RName"`
+		Index []string `json:"Index"`
 	}
 	rId, err := strconv.Atoi(s.reqRId)
 	if err != nil {
@@ -667,8 +683,7 @@ func (s *sessCtx) recipeRSearch() error {
 	}
 	// populate session context fields
 	s.reqRName = rec.RName
-	s.cat = rec.Cat
-	s.subcat = rec.Subcat
+	s.index = rec.Index
 	err = s.bookNameLookup()
 	if err != nil {
 		s.reqBkName = ""
@@ -820,7 +835,6 @@ func (s *sessCtx) recipeNameSearch() error {
 		expr expression.Expression
 		err  error
 	)
-	fmt.Printf("in recipeNameSearch . RecipeName = [%s]/n", s.reqRName)
 
 	kcond := expression.KeyEqual(expression.Key("RName"), expression.Value(s.reqRName))
 	if len(s.reqBkId) > 0 {
@@ -850,7 +864,6 @@ func (s *sessCtx) recipeNameSearch() error {
 	}
 	// define a slice of struct as Query expects to return 1 or more rows so the slice represents a row
 	// and we ue unmarshallistofmaps to handle a batch like select
-	fmt.Println("here.4")
 	recS := make([]dynoRecT, int(*result.Count))
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &recS)
 	if err != nil {

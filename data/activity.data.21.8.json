@@ -80,7 +80,8 @@
             "Item": { 
                 "PKey" : { "S": "R-21" },
                 "SortK" : { "N": "8"},
-                "RName" : { "S": "Hazelnut and Ricotta Cake"}
+                "RName" : { "S": "Hazelnut and Ricotta Cake"},
+                "Index" : { "SS" : ["cake", "hazelnut cake", "hazelnut", "Ricotta cake", "ricotta"] }
             }
         }
         },
@@ -117,7 +118,6 @@
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "hazelnuts" },
                 "quali" : { "S" : "shelled" },
-                "index" : { "SS" : ["hazelnut cake", "hazelnut"] },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "250" } ,
                                       "unit" : { "S" : "g" }
@@ -301,7 +301,6 @@
                 "label" : { "S": "Ricotta cheese"},
                 "ingrd" : { "S" : "Ricotta" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
-                "index" : { "SS" : ["ricotta cake", "ricotta"] },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "250" }  ,
                                       "unit" : { "S" : "g" }
@@ -393,8 +392,8 @@
                 },
                 "prep" : { "L" : [ 
                                 {"M" : { 
-                                  "txt" : { "S" : "Preheat {device} to {temp}{unit}" },
-                                  "say" : { "S" : "Preheat {device} to {temp}{unit}" },
+                                  "txt" : { "S" : "Preheat {used} to {temp}{unit}" },
+                                  "say" : { "S" : "Preheat {used} to {temp}{unit}" },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "label" : {"S" : "heat oven"},
