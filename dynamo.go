@@ -57,14 +57,15 @@ func (cs clsort) Less(i, j int) bool { return cs[i].size < cs[j].size }
 func (cs clsort) Swap(i, j int)      { cs[i], cs[j] = cs[j], cs[i] }
 
 type prepTaskRec struct {
-	PKey   string // R-[BkId]
-	SortK  int    // monotonically increasing - task at which user is upto in recipe
-	AId    int    // Activity Id
-	Type   byte
+	PKey   string  `json="PKey"`  // R-[BkId]
+	SortK  int     `json="SortK"` // monotonically increasing - task at which user is upto in recipe
+	AId    int     `json="AId"`   // Activity Id
+	Type   byte    `json="Type"`
 	time   float32 // all Linked preps sum time components into this field
-	Text   string  // all Linked preps combined text into this field
-	Verbal string
-	EOL    int // End-Of-List. Max Id assigned to each record
+	Text   string  `json="Text"` // all Linked preps combined text into this field
+	Verbal string  `json="Verbal"`
+	EOL    int     `json="EOL"` // End-Of-List. Max Id assigned to each record
+	taskp  *PerformT
 }
 
 func (pt prepTaskRec) Alexa() dialog {
@@ -256,10 +257,33 @@ func (s sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[st
 					irec.Quantity = m.Quantity + " " + ap.Ingredient + " of " + m.Volume + m.Unit + " each"
 				}
 				if len(m.Volume) == 0 && len(m.Weight) == 0 {
-					irec.Quantity = ap.Measure.Quantity + ap.Measure.Unit
+					irec.Quantity = ap.Measure.Quantity + ap.Measure.Unit + " " + ap.Ingredient
 				}
 			} else {
-				irec.Quantity = m.Quantity + " " + m.Size
+				if len(m.Size) > 0 {
+					irec.Quantity = m.Quantity + " " + m.Size + " of " + ap.Ingredient
+				} else {
+					qty := strings.ToLower(m.Quantity)
+					if qty != "bunch" {
+						qty_, err := strconv.Atoi(m.Quantity)
+						if err != nil {
+							irec.Quantity = m.Quantity + " of " + ap.Ingredient
+						} else {
+							if qty_ > 0 {
+								if ap.Ingredient[len(ap.Ingredient)-1] != 's' {
+									irec.Quantity = m.Quantity + " " + ap.Ingredient + "s"
+								} else {
+									irec.Quantity = m.Quantity + " " + ap.Ingredient
+								}
+							} else {
+								irec.Quantity = m.Quantity + " " + ap.Ingredient
+							}
+						}
+
+					} else {
+						irec.Quantity = m.Quantity + " of " + ap.Ingredient
+					}
+				}
 			}
 			if len(m.Size) > 0 && len(m.Quantity) == 0 {
 				irec.Quantity = m.Size
@@ -674,7 +698,7 @@ func (s *sessCtx) recipeRSearch() error {
 		return fmt.Errorf("%s: %s", "Error in GetItem of recipeRSearch", err.Error())
 	}
 	if len(result.Item) == 0 {
-		return fmt.Errorf("Error: %s [%s] %s [%s] - %s", "No recipe found in recipeRSearch for book Id", s.reqBkId, " and recipe Id ", s.reqRId, err.Error())
+		return fmt.Errorf("No Recipe record found for R-%s-%s", s.reqBkId, s.reqRId)
 	}
 	rec := recT{}
 	err = dynamodbattribute.UnmarshalMap(result.Item, &rec)

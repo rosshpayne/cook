@@ -50,7 +50,7 @@
                 "PKey" : { "S": "R-21" },
                 "SortK" : { "N": "6"},
                 "RName" : { "S": "Risotto with Roast Partridge"},
-                "Cat"  : { "S": "Risotto" } 
+                "index": { "SS" : ["partridge risotto","partridge","risotto"]}
             }
         }
         },
@@ -253,7 +253,6 @@
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "partridge"},
                 "quali" : { "S" : "prepared grey-legged "},
-                "index": { "SS" : ["partridge risotto","partridge"]},
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "3" } 
                                       }
@@ -475,12 +474,11 @@
                 "SortK" : { "N": "120"},
                 "label" : { "S": "celery"},
                 "ingrd" : { "S" : "celery heart" },
-                "index" : { "SS" : [ "celery risotto" ]},
                 "iQual" : { "S" : "finely chopped" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "1" } ,
-                                      "unit" : { 
+                                      "unit" : { "S" : "bunch" }
                                       }
                 },
                 "prep" : { "L" : [ 

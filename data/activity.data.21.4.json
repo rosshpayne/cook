@@ -22,8 +22,7 @@
                 "PKey" : { "S": "R-21" },
                 "SortK" : { "N": "4"},
                 "RName" : { "S": "Green Beans with Parmesan"},
-                "Cat"  : { "S": "Vegetable" } ,
-                "SubCat" : { "S": "Bean" }
+                "index" : { "SS" : ["beans","green beans","vegetarian"] }
             }
         }
         },
@@ -113,8 +112,8 @@
                 },
                 "task" : { "L" : [ 
                             { "M" : { 
-                                  "txt" : { "S" : "Season with {quali} {iQual} of {qty} {ingrd}" },
-                                  "say" : { "S" : "Season with {quali} {iQual} of {qty} {ingrd}" },
+                                  "txt" : { "S" : "Season with {quali} {ingrd} {iQual} of {qty} {ingrd}" },
+                                  "say" : { "S" : "Season with {quali} {ingrd} {iQual} of {qty} {ingrd}" },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },

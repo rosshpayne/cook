@@ -5,7 +5,7 @@
                "Item": {
                   "PKey" : { "S": "C-21-3" },
                   "SortK" : { "S": "RisoPan" },
-                  "label" : { "S" : "Pan" },
+                  "label" : { "S" : "Risotto Pan" },
                   "type" : { "S": "Pan" },
                   "contains" : { "S": "risotto ingredients" },
                   "measure" : { "M" : { 
@@ -14,8 +14,7 @@
                                       "unit" : { "S" : "cm" }  
                                       }
                               },
-                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
-                  "purpose" : {"S":"Cooking"}
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  }
                    }
                }
             }
@@ -27,7 +26,8 @@
                 "PKey" : { "S": "R-21" },
                 "SortK" : { "N": "3"},
                 "RName" : { "S": "Risotto Nero with Swiss Chard"},
-                "Cat"  : { "S": "risotto" } 
+                "Cat"  : { "S": "risotto" } ,
+                "index" : { "SS" : ["swiss chard","risotto","cuttlefish", "chard risotto","swiss chard risotto"] }
             }
         }
         },
@@ -50,7 +50,7 @@
                                   "say" : { "S" : "warm {qty} {ml} of {ingrd} in a large pan" },
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" }, 
-                                  "sourceC" : { "SS" : ["MC-S"] },
+                                  "useC" : { "SS" : ["MC-S"] },
                                   "addToC" : { "SS" : [ "RisoPan" ] }
                                     }
                                 }

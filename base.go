@@ -82,6 +82,7 @@ type Container struct {
 	Message  string     `json:"message"`
 	start    int        // first id in recipe tasks where container is used
 	last     int        // last id in recipe tasks where container is sourced from or recipe is complete.
+	reused   int        // links containers that can be the same physical container.
 	Activity []taskT    // slice of tasks (Prep and Task activites) associated with container
 }
 
@@ -96,7 +97,7 @@ type DeviceT struct {
 
 type PerformT struct {
 	//	type      PrepTask q // Prep or Task Activity
-	id          int
+	id          int      // order as appears in Activity JSON
 	Text        string   `json:"txt"` // original from db - contains {tag}
 	text        string   // has {tag} replaced
 	Verbal      string   `json:"say"` // original from db - contains {tag}
@@ -117,6 +118,7 @@ type PerformT struct {
 	AddToCp  []*Container // it is thought that only one addToC will be used per activity - but lets be flexible.
 	UseCp    []*Container // ---"---
 	SourceCp []*Container // ---"---
+	AllCp    []*Container // all containers (addTo, use, source) get saved here.
 }
 
 type MeasureT struct {
@@ -127,6 +129,7 @@ type MeasureT struct {
 	Volume    string `json:"vol"`
 	Size      string `json:"size"`
 	Unit      string `json:"unit"`
+	Comment   string `json:"comment"`
 }
 
 // used for alternative ingredients only
@@ -147,6 +150,7 @@ type Activity struct {
 	QualiferIngrd string      `json:"quali"`    // prepend  to ingredient.
 	AltIngrd      []string    `json:"altIngrd"` // key into Ingredient table - used for alternate ingredients only
 	Measure       *MeasureT   `json:"measure"`
+	AltMeasure    *MeasureT   `json:"altMeasure"`
 	Overview      string      `json:"ovv"`
 	Coord         [2]float32  // X,Y
 	Task          []*PerformT `json:"task"`
@@ -190,7 +194,8 @@ func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 		num int
 	}
 	var b strings.Builder
-	output_ := []string{}
+	var output_ []string
+
 	if len(cm) == 0 {
 		return nil
 	}
@@ -200,9 +205,11 @@ func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 	done := make(map[string]bool)
 	for _, v := range cm {
 		// for each container aggregate based on type and size
-		z := mkey{v.Measure.Size, v.Type}
+		z := mkey{strings.ToLower(v.Measure.Size), strings.ToLower(v.Type)}
+		fmt.Printf("Cid %s .  mkey: %#v\n", v.Cid, z)
 		if y, ok := identicalC[z]; !ok {
 			// does not exist - create first one
+			fmt.Println("new")
 			y := new(ctCount)
 			y.num = 1
 			y.C = append(y.C, v)
@@ -211,30 +218,28 @@ func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 			// check if the container can be reused by examining other containers in the identical list
 			var reuse bool
 			if !done[v.Cid] {
-				// for containers not already checked
+				// for containers not already matched as ok to reuse
 				for _, oc := range y.C {
+					fmt.Printf("loop check for %s  %s\n", v.Cid, oc.Cid)
+					fmt.Printf("oc.last %d  < %d v.start,  v.last  %d  < %d oc.start \n", oc.last, v.start, v.last, oc.start)
 					if oc.last <= v.start || v.last <= oc.start {
 						done[oc.Cid] = true // don't check for this Container again.
 						reuse = true
+						oc.reused, v.reused = y.num, y.num
+						// bind these containers which means that are the same physical container.
+						fmt.Printf("reuse true for %s\n", oc.Cid)
 						break
 					}
 				}
-				if reuse {
-					y.C = append(y.C, v)
-				} else {
+				if !reuse {
 					y.num += 1
-					y.C = append(y.C, v)
 				}
-			} else {
-				y.num += 1
-				y.C = append(y.C, v)
 			}
-
+			y.C = append(y.C, v)
 		}
 	}
-	// populate slice which satisfies sort interface. After sorting containers of same size together but of different types.
-	// This compares with the map that aggregates containers by type and size.
-	// For display purposes I have chosen to group by size  - hence this sort.
+	// Populate slice, which satisfies sort interface, with the map key.
+	// Objective - sort the may key which we then use to access the map in sorted order.
 	clsorted := clsort{}
 	for k, _ := range identicalC {
 		clsorted = append(clsorted, k)
@@ -242,25 +247,52 @@ func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 	// use sorted key to index into container map - sorted by size attribute in container.measure.
 	sort.Sort(clsorted)
 	for _, v := range clsorted {
-		if identicalC[v].num > 1 {
+		if len(identicalC[v].C) > 1 {
 			// use typE as this is the attribute that is used to aggregated the containers
-			// and each container may have a different label. Not so if were dealing with just one container of course.
-			b.WriteString(fmt.Sprintf(" %d %s %s", identicalC[v].num, strings.Title(v.size), v.typE+"s"))
-			for i, d := range identicalC[v].C {
-				switch i {
-				case 0:
-					b.WriteString(fmt.Sprintf(" one for %s ", strings.ToLower(d.Contains)))
-				default:
-					var written bool
-					for _, oc := range identicalC[v].C {
-						if oc.last <= d.start || d.last <= oc.start {
-							b.WriteString(fmt.Sprintf("%s ", " and "+strings.ToLower(d.Contains)))
-							written = true
+			// and each container may have a different label. Not so if were dealing with just one container of course
+			b.WriteString(fmt.Sprintf(" %d %s %s", identicalC[v].num, strings.Title(v.size), v.typE))
+			if identicalC[v].num > 1 {
+				b.WriteString(fmt.Sprintf("%s", "s"))
+			}
+			if len(identicalC[v].C) != identicalC[v].num {
+				if v.typE == "measuring cup" {
+					output_ = append(output_, b.String())
+					b.Reset()
+					continue
+				}
+				// some reuse
+				for i := identicalC[v].num; i > 0; i-- {
+					b.WriteString(fmt.Sprintf(" ( "))
+					for _, c := range identicalC[v].C {
+						if c.reused == i {
+							b.WriteString(fmt.Sprintf(" %s ", strings.ToLower(c.Contains)))
 						}
 					}
-					if !written {
-						b.WriteString(fmt.Sprintf(" another for %s ", strings.ToLower(d.Contains)))
-						written = false
+					b.WriteString(fmt.Sprintf(" ) "))
+				}
+			} else {
+				for i, d := range identicalC[v].C {
+					if d.Type == "Measuring Cup" {
+						continue
+					}
+					switch i {
+					case 0:
+						if len(d.Contains) > 0 {
+							b.WriteString(fmt.Sprintf(" one for %s ", strings.ToLower(d.Contains)))
+						}
+					default:
+						//TODO: what about container reuse.
+						var written bool
+						for _, oc := range identicalC[v].C {
+							if (oc.last <= d.start || d.last <= oc.start) && len(oc.Contains) > 0 {
+								b.WriteString(fmt.Sprintf("%s ", " and later "+strings.ToLower(oc.Contains)))
+								written = true
+							}
+						}
+						if !written && len(d.Contains) > 0 {
+							b.WriteString(fmt.Sprintf(" another for %s ", strings.ToLower(d.Contains)))
+							written = false
+						}
 					}
 				}
 			}
@@ -319,7 +351,7 @@ func (a Activities) GenerateTasks(pKey string) prepTaskS {
 			if pp.Parallel && pp.WaitOn == 0 || add {
 				add = false
 				processed[atvTask{p.AId, ia}] = true
-				pt := prepTaskRec{PKey: pKey, AId: p.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal}
+				pt := prepTaskRec{PKey: pKey, AId: p.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, taskp: pp}
 				ptS = append(ptS, pt)
 			}
 		}
@@ -345,7 +377,7 @@ func (a Activities) GenerateTasks(pKey string) prepTaskS {
 				continue
 			}
 			processed[atvTask{p.AId, ia}] = true
-			pt := prepTaskRec{PKey: pKey, SortK: i, AId: p.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal}
+			pt := prepTaskRec{PKey: pKey, SortK: i, AId: p.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, taskp: pp}
 			ptS = append(ptS, pt)
 			i++
 		}
@@ -356,7 +388,7 @@ func (a Activities) GenerateTasks(pKey string) prepTaskS {
 			if _, ok := processed[atvTask{p.AId, ia}]; ok {
 				continue
 			}
-			pt := prepTaskRec{PKey: pKey, SortK: i, AId: p.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal}
+			pt := prepTaskRec{PKey: pKey, SortK: i, AId: p.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, taskp: pp}
 			ptS = append(ptS, pt)
 			i++
 		}
@@ -366,7 +398,7 @@ func (a Activities) GenerateTasks(pKey string) prepTaskS {
 	//
 	for p := taskctl.start; p != nil; p = p.nextTask {
 		for _, pp := range p.Task {
-			pt := prepTaskRec{PKey: pKey, SortK: i, AId: p.AId, Type: 'T', time: pp.Time, Text: pp.text, Verbal: pp.verbal}
+			pt := prepTaskRec{PKey: pKey, SortK: i, AId: p.AId, Type: 'T', time: pp.Time, Text: pp.text, Verbal: pp.verbal, taskp: pp}
 			ptS = append(ptS, pt)
 			i++
 		}
@@ -629,6 +661,19 @@ func (s *sessCtx) processBaseRecipe() error {
 	//
 	// Create maps based on AId, Ingredient (plural and singular) and Label (plural and singular)
 	//
+	idx := 0
+	//TODO does id get used??
+	for _, p := range ActivityS {
+		for _, p := range p.Prep {
+			idx++
+			p.id = idx
+		}
+		for _, p := range p.Task {
+			idx++
+			p.id = idx
+		}
+	}
+	//
 	activityStart = &ActivityS[0]
 	ActivityM := make(map[string]*Activity)
 	IngredientM := make(map[string]*Activity)
@@ -636,17 +681,21 @@ func (s *sessCtx) processBaseRecipe() error {
 	for i, v := range ActivityS {
 		aid := strconv.Itoa(v.AId)
 		ActivityM[aid] = &ActivityS[i]
-		ingrd := strings.ToLower(v.Ingredient)
-		IngredientM[ingrd] = &ActivityS[i]
-		if ingrd[len(ingrd)-1] == 's' {
-			// make singular entry as well
-			IngredientM[ingrd[:len(ingrd)-1]] = &ActivityS[i]
+		if len(v.Ingredient) > 0 {
+			ingrd := strings.ToLower(v.Ingredient)
+			IngredientM[ingrd] = &ActivityS[i]
+			if ingrd[len(ingrd)-1] == 's' {
+				// make singular entry as well
+				IngredientM[ingrd[:len(ingrd)-1]] = &ActivityS[i]
+			}
 		}
-		label := strings.ToLower(v.Label)
-		IngredientM[label] = &ActivityS[i]
-		if label[len(label)-1] == 's' {
-			// make singular entry as well
-			IngredientM[label[:len(label)-1]] = &ActivityS[i]
+		if len(v.Label) > 0 {
+			label := strings.ToLower(v.Label)
+			IngredientM[label] = &ActivityS[i]
+			if label[len(label)-1] == 's' {
+				// make singular entry as well
+				IngredientM[label[:len(label)-1]] = &ActivityS[i]
+			}
 		}
 	}
 	// link activities together via next, prev, nextTask, nextPrep pointers. Order in ActivityS is sorted from dynamodb sort key.
@@ -816,14 +865,16 @@ func (s *sessCtx) processBaseRecipe() error {
 			// now compare contains defined in each activity with those registered for
 			// the recipe and those that are single-activity-containers
 			for idx, p := range p {
-				// a prep or task
+				// a prep or task in order specified in JSON not listed in dynamo - beware
 				if len(p.AddToC) > 0 {
-					// activity containers are held in []string
+					//  containers are held in []string
+					// check if container is registered or must be dynamically created
 					for i := 0; i < len(p.AddToC); i++ {
 						// ContainerM contains registered containers
 						cId, ok := ContainerM[strings.TrimSpace(p.AddToC[i])]
 						if !ok {
 							// ContainerSAM contains single activity containers
+							// purpose of SAM is defined after a "."
 							sac := strings.Split(strings.TrimSpace(p.AddToC[i]), ".")
 							p.AddToC[i] = sac[0]
 							if cId, ok = ContainerSAM[sac[0]]; !ok {
@@ -833,7 +884,7 @@ func (s *sessCtx) processBaseRecipe() error {
 							}
 							// Single-Activity-Containers are not pre-configured by the user into the Container repo - to make life easier.
 							// dynamically create a container with a new Cid, and add to ContainerM and update all references to it.
-							cs := sac[0] // original non-activity-specific container name
+							cs := sac[0] // original Single-activity container name
 							c := new(Container)
 							c.Cid = p.AddToC[i] + "-" + strconv.Itoa(ap.AId)
 							switch len(cId.Label) {
@@ -882,6 +933,7 @@ func (s *sessCtx) processBaseRecipe() error {
 						}
 						// activity to container edge
 						p.AddToCp = append(p.AddToCp, cId)
+						p.AllCp = append(p.AllCp, cId)
 						// container to activity edge
 						associatedTask := taskT{Type: l, Activityp: ap, Idx: idx}
 						cId.Activity = append(cId.Activity, associatedTask)
@@ -951,6 +1003,7 @@ func (s *sessCtx) processBaseRecipe() error {
 							cId = c
 						}
 						p.UseCp = append(p.UseCp, cId)
+						p.AllCp = append(p.AllCp, cId)
 						associatedTask := taskT{Type: l, Activityp: ap, Idx: idx}
 						cId.Activity = append(cId.Activity, associatedTask)
 					}
@@ -1018,6 +1071,7 @@ func (s *sessCtx) processBaseRecipe() error {
 							cId = c
 						}
 						p.SourceCp = append(p.SourceCp, cId)
+						p.AllCp = append(p.AllCp, cId)
 						associatedTask := taskT{Type: l, Activityp: ap, Idx: idx}
 						cId.Activity = append(cId.Activity, associatedTask)
 					}
@@ -1028,10 +1082,14 @@ func (s *sessCtx) processBaseRecipe() error {
 
 	// check container is associated with an activity. if not delete from container map.
 	for _, c := range ContainerM {
+		fmt.Printf("Container: Id: [%s]  Type: [%s]  Size:[%s]  Label: [%s] \n", c.Cid, c.Type, c.Measure.Size, c.Label)
+	}
+	for _, c := range ContainerM {
 		if len(c.Activity) == 0 {
 			delete(ContainerM, c.Cid)
 		}
 	}
+
 	// populate prep/task id
 	for i, p := 0, activityStart; p != nil; p = p.next {
 		for _, pp := range p.Prep {
@@ -1380,38 +1438,48 @@ func (s *sessCtx) processBaseRecipe() error {
 		return fmt.Errorf("Error in readBaseRecipe after IndexIngd - %s", err.Error())
 	}
 	//
-	// Post processing of Containers  - assign first index into ptS for each container
+	// Post processing of Containers
 	//
+	// find first reference to Container in the ordered instruction (ptS) list
 	for _, v := range ContainerM {
+		var found bool
 		v.start = 99999
-		for _, t := range v.Activity {
-			// find first appearance in task list (typcially useC or addToC)
-			for l, r := range ptS {
-				l := l + 1
-				if r.AId == t.Activityp.AId {
-					if v.start > l {
-						ContainerM[v.Cid].start = l
+		for _, pt := range ptS {
+			for _, c := range pt.taskp.AllCp {
+				if c == v {
+					if c.start > pt.SortK {
+						c.start = pt.SortK
+						found = true
 						break
 					}
 				}
 			}
+			if found {
+				break
+			}
 		}
 	}
-	// assign last index into ptS for each container.
+	// find last reference to container in ptS list.
+	// in most cases a container is sourced from to represent its last use
 	for _, v := range ContainerM {
-		for _, t := range v.Activity {
-			// find last appearance in task list (typcially useC or sourceC)
-			for i := len(ptS) - 1; i >= 0; i-- {
-				// find last appearance (typically sourceC). Start at last ptS and work backwards
-				if ptS[i].AId == t.Activityp.AId {
-					if v.last < i+1 {
-						ContainerM[v.Cid].last = i + 1
+		var found bool
+		for i := len(ptS) - 1; i >= 0; i-- {
+			// find last appearance (typically sourceC). Start at last ptS and work backwards
+			for _, c := range ptS[i].taskp.AllCp {
+				if c == v {
+					if ptS[i].SortK > c.last {
+						c.last = ptS[i].SortK
+						found = true
 						break
 					}
 				}
 			}
+			if found {
+				break
+			}
 		}
 	}
+	//
 	err = ContainerM.saveContainerUsage(s)
 	if err != nil {
 		return fmt.Errorf("Error in readBaseRecipe after saveContainerUsage - %s", err.Error())

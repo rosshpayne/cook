@@ -1,0 +1,321 @@
+{
+       "Ingredient" : [ 
+        {
+          "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-20-2" },
+                  "SortK" : { "S": "GrapeFBowl" },
+                  "type" : { "S": "Bowl" },
+                  "label" : { "S": "Bowl" },
+                  "measure" : { "M" : { "size" : { "S" : "Medium" }
+                  }},
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "contents" : { "S": "grapefruit mixture" },
+                  "purpose": { "S": "blending" }}
+            }
+         },
+         {
+          "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-20-2" },
+                  "SortK" : { "S": "LemonBowl" },
+                  "type" : { "S": "Bowl" },
+                  "label" : { "S": "Bowl" },
+                  "measure" : { "M" : { "size" : { "S" : "Small" } }},
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "contents" : { "S": "lemon juice" },
+                  "purpose": { "S": "holding" } }
+            }
+         },
+         {
+          "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-20-2" },
+                  "SortK" : { "S": "Sausepan" },
+                  "type" : { "S": "Sausepan" },
+                  "label" : { "S": "Sausepan" },
+                  "measure" : { "M" : { "size" : { "S" : "Small" }
+                  }},
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "contents" : { "S": "grapefruit + sugar" },
+                  "purpose": { "S": "heating" }}
+            }
+         },
+         {
+          "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-20-2" },
+                  "SortK" : { "S": "IceMBowl" },
+                  "type" : { "S": "IceCreamMachineBowl" },
+                  "label" : { "S": "Icecream Bowl" },
+                  "measure" : { "M" : { "size" : { "S" : "Large" }}},
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "contents" : { "S": "icecream" }
+                  }
+            }
+         }
+      ],
+      "Recipe" : [ 
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "R-20" },
+                "SortK" : { "N": "2"},
+                "RName" : { "S": "Campari and grapefruit sorbet"},
+                "Index" : { "SS" : ["sorbet", "campari", "grapefruit","campari sorbet"] }
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-2" },
+                "SortK" : { "N": "10"},
+                "label" : { "S": "grapefruit"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "grapefruit" },
+                "quali" : { "S" : "ruby read" },
+                "iqual" : { "S" : "juice" },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "500" } ,
+                                      "unit": { "S": "ml"}
+                                      }
+                },
+                "altMeasure" : { "M" : { 
+                                      "qty" : { "S" : "2-5" } ,
+                                      "comment" : {"S" : "depending on their size and juiciness"}
+                                      }
+                },
+                 "task" : { "L" : [
+                                { "M" : { 
+                                  "txt" : { "S" : "cut each {ingrd} in half and remove the flesh and place in a {used}. Make sure there a no pips in the flesh." },
+                                  "say" : { "S" : "cut each {ingrd} in half and remove the flesh and place in a {used}. Make sure there a no pips in the flesh" },
+                                  "time" : { "N" : "3" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useD" : { "M" : { "type" : {"S": "blender" },
+                                                     "purpose" : {"S" : "blend grapefruit flesh"},
+                                                     "alternate" : {"S" : "food processor"} }}
+                                    }
+                                },
+                                { "M" : { 
+                                  "txt" : { "S" : "blend until the {ingrd} is crushed." },
+                                  "say" : { "S" : "blend until the {ingrd} is crushed." },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useD" : { "M" : { "type" : {"S": "blender" }
+                                  }}
+                                }
+                                },
+                                { "M" : { 
+                                  "txt" : { "S" : "Strain it into a {addToC} through a {used}. You will need {qty}{unit} of juice." },
+                                  "say" : { "S" : "Strain it into a {addToC} through a {used}. You will need {qty}{unit} of juice." },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : {"SS" : ["GrapeFBowl"] },
+                                  "useD" : { "M" : { "type" : {"S": "fine-mesh sieve" },
+                                                     "purpose" : {"S" : "straining grapefruit flesh"}} 
+                                            }
+                                }
+                                },
+                                { "M" : { 
+                                  "txt" : { "S" : "Feel free to drink any excess or even make a cocktail with it" },
+                                  "say" : { "S" : "Feel free to drink any excess or even make a cocktail with it" },
+                                  "time" : { "N" : "0" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : {"SS" : ["GrapeFBowl"] }
+                                    }
+                                }
+                                ]
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-2" },
+                "SortK" : { "N": "20"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "lemon" },
+                "iQual" : { "S" : "juice" },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "60" } ,
+                                      "unit" : { "S" : "ml" }
+                                      }
+                },
+                "prep" : { "L" : [             
+                                {"M" : { 
+                                  "txt" : { "S" : "Juice enough {ingrd}s to make {qty}{unit}. Set aside." },
+                                  "say" : { "S" : "Juice enough {ingrd}s to make {qty}{unit}. Set aside." },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : {"SS" : ["LemonBowl"] }
+                                }}
+                                ]
+                                         
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-2" },
+                "SortK" : { "N": "30"},
+                "ingrd" : { "S" : "orange juice" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "100" } ,
+                                      "unit": { "S": "ml"}
+                                      }
+                },
+                "prep" : { "L" : [
+                                { "M" : {
+                                  "txt" : { "S" : "Measure {qty}{unit} of {ingrd} and set aside." },
+                                  "say" : { "S" : "Measure {qty}{unit} of {ingrd} and set aside." },
+                                  "time" : { "N" : "15" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useC" : { "SS" : ["MC-S"] }
+                                  }
+                                }
+                                ]
+               },
+               "task" : { "L" : [             
+                                {"M" : { 
+                                  "txt" : { "S" : "Add the {ingrd.20} and {ingrd} to {ingrd.10} juice and mix together." },
+                                  "say" : { "S" : "Add the {ingrd.20} and {ingrd} to {ingrd.10} juice and mix together." },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "sourceC": { "SS" : ["MC-S","LemonBowl" ] },
+                                  "addToC" : {"SS" : ["GrapeFBowl"] }
+                                }}
+                                ]}
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-2" },
+                "SortK" : { "N": "40"},
+                "label" : { "S": "sugar"},
+                "ingrd" : { "S" : "sugar" },
+                "quali" : { "S" : "caster" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "wgt" : { "S" : "200" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                },
+                "task" : { "L" : [
+                                { "M" : {
+                                  "txt" : { "S" : "measure {wgt}{unit} of {ingrd} into {addToC}" },
+                                  "say" : { "S" : "measure {wgt}{unit} of {ingrd} into {addToC}" },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "Sausepan" ] },
+                                  "label" : {"S" : "measure sugar"}} 
+                                },
+                                {"M" : { 
+                                  "txt" : { "S" : "Measure 250ml of {ingrd.10} juice into the sausepan containing the {ingrd}, and set the remaining juice aside"},
+                                  "say" : { "S" : "Measure 250ml of {ingrd.10} juice into the sausepan containing the {ingrd}, and set the remaining juice aside"},
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useC" : { "SS" : ["MC-S"] },
+                                  "addToC" : {"SS" : ["Sausepan"] },
+                                  "sourceC" : {"SS" : ["GrapeFBowl"] }
+                                }},
+                                {"M" : { 
+                                  "txt" : { "S" : "Heat the sausepan over low heat, stirring until the {ingrd} is dissolved then set aside for {time} {unit} to cool" },
+                                  "say" : { "S" : "Heat the sausepan over low heat, stirring until the {ingrd} is dissolved then set aside for {time} {unit} to cool" },
+                                  "time" : { "N" : "10" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useC" : {"SS" : ["Sausepan"] }
+                                }}
+                                ]
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-2" },
+                "SortK" : { "N": "50"},
+                "ingrd" : { "S" : "Campari" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "80" } ,
+                                      "unit": { "S": "ml"}
+                                      }
+                },
+               "task" : { "L" : [ 
+                                {"M" : { 
+                                  "txt" : { "S" : "Once cooled pour into the remaining juice, add {qty}{unit} of {ingrd} and chill completely by setting it over an ice bath or placing it in the fridge" },
+                                  "say" : { "S" : "Once cooled pour into the remaining juice, add {qty}{unit} of {ingrd} and chill completely by setting it over an ice bath or placing it in the fridge" },
+                                  "time" : { "N" : "10" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "sourceC" : {"SS" : ["Sausepan"] },
+                                  "addToC" : {"SS" : ["GrapeFBowl" ] }
+                                }},
+                                {"M" : { 
+                                  "txt" : { "S" : "Once chilled, transfer to an ice cream maker and curn until soft waves form." },
+                                  "say" : { "S" : "nce chilled, transfer to an ice cream maker and curn until soft waves form." },
+                                  "time" : { "N" : "10" },
+                                  "tplus" : { "N" : "5" },
+                                  "unit" : { "S" : "min" },
+                                  "sourceC" : {"SS" : ["GrapeFBowl" ] },
+                                  "addToC" :  {"SS" : ["IceMBowl"] },
+                                  "useD" : { "M" : { "type" : {"S": "ice cream maker" }}
+                                   }
+                                }}
+                                ]
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-2" },
+                "SortK" : { "N": "60"},
+                "Label" : { "S": "Sorbet"},
+                "ingrd" : { "S" : "Sorbet" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+               "task" : { "L" : [ 
+                                {"M" : { 
+                                  "txt" : { "S" : "Transfer the {ingrd} to a container, cover with cling film - so that the cling film is actually touching the surface of the sorbet, to prevent ice particles forming - and seel the container. " },
+                                  "say" : { "S" : "Transfer the {ingrd} to a container, cover with cling film - so that the cling film is actually touching the surface of the sorbet, to prevent ice particles forming - and seel the container. " },
+                                  "time" : { "N" : "10" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : {"SS" : ["SAB-L"] },
+                                  "sourceC" : {"SS" : ["IceMBowl" ] }
+                                   }
+                                },
+                                {"M" : { 
+                                  "txt" : { "S" : "Freeze until firm enough to scoop into a glass, and server" },
+                                  "say" : { "S" : "Freeze until firm enough to scoop into a glass, and server" },
+                                  "time" : { "N" : "10" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" }
+                                   }
+                                }
+                                ]
+                }
+            }
+            }
+            }
+    ]
+}  

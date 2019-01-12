@@ -131,7 +131,6 @@
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "hazelnuts" },
                 "quali" : { "S" : "shelled" },
-                "index" : { "SS" : ["hazelnut cake", "hazelnut"] },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "250" } ,
                                       "unit" : { "S" : "g" }
@@ -332,7 +331,6 @@
                 "label" : { "S": "Ricotta cheese"},
                 "ingrd" : { "S" : "Ricotta" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
-                "index" : { "SS" : ["ricotta cake", "ricotta"] },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "250" }  ,
                                       "unit" : { "S" : "g" }

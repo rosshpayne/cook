@@ -265,8 +265,10 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 	// assign primary key - used for most dyamo accesses
 	//
 	s.pkey = s.reqBkId + "-" + s.reqRId
+	fmt.Println("reqVersion = ", s.reqVersion)
 	if len(s.reqVersion) > 0 {
 		if s.reqVersion != "0" {
+			fmt.Println("..including version id")
 			s.pkey += "-" + s.reqVersion
 		} else {
 			s.reqVersion = ""
