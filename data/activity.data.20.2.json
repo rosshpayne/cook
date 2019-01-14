@@ -46,7 +46,7 @@
                "Item": { 
                   "PKey" : { "S": "C-20-2" },
                   "SortK" : { "S": "IceMBowl" },
-                  "type" : { "S": "IceCreamMachineBowl" },
+                  "type" : { "S": "Bowl" },
                   "label" : { "S": "Icecream Bowl" },
                   "measure" : { "M" : { "size" : { "S" : "Large" }}},
                   "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
@@ -300,7 +300,7 @@
                                   "time" : { "N" : "10" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
-                                  "addToC" : {"SS" : ["SAB-L"] },
+                                  "addToC" : {"SS" : ["SAB-L.storing.sorbet"] },
                                   "sourceC" : {"SS" : ["IceMBowl" ] }
                                    }
                                 },

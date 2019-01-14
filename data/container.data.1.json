@@ -190,8 +190,7 @@
                   "measure" : { "M" : { 
                                       "size" : { "S" : "1.5 Cup" } 
                                       }
-                              },
-                  "purpose" : {"S":"measuring"}
+                              }
                    }
                }
             },
@@ -205,8 +204,7 @@
                   "measure" : { "M" : { 
                                       "size" : { "S" : "2.5 Cup" } 
                                       }
-                              },
-                  "purpose" : {"S":"measuring"}
+                              }
                    }
                }
             },
@@ -216,12 +214,11 @@
                   "PKey" : { "S": "C-0-0" },
                   "SortK" : { "S": "MC-L" },
                   "label" : { "S" : "Measuring Bowl" },
-                  "type" : { "S": "Measuring Bowl" },
+                  "type" : { "S": "Measuring Cup" },
                   "measure" : { "M" : { 
                                       "size" : { "S" : "4.5 Cup" } 
                                       }
-                              },
-                  "purpose" : {"S":"measuring"}
+                              }
                    }
                }
             }
