@@ -56,11 +56,15 @@ type Unit struct {
 }
 
 type MeasureCT struct {
-	Quantity string `json:"qty"`
-	Size     string `json:"size"`
-	Diameter string `json:"diameter"`
-	Height   string `json:"height"`
-	Unit     string `json:"unit`
+	Quantity  string `json:"qty"`
+	Size      string `json:"size"`
+	Shape     string `json:"shape"`
+	Dimension string `json:"dim"`
+	//	Diameter string `json:"diameter"`
+	//	Square   string `json:"square"`
+	//	Rect     string `json:"rect"`
+	Height string `json:"height"`
+	Unit   string `json:"unit`
 }
 
 type taskT struct {
@@ -71,18 +75,19 @@ type taskT struct {
 
 type Container struct {
 	// Rid      string     `json:"PKey"`
-	Cid      string     `json:"SortK"`
-	Label    string     `json:"label"`
-	Type     string     `json:"type"`
-	Purpose  string     `json:"purpose"`
-	Coord    [2]float32 `json:"coord"`
-	Measure  *MeasureCT `json:"measure"`
-	Contains string     `json:"contents"`
-	Message  string     `json:"message"`
-	start    int        // first id in recipe tasks where container is used
-	last     int        // last id in recipe tasks where container is sourced from or recipe is complete.
-	reused   int        // links containers that can be the same physical container.
-	Activity []taskT    // slice of tasks (Prep and Task activites) associated with container
+	Cid        string     `json:"SortK"`
+	Label      string     `json:"label"`
+	Type       string     `json:"type"`
+	Purpose    string     `json:"purpose"`
+	Coord      [2]float32 `json:"coord"`
+	Measure    *MeasureCT `json:"measure"`
+	AltMeasure *MeasureCT `json:"altMeasure"`
+	Contains   string     `json:"contents"`
+	Message    string     `json:"message"`
+	start      int        // first id in recipe tasks where container is used
+	last       int        // last id in recipe tasks where container is sourced from or recipe is complete.
+	reused     int        // links containers that can be the same physical container.
+	Activity   []taskT    // slice of tasks (Prep and Task activites) associated with container
 }
 
 type DeviceT struct {
@@ -147,6 +152,7 @@ type Activity struct {
 	Ingredient    string      `json:"ingrd"`    //
 	IngrdQualifer string      `json:"iQual"`    // (append) to ingredient
 	QualiferIngrd string      `json:"quali"`    // prepend  to ingredient.
+	QualMeasure   string      `json:"qualm"`    // qualifer before measure in ingredients output e.g. <qualm> of <measure> a <ingrd>
 	AltIngrd      []string    `json:"altIngrd"` // key into Ingredient table - used for alternate ingredients only
 	Measure       *MeasureT   `json:"measure"`
 	AltMeasure    *MeasureT   `json:"altMeasure"`
@@ -186,6 +192,47 @@ type prepCtl struct {
 }
 
 var prepctl prepCtl = prepCtl{}
+
+func (d *DeviceT) String() (string, error) {
+	var s string
+	if len(d.Temp) > 0 {
+		if len(d.Unit) == 0 {
+			return "", fmt.Errorf("No Unit specified for device [%s] with Temp in Activity", d.Type)
+		}
+		t := strings.Split(d.Temp, "/")
+		if len(t) > 0 {
+			// for an oven device, a/b means <a><unit> fan/ <b><unit> nofan / setting
+			s = t[0] + "\u00B0" + d.Unit + "/" + t[1] + "\u00B0" + d.Unit + " Fan"
+		} else {
+			s = d.Temp + "\u00B0" + d.Unit
+		}
+	}
+	if len(d.Set) > 0 {
+		if len(s) > 0 {
+			s += "/" + d.Set
+		} else {
+			s = d.Set
+		}
+	}
+	return s, nil
+}
+
+func (m *MeasureCT) String() string {
+	var s string
+	if len(m.Shape) > 0 {
+		s = m.Shape + " "
+	}
+	if len(m.Dimension) > 0 {
+		s += m.Dimension
+	}
+	if len(m.Height) > 0 {
+		s += "x" + m.Height
+	}
+	if len(m.Unit) > 0 {
+		s += m.Unit
+	}
+	return s
+}
 
 func (s *sessCtx) processBaseRecipe() error {
 	//
@@ -334,7 +381,6 @@ func (s *sessCtx) processBaseRecipe() error {
 	// Container lookup - given Cid give me pointer to the continer.
 	ContainerM = make(ContainerMap, int(*result.Count))
 	itemc := make([]*Container, int(*result.Count))
-	fmt.Println("**** ", len(itemc))
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &itemc)
 	if err != nil {
 		return fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
@@ -342,9 +388,9 @@ func (s *sessCtx) processBaseRecipe() error {
 	for _, v := range itemc {
 		ContainerM[v.Cid] = v
 	}
-	for k, v := range ContainerM {
-		fmt.Printf("%s - %#v\n", k, v)
-	}
+	// for k, v := range ContainerM {
+	// 	fmt.Printf("%s - %#v\n", k, v)
+	// }
 	// common containers - not recipe specific
 	kcond = expression.KeyEqual(expression.Key("PKey"), expression.Value("C-0-0"))
 	expr, err = expression.NewBuilder().WithKeyCondition(kcond).Build()
@@ -370,7 +416,6 @@ func (s *sessCtx) processBaseRecipe() error {
 	ContainerSAM := make(ContainerMap, int(*result.Count))
 	itemc = nil
 	itemc = make([]*Container, int(*result.Count))
-	fmt.Println("**** ", len(itemc))
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &itemc)
 	if err != nil {
 		return fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
@@ -378,9 +423,9 @@ func (s *sessCtx) processBaseRecipe() error {
 	for _, v := range itemc {
 		ContainerSAM[v.Cid] = v
 	}
-	for k, v := range ContainerSAM {
-		fmt.Printf("%s - %#v\n", k, v)
-	}
+	// for k, v := range ContainerSAM {
+	// 	fmt.Printf("%s - %#v\n", k, v)
+	// }
 	itemc = nil
 	//
 	// Table:  Unit
@@ -410,9 +455,9 @@ func (s *sessCtx) processBaseRecipe() error {
 	for _, v := range unit {
 		unitM[v.Slabel] = v
 	}
-	for k, v := range unitM {
-		fmt.Printf("%s - %#v\n", k, v)
-	}
+	// for k, v := range unitM {
+	// 	fmt.Printf("%s - %#v\n", k, v)
+	// }
 	unit = nil
 	//
 	//  Post fetch processing - assign container pointers in Activity and validate that all containers referenced exist
@@ -774,6 +819,8 @@ func (s *sessCtx) processBaseRecipe() error {
 		b       strings.Builder // supports io.Write write expanded text/verbal text to this buffer before saving to Task or Verbal fields
 		context int
 		str     string
+		tclose  int
+		topen   int
 	)
 	//
 	//  replace all {tag} in text and verbal for each activity. Ignore Link'd activites - they are only relevant at print time
@@ -792,7 +839,9 @@ func (s *sessCtx) processBaseRecipe() error {
 					// perform over slice of preps, tasks
 					switch interactionType {
 					case text:
-						str = pt.Text
+						str = strings.TrimLeft(pt.Text, " ")
+						s := str[0]
+						str = strings.ToUpper(string(s)) + str[1:]
 					case voice:
 						str = pt.Verbal
 					}
@@ -809,20 +858,30 @@ func (s *sessCtx) processBaseRecipe() error {
 						b.Reset()
 						continue
 					}
-					for tclose, topen := 0, strings.IndexByte(str, '{'); topen != -1; {
+					for tclose, topen = 0, strings.IndexByte(str, '{'); topen != -1; {
 						var (
 							el  string
 							el2 string
 						)
 						p := p
 						b.WriteString(str[tclose:topen])
+						nextclose := strings.IndexByte(str[topen:], '}')
+						if nextclose == -1 {
+							return fmt.Errorf("Error: closing } not found in Activity [%d] string [%s] ", p.AId, str)
+						}
+						nextopen := strings.IndexByte(str[topen+1:], '{')
+						if nextopen != -1 {
+							if nextclose > nextopen {
+								return fmt.Errorf("Error: closing } not found in Activity [%d] string [%s] ", p.AId, str)
+							}
+						}
 						tclose += strings.IndexByte(str[tclose:], '}')
 						tclose_ := tclose
 						// examine tag to see if it references entities outside of current activity
 						//   currenlty only device oven and noncurrent activity is supported
 						if tdot := strings.IndexByte(str[topen+1:tclose], '.'); tdot > 0 {
 							// dot notation used. Breakdown object being referenced.
-							s := strings.SplitN(str[topen+1:tclose], ".", 2)
+							s := strings.SplitN(strings.ToLower(str[topen+1:tclose]), ".", 2)
 							el, el2 = s[0], s[1]
 							if el == "ingrd" {
 								// reference to attribute in noncurrent activity e.g. {ingrd.30}
@@ -831,9 +890,9 @@ func (s *sessCtx) processBaseRecipe() error {
 								//el = str[topen+1 : tclose_]
 							}
 						} else {
-							el = str[topen+1 : tclose_]
+							el, el2 = strings.ToLower(str[topen+1:tclose_]), ""
 						}
-						switch strings.ToLower(el) {
+						switch el {
 						case "device":
 							s := strings.Split(el2, ".")
 							if ov, ok := DeviceM[strconv.Itoa(pt.id)+"-"+s[0]]; ok {
@@ -854,28 +913,39 @@ func (s *sessCtx) processBaseRecipe() error {
 							fmt.Fprintf(&b, "%s", p.IngrdQualifer)
 						case "quali":
 							fmt.Fprintf(&b, "%s", p.QualiferIngrd)
-						case "csize":
-							if len(pt.AddToCp) > 0 {
-								if pt.AddToCp[0].Measure != nil {
-									m := pt.AddToCp[0].Measure
-									switch {
-									case len(m.Diameter) > 0 && len(m.Height) > 0:
-										fmt.Fprintf(&b, "%s", m.Diameter+"x"+m.Height+m.Unit)
-									case len(m.Diameter) > 0:
-										fmt.Fprintf(&b, "%s", m.Diameter+m.Unit)
-									case len(m.Size) > 0:
-										fmt.Fprintf(&b, "%s", m.Size)
-									}
-								} else {
-									return fmt.Errorf("in processBaseRecipe. No measure defined for container in Activity [%d]\n", p.AId)
+						case "usec", "addtoc":
+							var c *Container
+							if el == "usec" {
+								c = pt.UseCp[0]
+							} else {
+								c = pt.AddToCp[0]
+							}
+							var m *MeasureCT
+							// useC.form
+							if len(el2) > 0 {
+								switch el2 {
+								case "form":
+									m = c.Measure
+								case "alt":
+									m = c.AltMeasure
+								default:
+									return fmt.Errorf(`Error: useC or addtoC tag not followed by "form" or "alt" type in AId [%d] [%s]`, p.AId, str)
+								}
+								if m != nil {
+									s := m.String()
+									fmt.Fprintf(&b, "%s", strings.ToLower(s)+" "+c.Label)
 								}
 							} else {
-								return fmt.Errorf("in processBaseRecipe. AddtoC not defined for prep/task in Activity [%d]\n", p.AId)
-							}
-						case "addtoc":
-							if pt.AddToCp[0].Measure != nil {
-								c := pt.AddToCp[0]
-								fmt.Fprintf(&b, "%s", c.Measure.Size+" "+c.Label)
+								m = c.Measure
+								if m != nil {
+									if len(m.Size) == 0 {
+										fmt.Fprintf(&b, "%s", strings.ToLower("medium "+c.Label))
+									} else {
+										fmt.Fprintf(&b, "%s", strings.ToLower(m.Size+" "+c.Label))
+									}
+								} else {
+									fmt.Fprintf(&b, "%s", strings.ToLower("medium "+c.Label))
+								}
 							}
 						case "qty":
 							context = measure
@@ -904,20 +974,26 @@ func (s *sessCtx) processBaseRecipe() error {
 							if pt.UseDevice == nil {
 								return fmt.Errorf("in processBaseRecipe. UseDevice attribute not defined for Activity [%d]\n", p.AId)
 							}
-							fmt.Fprintf(&b, "%s", pt.UseDevice.Type)
+							fmt.Fprintf(&b, "%s", strings.ToLower(pt.UseDevice.Type))
 							context = device
 						case "alternate", "devicealt":
 							if pt.UseDevice == nil {
 								return fmt.Errorf("in processBaseRecipe. UseDevice attribute not defined for Activity [%d]\n", p.AId)
 							}
-							fmt.Fprintf(&b, "%s", pt.UseDevice.Alternate)
+							fmt.Fprintf(&b, "%s", strings.ToLower(pt.UseDevice.Alternate))
 							context = device
+						case "qualm":
+							fmt.Fprintf(&b, "%s", strings.ToLower(p.QualMeasure))
 						case "temp":
 							if pt.UseDevice == nil {
 								return fmt.Errorf("in processBaseRecipe. UseDevice attribute not defined for Activity [%d]\n", p.AId)
 							}
 							context = device
-							fmt.Fprintf(&b, "%s", pt.UseDevice.Temp)
+							s, err := pt.UseDevice.String()
+							if err != nil {
+								return err
+							}
+							fmt.Fprintf(&b, "%s", s)
 						case "label":
 							fmt.Fprintf(&b, "%s", pt.Label)
 						case "unit":
@@ -984,6 +1060,9 @@ func (s *sessCtx) processBaseRecipe() error {
 						} else {
 							topen += tclose
 						}
+					}
+					if topen == -1 && strings.IndexByte(str[tclose:], '}') != -1 {
+						return fmt.Errorf("Error: closing } found with no open { in Activity [%d] string [%s] ", p.AId, str)
 					}
 					switch interactionType {
 					case text:
@@ -1106,6 +1185,7 @@ func (s *sessCtx) processBaseRecipe() error {
 	if err != nil {
 		return fmt.Errorf("Error in readBaseRecipe after saveDevice - %s", err.Error())
 	}
+
 	return nil
 
 } //

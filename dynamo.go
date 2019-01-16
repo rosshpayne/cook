@@ -46,6 +46,17 @@ type mRecT struct {
 	Quantity string
 }
 
+type indexRecT struct {
+	PKey     string
+	SortK    string
+	PreQual  string
+	PostQual string
+	Quantity string
+	BkName   string
+	RName    string
+	Authors  string
+}
+
 // use this struct as key into map
 type mkey struct {
 	size string
@@ -200,17 +211,7 @@ func loadNonIngredientsMap(svc *dynamodb.DynamoDB) (map[string]bool, error) {
 
 }
 
-func (s sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[string]*Activity) error {
-	type indexRecT struct {
-		PKey     string
-		SortK    string
-		PreQual  string
-		PostQual string
-		Quantity string
-		BkName   string
-		RName    string
-		Authors  string
-	}
+func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[string]*Activity) error {
 
 	var indexRecS []indexRecT
 	indexRow := make(map[string]bool)
@@ -229,10 +230,10 @@ func (s sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[st
 				return fmt.Errorf("failed in IndexIngd to PutItem into Ingredient table - %v", err)
 			}
 		}
-		indexRecS = nil // free memory. Probably redundant as its local to this func so once func exists memory would be freed anyway.
+		s.indexRecs = indexRecS // free memory. Probably redundant as its local to this func so once func exists memory would be freed anyway.
 		return nil
 	}
-	//
+
 	indexBasicEntry := func(entry string) {
 		//
 		irec := indexRecT{SortK: s.reqBkId + "-" + s.reqRId, BkName: s.reqBkName, RName: s.reqRName, Authors: s.authors}
@@ -344,7 +345,14 @@ func (s sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[st
 			AddEntry(e[1] + " " + e[2])
 		}
 	}
-	err := saveIngdIndex()
+	//TODO: determine if running as Lambda or standalone executable
+	// Before saving index to table generate slot entries
+	s.indexRecs = indexRecS
+	err := s.generateSlotEntries()
+	if err != nil {
+		return fmt.Errorf("Error in generateAndSaveIndex at  generateSlotEntries - %s", err.Error())
+	}
+	err = saveIngdIndex()
 	return err
 }
 
@@ -702,6 +710,7 @@ func (s sessCtx) generateSlotEntries() error {
 		PKey string `json="PKey"`
 	}
 	type SrchKeyS Index
+	var str string
 	proj := expression.NamesList(expression.Name("PKey"))
 	expr, err := expression.NewBuilder().WithProjection(proj).Build()
 	if err != nil {
@@ -718,32 +727,54 @@ func (s sessCtx) generateSlotEntries() error {
 	if err != nil {
 		return fmt.Errorf("%s", "Error in scan of generateSlotEntries - "+err.Error())
 	}
-	fmt.Println("Num rows =", int(*result.Count))
+	srchKeys := make(map[string]bool)
 	skey := make([]Index, int(*result.Count))
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &skey)
 	if err != nil {
 		return fmt.Errorf("%s", "Error in UnmarshalMap of unit table: "+err.Error())
 	}
+	//
 	f, err := os.OpenFile("slot.entries", os.O_RDWR|os.O_CREATE, 0755)
 	if err != nil {
 		panic(err)
 	}
-	done := make(map[string]bool)
-	for _, v := range skey {
-		if len(v.PKey) > 2 && v.PKey[:2] != "C-" && v.PKey[len(v.PKey)-1] != 's' {
-			if !done[v.PKey] {
-				done[v.PKey] = true
-				str := v.PKey + ",," + v.PKey + "s" + "\n"
-				_, err := f.Write([]byte(str))
-				if err != nil {
-					return fmt.Errorf("Write error in generateSlotEntries - %s", err.Error())
-				}
+	//
+	write := func(PKey string) error {
+		if !srchKeys[PKey] {
+			srchKeys[PKey] = true
+			if PKey[len(PKey)-1] != 's' {
+				str = PKey + ",," + PKey + "s" + "\n"
+			} else {
+				str = PKey + ",," + "\n"
 			}
+			_, err := f.Write([]byte(str))
+			if err != nil {
+				return fmt.Errorf("Write error in generateSlotEntries - %s", err.Error())
+			}
+		}
+		return nil
+	}
+	//
+	for _, v := range skey {
+		if len(v.PKey) > 2 && v.PKey[:2] != "C-" {
+			write(v.PKey)
+		}
+	}
+	skey = nil
+	//
+	//  merge s.indexRecs.PKey entries to skey and printout new slot entries to file slot.entries
+	//
+	fmt.Println()
+	for _, v := range s.indexRecs {
+		err = write(v.PKey)
+		if err != nil {
+			return err
 		}
 	}
 	if err := f.Close(); err != nil {
 		panic(err)
 	}
+	skey = nil
 	return nil
 }
 
