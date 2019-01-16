@@ -16,10 +16,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-
 	//"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-lambda-go/lambda"
-	_ "github.com/aws/aws-lambda-go/lambdacontext"
+	//"github.com/aws/aws-lambda-go/lambda"
+	// "github.com/aws/aws-lambda-go/lambdacontext"
 )
 
 //TODO
@@ -41,12 +40,13 @@ type sessCtx struct {
 	swapBkName     string
 	swapBkId       string
 	authorS        []string
-	authors        string   // siRNames of the first two authors
-	index          []string // entries under which recipe is indexed. Sourced from recipe not ingredient.
-	dbatchNum      string   // mulit-records sent to display in fixed batch sizes (6 say).
-	reset          bool     // zeros []RecId in session table during changes to recipe, as []RecId is recipe dependent
-	curreq         int      // bookrecipe_, object_(ingredient,task,container,utensil), listing_(next,prev,goto,modify,repeat)
-	questionId     int      // what question is the user responding to with a yes|no.
+	authors        string      // siRNames of the first two authors
+	index          []string    // user defined entries under which recipe is indexed. Sourced from recipe not ingredient.
+	indexRecs      []indexRecT // processed index entries as saved to dynamo
+	dbatchNum      string      // mulit-records sent to display in fixed batch sizes (6 say).
+	reset          bool        // zeros []RecId in session table during changes to recipe, as []RecId is recipe dependent
+	curreq         int         // bookrecipe_, object_(ingredient,task,container,utensil), listing_(next,prev,goto,modify,repeat)
+	questionId     int         // what question is the user responding to with a yes|no.
 	dynamodbSvc    *dynamodb.DynamoDB
 	closeBook      bool
 	object         string  //container,ingredient,instruction,utensil. Sourced from Sessions table or request
@@ -653,7 +653,7 @@ func handler(request InputEvent) (RespEvent, error) {
 		if err != nil {
 			break
 		}
-		sessctx.abort = true
+		sessctx.abort, sessctx.reset = true, true
 	//
 	case "load":
 		sessctx.reqBkId = request.QueryStringParameters["bkid"]
@@ -674,8 +674,14 @@ func handler(request InputEvent) (RespEvent, error) {
 		if err != nil {
 			break
 		}
-		sessctx.abort = true
+		sessctx.abort, sessctx.reset = true, true
 	//
+	case "genSlotValues":
+		err = sessctx.generateSlotEntries()
+		if err != nil {
+			break
+		}
+		sessctx.abort, sessctx.reset = true, true
 	case "book", "recipe", "select", "search", "list", "yesno", "version":
 		sessctx.curreq = bookrecipe_
 		sessctx.request = pathItem[0]
@@ -775,5 +781,13 @@ func handler(request InputEvent) (RespEvent, error) {
 }
 
 func main() {
-	lambda.Start(handler)
+	//lambda.Start(handler)
+	p1 := InputEvent{Path: "load", Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=20&rid=4"}
+
+	p, _ := handler(p1)
+	if len(p.Error) > 0 {
+		fmt.Printf("%#v\n", p.Error)
+	} else {
+		fmt.Printf("%s\n", p.Text)
+	}
 }
