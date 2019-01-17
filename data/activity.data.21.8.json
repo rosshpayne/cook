@@ -204,14 +204,14 @@
                 "quali" : { "S" : "caster" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
-                                      "wgt" : { "S" : "250" } ,
+                                      "qty" : { "S" : "250" } ,
                                       "unit" : { "S" : "g" }
                                       }
                 },
                 "prep" : { "L" : [
                                 { "M" : {
-                                  "txt" : { "S" : "measure {wgt}{unit} of {ingrd} into {addToC} and set aside" },
-                                  "say" : { "S" : "measure {wgt}{unit} of {ingrd} into {addToC} and set aside" },
+                                  "txt" : { "S" : "measure {qty}{unit} of {ingrd} into {addToC} and set aside" },
+                                  "say" : { "S" : "measure {qty}{unit} of {ingrd} into {addToC} and set aside" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -329,9 +329,9 @@
                 "PKey" : { "S": "A-21-8" },
                 "SortK" : { "N": "70"},
                 "label" : { "S": "lemon zest"},
-                "ingrd" : { "S" : "lemon" },
-                "quali" : { "S" : "finely grated" },
-                "iQual" : { "S" : "zest" },
+                "ingrd" : { "S" : "lemons" },
+                "iQual" : { "S" : "(finely grated)" },
+                "qualm" : { "S" : "zest of" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "5" } 
@@ -339,8 +339,8 @@
                 },
                "prep" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "finely grate the {iQual} of {qty} {ingrd}s and set aside" },
-                                  "say" : { "S" : "finely grate the {iQual} of {qty} {ingrd}s and set aside" },
+                                  "txt" : { "S" : "finely grate the {qualm} {qty} {ingrd} and set aside" },
+                                  "say" : { "S" : "finely grate the {qualm} {qty} {ingrd} and set aside" },
                                   "time" : { "N" : "3" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -382,7 +382,7 @@
                 "SortK" : { "N": "80"},
                 "label" : { "S": "flour"},
                 "ingrd" : { "S" : "Flour" },
-                "iQual" : { "S" : "plan" },
+                "quali" : { "S" : "plain" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "65" } ,
@@ -404,8 +404,8 @@
                                   }}
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "Sift {qty}{unit} of {iQual} {ingrd} and set aside" },
-                                  "say" : { "S" : "Sift {qty}{unit} of {iQual} {ingrd} and set aside" },
+                                  "txt" : { "S" : "Sift {qty}{unit} of {quali} {ingrd} and set aside" },
+                                  "say" : { "S" : "Sift {qty}{unit} of {quali} {ingrd} and set aside" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },

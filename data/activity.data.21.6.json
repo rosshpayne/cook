@@ -62,8 +62,8 @@
                 "label" : { "S": "butter"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "butter" },
-                "iQual" : { "S" : "unsalted" },
-                "quali" : { "S" : "softened" },
+                "quali" : { "S" : "unsalted" },
+                "iQual" : { "S" : "softened" },
                  "measure" : { "M" : { 
                                       "qty" : { "S" : "50" },
                                       "unit" : {"S" : "g" }
@@ -71,8 +71,8 @@
                  },
                  "prep" : { "L" : [
                                 { "M" : { 
-                                  "txt" : { "S" : "cut {qty}{unit} of {iQual} {ingrd} into 2cm peices and set aside while it comes to room temperature" },
-                                  "say" : { "S" : "cut {qty}{unit} of {iQual} {ingrd} into 2cm peices and set aside while it comes to room temperature" },
+                                  "txt" : { "S" : "cut {qty}{unit} of {quali} {ingrd} into 2cm peices and set aside while it comes to room temperature" },
+                                  "say" : { "S" : "cut {qty}{unit} of {quali} {ingrd} into 2cm peices and set aside while it comes to room temperature" },
                                   "time" : { "N" : "20" },
                                   "tplus" : { "N" : "0" },
                                   "parallel" : {"BOOL" : true } ,
@@ -163,11 +163,10 @@
                 "SortK" : { "N": "40"},
                 "label" : { "S": "garlic"},
                 "ingrd" : { "S" : "garlic" },
-                "iQual" : { "S" : "cloves" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "2" } ,
-                                      "unit" : { "S" : "cloves" }
+                                      "unit" : { "S" : "clove" }
                                       }
                 },
                 "prep" : { "L" : [
@@ -206,18 +205,18 @@
                 "PKey" : { "S": "A-21-6" },
                 "SortK" : { "N": "50"},
                 "label" : { "S": "sage"},
-                "ingrd" : { "S" : "sage" },
+                "ingrd" : { "S" : "sage leaves" },
                 "quali" : { "S" : "fresh" },
-                "iQual" : { "S" : "leaves" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
-                                      "qty" : { "S" : "a bunch" } 
+                                      "qty" : { "S" : "1" } ,
+                                      "unit" : { "S" : "bunch" } 
                                       }
                 },
                "prep" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Separate the {ingrd} {iQual} and make sure they are clean. Set aside" },
-                                  "say" : { "S" : "Separate the {ingrd} {iQual} and make sure they are clean. Set aside" },
+                                  "txt" : { "S" : "Separate the {ingrd} and make sure they are clean. Set aside" },
+                                  "say" : { "S" : "Separate the {ingrd} and make sure they are clean. Set aside" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -251,7 +250,7 @@
                 "SortK" : { "N": "60"},
                 "label" : { "S": "partridge"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
-                "ingrd" : { "S" : "partridge"},
+                "ingrd" : { "S" : "partridges"},
                 "quali" : { "S" : "prepared grey-legged "},
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "3" } 
@@ -351,7 +350,7 @@
                 "label" : { "S": "butter"},
                 "ingrd" : { "S" : "butter" },
                 "quali" : { "S" : "unsalted" },
-                "iQual" : { "S" : "softened" },
+                "iQual" : { "S" : ", softened" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "120" } ,

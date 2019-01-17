@@ -424,7 +424,7 @@
                 "label" : { "S": "vanilla pod"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "vanilla pod" },
-                "qualm" : { "S" : "scrapped seeds " },
+                "qualm" : { "S" : "scrapped seeds" },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "1/2" } 
                                       }

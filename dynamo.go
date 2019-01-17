@@ -249,15 +249,15 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 		m := ap.Measure
 		if m != nil {
 			if len(m.Quantity) > 0 && len(m.Unit) > 0 {
-				if len(m.Weight) > 0 {
-					irec.Quantity = m.Quantity + " " + ap.Ingredient + " of " + m.Weight + m.Unit + " each"
-				}
-				if len(m.Volume) > 0 {
-					irec.Quantity = m.Quantity + " " + ap.Ingredient + " of " + m.Volume + m.Unit + " each"
-				}
-				if len(m.Volume) == 0 && len(m.Weight) == 0 {
-					irec.Quantity = ap.Measure.Quantity + ap.Measure.Unit + " " + ap.Ingredient
-				}
+				// if len(m.Weight) > 0 {
+				// 	irec.Quantity = m.Quantity + " " + ap.Ingredient + " of " + m.Weight + m.Unit + " each"
+				// }
+				// if len(m.Volume) > 0 {
+				// 	irec.Quantity = m.Quantity + " " + ap.Ingredient + " of " + m.Volume + m.Unit + " each"
+				// }
+				// if len(m.Volume) == 0 && len(m.Weight) == 0 {
+				irec.Quantity = ap.Measure.Quantity + ap.Measure.Unit + " " + ap.Ingredient
+				// }
 			} else {
 				if len(m.Size) > 0 {
 					irec.Quantity = m.Quantity + " " + m.Size + " of " + ap.Ingredient

@@ -309,18 +309,18 @@ func (a Activities) PrintRecipe(rId string) (prepTaskS, string) {
 	}
 	b.WriteString("] } ")
 	return ptS, b.String()
-} // PrintRecipe
+}
 
 // Recipe table
 type PkeysT1 struct {
-	PKey  string `json="PKey"`
+	PKey  string `json:"PKey"`
 	SortK int    `json='SortK"`
 }
 
 // Ingredient table
 type PkeysT2 struct {
-	PKey  string `json="PKey"`
-	SortK string `json='SortK"`
+	PKey  string `json:"PKey"`
+	SortK string `json:"SortK"`
 }
 
 // contains meta-data that defines what is purged

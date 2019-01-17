@@ -49,10 +49,11 @@ type respT struct {
 }
 
 type Unit struct {
-	Unit   string `json:"unit"`
+	Unit   string `json:"unit"`   // as used in recipe json
 	Slabel string `json:"slabel"` // short label
 	Llabel string `json:"llabel"` // long label
 	Desc   string `json:"desc"`
+	Print  string `json:"print"` // short or long label when printing unit in ingredients listing.
 }
 
 type MeasureCT struct {
@@ -126,24 +127,25 @@ type PerformT struct {
 }
 
 type MeasureT struct {
-	type_     int    // 0 - normal qty being vol/weigth, 1 - qty being number of, 2 - qty being weight each, 3 - qty being vol each
+	//	type_     int    // 0 - normal qty being vol/weigth, 1 - qty being number of, 2 - qty being weight each, 3 - qty being vol each
 	Quantity  string `json:"qty"`
 	VerbalQty string `json:"vQty"`
-	Weight    string `json:"wgt"`
-	Volume    string `json:"vol"`
-	Size      string `json:"size"`
-	Unit      string `json:"unit"`
-	Comment   string `json:"comment"`
+	//	Weight    string `json:"wgt"`
+	//	Volume    string `json:"vol"`
+	Size string `json:"size"`
+	Unit string `json:"unit"`
+	//	Comment   string `json:"comment"`
+	unitMap map[string]*Unit
 }
 
 // used for alternative ingredients only
-type IngredientT struct {
-	Name          string
-	IngrdQualifer string `json:"iQual"` // (append) to ingredient
-	QualiferIngrd string `json:"quali"` // prepend  to ingredient.
-	Type          string `json:"iType"`
-	Measure       *MeasureT
-}
+// type IngredientT struct {
+// 	Name          string
+// 	IngrdQualifer string `json:"iQual"` // (append) to ingredient
+// 	QualiferIngrd string `json:"quali"` // prepend  to ingredient.
+// 	Type          string `json:"iType"`
+// 	Measure       *MeasureT
+// }
 
 type Activity struct {
 	// Pkey          string     `json:"PKey"`
@@ -156,10 +158,12 @@ type Activity struct {
 	AltIngrd      []string    `json:"altIngrd"` // key into Ingredient table - used for alternate ingredients only
 	Measure       *MeasureT   `json:"measure"`
 	AltMeasure    *MeasureT   `json:"altMeasure"`
+	Part          string      `json:"part"` // ingredients are aggregated by part
 	Overview      string      `json:"ovv"`
 	Coord         [2]float32  // X,Y
 	Task          []*PerformT `json:"task"`
 	Prep          []*PerformT `json:"prep"`
+	unitMap       map[string]*Unit
 	next          *Activity
 	prev          *Activity
 	nextTask      *Activity
@@ -193,6 +197,18 @@ type prepCtl struct {
 
 var prepctl prepCtl = prepCtl{}
 
+func (u *Unit) String() string {
+	// mode: Print ingredients
+	switch u.Print {
+	case "s":
+		return u.Slabel
+	case "l":
+		return u.Llabel
+	default:
+		return u.Slabel
+	}
+}
+
 func (d *DeviceT) String() (string, error) {
 	var s string
 	if len(d.Temp) > 0 {
@@ -200,7 +216,7 @@ func (d *DeviceT) String() (string, error) {
 			return "", fmt.Errorf("No Unit specified for device [%s] with Temp in Activity", d.Type)
 		}
 		t := strings.Split(d.Temp, "/")
-		if len(t) > 0 {
+		if len(t) > 1 {
 			// for an oven device, a/b means <a><unit> fan/ <b><unit> nofan / setting
 			s = t[0] + "\u00B0" + d.Unit + "/" + t[1] + "\u00B0" + d.Unit + " Fan"
 		} else {
@@ -232,6 +248,204 @@ func (m *MeasureCT) String() string {
 		s += m.Unit
 	}
 	return s
+}
+
+var unitMap map[string]*Unit
+
+func (m MeasureT) String() string {
+	if len(m.Quantity) > 0 && len(m.Size) > 0 {
+		return m.Quantity + " " + m.Size
+	}
+	if len(m.Quantity) > 0 && len(m.Unit) > 0 {
+
+		if m.Unit == "tsp" || m.Unit == "tbsp" {
+			if strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0 || m.Quantity == "1" {
+				return m.Quantity + " " + unitMap[m.Unit].String() + " of"
+			} else {
+				return m.Quantity + " " + unitMap[m.Unit].String() + "s" + " of"
+			}
+		}
+		if strings.Index(strings.ToLower(m.Unit), "clove") >= 0 {
+			if strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0 || m.Quantity == "1" {
+				return m.Quantity + " " + m.Unit + " of"
+			} else {
+				return m.Quantity + " " + m.Unit + "s" + " of"
+			}
+		}
+		if strings.Index(strings.ToLower(m.Unit), "bunch") >= 0 {
+			if strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0 || m.Quantity == "1" {
+				return m.Quantity + " " + m.Unit + " of"
+			} else {
+				return m.Quantity + " " + m.Unit + "es" + " of"
+			}
+		}
+		if strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0 || m.Quantity == "1" {
+			return m.Quantity + " " + unitMap[m.Unit].String() + " of"
+		} else {
+			if unitMap[m.Unit].Print == "l" {
+				return m.Quantity + " " + unitMap[m.Unit].String() + "s" + " of"
+			} else {
+				return m.Quantity + unitMap[m.Unit].String() + " of"
+			}
+		}
+	}
+	if len(m.Quantity) > 0 {
+		if strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0 {
+			return m.Quantity + " a"
+		}
+		if strings.Index(strings.ToLower(m.Quantity), "drizzle") >= 0 {
+			return m.Quantity + " of"
+		}
+		return m.Quantity
+	}
+	return "No-Measure"
+}
+
+func (a Activity) String() string {
+	var s string
+	//sfmt.Println("string() ", a.AId, a.Ingredient)
+	if len(a.Ingredient) > 0 {
+		// qualm, qty, unit, quali, i , iqual
+		if len(a.QualMeasure) > 0 {
+			s = a.QualMeasure
+			if s[len(s)-3:] != " of" {
+				s += " of"
+			}
+		}
+		m := a.Measure
+		if m != nil {
+			m.unitMap = a.unitMap
+			if len(s) > 0 {
+				s += " " + m.String()
+			} else {
+				s = m.String()
+			}
+		} else {
+			// no measure then ignore this ingredient
+			return ""
+		}
+		if len(a.QualiferIngrd) > 0 {
+			if len(s) > 0 {
+				s += " " + a.QualiferIngrd
+			} else {
+				s = a.QualiferIngrd
+			}
+		}
+		if len(s) > 0 {
+			s += " " + a.Ingredient
+		} else {
+			s = a.Ingredient
+		}
+		if len(a.IngrdQualifer) > 0 {
+			if len(s) > 0 {
+				if a.IngrdQualifer[0] == ',' {
+					s += a.IngrdQualifer
+				} else {
+					s += " " + a.IngrdQualifer
+				}
+			} else {
+				s = a.IngrdQualifer
+			}
+		}
+		return s
+	}
+	return "no-ingredient"
+}
+
+func (as Activities) String() string {
+	partM := make(map[string][]*Activity)
+	for i := 0; i < len(as); i++ {
+		a := as[i]
+		if len(a.Part) > 0 {
+			partM[a.Part] = append(partM[a.Part], &a)
+		} else {
+			partM["nopart_"] = append(partM["nopart_"], &a)
+		}
+	}
+	var b strings.Builder
+	for k, v := range partM {
+		if k == "nopart_" {
+			continue
+		}
+		fmt.Fprintf(&b, "\n\n%s\n\n", k)
+		for _, a := range v {
+			fmt.Fprintf(&b, "%s\n", a.String())
+		}
+	}
+	for _, a := range partM["nopart_"] {
+		fmt.Fprintf(&b, "%s\n", a.String())
+	}
+	return b.String()
+}
+
+func (s *sessCtx) getActivity() (Activities, error) {
+	//
+	// Table:  Activity
+	//
+	kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value("A-"+s.pkey))
+	expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
+	if err != nil {
+		return nil, fmt.Errorf("Error: in readActivity Query - %s", err.Error())
+	}
+	input := &dynamodb.QueryInput{
+		KeyConditionExpression:    expr.KeyCondition(),
+		FilterExpression:          expr.Filter(),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+	}
+	input = input.SetTableName("Recipe").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
+	//*dynamodb.DynamoDB,
+	result, err := s.dynamodbSvc.Query(input)
+	if err != nil {
+		return nil, fmt.Errorf("Error: in readActivity Query - %s", err.Error())
+	}
+	if int(*result.Count) == 0 {
+		return nil, fmt.Errorf("No data found for reqRId %s in readActivity for Activity - ", s.pkey)
+	}
+	//ActivityS := make([]Activity, int(*result.Count))
+	ActivityS := make(Activities, int(*result.Count))
+	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &ActivityS)
+	if err != nil {
+		return nil, fmt.Errorf("** Error during UnmarshalListOfMaps in readActivity - %s", err.Error())
+	}
+	//
+	// Table:  Unit
+	//
+	proj := expression.NamesList(expression.Name("slabel"), expression.Name("llabel"), expression.Name("print"), expression.Name("desc"))
+	expr, err = expression.NewBuilder().WithProjection(proj).Build()
+	if err != nil {
+		return nil, fmt.Errorf("%s", "Error in expression build of unit table: "+err.Error())
+	}
+	// Build the query input parameters
+	params := &dynamodb.ScanInput{
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+		ProjectionExpression:      expr.Projection(),
+		TableName:                 aws.String("Unit"),
+	}
+	resultS, err := s.dynamodbSvc.Scan(params)
+	if err != nil {
+		return nil, fmt.Errorf("%s", "Error in scan of unit table: "+err.Error())
+	}
+	unitMap = make(map[string]*Unit, int(*result.Count))
+	unit := make([]*Unit, int(*result.Count))
+	err = dynamodbattribute.UnmarshalListOfMaps(resultS.Items, &unit)
+	if err != nil {
+		return nil, fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
+	}
+	for _, v := range unit {
+		unitMap[v.Slabel] = v
+	}
+	// for k, v := range unitMap {
+	// 	fmt.Printf("%s - %#v\n", k, v)
+	// }
+	// unit = nil
+	// for i := 0; i < len(ActivityS); i++ {
+	// 	fmt.Printf("%v", ActivityS[i])
+	// 	// 	a.unitMap = unitM
+	// }
+
+	return ActivityS, nil
 }
 
 func (s *sessCtx) processBaseRecipe() error {
@@ -269,6 +483,7 @@ func (s *sessCtx) processBaseRecipe() error {
 	//
 	idx := 0
 	//TODO does id get used??
+	s.activityS = ActivityS
 	for _, p := range ActivityS {
 		for _, p := range p.Prep {
 			idx++
@@ -953,18 +1168,18 @@ func (s *sessCtx) processBaseRecipe() error {
 								return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
 							}
 							fmt.Fprintf(&b, "%s", p.Measure.Quantity)
-						case "wgt":
-							context = measure
-							if p.Measure == nil {
-								return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
-							}
-							fmt.Fprintf(&b, "%s", p.Measure.Weight)
-						case "vol":
-							context = measure
-							if p.Measure == nil {
-								return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
-							}
-							fmt.Fprintf(&b, "%s", p.Measure.Volume)
+						// case "wgt":
+						// 	context = measure
+						// 	if p.Measure == nil {
+						// 		return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
+						// 	}
+						// 	fmt.Fprintf(&b, "%s", p.Measure.Weight)
+						// case "vol":
+						// 	context = measure
+						// 	if p.Measure == nil {
+						// 		return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
+						// 	}
+						// 	fmt.Fprintf(&b, "%s", p.Measure.Volume)
 						case "size":
 							if p.Measure == nil {
 								return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)

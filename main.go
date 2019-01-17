@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
-	_ "os"
+	"os"
 	"strconv"
 	"strings"
 
@@ -61,6 +61,7 @@ type sessCtx struct {
 	showList       bool // show what ever is in the current list (books, recipes)
 	// vPreMsg        string
 	// dPreMsg        string
+	activityS  Activities
 	dmsg       string
 	vmsg       string
 	ddata      string
@@ -633,6 +634,7 @@ func handler(request InputEvent) (RespEvent, error) {
 		sessionId:   request.QueryStringParameters["sid"],
 		dynamodbSvc: dynamodbService(),
 	}
+	fmt.Printf("pathItem[0] %s\n\n", pathItem[0])
 	switch pathItem[0] {
 	case "purge":
 		sessctx.reqBkId = request.QueryStringParameters["bkid"]
@@ -655,7 +657,7 @@ func handler(request InputEvent) (RespEvent, error) {
 		}
 		sessctx.abort, sessctx.reset = true, true
 	//
-	case "load":
+	case "load", "print":
 		sessctx.reqBkId = request.QueryStringParameters["bkid"]
 		sessctx.reqRId = request.QueryStringParameters["rid"]
 		sessctx.reqVersion = request.QueryStringParameters["ver"]
@@ -670,10 +672,21 @@ func handler(request InputEvent) (RespEvent, error) {
 			break
 		}
 		// read base recipe data and generate tasks, container and device usage and save to dynamodb.
-		err = sessctx.processBaseRecipe()
-		if err != nil {
-			break
+		switch pathItem[0] {
+		case "load":
+			fmt.Println("loading..")
+			sessctx.processBaseRecipe()
+			if err != nil {
+				break
+			}
+		case "print":
+			as, err := sessctx.getActivity()
+			if err != nil {
+				fmt.Printf("error: %s", err.Error())
+			}
+			fmt.Printf("%s\n", as.String())
 		}
+
 		sessctx.abort, sessctx.reset = true, true
 	//
 	case "genSlotValues":
@@ -782,7 +795,7 @@ func handler(request InputEvent) (RespEvent, error) {
 
 func main() {
 	//lambda.Start(handler)
-	p1 := InputEvent{Path: "load", Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=20&rid=4"}
+	p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=21&rid=6"}
 
 	p, _ := handler(p1)
 	if len(p.Error) > 0 {
