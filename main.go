@@ -681,7 +681,7 @@ func handler(request InputEvent) (RespEvent, error) {
 		case "print":
 			// set unit format mode
 			pUmode = uPrint
-			as, err := sessctx.getActivity()
+			as, err := sessctx.getIngredientData()
 			if err != nil {
 				fmt.Printf("error: %s", err.Error())
 			}
@@ -795,7 +795,7 @@ func handler(request InputEvent) (RespEvent, error) {
 
 func main() {
 	//lambda.Start(handler)
-	p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=21&rid=8"}
+	p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=20&rid=1"}
 
 	p, _ := handler(p1)
 	if len(p.Error) > 0 {

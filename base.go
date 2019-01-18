@@ -159,7 +159,8 @@ type Activity struct {
 	AltIngrd      []string    `json:"altIngrd"` // key into Ingredient table - used for alternate ingredients only
 	Measure       *MeasureT   `json:"measure"`
 	AltMeasure    *MeasureT   `json:"altMeasure"`
-	Part          string      `json:"part"` // ingredients are aggregated by part
+	Part          string      `json:"part"`      // ingredients are aggregated by part
+	Invisible     bool        `json:"invisible"` // do not include in ingredients listing.
 	Overview      string      `json:"ovv"`
 	Coord         [2]float32  // X,Y
 	Task          []*PerformT `json:"task"`
@@ -314,15 +315,24 @@ func (m MeasureT) String() string {
 		return m.Quantity + " " + m.Size
 	}
 	if len(m.Quantity) > 0 && len(m.Unit) > 0 {
+
 		if m.Unit == "tsp" || m.Unit == "tbsp" {
-			return m.Quantity + " " + unitMap[m.Unit].String()
-		}
-		if m.Unit == "g" || m.Unit == "kg" {
-			if strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0 {
+			if strings.IndexByte(m.Quantity, '/') > 0 || m.Quantity == "1" {
 				return m.Quantity + " " + unitMap[m.Unit].String()
 			} else {
 				if pUmode == uSay {
-					return m.Quantity + unitMap[m.Unit].String() + "s"
+					return m.Quantity + " " + unitMap[m.Unit].String() + "s"
+				} else {
+					return m.Quantity + unitMap[m.Unit].String()
+				}
+			}
+		}
+		if m.Unit == "g" || m.Unit == "kg" {
+			if strings.IndexByte(m.Quantity, '/') > 0 {
+				return m.Quantity + " " + unitMap[m.Unit].String()
+			} else {
+				if pUmode == uSay {
+					return m.Quantity + " " + unitMap[m.Unit].String() + "s"
 				} else {
 					return m.Quantity + unitMap[m.Unit].String()
 				}
@@ -347,7 +357,7 @@ func (m MeasureT) String() string {
 		} else {
 			//if unitMap[m.Unit].Print == "l" {
 			if pUmode == uSay {
-				return m.Quantity + unitMap[m.Unit].String() + "s"
+				return m.Quantity + " " + unitMap[m.Unit].String() + "s"
 			} else {
 				return m.Quantity + unitMap[m.Unit].String()
 			}
@@ -368,55 +378,56 @@ func (m MeasureT) String() string {
 func (a Activity) String() string {
 	var s string
 	//sfmt.Println("string() ", a.AId, a.Ingredient)
-	if len(a.Ingredient) > 0 {
-		// qualm, qty, unit, quali, i , iqual
-		if len(a.QualMeasure) > 0 {
-			s = a.QualMeasure
-			if s[len(s)-3:] != " of" {
-				s += " of"
-			}
-		}
-		m := a.Measure
-		if m != nil {
-			if len(s) > 0 {
-				s += " " + m.String()
-			} else {
-				s = m.String()
-			}
-		} else {
-			// no measure then ignore this ingredient
-			return ""
-		}
-		if len(a.QualiferIngrd) > 0 {
-			if len(s) > 0 {
-				s += " " + a.QualiferIngrd
-			} else {
-				s = a.QualiferIngrd
-			}
-		}
-		if len(s) > 0 {
-			s += " " + a.Ingredient
-		} else {
-			s = a.Ingredient
-		}
-		if len(a.IngrdQualifer) > 0 {
-			if len(s) > 0 {
-				if a.IngrdQualifer[0] == ',' {
-					s += a.IngrdQualifer
-				} else {
-					s += " " + a.IngrdQualifer
-				}
-			} else {
-				s = a.IngrdQualifer
-			}
-		}
-		return s
+	// qualm, qty, unit, quali, i , iqual
+	if a.Invisible || len(a.Ingredient) == 0 {
+		return ""
 	}
-	return "no-ingredient"
+	if len(a.QualMeasure) > 0 {
+		s = a.QualMeasure
+		if s[len(s)-3:] != " of" {
+			s += " of"
+		}
+	}
+	m := a.Measure
+	if m != nil {
+		if len(s) > 0 {
+			s += " " + m.String()
+		} else {
+			s = m.String()
+		}
+	} else {
+		// no measure then ignore this ingredient
+		return ""
+	}
+	if len(a.QualiferIngrd) > 0 {
+		if len(s) > 0 {
+			s += " " + a.QualiferIngrd
+		} else {
+			s = a.QualiferIngrd
+		}
+	}
+	if len(s) > 0 {
+		s += " " + a.Ingredient
+	} else {
+		s = a.Ingredient
+	}
+	if len(a.IngrdQualifer) > 0 {
+		if len(s) > 0 {
+			if a.IngrdQualifer[0] == ',' {
+				s += a.IngrdQualifer
+			} else {
+				s += " " + a.IngrdQualifer
+			}
+		} else {
+			s = a.IngrdQualifer
+		}
+	}
+	return s
 }
 
 func (as Activities) String() string {
 	partM := make(map[string][]*Activity)
+	// find if there are any parts to recipe
 	for i := 0; i < len(as); i++ {
 		a := as[i]
 		if len(a.Part) > 0 {
@@ -432,16 +443,20 @@ func (as Activities) String() string {
 		}
 		fmt.Fprintf(&b, "\n\n%s\n\n", k)
 		for _, a := range v {
-			fmt.Fprintf(&b, "%s\n", strings.TrimLeft(a.String(), " "))
+			if s := a.String(); len(s) > 0 {
+				fmt.Fprintf(&b, "%s\n", strings.TrimLeft(s, " "))
+			}
 		}
 	}
 	for _, a := range partM["nopart_"] {
-		fmt.Fprintf(&b, "%s\n", strings.TrimLeft(a.String(), " "))
+		if s := a.String(); len(s) > 0 {
+			fmt.Fprintf(&b, "%s\n", strings.TrimLeft(s, " "))
+		}
 	}
 	return b.String()
 }
 
-func (s *sessCtx) getActivity() (Activities, error) {
+func (s *sessCtx) getIngredientData() (Activities, error) {
 	//
 	// Table:  Activity
 	//

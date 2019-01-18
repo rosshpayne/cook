@@ -7,7 +7,8 @@
                   "SortK" : { "S": "CakeTin" },
                   "type" : { "S": "Cake Tin " },
                   "label" : { "S": "Cake Tin" },
-                  "measure" : { "M" : { "diameter" : { "S" : "30" },
+                  "measure" : { "M" : { "shape" : { "S" : "round" },
+                                        "dim" : { "S" : "30" },
                                         "height" : { "S" : "5" },
                                         "unit": {"S":"cm"} }
                   },
@@ -48,7 +49,7 @@
                 "label" : { "S": "AddChocolate"},
                 "ingrd" : { "S" : "chocolate" },
                 "quali" : { "S" : "dark" },
-                "iQual" : { "S" : "70 percent Cocoa" },
+                "iQual" : { "S" : "(70 percent Cocoa)" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "200" } ,
@@ -57,8 +58,8 @@
                          },
                 "task" : { "L" : [
                                 { "M" :  {
-                                  "txt" : { "S" : "Place a {Csize} {addToC} over a pot of simmering water and break {qty}{unit} of {ingrd}, atleast {iQual}, into small pieces and place in bowl and stir to help melt in the melting process" },
-                                  "say" : { "S" : "Place a {Csize} {addToC} over a pot of simmering water and break {qty} {unit} of {ingrd}, atleast {iQual}, into small pieces and place in bowl and stir to help melt in the melting process"},
+                                  "txt" : { "S" : "Place a {addToC} over a pot of simmering water and break {measure} of {ingrd}, atleast {iQual}, into small pieces and place in bowl and stir to help melt in the melting process" },
+                                  "say" : { "S" : "Place a {addToC} over a pot of simmering water and break {measure} of {ingrd}, atleast {iQual}, into small pieces and place in bowl and stir to help melt in the melting process"},
                                   "time" : { "N" : "6" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -85,8 +86,8 @@
                          },
                 "prep" :  { "L" : [
                                 { "M" :  {
-                                  "txt" : { "S" : "cut {qty}{unit} of {ingrd} into small pieces and set aside" },
-                                  "say" : { "S" : "cut {qty} {unit} of {ingrd} into small pieces and set asid" },
+                                  "txt" : { "S" : "cut {measure} of {ingrd} into small pieces and set aside" },
+                                  "say" : { "S" : "cut {measure} of {ingrd} into small pieces and set asid" },
                                   "time" : { "N" : "8" },
                                   "unit" : { "S" : "min" },
                                   "parallel" : { "BOOL" : true },
@@ -118,12 +119,38 @@
         "PutRequest": { 
             "Item": { 
                 "PKey" : { "S": "A-20-1" },
+                "SortK" : { "N": "40"},
+                "label" : { "S": "Water"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "water" },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "350" } ,
+                                      "unit" : { "S" : "ml" }
+                                      } 
+                         },
+                "invisible" : { "BOOL" : true },
+                "task" :  { "L" : [
+                                { "M" : { 
+                                  "txt" : { "S" : "Bring {measure} of {ingrd} to a boil" },
+                                  "say" : { "S" : "Bring {measure} of {ingrd} to a boil" },
+                                  "time" : { "N" : "3" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useC" : { "SS" : [ "SAS-S" ] } } }
+                                    ]
+                       }
+                }
+            }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-1" },
                 "SortK" : { "N": "45"},
                 "label" : { "S": "Coffee"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "coffee" },
                 "quali" : { "S" : "instant" },
-                "iQual" : { "S" : "disolved in 350ml of boiled water" },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "1.5" } ,
                                       "unit" : { "S" : "tsp" }
@@ -131,8 +158,8 @@
                          },
                 "task" :  { "L" : [
                                 { "M" : { 
-                                  "txt" : { "S" : "Disssolve {qty}{unit} of {ingrd} in 350ml of boiled water " },
-                                  "say" : { "S" : "Disolve {qty} {unit} of {ingrd} in 350 millilitres of boiled water " },
+                                  "txt" : { "S" : "Into the boiled {ingrd.40} disssolve {measure} of {quali} {ingrd} " },
+                                  "say" : { "S" : "Into the boiled {ingrd.40} disssolve {measure} of {quali} {ingrd} " },
                                   "time" : { "N" : "3" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -170,8 +197,8 @@
                          },
                 "task" :  { "L" : [
                             { "M" :  {
-                                  "txt" : { "S" : "Whisk {qty}{unit} {quali} {ingrd} into chocolate mix until disolved" },
-                                  "say" : { "S" : "Whisk {qty} {unit} {quali} {ingrd} into chocolate mix until disolved"},
+                                  "txt" : { "S" : "Whisk {measure} {quali} {ingrd} into chocolate mix until disolved" },
+                                  "say" : { "S" : "Whisk {measure} {quali} {ingrd} into chocolate mix until disolved"},
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -233,8 +260,8 @@
                          },
                 "prep" :  { "L" : [
                                 { "M" :  {
-                                  "txt" : { "S" : "sift {qty}{unit} of  {quali} {ingrd}" },
-                                  "say" : { "S" : "sift {qty} {unit} of {ingrd}" },
+                                  "txt" : { "S" : "sift {measure} of  {quali} {ingrd}" },
+                                  "say" : { "S" : "sift {measure} of {ingrd}" },
                                   "time" : { "N" : "2" },
                                   "unit" : { "S" : "min" },
                                   "useC" : { "SS" : [ "SAB-M"] },
@@ -275,8 +302,8 @@
                          },
                 "task" : { "L" : [
                                 { "M" :  {
-                                  "txt" : { "S" : "Add a {qty} {unit} of {ingrd} to choc mixture" },
-                                  "say" : { "S" : "add {qty} {unit} of {ingrd} add choc mixture" },
+                                  "txt" : { "S" : "Add a {measure} of {ingrd} to choc mixture" },
+                                  "say" : { "S" : "add {measure} of {ingrd} add choc mixture" },
                                   "addToC" : { "SS" : [ "ChochMixBowl" ] }
                                   }
                         }]}
@@ -290,8 +317,8 @@
                 "SortK" : { "N": "95"},
                 "label" : { "S": "AddCocoa"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
-                "ingrd" : { "S" : "Cocoa powder"},
-                "iQual" : { "S" : "Danish processed"},
+                "ingrd" : { "S" : "cocoa powder"},
+                "iQual" : { "S" : "- Danish processed"},
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "30" } ,
                                       "unit" : { "S" : "g" }
@@ -299,8 +326,8 @@
                          },
                 "prep" : { "L" : [
                                 { "M" :  {
-                                  "txt" : { "S" : "sift {qty}{unit} of {ingrd} and set aside" },
-                                  "say" : { "S" : "sift {qty} {unit} of {ingrd} {iQual} and set aside" },
+                                  "txt" : { "S" : "sift {measure} of {ingrd} and set aside" },
+                                  "say" : { "S" : "sift {measure} of {ingrd} {iQual} and set aside" },
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" },
                                   "useD" : { "M" : {

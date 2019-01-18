@@ -182,8 +182,8 @@
                 },
                "prep" : { "L" : [
                                 { "M" : {
-                                  "txt" : { "S" : "Dice {qty}{unit} of {quali} {ingrd} into 2cm pieces and allow to come to room temperature" },
-                                  "say" : { "S" : "Dice {qty}{unit} of {quali} {ingrd} into 2cm pieces and allow to come to room temperature" },
+                                  "txt" : { "S" : "Dice {measure} of {quali} {ingrd} into 2cm pieces and allow to come to room temperature" },
+                                  "say" : { "S" : "Dice {measure} of {quali} {ingrd} into 2cm pieces and allow to come to room temperature" },
                                   "time" : { "N" : "15" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -212,8 +212,8 @@
                 },
                 "prep" : { "L" : [
                                 { "M" : {
-                                  "txt" : { "S" : "measure {qty}{unit} of {ingrd} into {addToC} and set aside" },
-                                  "say" : { "S" : "measure {qty}{unit} of {ingrd} into {addToC} and set aside" },
+                                  "txt" : { "S" : "measure {measure} of {ingrd} into {addToC} and set aside" },
+                                  "say" : { "S" : "measure {measure} of {ingrd} into {addToC} and set aside" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -406,8 +406,8 @@
                                   }}
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "Sift {qty}{unit} of {quali} {ingrd} and set aside" },
-                                  "say" : { "S" : "Sift {qty}{unit} of {quali} {ingrd} and set aside" },
+                                  "txt" : { "S" : "Sift {measure} of {quali} {ingrd} and set aside" },
+                                  "say" : { "S" : "Sift {measure} of {quali} {ingrd} and set aside" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -478,8 +478,8 @@
                                   }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "While the cake is cooling, finely grate {qty}{unit} of {quali} {ingrd} onto a {csize} plate" },
-                                  "say" : { "S" : "While the cake is cooling, finely grate {qty}{unit} of {quali} {ingrd} onto a {csize} plate" },
+                                  "txt" : { "S" : "While the cake is cooling, finely grate {measure} of {quali} {ingrd} onto a {csize} plate" },
+                                  "say" : { "S" : "While the cake is cooling, finely grate {measure} of {quali} {ingrd} onto a {csize} plate" },
                                   "time" : { "N" : "3" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
