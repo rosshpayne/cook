@@ -6,7 +6,9 @@
                 "slabel" : { "S" : "g" },
                 "llabel" : { "S": "gram" },
                 "desc" : { "S": "1000 grams per kilogram"},
-                "print": { "S": "s" }
+                "print": { "S": "s" },
+                "say": { "S": "l" },
+                "display": { "S": "s" }
                 }
             }
          },
@@ -15,7 +17,9 @@
             "Item": {
                 "slabel" : { "S" : "kg" },
                 "llabel" : { "S": "kilogram" },
-                "print": { "S": "s" }
+                "print": { "S": "s" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
                 }
             }
          },
@@ -24,7 +28,9 @@
             "Item": {
                 "slabel" : { "S" : "tbsp" },
                 "llabel" : { "S": "tablespoon" },
-                "print": { "S": "l" }
+                "print": { "S": "l" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
                 }
             }
          },
@@ -34,7 +40,9 @@
                 "slabel" : { "S" : "tsp" },
                 "llabel" : { "S": "teespoon" },
                 "desc" : { "S": "25g or 25ml of water is equivalent to 1 teespoon"},
-                "print": { "S": "l" }
+                "print": { "S": "l" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
                 }
             }
          },
@@ -43,7 +51,9 @@
             "Item": {
                 "slabel" : { "S" : "l" },
                 "llabel" : { "S": "litre" },
-                "print": { "S": "l" }
+                "print": { "S": "l" },               
+                "say": { "S": "l" },
+                "display": { "S": "l" }
                 }
             }
          },
@@ -52,7 +62,9 @@
             "Item": {
                 "slabel" : { "S" : "ml" },
                 "llabel" : { "S": "millilitre" },
-                "print": { "S": "s" }
+                "print": { "S": "s" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
                 }
             }
          },
@@ -61,7 +73,9 @@
               "Item": {
                 "slabel" : { "S" : "mm" },
                 "llabel" : { "S": "millimeter" },
-                "print": { "S": "s" }
+                "print": { "S": "s" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
                 }
          }
          },
@@ -71,7 +85,9 @@
                 "slabel" : { "S" : "cup" },
                 "llabel" : { "S": "cup" },
                 "desc" : { "S": "one cup is equivalent to 250ml"},
-                "print": { "S": "s" }
+                "print": { "S": "s" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
                 }
             }
          },
@@ -80,7 +96,9 @@
             "Item": {
                 "slabel" : { "S" : "cm" },
                 "llabel" : { "S": "centimeter" },
-                "print": { "S": "s" }
+                "print": { "S": "s" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
                 }
          }
          },
@@ -89,7 +107,9 @@
             "Item": {
                 "slabel" : { "S" : "m" },
                 "llabel" : { "S": "meter" },
-                "print": { "S": "l" }
+                "print": { "S": "l" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
                 }
             }
          },
@@ -98,7 +118,9 @@
             "Item": {
                 "slabel" : { "S" : "C" },
                 "llabel" : { "S": "Celsius" },
-                "print": { "S": "s" }
+                "print": { "S": "s" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
                 }
             }
          },
@@ -107,7 +129,9 @@
             "Item": {
                 "slabel" : { "S" : "F" },
                 "llabel" : { "S": "Fehrenhite" },
-                "print": { "S": "s" }
+                "print": { "S": "s" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
                 }
             }
          },
@@ -116,7 +140,9 @@
             "Item": {
                 "slabel" : { "S" : "min" },
                 "llabel" : { "S": "minute" },
-                "print": { "S": "l" }
+                "print": { "S": "l" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
                 }
             }
          },
@@ -125,7 +151,9 @@
             "Item": {
                 "slabel" : { "S" : "sec" },
                 "llabel" : { "S": "second" },
-                "print": { "S": "l" }
+                "print": { "S": "l" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
                 }
             }
          },
@@ -134,7 +162,9 @@
             "Item": {
                 "slabel" : { "S" : "hr" },
                 "llabel" : { "S": "hour" },
-                "print": { "S": "l" }
+                "print": { "S": "l" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
                 }
             }
          },
@@ -143,7 +173,9 @@
             "Item": {
                 "slabel" : { "S" : "clove" },
                 "llabel" : { "S": "clove" },
-                "print": { "S": "s" }
+                "print": { "S": "s" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
                 }
             }
          }

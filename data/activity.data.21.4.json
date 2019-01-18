@@ -33,9 +33,9 @@
                 "SortK" : { "N": "10"},
                 "label" : { "S": "beans"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
-                "ingrd" : { "S" : "beans"},
+                "ingrd" : { "S" : "green beans"},
                 "iQual" : { "S" : ", trimmed"},
-                "quali" : { "S" : "green"},
+                "quali" : { "S" : "fine"},
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "450" } ,
                                       "unit" : { "S" : "g" }
@@ -52,8 +52,8 @@
                                         }   
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "trim {qty}{unit} of {quali} {ingrd} and set aside" },
-                                  "say" : { "S" : "trim {qty}{unit} of {quali} {ingrd} and set aside" },
+                                  "txt" : { "S" : "trim {qty}{unit} of {ingrd} and set aside" },
+                                  "say" : { "S" : "trim {qty}{unit} of {ingrd} and set aside" },
                                   "time" : { "N" : "3" },
                                   "unit" : { "S" : "min" }, 
                                   "useC" : { "SS" : ["SAB-M"] }
@@ -63,8 +63,8 @@
                  },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "when the water is boiling, drop the {quali} {ingrd} into the water and cover the pot. When the water comes back to the boil, remove the lid and cook until the {ingrd} are al dente" },
-                                  "say" : { "S" : "when the water is boiling, drop the {quali} {ingrd} into the water and cover the pot. When the water comes back to the boil, remove the lid and cook until the {ingrd} are al dente" },
+                                  "txt" : { "S" : "when the water is boiling, drop the {ingrd} into the water and cover the pot. When the water comes back to the boil, remove the lid and cook until the {ingrd} are al dente" },
+                                  "say" : { "S" : "when the water is boiling, drop the {ingrd} into the water and cover the pot. When the water comes back to the boil, remove the lid and cook until the {ingrd} are al dente" },
                                   "time" : { "N" : "5" },
                                   "tplus" : { "N" : "1" },
                                   "unit" : { "S" : "min" },
@@ -86,8 +86,9 @@
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "olive oil" },
                 "quali" : { "S" : "extra virgin" },
-                 "measure" : { "M" : { 
-                                      "qty" : { "S" : "generous drizzle" }
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "150" },
+                                      "unit" :  { "S" : "ml" }
                             }
                  },
                 "task" : { "L" : [ 
@@ -139,7 +140,7 @@
                 "PKey" : { "S": "A-21-4" },
                 "SortK" : { "N": "50"},
                 "label" : { "S": "cheese"},
-                "ingrd" : { "S" : "parmesan" },
+                "ingrd" : { "S" : "Parmesan" },
                 "iQual" : { "S" : "freshly grated" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 

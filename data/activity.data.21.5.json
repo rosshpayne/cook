@@ -105,17 +105,16 @@
                 "SortK" : { "N": "20"},
                 "label" : { "S": "garlic"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
-                "ingrd" : { "S" : "garlic" },
-                "iQual" : { "S" : "cloves" },
+                "ingrd" : { "S" : "garlic cloves" },
+                "iQual" : { "S" : "peeled" },
                  "measure" : { "M" : { 
-                                      "qty" : { "S" : "2" },
-                                      "unit" : {"S" : "cloves" }
+                                      "qty" : { "S" : "2" }
                             }
                  },
                  "prep" : { "L" : [
                                 { "M" : { 
-                                  "txt" : { "S" : "Peel {qty}{unit} of {ingrd}, cut in half and remove the centre piece and set aside" },
-                                  "say" : { "S" : "Peel {qty}{unit} of {ingrd}, cut in half and remove the centre piece and set aside" },
+                                  "txt" : { "S" : "Peel {qty} {ingrd}, cut in half and remove the centre piece and set aside" },
+                                  "say" : { "S" : "Peel {qty} {ingrd}, cut in half and remove the centre piece and set aside" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "useC" : { "SS" : ["SAP-S"] },
@@ -149,8 +148,7 @@
                 "label" : { "S": "oil"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "olive oil" },
-                "iQual" : { "S" : "extra virgin" },
-                "iQual" : { "S" : "juice" },
+                "quali" : { "S" : "extra virgin" },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "250" } ,
                                       "unit" : { "S" : "ml"}
@@ -215,13 +213,11 @@
                 "PKey" : { "S": "A-21-5" },
                 "SortK" : { "N": "50"},
                 "label" : { "S": "cheese"},
-                "ingrd" : { "S" : "parmesan" },
+                "ingrd" : { "S" : "Parmesan" },
                 "quali" : { "S" : "freshly grated" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
-                                      "qty" : { "S" : "500" } ,
-                                      "unit" : { "S" : "g" }
-                                      }
+                                      "qty" : { "S" : " " } }
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {

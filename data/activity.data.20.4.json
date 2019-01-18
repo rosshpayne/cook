@@ -102,8 +102,8 @@
                 },
                 "task" : { "L" : [
                                 { "M" : { 
-                                  "txt" : { "S" : "cut {qty} {unit} of {quali} {ingrd} into a {addToC} and melt the butter gently. When melted immediately set aside" },
-                                  "say" : { "S" : "cut {qty} {unit} of {quali} {ingrd} into a {addToC} and melt the butter gently. When melted immediately set aside" },
+                                  "txt" : { "S" : "cut {measure} of {quali} {ingrd} into a {addToC} and melt the butter gently. When melted immediately set aside" },
+                                  "say" : { "S" : "cut {measure} of {quali} {ingrd} into a {addToC} and melt the butter gently. When melted immediately set aside" },
                                   "time" : { "N" : "3" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -131,8 +131,8 @@
                 },
                 "task" : { "L" : [             
                                 {"M" : { 
-                                  "txt" : { "S" : "Add {qty}{unit} of {quali} {ingrd} to a {addToC}." },
-                                  "say" : { "S" : "Add {qty}{unit} of {quali} {ingrd} to a {addToC}." },
+                                  "txt" : { "S" : "Add {measure} of {quali} {ingrd} to a {addToC}." },
+                                  "say" : { "S" : "Add {measure} of {quali} {ingrd} to a {addToC}." },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -162,8 +162,8 @@
                 },
                 "task" : { "L" : [
                                 { "M" : {
-                                  "txt" : { "S" : "Measure {qty}{unit} of {quali} {ingrd} into a {addToC}." },
-                                  "say" : { "S" : "Measure {qty}{unit} of {quali} {ingrd} into a {addToC}." },
+                                  "txt" : { "S" : "Measure {measure} of {quali} {ingrd} into a {addToC}." },
+                                  "say" : { "S" : "Measure {measure} of {quali} {ingrd} into a {addToC}." },
                                   "time" : { "N" : "15" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -193,8 +193,8 @@
                 },
                 "task" : { "L" : [
                                 { "M" : {
-                                  "txt" : { "S" : "Add {qty}{unit} of {quali} {ingrd} to the bowl." },
-                                  "say" : { "S" : "Add {qty}{unit} of {quali} {ingrd} to the bowl." },
+                                  "txt" : { "S" : "Add {measure} of {quali} {ingrd} to the bowl." },
+                                  "say" : { "S" : "Add {measure} of {quali} {ingrd} to the bowl." },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -222,8 +222,8 @@
                 },
                "task" : { "L" : [ 
                                 {"M" : { 
-                                  "txt" : { "S" : "add {qty}{unit} of {ingrd} to the bowl." },
-                                  "say" : { "S" : "add {qty}{unit} of {ingrd} to the bowl." },
+                                  "txt" : { "S" : "add {measure} of {ingrd} to the bowl." },
+                                  "say" : { "S" : "add {measure} of {ingrd} to the bowl." },
                                   "time" : { "N" : "30" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "sec" },
@@ -280,8 +280,8 @@
                 },
                "task" : { "L" : [ 
                                 {"M" : { 
-                                  "txt" : { "S" : "Cut {qty}{unit} of {ingrd} into 1cm slices and place in a {addToC} " },
-                                  "say" : { "S" : "Cut {qty}{unit} of {ingrd} into 1cm slices and place in a {addToC} " },
+                                  "txt" : { "S" : "Cut {measure} of {ingrd} into 1cm slices and place in a {addToC} " },
+                                  "say" : { "S" : "Cut {measure} of {ingrd} into 1cm slices and place in a {addToC} " },
                                   "time" : { "N" : "5" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -310,8 +310,8 @@
                 },
                 "task" : { "L" : [ 
                                 {"M" : { 
-                                  "txt" : { "S" : "hull and slice {qty}{unit} of {ingrd} into 0.5cm thickslices and place in {addToC} " },
-                                  "say" : { "S" : "hull and slice {qty}{unit} of {ingrd} into 0.5cm thickslices and place in {addToC} " },
+                                  "txt" : { "S" : "hull and slice {measure} of {ingrd} into 0.5cm thickslices and place in {addToC} " },
+                                  "say" : { "S" : "hull and slice {measure} of {ingrd} into 0.5cm thickslices and place in {addToC} " },
                                   "time" : { "N" : "10" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -340,8 +340,8 @@
                 },
                 "task" : { "L" : [ 
                                 {"M" : { 
-                                  "txt" : { "S" : "add {qty}{unit} of {ingrd}" },
-                                  "say" : { "S" : "add {qty}{unit} of {ingrd}" },
+                                  "txt" : { "S" : "add {measure} of {ingrd}" },
+                                  "say" : { "S" : "add {measure} of {ingrd}" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -371,8 +371,8 @@
                 },
                 "task" : { "L" : [ 
                                 {"M" : { 
-                                  "txt" : { "S" : "now add {qty}{unit} of {ingrd} or {altIngrd}" },
-                                  "say" : { "S" : "now add {qty}{unit} of {ingrd} or {altIngrd}" },
+                                  "txt" : { "S" : "now add {measure} of {ingrd} or {altIngrd}" },
+                                  "say" : { "S" : "now add {measure} of {ingrd} or {altIngrd}" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -401,8 +401,8 @@
                 },
                 "task" : { "L" : [ 
                                 {"M" : { 
-                                  "txt" : { "S" : "add {qty}{unit} of {ingrd}" },
-                                  "say" : { "S" : "add {qty} {unit} of {ingrd} " },
+                                  "txt" : { "S" : "add {measure} of {ingrd}" },
+                                  "say" : { "S" : "add {measure} of {ingrd} " },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -461,8 +461,8 @@
                 },
                 "task" : { "L" : [ 
                                 {"M" : { 
-                                  "txt" : { "S" : "finally, add {qty} {unit} a {ingrd} " },
-                                  "say" : { "S" : "finally add {qty} {unit} a {ingrd} " },
+                                  "txt" : { "S" : "finally, add {measure} of {ingrd} " },
+                                  "say" : { "S" : "finally add {measure} of {ingrd} " },
                                   "time" : { "N" : "20" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "sec" },
@@ -500,8 +500,8 @@
                 },
                 "task" : { "L" : [ 
                                 {"M" : { 
-                                  "txt" : { "S" : "Now we will work on the cake mixture. Measure {qty}{unit} of {ingrd}" },
-                                  "say" : { "S" : "Now we will work on the cake mixture. Measure {qty}{unit} of {ingrd}" },
+                                  "txt" : { "S" : "Now we will work on the cake mixture. Measure {measure} of {ingrd}" },
+                                  "say" : { "S" : "Now we will work on the cake mixture. Measure {measure} of {ingrd}" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -540,8 +540,8 @@
                 },
                 "task" : { "L" : [ 
                                 {"M" : { 
-                                  "txt" : { "S" : "add {qty}{unit} of {ingrd} to the bowl containing the {ingrd.130}" },
-                                  "say" : { "S" : "add {qty}{unit} of {ingrd} to the bowl containing the {ingrd.130}" },
+                                  "txt" : { "S" : "add {measure} of {ingrd} to the bowl containing the {ingrd.130}" },
+                                  "say" : { "S" : "add {measure} of {ingrd} to the bowl containing the {ingrd.130}" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -570,8 +570,8 @@
                 },
                 "task" : { "L" : [ 
                                 {"M" : { 
-                                  "txt" : { "S" : "add {qty}{unit} of {ingrd} and set the bowl aside" },
-                                  "say" : { "S" : "add {qty}{unit} of {ingrd} and set the bowl aside" },
+                                  "txt" : { "S" : "add {measure} of {ingrd} and set the bowl aside" },
+                                  "say" : { "S" : "add {measure} of {ingrd} and set the bowl aside" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -601,8 +601,8 @@
                 },
                 "prep" : { "L" : [ 
                                 {"M" : { 
-                                  "txt" : { "S" : "cut {qty}{unit} of {ingrd} into pieces and set aside to come to room temperature" },
-                                  "say" : { "S" : "cut {qty}{unit} of {ingrd} into pieces and set aside to come to room temperature" },
+                                  "txt" : { "S" : "cut {measure} of {ingrd} into pieces and set aside to come to room temperature" },
+                                  "say" : { "S" : "cut {measure} of {ingrd} into pieces and set aside to come to room temperature" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -644,8 +644,8 @@
                 },
                 "task" : { "L" : [ 
                                 {"M" : { 
-                                  "txt" : { "S" : "measure {qty}{unit} of {ingrd} and add to the mixer bowl" },
-                                  "say" : { "S" : "measure {qty}{unit} of {ingrd} and add to the mixer bowl" },
+                                  "txt" : { "S" : "measure {measure} of {ingrd} and add to the mixer bowl" },
+                                  "say" : { "S" : "measure {measure} of {ingrd} and add to the mixer bowl" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -691,7 +691,7 @@
                 "ingrd" : { "S" : "eggs" },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "3" } ,
-                                      "size":{"S": " large"}}
+                                      "size":{"S": "large"}}
                 },
                 "prep" : { "L" : [ 
                                 {"M" : { 
@@ -729,7 +729,7 @@
                 "ingrd" : { "S" : "vanilla extract" },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "1" } ,
-                                      "size":{"S": " tsp"}
+                                      "unit": {"S": "tsp"}
                 }},
                 "prep" : { "L" : [ 
                                 {"M" : { 

@@ -49,17 +49,19 @@ type respT struct {
 }
 
 type Unit struct {
-	Unit   string `json:"unit"`   // as used in recipe json
-	Slabel string `json:"slabel"` // short label
-	Llabel string `json:"llabel"` // long label
-	Desc   string `json:"desc"`
-	Print  string `json:"print"` // short or long label when printing unit in ingredients listing.
+	Unit    string `json:"unit"`   // as used in recipe json
+	Slabel  string `json:"slabel"` // short label
+	Llabel  string `json:"llabel"` // long label
+	Desc    string `json:"desc"`
+	Print   string `json:"print"`   // short or long label when printing unit in ingredients listing.
+	Say     string `json:"say"`     // format in verbal communication
+	Display string `json:"display"` // format in display of Alexa device
 }
 
 type MeasureCT struct {
 	Quantity  string `json:"qty"`
 	Size      string `json:"size"`
-	Shape     string `json:"shape"`
+	Shape     string `json:"shape"` // typically, round, square, rect
 	Dimension string `json:"dim"`
 	//	Diameter string `json:"diameter"`
 	//	Square   string `json:"square"`
@@ -135,7 +137,6 @@ type MeasureT struct {
 	Size string `json:"size"`
 	Unit string `json:"unit"`
 	//	Comment   string `json:"comment"`
-	unitMap map[string]*Unit
 }
 
 // used for alternative ingredients only
@@ -197,44 +198,95 @@ type prepCtl struct {
 
 var prepctl prepCtl = prepCtl{}
 
+type UnitModeT int
+
+var pUmode UnitModeT // package variable that determines formating of unit
+
+const (
+	uPrint UnitModeT = iota + 1
+	uSay
+	uDisplay
+)
+
+// String output unit text based on mode represented by package variable pUmode [package_variable-Unit-mode]
 func (u *Unit) String() string {
 	// mode: Print ingredients
-	switch u.Print {
+	var format string
+	if u == nil {
+		panic(fmt.Errorf("%s", "Unit is nil in method String() of *Unit"))
+	}
+	switch pUmode {
+	case uPrint, uSay, uDisplay:
+	default:
+		panic(fmt.Errorf("%s", "Unit format mode not set"))
+	}
+	switch pUmode {
+	case uPrint:
+		format = u.Print
+	case uSay:
+		format = u.Say
+	case uDisplay:
+		format = u.Display
+	}
+	switch format {
 	case "s":
-		return u.Slabel
+		switch u.Slabel {
+		case "C", "F":
+			return "\u00B0" + u.Slabel
+		default:
+			return u.Slabel
+		}
 	case "l":
-		return u.Llabel
+		switch u.Slabel {
+		case "C", "F":
+			return "\u00B0" + u.Llabel
+		default:
+			return u.Llabel
+		}
 	default:
 		return u.Slabel
 	}
+
 }
 
-func (d *DeviceT) String() (string, error) {
+func (d *DeviceT) String() string {
 	var s string
 	if len(d.Temp) > 0 {
 		if len(d.Unit) == 0 {
-			return "", fmt.Errorf("No Unit specified for device [%s] with Temp in Activity", d.Type)
+			panic(fmt.Errorf("No Unit specified for device [%s] with Temp in Activity", d.Type))
 		}
 		t := strings.Split(d.Temp, "/")
 		if len(t) > 1 {
 			// for an oven device, a/b means <a><unit> fan/ <b><unit> nofan / setting
-			s = t[0] + "\u00B0" + d.Unit + "/" + t[1] + "\u00B0" + d.Unit + " Fan"
+			if pUmode == uSay {
+				s = t[0] + unitMap[d.Unit].String() + " or " + t[1] + unitMap[d.Unit].String() + " fan forced"
+			} else {
+				s = t[0] + unitMap[d.Unit].String() + "/" + t[1] + unitMap[d.Unit].String() + " Fan"
+			}
 		} else {
-			s = d.Temp + "\u00B0" + d.Unit
+			s = d.Temp + unitMap[d.Unit].String()
 		}
 	}
 	if len(d.Set) > 0 {
 		if len(s) > 0 {
-			s += "/" + d.Set
+			if pUmode == uSay {
+				s += " or " + d.Set
+			} else {
+				s += "/" + d.Set
+			}
 		} else {
 			s = d.Set
 		}
 	}
-	return s, nil
+	return s
 }
 
 func (m *MeasureCT) String() string {
 	var s string
+	if m == nil {
+		panic(fmt.Errorf("%s", "Measure is nil in method String() of Container"))
+	}
+	fmt.Printf("MeascureCT == [%#v}\n", m)
 	if len(m.Shape) > 0 {
 		s = m.Shape + " "
 	}
@@ -247,22 +299,33 @@ func (m *MeasureCT) String() string {
 	if len(m.Unit) > 0 {
 		s += m.Unit
 	}
+	if len(m.Size) > 0 {
+		s = m.Size
+	}
+	fmt.Println(s)
 	return s
 }
 
-var unitMap map[string]*Unit
+var unitMap map[string]*Unit // populated in getActivity()
 
 func (m MeasureT) String() string {
+
 	if len(m.Quantity) > 0 && len(m.Size) > 0 {
 		return m.Quantity + " " + m.Size
 	}
 	if len(m.Quantity) > 0 && len(m.Unit) > 0 {
-
 		if m.Unit == "tsp" || m.Unit == "tbsp" {
-			if strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0 || m.Quantity == "1" {
-				return m.Quantity + " " + unitMap[m.Unit].String() + " of"
+			return m.Quantity + " " + unitMap[m.Unit].String()
+		}
+		if m.Unit == "g" || m.Unit == "kg" {
+			if strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0 {
+				return m.Quantity + " " + unitMap[m.Unit].String()
 			} else {
-				return m.Quantity + " " + unitMap[m.Unit].String() + "s" + " of"
+				if pUmode == uSay {
+					return m.Quantity + unitMap[m.Unit].String() + "s"
+				} else {
+					return m.Quantity + unitMap[m.Unit].String()
+				}
 			}
 		}
 		if strings.Index(strings.ToLower(m.Unit), "clove") >= 0 {
@@ -280,18 +343,19 @@ func (m MeasureT) String() string {
 			}
 		}
 		if strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0 || m.Quantity == "1" {
-			return m.Quantity + " " + unitMap[m.Unit].String() + " of"
+			return m.Quantity + " " + unitMap[m.Unit].String()
 		} else {
-			if unitMap[m.Unit].Print == "l" {
-				return m.Quantity + " " + unitMap[m.Unit].String() + "s" + " of"
+			//if unitMap[m.Unit].Print == "l" {
+			if pUmode == uSay {
+				return m.Quantity + unitMap[m.Unit].String() + "s"
 			} else {
-				return m.Quantity + unitMap[m.Unit].String() + " of"
+				return m.Quantity + unitMap[m.Unit].String()
 			}
 		}
 	}
 	if len(m.Quantity) > 0 {
 		if strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0 {
-			return m.Quantity + " a"
+			return m.Quantity + " of"
 		}
 		if strings.Index(strings.ToLower(m.Quantity), "drizzle") >= 0 {
 			return m.Quantity + " of"
@@ -314,7 +378,6 @@ func (a Activity) String() string {
 		}
 		m := a.Measure
 		if m != nil {
-			m.unitMap = a.unitMap
 			if len(s) > 0 {
 				s += " " + m.String()
 			} else {
@@ -369,11 +432,11 @@ func (as Activities) String() string {
 		}
 		fmt.Fprintf(&b, "\n\n%s\n\n", k)
 		for _, a := range v {
-			fmt.Fprintf(&b, "%s\n", a.String())
+			fmt.Fprintf(&b, "%s\n", strings.TrimLeft(a.String(), " "))
 		}
 	}
 	for _, a := range partM["nopart_"] {
-		fmt.Fprintf(&b, "%s\n", a.String())
+		fmt.Fprintf(&b, "%s\n", strings.TrimLeft(a.String(), " "))
 	}
 	return b.String()
 }
@@ -411,7 +474,7 @@ func (s *sessCtx) getActivity() (Activities, error) {
 	//
 	// Table:  Unit
 	//
-	proj := expression.NamesList(expression.Name("slabel"), expression.Name("llabel"), expression.Name("print"), expression.Name("desc"))
+	proj := expression.NamesList(expression.Name("slabel"), expression.Name("llabel"), expression.Name("print"), expression.Name("desc"), expression.Name("say"), expression.Name("display"))
 	expr, err = expression.NewBuilder().WithProjection(proj).Build()
 	if err != nil {
 		return nil, fmt.Errorf("%s", "Error in expression build of unit table: "+err.Error())
@@ -427,6 +490,9 @@ func (s *sessCtx) getActivity() (Activities, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s", "Error in scan of unit table: "+err.Error())
 	}
+	//
+	// Note: unitMap is a package variable
+	//
 	unitMap = make(map[string]*Unit, int(*result.Count))
 	unit := make([]*Unit, int(*result.Count))
 	err = dynamodbattribute.UnmarshalListOfMaps(resultS.Items, &unit)
@@ -645,7 +711,7 @@ func (s *sessCtx) processBaseRecipe() error {
 	//
 	// Table:  Unit
 	//
-	proj := expression.NamesList(expression.Name("slabel"), expression.Name("llabel"), expression.Name("desc"))
+	proj := expression.NamesList(expression.Name("slabel"), expression.Name("llabel"), expression.Name("print"), expression.Name("desc"), expression.Name("say"), expression.Name("display"))
 	expr, err = expression.NewBuilder().WithProjection(proj).Build()
 	if err != nil {
 		return fmt.Errorf("%s", "Error in expression build of unit table: "+err.Error())
@@ -661,18 +727,18 @@ func (s *sessCtx) processBaseRecipe() error {
 	if err != nil {
 		return fmt.Errorf("%s", "Error in scan of unit table: "+err.Error())
 	}
-	unitM := make(map[string]*Unit, int(*result.Count))
+	unitMap = make(map[string]*Unit, int(*result.Count))
 	unit := make([]*Unit, int(*result.Count))
 	err = dynamodbattribute.UnmarshalListOfMaps(resultS.Items, &unit)
 	if err != nil {
 		return fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
 	}
 	for _, v := range unit {
-		unitM[v.Slabel] = v
+		unitMap[v.Slabel] = v
 	}
-	// for k, v := range unitM {
-	// 	fmt.Printf("%s - %#v\n", k, v)
-	// }
+	for k, v := range unitMap {
+		fmt.Printf("%s - %#v\n", k, v)
+	}
 	unit = nil
 	//
 	//  Post fetch processing - assign container pointers in Activity and validate that all containers referenced exist
@@ -1054,10 +1120,12 @@ func (s *sessCtx) processBaseRecipe() error {
 					// perform over slice of preps, tasks
 					switch interactionType {
 					case text:
+						pUmode = uDisplay // unit formating
 						str = strings.TrimLeft(pt.Text, " ")
 						s := str[0]
 						str = strings.ToUpper(string(s)) + str[1:]
 					case voice:
+						pUmode = uSay // unit formating
 						str = pt.Verbal
 					}
 					// if no {} then print and return to top of the loop
@@ -1113,7 +1181,10 @@ func (s *sessCtx) processBaseRecipe() error {
 							if ov, ok := DeviceM[strconv.Itoa(pt.id)+"-"+s[0]]; ok {
 								switch s[1] {
 								case "temp":
-									fmt.Fprintf(&b, "%s", ov.Temp+" "+ov.Unit)
+									if len(ov.Unit) == 0 {
+										return fmt.Errorf("in processBaseRecipe. No Unit defined for oven temperature for activity [%d, %d]\n", p.AId, pt.id)
+									}
+									fmt.Fprintf(&b, "%s", ov.String())
 								case "set":
 									fmt.Fprintf(&b, "%s", ov.Set)
 								case "alternate":
@@ -1135,51 +1206,34 @@ func (s *sessCtx) processBaseRecipe() error {
 							} else {
 								c = pt.AddToCp[0]
 							}
-							var m *MeasureCT
+							m := c.Measure
 							// useC.form
 							if len(el2) > 0 {
 								switch el2 {
-								case "form":
+								case "form": // depreciated - only alt used now. Still here to support existing
 									m = c.Measure
 								case "alt":
 									m = c.AltMeasure
 								default:
 									return fmt.Errorf(`Error: useC or addtoC tag not followed by "form" or "alt" type in AId [%d] [%s]`, p.AId, str)
 								}
-								if m != nil {
-									s := m.String()
-									fmt.Fprintf(&b, "%s", strings.ToLower(s)+" "+c.Label)
-								}
-							} else {
-								m = c.Measure
-								if m != nil {
-									if len(m.Size) == 0 {
-										fmt.Fprintf(&b, "%s", strings.ToLower("medium "+c.Label))
-									} else {
-										fmt.Fprintf(&b, "%s", strings.ToLower(m.Size+" "+c.Label))
-									}
-								} else {
-									fmt.Fprintf(&b, "%s", strings.ToLower("medium "+c.Label))
-								}
 							}
+							if m != nil {
+								s := m.String()
+								fmt.Fprintf(&b, "%s", strings.ToLower(s+" "+c.Label))
+							}
+						case "measure":
+							context = measure
+							if p.Measure == nil {
+								return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
+							}
+							fmt.Fprintf(&b, "%s", p.Measure.String())
 						case "qty":
 							context = measure
 							if p.Measure == nil {
 								return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
 							}
 							fmt.Fprintf(&b, "%s", p.Measure.Quantity)
-						// case "wgt":
-						// 	context = measure
-						// 	if p.Measure == nil {
-						// 		return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
-						// 	}
-						// 	fmt.Fprintf(&b, "%s", p.Measure.Weight)
-						// case "vol":
-						// 	context = measure
-						// 	if p.Measure == nil {
-						// 		return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
-						// 	}
-						// 	fmt.Fprintf(&b, "%s", p.Measure.Volume)
 						case "size":
 							if p.Measure == nil {
 								return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
@@ -1204,64 +1258,55 @@ func (s *sessCtx) processBaseRecipe() error {
 								return fmt.Errorf("in processBaseRecipe. UseDevice attribute not defined for Activity [%d]\n", p.AId)
 							}
 							context = device
-							s, err := pt.UseDevice.String()
-							if err != nil {
-								return err
-							}
-							fmt.Fprintf(&b, "%s", s)
+							fmt.Fprintf(&b, "%s", pt.UseDevice.String())
 						case "label":
 							fmt.Fprintf(&b, "%s", pt.Label)
 						case "unit":
-							{
-								switch context {
-								case device:
-									if pt.UseDevice == nil {
-										return fmt.Errorf("in processBaseRecipe. UseDevice attribute not defined for Activity [%d]\n", p.AId)
-									}
-									if u, ok := unitM[pt.UseDevice.Unit]; !ok {
-										return fmt.Errorf("in processBaseRecipe. Unit for device, [%s], not defined in unitM for Activity [%d]\n", p.Measure.Unit, p.AId)
-									} else {
-										switch interactionType {
-										case text:
-											fmt.Fprintf(&b, "%s", u.Slabel)
-										case voice:
-											fmt.Fprintf(&b, "%s", u.Llabel+"s")
-										}
-									}
-								case measure:
-									if p.Measure == nil {
-										return fmt.Errorf("in processBaseRecipe. Measure not defined for Activity [%d]\n", p.AId)
-									}
-									if u, ok := unitM[p.Measure.Unit]; !ok {
-										return fmt.Errorf("in processBaseRecipe. Unit for measure, [%s], not defined in unitM for Activity [%d]\n", p.Measure.Unit, p.AId)
-									} else {
-										switch interactionType {
-										case text:
-											fmt.Fprintf(&b, "%s", u.Slabel)
-										case voice:
-											fmt.Fprintf(&b, "%s", u.Llabel+"s")
-										}
-									}
-								case time:
-									if u, ok := unitM[pt.Unit]; !ok {
-										return fmt.Errorf("in processBaseRecipe. Unit for time, [%s], not defined in unitM for Activity [%d]\n", pt.Unit, p.AId)
-									} else {
-										switch interactionType {
-										case text:
-											fmt.Fprintf(&b, "%s", u.Llabel+"s")
-										case voice:
-											fmt.Fprintf(&b, "%s", u.Llabel+"s")
-										}
-									}
+							var (
+								u      *Unit
+								ok     bool
+								plural bool
+							)
+							switch context {
+							case measure:
+								if p.Measure == nil {
+									return fmt.Errorf("in processBaseRecipe. Measure not defined for Activity [%d]\n", p.AId)
 								}
+								m := p.Measure
+								if !(strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0 || m.Quantity == "1") {
+									plural = true
+								}
+								if len(p.Measure.Unit) == 0 {
+									return fmt.Errorf("in processBaseRecipe. Unit for time, [%s], not defined for Measure in Activity [%d]\n", pt.Unit, p.AId)
+								}
+								if u, ok = unitMap[p.Measure.Unit]; !ok {
+									return fmt.Errorf("in processBaseRecipe. Unit for measure, [%s], not defined in unitM for Activity [%d]\n", p.Measure.Unit, p.AId)
+								}
+							case time:
+								if pt.Time > 0 {
+									plural = true
+								}
+								if len(pt.Unit) == 1 {
+									return fmt.Errorf("in processBaseRecipe. Unit for time, [%s], not defined for Activity [%d]\n", pt.Unit, p.AId)
+								}
+								if u, ok = unitMap[pt.Unit]; !ok {
+									return fmt.Errorf("in processBaseRecipe. Unit for time, [%s], not defined in unitM for Activity [%d]\n", pt.Unit, p.AId)
+								}
+							}
+							if context == device {
+								// ignore device as unit now printed with temp tag.
+								break
+							}
+							if plural && interactionType == voice && u.Say == "l" {
+								fmt.Fprintf(&b, "%s", u.String()+"s")
+							} else {
+								fmt.Fprintf(&b, "%s", u.String())
 							}
 						case "ingrd":
 							fmt.Fprintf(&b, "%s", strings.ToLower(p.Ingredient))
 						case "time":
-							{
-								context = time
-								fmt.Fprintf(&b, "%2.0f", pt.Time)
-							}
+							context = time
+							fmt.Fprintf(&b, "%2.0f", pt.Time)
 						case "tplus":
 							{
 								context = time

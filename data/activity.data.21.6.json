@@ -120,6 +120,7 @@
                 "SortK" : { "N": "30"},
                 "label" : { "S": "pancetta"},
                 "ingrd" : { "S" : "pancetta" },
+                "iQual" : {"S": "cut into large dice" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "200" } ,
@@ -128,8 +129,8 @@
                 },
                "prep" : { "L" : [
                                 { "M" : {
-                                  "txt" : { "S" : "Dice the {ingrd} into large pieces, say 2cm and set aside" },
-                                  "say" : { "S" : "Dice the {ingrd} into large pieces, say 2cm and set aside " },
+                                  "txt" : { "S" : "Dice the {ingrd} into large dice size pieces and set aside" },
+                                  "say" : { "S" : "Dice the {ingrd} into large dice size pieces and set aside " },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -141,8 +142,8 @@
                },
               "task" : { "L" : [
                                 { "M" : {
-                                  "txt" : { "S" : "Add the pancetta and fry for gently for 30 secs" },
-                                  "say" : { "S" : "Add the pancetta and fry for gently for 30 secs" },
+                                  "txt" : { "S" : "Add the {ingrd} and fry for gently for 30 secs" },
+                                  "say" : { "S" : "Add the {ingrd} and fry for gently for 30 secs" },
                                   "time" : { "N" : "30" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "sec" },
@@ -162,17 +163,17 @@
                 "PKey" : { "S": "A-21-6" },
                 "SortK" : { "N": "40"},
                 "label" : { "S": "garlic"},
-                "ingrd" : { "S" : "garlic" },
+                "ingrd" : { "S" : "garlic cloves" },
+                "iQual" : { "S" : ", peeled" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
-                                      "qty" : { "S" : "2" } ,
-                                      "unit" : { "S" : "clove" }
+                                      "qty" : { "S" : "2" } 
                                       }
                 },
                 "prep" : { "L" : [
                                 { "M" : {
-                                  "txt" : { "S" : "peel and slice {qty} {unit} of {ingrd} and set aside " },
-                                  "say" : { "S" : "peel and slice {qty} {unit} of {ingrd} and set aside " },
+                                  "txt" : { "S" : "peel and slice {qty} {ingrd} and set aside " },
+                                  "say" : { "S" : "peel and slice {qty} {ingrd} and set aside " },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -597,8 +598,6 @@
                 "SortK" : { "N": "150"},
                 "label" : { "S": "stock"},
                 "ingrd" : { "S" : "chicken stock" },
-                "quali" : { "S" : "fresh" },
-                "iQual" : { "S" : "leaves" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "1" } ,
@@ -660,8 +659,8 @@
                 "PKey" : { "S": "A-21-6" },
                 "SortK" : { "N": "160"},
                 "label" : { "S": "Cheese"},
-                "ingrd" : { "S" : "parmesan" },
-                "iQual" : { "S" : "freshly grated" },
+                "ingrd" : { "S" : "Parmesan" },
+                "iQual" : { "S" : ", freshly grated" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "175" },
