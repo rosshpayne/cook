@@ -22,7 +22,7 @@
                 "PKey" : { "S": "R-21" },
                 "SortK" : { "N": "4"},
                 "RName" : { "S": "Green Beans with Parmesan"},
-                "index" : { "SS" : ["beans","green beans","vegetarian"] }
+                "Index" : { "SS" : ["beans","green-beans","vegetarian"] }
             }
         }
         },

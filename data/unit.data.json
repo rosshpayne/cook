@@ -61,7 +61,7 @@
          "PutRequest": { 
             "Item": {
                 "slabel" : { "S" : "ml" },
-                "llabel" : { "S": "millilitre" },
+                "llabel" : { "S": "mill" },
                 "print": { "S": "s" },               
                 "say": { "S": "l" },
                 "display": { "S": "s" }

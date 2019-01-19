@@ -130,9 +130,9 @@ func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 				b.WriteString(fmt.Sprintf(" %d %s %s", identicalC[v].num, strings.Title(v.size), strings.ToLower(c.Label)))
 			} else {
 				if len(c.Measure.Height) > 0 {
-					b.WriteString(fmt.Sprintf(" %d %sx%s%s %s ", identicalC[v].num, c.Measure.Height, c.Measure.Unit, strings.ToLower(c.Label)))
+					b.WriteString(fmt.Sprintf(" %d %sx%s%s %s ", identicalC[v].num, c.Measure.Height, c.Measure.Dimension, c.Measure.Unit, strings.ToLower(c.Label)))
 				} else {
-					b.WriteString(fmt.Sprintf(" %d %s%s %s ", identicalC[v].num, c.Measure.Unit, strings.ToLower(c.Label)))
+					b.WriteString(fmt.Sprintf(" %d %s%s %s ", identicalC[v].num, c.Measure.Dimension, c.Measure.Unit, strings.ToLower(c.Label)))
 				}
 			}
 			if len(c.Purpose) > 0 {

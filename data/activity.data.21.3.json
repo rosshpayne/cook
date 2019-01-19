@@ -9,8 +9,8 @@
                   "type" : { "S": "Pan" },
                   "contains" : { "S": "risotto ingredients" },
                   "measure" : { "M" : { 
-                                      "diameter" : { "N" : "30" } , 
-                                      "height"   : { "N" : "2"  } ,
+                                      "dim" : { "N" : "30" } , 
+                                      "height"   : { "N" : "2.5"  } ,
                                       "unit" : { "S" : "cm" }  
                                       }
                               },
@@ -27,7 +27,7 @@
                 "SortK" : { "N": "3"},
                 "RName" : { "S": "Risotto Nero with Swiss Chard"},
                 "Cat"  : { "S": "risotto" } ,
-                "index" : { "SS" : ["swiss chard","risotto","cuttlefish", "chard risotto","swiss chard risotto"] }
+                "Index" : { "SS" : ["cuttlefish","swiss-chard risotto"] }
             }
         }
         },
@@ -46,8 +46,8 @@
                 },
                 "task" : { "L" : [
                                 { "M" :  {
-                                  "txt" : { "S" : "warm {qty}{ml} of {ingrd} in a large pan" },
-                                  "say" : { "S" : "warm {qty} {ml} of {ingrd} in a large pan" },
+                                  "txt" : { "S" : "warm {measure} of {ingrd} in a large pan" },
+                                  "say" : { "S" : "warm {measure} of {ingrd} in a large pan" },
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" }, 
                                   "useC" : { "SS" : ["MC-S"] },
@@ -75,14 +75,13 @@
                 },
                 "prep" : { "L" : [
                                 { "M" : { 
-                                  "txt" : { "S" : "Peel and finely chop {qty} {size} {ingrd} and set aside" },
-                                  "say" : { "S" : "Peel and finely chop {qty} {size} {ingrd} and set aside"  },
+                                  "txt" : { "S" : "Peel and finely chop {measure} {ingrd} and set aside" },
+                                  "say" : { "S" : "Peel and finely chop {measure} {ingrd} and set aside"  },
                                   "time" : { "N" : "3" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
                                   "useD" : { "M" : {
-                                                "type" : { "S": "knife" },
-                                                "purpose" : {"S": "chop" }
+                                                "type" : { "S": "knife" }
                                         }
                                     },
                                   "useC" : { "SS" : [ "SAP-S" ] }
@@ -122,8 +121,8 @@
                 },
                 "task" : { "L" : [
                                 { "M" : { 
-                                  "txt" : { "S" : "Peel and finely chop {qty} {size} {ingrd} cloves and add to pan" },
-                                  "say" : { "S" : "Peel and finely chop {qty} {size} {ingrd} cloves and add to pan" },
+                                  "txt" : { "S" : "Peel and finely chop {measure} {ingrd} cloves and add to pan" },
+                                  "say" : { "S" : "Peel and finely chop {measure} {ingrd} cloves and add to pan" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -156,8 +155,8 @@
                 },
                 "prep" :  { "L" : [
                                 { "M" :  {
-                                 "txt" : { "S" : "Finely chop {qty} {size} {ingrd}. Keep the ink sacs intact if using and set both aside." },
-                                  "say" : { "S" : "Finely chop {qty} {size} {ingrd}. Keep the ink sacs intact if using and set both aside" },
+                                 "txt" : { "S" : "Finely chop {measure} {ingrd}. Keep the ink sacs intact if using and set both aside." },
+                                  "say" : { "S" : "Finely chop {measure} {ingrd}. Keep the ink sacs intact if using and set both aside" },
                                   "time" : { "N" : "3" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -198,8 +197,8 @@
                 },
                 "task" :  { "L" : [
                                 { "M" : { 
-                                  "txt" : { "S" : "Add {qty} {iQual} {ingrd} to pan" },
-                                  "say" : { "S" : "Add {qty} {iQual} {ingrd} to pan" },
+                                  "txt" : { "S" : "Add {measure} {iQual} {ingrd} to the pan" },
+                                  "say" : { "S" : "Add {measure} {iQual} {ingrd} to the pan" },
                                   "time" : { "N" : "0" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -222,8 +221,8 @@
                 "iQual" : { "S" : ", sea salt and black pepper" },
                 "task" :  { "L" : [
                                 { "M" : { 
-                                  "txt" : { "S" : "Add {ingrd}{iQual} to pan. Stir to combine." },
-                                  "say" : { "S" : "Add {ingrd}{iQual} to pan. Stir to combine." },
+                                  "txt" : { "S" : "Add {ingrd}{iQual} to {addtoc}. Stir to combine." },
+                                  "say" : { "S" : "Add {ingrd}{iQual} to {addtoc}. Stir to combine." },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "addToC" : { "SS" : [ "RisoPan" ] }
@@ -250,8 +249,8 @@
                 },
                 "prep" :  { "L" : [
                                 { "M" : { 
-                                  "txt" : { "S" : "Measure out {qty}{unit} of {quali} {ingrd} and set aside" },
-                                  "say" : { "S" : "Measure out {qty} {unit} of {quali} {ingrd} and set aside" },
+                                  "txt" : { "S" : "Measure out {measure} of {quali} {ingrd} and set aside" },
+                                  "say" : { "S" : "Measure out {measure} of {quali} {ingrd} and set aside" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -291,8 +290,8 @@
                 },
                 "task" :  { "L" : [
                                 { "M" : { 
-                                  "txt" : { "S" : "Add {qty}{unit} of {ingrd} to pan. Give contents a good stir." },
-                                  "say" : { "S" : "Add {qty} {unit} of {ingrd} to pan. Give contents a good stir." },
+                                  "txt" : { "S" : "Add {measure} of {ingrd} to pan. Give contents a good stir." },
+                                  "say" : { "S" : "Add {measure} of {ingrd} to pan. Give contents a good stir." },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -310,9 +309,9 @@
             "Item": { 
                 "PKey" : { "S": "A-21-3" },
                 "SortK" : { "N": "75"},
-                "label" : { "S": "Tomatoe"},
+                "label" : { "S": "Tomatoes"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
-                "ingrd" : { "S" : "tomatoe" },
+                "ingrd" : { "S" : "tomatoes" },
                 "quali" : { "S" : "peeled plum" },
                 "iQual" : { "S" : "from a jar, drained of their juices" },
                 "measure" : { "M" : { 
@@ -373,8 +372,8 @@
                 "alt" : { "S" : "use the saved ink sac from the cuttle fish" },
                 "task" :  { "L" : [
                                 { "M" : { 
-                                  "txt" : { "S" : "Now add {qty} {unit} of {ingrd} {alt} to the pan and stir in. When each grain of rice has become black proceed to next task" },
-                                  "say" : { "S" : "Now add {qty} {unit} of {ingrd} {alt} to the pan and stir in. When each grain of rice has become black proceed to next task" },
+                                  "txt" : { "S" : "Now add {measure} of {ingrd} {alt} to the pan and stir in. When each grain of rice has become black proceed to next task" },
+                                  "say" : { "S" : "Now add {measure} of {ingrd} {alt} to the pan and stir in. When each grain of rice has become black proceed to next task" },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -402,12 +401,12 @@
                 },
                 "prep" : {  "L" : [
                                 { "M" :  {
-                                 "txt" : { "S" : "In a {size} {useC} sausepan, warm up the {ingrd} but do not bring to boil. Keep it warm until used" },
-                                  "say" : { "S" : "In a {size} {useC} sausepan, warm up the {ingrd} but do not bring to boil. Keep it warm until used." },
+                                 "txt" : { "S" : "In a {useC} sausepan, warm up {measure} of {ingrd} but do not bring to boil. Keep it warm until used" },
+                                  "say" : { "S" : "In a {useC} sausepan, warm up {measure} of {ingrd} but do not bring to boil. Keep it warm until used." },
                                   "time" : { "N" : "5" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
-                                  "useC"  : { "SS" : [ "Sausepan-L"  ] },
+                                  "useC"  : { "SS" : [ "SAS-L"  ] },
                                   "parallel" : { "BOOL" : true }
                                   }
                                 }
@@ -420,7 +419,7 @@
                                   "time" : { "N" : "6" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
-                                  "sourceC" : { "SS" : [ "Sausepan-L"  ] },
+                                  "sourceC" : { "SS" : [ "SAS-L"  ] },
                                   "addToC"  : { "SS" : [ "RisoPan"  ] }
                                   }
                                 }
@@ -446,8 +445,8 @@
                 },
                 "prep" :  { "L" : [
                                 { "M" :  {
-                                 "txt" : { "S" : "Coarsely chop {qty} {unit} of {ingrd} and set aside" },
-                                  "say" : { "S" : "Coarsely chop {qty} {unit} of {ingrd} and set aside"},
+                                 "txt" : { "S" : "Coarsely chop {measure} of {ingrd} and set aside" },
+                                  "say" : { "S" : "Coarsely chop {measure} of {ingrd} and set aside"},
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -489,8 +488,8 @@
                 },
                 "prep" :  { "L" : [
                                 { "M" :  {
-                                  "txt" : { "S" : "Cook {qty}{unit} of {ingrd} for {time} {unit}, drain and then chop coarsely. Set aside" },
-                                  "say" : { "S" : "Cook {qty} {unit} of {ingrd} for {time} {unit}, drain and then chop coarsely. Set aside" },
+                                  "txt" : { "S" : "Cook {measure} of {ingrd} for {time} {unit}, drain and then chop coarsely. Set aside" },
+                                  "say" : { "S" : "Cook {measure} of {ingrd} for {time} {unit}, drain and then chop coarsely. Set aside" },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -530,12 +529,17 @@
                 },
                 "task" :  { "L" : [
                                 { "M" :  {
-                                 "txt" : { "S" : "Chop {qty}{unit} of {ingrd} into 2 cm pieces and add to the risotto. Server immediately" },
-                                  "say" : { "S" :"Chop {qty} {unit} of {ingrd} into 2 centimeter pieces and add to the risotto. Server immediately, yes now, quick" },
+                                 "txt" : { "S" : "Chop {ameasure} of {ingrd} into {measure} pieces and add to the risotto. Server immediately" },
+                                  "say" : { "S" :"Chop {ameasure} of {ingrd} into {measure} pieces and add to the risotto. Server immediately, yes now, quick" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
-                                  "addToC"  : { "SS" : [ "RisoPan"  ] }
+                                  "addToC"  : { "SS" : [ "RisoPan"  ] },
+                                  "measure" : { "M" : { 
+                                      "qty" : { "S" : "2" },
+                                      "unit" : { "S" : "cm" } 
+                                      }
+                                      }
                                   }
                                 }
                                 ]

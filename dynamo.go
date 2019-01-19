@@ -122,7 +122,7 @@ func (a ContainerMap) saveContainerUsage(s *sessCtx) error {
 	return nil
 }
 
-func (s sessCtx) getContainerRecById() (alexaDialog, error) {
+func (s *sessCtx) getContainerRecById() (alexaDialog, error) {
 
 	type pKey struct {
 		PKey  string
@@ -260,13 +260,13 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 				// }
 			} else {
 				if len(m.Size) > 0 {
-					irec.Quantity = m.Quantity + " " + m.Size + " of " + ap.Ingredient
+					irec.Quantity = m.Quantity + " " + m.Size + " " + ap.Ingredient
 				} else {
 					qty := strings.ToLower(m.Quantity)
 					if qty != "bunch" {
 						qty_, err := strconv.Atoi(m.Quantity)
 						if err != nil {
-							irec.Quantity = m.Quantity + " of " + ap.Ingredient
+							irec.Quantity = m.Quantity + " " + ap.Ingredient
 						} else {
 							if qty_ > 0 {
 								if ap.Ingredient[len(ap.Ingredient)-1] != 's' {
@@ -280,7 +280,7 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 						}
 
 					} else {
-						irec.Quantity = m.Quantity + " of " + ap.Ingredient
+						irec.Quantity = m.Quantity + " " + ap.Ingredient
 					}
 				}
 			}
@@ -301,18 +301,35 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 		}
 	}
 	AddEntry := func(entry string) {
+		entry = strings.Replace(entry, "-", " ", 1)
 		entry = strings.TrimRight(strings.TrimLeft(strings.ToLower(entry), " "), " ")
 		// for each word in index entry find associated activity ingredient
-		for _, w := range strings.Split(entry, " ") {
-			if a, ok := labelM[strings.ToLower(w)]; ok {
-				delete(indexRow, entry)
-				makeIndexRecs(entry, a)
-				break
-			}
+		var indexed bool
+		w := entry
+		if a, ok := labelM[strings.ToLower(w)]; ok {
+			delete(indexRow, entry)
+			makeIndexRecs(entry, a)
+			indexed = true
+		}
+		if !indexed {
 			if a, ok := ingrdM[strings.ToLower(w)]; ok {
 				delete(indexRow, entry)
 				makeIndexRecs(entry, a)
-				break
+				indexed = true
+			}
+		}
+		if !indexed {
+			for _, w := range strings.Split(entry, " ") {
+				if a, ok := labelM[strings.ToLower(w)]; ok {
+					delete(indexRow, entry)
+					makeIndexRecs(entry, a)
+					break
+				}
+				if a, ok := ingrdM[strings.ToLower(w)]; ok {
+					delete(indexRow, entry)
+					makeIndexRecs(entry, a)
+					break
+				}
 			}
 		}
 		if !indexRow[entry] {
@@ -466,7 +483,7 @@ func (s *sessCtx) updateSessionEOL() error {
 	return nil
 }
 
-func (s sessCtx) getTaskRecById() (alexaDialog, error) {
+func (s *sessCtx) getTaskRecById() (alexaDialog, error) {
 
 	var taskRec prepTaskRec
 	pKey := "T-" + s.pkey
@@ -704,7 +721,7 @@ func (s *sessCtx) ingredientSearch() error {
 	return nil
 }
 
-func (s sessCtx) generateSlotEntries() error {
+func (s *sessCtx) generateSlotEntries() error {
 	//
 	type Index struct {
 		PKey string `json="PKey"`

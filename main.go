@@ -674,14 +674,14 @@ func handler(request InputEvent) (RespEvent, error) {
 		// read base recipe data and generate tasks, container and device usage and save to dynamodb.
 		switch pathItem[0] {
 		case "load":
-			sessctx.processBaseRecipe()
+			sessctx.loadBaseRecipe()
 			if err != nil {
 				break
 			}
 		case "print":
 			// set unit format mode
-			pUmode = uPrint
-			as, err := sessctx.getIngredientData()
+			writeCtx = uPrint
+			as, err := sessctx.loadIngredients()
 			if err != nil {
 				fmt.Printf("error: %s", err.Error())
 			}
@@ -795,7 +795,8 @@ func handler(request InputEvent) (RespEvent, error) {
 
 func main() {
 	//lambda.Start(handler)
-	p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=20&rid=1"}
+	fmt.Printf("%#v\n", os.Args)
+	p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
 
 	p, _ := handler(p1)
 	if len(p.Error) > 0 {

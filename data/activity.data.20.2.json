@@ -74,7 +74,7 @@
                 "label" : { "S": "grapefruit"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "grapefruit" },
-                "quali" : { "S" : "ruby read" },
+                "quali" : { "S" : "ruby red" },
                 "iqual" : { "S" : "juice" },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "500" } ,
@@ -109,8 +109,8 @@
                                 }
                                 },
                                 { "M" : { 
-                                  "txt" : { "S" : "Strain it into a {addToC} through a {used}. You will need {qty}{unit} of juice." },
-                                  "say" : { "S" : "Strain it into a {addToC} through a {used}. You will need {qty}{unit} of juice." },
+                                  "txt" : { "S" : "Strain it into a {addToC} through a {used}. You will need {measure} of juice." },
+                                  "say" : { "S" : "Strain it into a {addToC} through a {used}. You will need {measure} of juice." },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -149,8 +149,8 @@
                 },
                 "prep" : { "L" : [             
                                 {"M" : { 
-                                  "txt" : { "S" : "Juice enough {ingrd}s to make {qty}{unit}. Set aside." },
-                                  "say" : { "S" : "Juice enough {ingrd}s to make {qty}{unit}. Set aside." },
+                                  "txt" : { "S" : "Juice enough {ingrd}s to make {measure}. Set aside." },
+                                  "say" : { "S" : "Juice enough {ingrd}s to make {measure}. Set aside." },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -176,8 +176,8 @@
                 },
                 "prep" : { "L" : [
                                 { "M" : {
-                                  "txt" : { "S" : "Measure {qty}{unit} of {ingrd} and set aside." },
-                                  "say" : { "S" : "Measure {qty}{unit} of {ingrd} and set aside." },
+                                  "txt" : { "S" : "Measure {measure} of {ingrd} and set aside." },
+                                  "say" : { "S" : "Measure {measure} of {ingrd} and set aside." },
                                   "time" : { "N" : "15" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -210,14 +210,14 @@
                 "quali" : { "S" : "caster" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
-                                      "wgt" : { "S" : "200" } ,
+                                      "qty" : { "S" : "200" } ,
                                       "unit" : { "S" : "g" }
                                       }
                 },
                 "task" : { "L" : [
                                 { "M" : {
-                                  "txt" : { "S" : "measure {wgt}{unit} of {ingrd} into {addToC}" },
-                                  "say" : { "S" : "measure {wgt}{unit} of {ingrd} into {addToC}" },
+                                  "txt" : { "S" : "measure {measure} of {ingrd} into {addToC}" },
+                                  "say" : { "S" : "measure {measure} of {ingrd} into {addToC}" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -225,11 +225,16 @@
                                   "label" : {"S" : "measure sugar"}} 
                                 },
                                 {"M" : { 
-                                  "txt" : { "S" : "Measure 250ml of {ingrd.10} juice into the sausepan containing the {ingrd}, and set the remaining juice aside"},
-                                  "say" : { "S" : "Measure 250ml of {ingrd.10} juice into the sausepan containing the {ingrd}, and set the remaining juice aside"},
+                                  "txt" : { "S" : "Measure {measure} of {ingrd.10} juice into the sausepan containing the {ingrd}, and set the remaining juice aside"},
+                                  "say" : { "S" : "Measure {measure} of {ingrd.10} juice into the sausepan containing the {ingrd}, and set the remaining juice aside"},
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
+                                  "measure" : { "M" : { 
+                                      "qty" : { "S" : "200" } ,
+                                      "unit" : { "S" : "ml" }
+                                      }
+                                  },
                                   "useC" : { "SS" : ["MC-S"] },
                                   "addToC" : {"SS" : ["Sausepan"] },
                                   "sourceC" : {"SS" : ["GrapeFBowl"] }
@@ -261,8 +266,8 @@
                 },
                "task" : { "L" : [ 
                                 {"M" : { 
-                                  "txt" : { "S" : "Once cooled pour into the remaining juice, add {qty}{unit} of {ingrd} and chill completely by setting it over an ice bath or placing it in the fridge" },
-                                  "say" : { "S" : "Once cooled pour into the remaining juice, add {qty}{unit} of {ingrd} and chill completely by setting it over an ice bath or placing it in the fridge" },
+                                  "txt" : { "S" : "Once cooled pour into the remaining juice, add {measure} of {ingrd} and chill completely by setting it over an ice bath or placing it in the fridge" },
+                                  "say" : { "S" : "Once cooled pour into the remaining juice, add {measure} of {ingrd} and chill completely by setting it over an ice bath or placing it in the fridge" },
                                   "time" : { "N" : "10" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },

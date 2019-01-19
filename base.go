@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
+	_ "github.com/aws/aws-sdk-go/aws"
 	_ "github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
@@ -49,8 +49,8 @@ type respT struct {
 }
 
 type Unit struct {
-	Unit    string `json:"unit"`   // as used in recipe json
-	Slabel  string `json:"slabel"` // short label
+	Unit    string `json:"PKey"`   // as used in recipe json
+	Slabel  string `json:"SortK"`  // short label
 	Llabel  string `json:"llabel"` // long label
 	Desc    string `json:"desc"`
 	Print   string `json:"print"`   // short or long label when printing unit in ingredients listing.
@@ -104,18 +104,19 @@ type DeviceT struct {
 
 type PerformT struct {
 	//	type      PrepTask q // Prep or Task Activity
-	id          int      // order as appears in Activity JSON
-	Text        string   `json:"txt"` // original from db - contains {tag}
-	text        string   // has {tag} replaced
-	Verbal      string   `json:"say"` // original from db - contains {tag}
-	verbal      string   // has {tag} replaced
-	Label       string   `json:"label"`
-	IngredientS []string `json:"ingrd"` // case where ingredient prepping produces other ingredients e.g. separating eggs
-	Time        float32  `json:"time"`
-	Tplus       float32  `json:"tPlus"`
-	Unit        string   `json:"unit"`
-	UseDevice   *DeviceT `json:"useD"`
-	WaitOn      int      `json:"waitOn"` // depenency on other activity to complete
+	id          int       // order as appears in Activity JSON
+	Text        string    `json:"txt"` // original from db - contains {tag}
+	text        string    // has {tag} replaced
+	Verbal      string    `json:"say"` // original from db - contains {tag}
+	verbal      string    // has {tag} replaced
+	Label       string    `json:"label"`
+	IngredientS []string  `json:"ingrd"` // case where ingredient prepping produces other ingredients e.g. separating eggs
+	Time        float32   `json:"time"`
+	Tplus       float32   `json:"tPlus"`
+	Unit        string    `json:"unit"`
+	UseDevice   *DeviceT  `json:"useD"`
+	Measure     *MeasureT `json:"measure"` // used by those tasks that use some portion of some ingredient.
+	WaitOn      int       `json:"waitOn"`  // depenency on other activity to complete
 	//DeviceT
 	AddToC   []string     `json:"addToC"`
 	UseC     []string     `json:"useC"`
@@ -199,29 +200,29 @@ type prepCtl struct {
 
 var prepctl prepCtl = prepCtl{}
 
-type UnitModeT int
+type WriteContextT int
 
-var pUmode UnitModeT // package variable that determines formating of unit
+var writeCtx WriteContextT // package variable that determines formating of unit
 
 const (
-	uPrint UnitModeT = iota + 1
+	uPrint WriteContextT = iota + 1
 	uSay
 	uDisplay
 )
 
-// String output unit text based on mode represented by package variable pUmode [package_variable-Unit-mode]
+// String output unit text based on mode represented by package variable writeCtx [package_variable-Unit-mode]
 func (u *Unit) String() string {
 	// mode: Print ingredients
 	var format string
 	if u == nil {
-		panic(fmt.Errorf("%s", "Unit is nil in method String() of *Unit"))
+		panic(fmt.Errorf("%s", "Unit is nil in method (*Unit).String()"))
 	}
-	switch pUmode {
+	switch writeCtx {
 	case uPrint, uSay, uDisplay:
 	default:
-		panic(fmt.Errorf("%s", "Unit format mode not set"))
+		panic(fmt.Errorf("%s", "write context not set"))
 	}
-	switch pUmode {
+	switch writeCtx {
 	case uPrint:
 		format = u.Print
 	case uSay:
@@ -259,7 +260,7 @@ func (d *DeviceT) String() string {
 		t := strings.Split(d.Temp, "/")
 		if len(t) > 1 {
 			// for an oven device, a/b means <a><unit> fan/ <b><unit> nofan / setting
-			if pUmode == uSay {
+			if writeCtx == uSay {
 				s = t[0] + unitMap[d.Unit].String() + " or " + t[1] + unitMap[d.Unit].String() + " fan forced"
 			} else {
 				s = t[0] + unitMap[d.Unit].String() + "/" + t[1] + unitMap[d.Unit].String() + " Fan"
@@ -270,7 +271,7 @@ func (d *DeviceT) String() string {
 	}
 	if len(d.Set) > 0 {
 		if len(s) > 0 {
-			if pUmode == uSay {
+			if writeCtx == uSay {
 				s += " or " + d.Set
 			} else {
 				s += "/" + d.Set
@@ -320,7 +321,7 @@ func (m MeasureT) String() string {
 			if strings.IndexByte(m.Quantity, '/') > 0 || m.Quantity == "1" {
 				return m.Quantity + " " + unitMap[m.Unit].String()
 			} else {
-				if pUmode == uSay {
+				if writeCtx == uSay {
 					return m.Quantity + " " + unitMap[m.Unit].String() + "s"
 				} else {
 					return m.Quantity + unitMap[m.Unit].String()
@@ -331,7 +332,7 @@ func (m MeasureT) String() string {
 			if strings.IndexByte(m.Quantity, '/') > 0 {
 				return m.Quantity + " " + unitMap[m.Unit].String()
 			} else {
-				if pUmode == uSay {
+				if writeCtx == uSay {
 					return m.Quantity + " " + unitMap[m.Unit].String() + "s"
 				} else {
 					return m.Quantity + unitMap[m.Unit].String()
@@ -352,11 +353,18 @@ func (m MeasureT) String() string {
 				return m.Quantity + " " + m.Unit + "es" + " of"
 			}
 		}
+		if strings.Index(strings.ToLower(m.Unit), "sachet") >= 0 {
+			if strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0 || m.Quantity == "1" {
+				return m.Quantity + " " + m.Unit + " of"
+			} else {
+				return m.Quantity + " " + m.Unit + "s" + " of"
+			}
+		}
 		if strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0 || m.Quantity == "1" {
 			return m.Quantity + " " + unitMap[m.Unit].String()
 		} else {
 			//if unitMap[m.Unit].Print == "l" {
-			if pUmode == uSay {
+			if writeCtx == uSay {
 				return m.Quantity + " " + unitMap[m.Unit].String() + "s"
 			} else {
 				return m.Quantity + unitMap[m.Unit].String()
@@ -364,9 +372,6 @@ func (m MeasureT) String() string {
 		}
 	}
 	if len(m.Quantity) > 0 {
-		if strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0 {
-			return m.Quantity + " of"
-		}
 		if strings.Index(strings.ToLower(m.Quantity), "drizzle") >= 0 {
 			return m.Quantity + " of"
 		}
@@ -379,6 +384,7 @@ func (a Activity) String() string {
 	var s string
 	//sfmt.Println("string() ", a.AId, a.Ingredient)
 	// qualm, qty, unit, quali, i , iqual
+	//
 	if a.Invisible || len(a.Ingredient) == 0 {
 		return ""
 	}
@@ -388,16 +394,12 @@ func (a Activity) String() string {
 			s += " of"
 		}
 	}
-	m := a.Measure
-	if m != nil {
+	if a.Measure != nil {
 		if len(s) > 0 {
-			s += " " + m.String()
+			s += " " + a.Measure.String()
 		} else {
-			s = m.String()
+			s = a.Measure.String()
 		}
-	} else {
-		// no measure then ignore this ingredient
-		return ""
 	}
 	if len(a.QualiferIngrd) > 0 {
 		if len(s) > 0 {
@@ -456,14 +458,14 @@ func (as Activities) String() string {
 	return b.String()
 }
 
-func (s *sessCtx) getIngredientData() (Activities, error) {
+func (s *sessCtx) loadIngredients() (Activities, error) {
 	//
 	// Table:  Activity
 	//
 	kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value("A-"+s.pkey))
 	expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
 	if err != nil {
-		return nil, fmt.Errorf("Error: in readActivity Query - %s", err.Error())
+		return nil, fmt.Errorf("Error: in getIngredientData Query - %s", err.Error())
 	}
 	input := &dynamodb.QueryInput{
 		KeyConditionExpression:    expr.KeyCondition(),
@@ -475,35 +477,41 @@ func (s *sessCtx) getIngredientData() (Activities, error) {
 	//*dynamodb.DynamoDB,
 	result, err := s.dynamodbSvc.Query(input)
 	if err != nil {
-		return nil, fmt.Errorf("Error: in readActivity Query - %s", err.Error())
+		return nil, fmt.Errorf("Error: in getIngredientData Query - %s", err.Error())
 	}
 	if int(*result.Count) == 0 {
-		return nil, fmt.Errorf("No data found for reqRId %s in readActivity for Activity - ", s.pkey)
+		return nil, fmt.Errorf("No data found for reqRId %s in getIngredientData for Activity - ", s.pkey)
 	}
 	//ActivityS := make([]Activity, int(*result.Count))
 	ActivityS := make(Activities, int(*result.Count))
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &ActivityS)
 	if err != nil {
-		return nil, fmt.Errorf("** Error during UnmarshalListOfMaps in readActivity - %s", err.Error())
+		return nil, fmt.Errorf("** Error during UnmarshalListOfMaps in getIngredientData - %s", err.Error())
 	}
 	//
 	// Table:  Unit
 	//
-	proj := expression.NamesList(expression.Name("slabel"), expression.Name("llabel"), expression.Name("print"), expression.Name("desc"), expression.Name("say"), expression.Name("display"))
-	expr, err = expression.NewBuilder().WithProjection(proj).Build()
+	//proj := expression.NamesList(expression.Name("slabel"), expression.Name("llabel"), expression.Name("print"), expression.Name("desc"), expression.Name("say"), expression.Name("display"))
+	kcond = expression.KeyEqual(expression.Key("PKey"), expression.Value("U"))
+	expr, err = expression.NewBuilder().WithKeyCondition(kcond).Build()
 	if err != nil {
 		return nil, fmt.Errorf("%s", "Error in expression build of unit table: "+err.Error())
 	}
 	// Build the query input parameters
-	params := &dynamodb.ScanInput{
+	input = &dynamodb.QueryInput{
+		KeyConditionExpression:    expr.KeyCondition(),
+		FilterExpression:          expr.Filter(),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
-		ProjectionExpression:      expr.Projection(),
-		TableName:                 aws.String("Unit"),
 	}
-	resultS, err := s.dynamodbSvc.Scan(params)
+	input = input.SetTableName("Ingredient").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
+	//*dynamodb.DynamoDB,
+	resultS, err := s.dynamodbSvc.Query(input)
 	if err != nil {
-		return nil, fmt.Errorf("%s", "Error in scan of unit table: "+err.Error())
+		return nil, fmt.Errorf("Error: in getIngredientData Query - %s", err.Error())
+	}
+	if int(*result.Count) == 0 {
+		return nil, fmt.Errorf("No Unit data found ")
 	}
 	//
 	// Note: unitMap is a package variable
@@ -520,16 +528,12 @@ func (s *sessCtx) getIngredientData() (Activities, error) {
 	// for k, v := range unitMap {
 	// 	fmt.Printf("%s - %#v\n", k, v)
 	// }
-	// unit = nil
-	// for i := 0; i < len(ActivityS); i++ {
-	// 	fmt.Printf("%v", ActivityS[i])
-	// 	// 	a.unitMap = unitM
-	// }
+	unit = nil
 
 	return ActivityS, nil
 }
 
-func (s *sessCtx) processBaseRecipe() error {
+func (s *sessCtx) loadBaseRecipe() error {
 	//
 	// Table:  Activity
 	//
@@ -726,22 +730,30 @@ func (s *sessCtx) processBaseRecipe() error {
 	//
 	// Table:  Unit
 	//
-	proj := expression.NamesList(expression.Name("slabel"), expression.Name("llabel"), expression.Name("print"), expression.Name("desc"), expression.Name("say"), expression.Name("display"))
-	expr, err = expression.NewBuilder().WithProjection(proj).Build()
+	kcond = expression.KeyEqual(expression.Key("PKey"), expression.Value("U"))
+	expr, err = expression.NewBuilder().WithKeyCondition(kcond).Build()
 	if err != nil {
 		return fmt.Errorf("%s", "Error in expression build of unit table: "+err.Error())
 	}
 	// Build the query input parameters
-	params := &dynamodb.ScanInput{
+	input = &dynamodb.QueryInput{
+		KeyConditionExpression:    expr.KeyCondition(),
+		FilterExpression:          expr.Filter(),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
-		ProjectionExpression:      expr.Projection(),
-		TableName:                 aws.String("Unit"),
 	}
-	resultS, err := s.dynamodbSvc.Scan(params)
+	input = input.SetTableName("Ingredient").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
+	//*dynamodb.DynamoDB,
+	resultS, err := s.dynamodbSvc.Query(input)
 	if err != nil {
-		return fmt.Errorf("%s", "Error in scan of unit table: "+err.Error())
+		return fmt.Errorf("Error: in getIngredientData Query - %s", err.Error())
 	}
+	if int(*result.Count) == 0 {
+		return fmt.Errorf("No Unit data found ")
+	}
+	//
+	// Note: unitMap is a package variable
+	//
 	unitMap = make(map[string]*Unit, int(*result.Count))
 	unit := make([]*Unit, int(*result.Count))
 	err = dynamodbattribute.UnmarshalListOfMaps(resultS.Items, &unit)
@@ -751,9 +763,9 @@ func (s *sessCtx) processBaseRecipe() error {
 	for _, v := range unit {
 		unitMap[v.Slabel] = v
 	}
-	for k, v := range unitMap {
-		fmt.Printf("%s - %#v\n", k, v)
-	}
+	// for k, v := range unitMap {
+	// 	fmt.Printf("%s - %#v\n", k, v)
+	// }
 	unit = nil
 	//
 	//  Post fetch processing - assign container pointers in Activity and validate that all containers referenced exist
@@ -786,7 +798,7 @@ func (s *sessCtx) processBaseRecipe() error {
 						cId, ok := ContainerM[strings.TrimSpace(p.AddToC[i])]
 						if !ok {
 							// ContainerSAM contains single activity containers
-							// purpose of SAM is defined after a "."
+							// format: <SA?>.<purpose>
 							sac := strings.Split(strings.TrimSpace(p.AddToC[i]), ".")
 							p.AddToC[i] = sac[0]
 							if cId, ok = ContainerSAM[sac[0]]; !ok {
@@ -1135,12 +1147,12 @@ func (s *sessCtx) processBaseRecipe() error {
 					// perform over slice of preps, tasks
 					switch interactionType {
 					case text:
-						pUmode = uDisplay // unit formating
+						writeCtx = uDisplay // unit formating
 						str = strings.TrimLeft(pt.Text, " ")
 						s := str[0]
 						str = strings.ToUpper(string(s)) + str[1:]
 					case voice:
-						pUmode = uSay // unit formating
+						writeCtx = uSay // unit formating
 						str = pt.Verbal
 					}
 					// if no {} then print and return to top of the loop
@@ -1239,10 +1251,22 @@ func (s *sessCtx) processBaseRecipe() error {
 							}
 						case "measure":
 							context = measure
+							// is it the task measure
+							if pt.Measure != nil {
+								fmt.Fprintf(&b, "%s", pt.Measure.String())
+								break
+							}
+							// is it the activity measure
 							if p.Measure == nil {
 								return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
 							}
 							fmt.Fprintf(&b, "%s", p.Measure.String())
+						case "actmeasure", "ameasure":
+							context = measure
+							// is it the task measure
+							if p.Measure != nil {
+								fmt.Fprintf(&b, "%s", p.Measure.String())
+							}
 						case "qty":
 							context = measure
 							if p.Measure == nil {

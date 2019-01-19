@@ -50,7 +50,7 @@
                 "PKey" : { "S": "R-21" },
                 "SortK" : { "N": "6"},
                 "RName" : { "S": "Risotto with Roast Partridge"},
-                "index": { "SS" : ["partridge risotto","partridge","risotto"]}
+                "Index": { "SS" : ["partridge risotto"]}
             }
         }
         },

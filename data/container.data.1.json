@@ -94,6 +94,51 @@
             "PutRequest": { 
                "Item": {
                   "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAPN-S" },
+                  "label" : { "S" : "pan" },
+                  "type" : { "S": "pan" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "small" } 
+                                      }
+                              },
+                  "purpose" : {"S":"cooking"}
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAPN-M" },
+                  "label" : { "S" : "pan" },
+                  "type" : { "S": "pan" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "medium" } 
+                                      }
+                              },
+                  "purpose" : {"S":"cooking"}
+                   }
+            }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAPN-L" },
+                  "label" : { "S" : "pan" },
+                  "type" : { "S": "pan" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "large" } 
+                                      }
+                              },
+                  "purpose" : {"S":"cooking"}
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
                   "SortK" : { "S": "SAP-S" },
                   "label" : { "S" : "plate" },
                   "type" : { "S": "plate" },
@@ -188,7 +233,7 @@
                   "label" : { "S" : "Measuring Cup" },
                   "type" : { "S": "Measuring Cup" },
                   "measure" : { "M" : { 
-                                      "size" : { "S" : "1.5 Cup" } 
+                                      "size" : { "S" : "1.5cup" } 
                                       }
                               }
                    }
@@ -202,7 +247,7 @@
                   "label" : { "S" : "Measuring Cup" },
                   "type" : { "S": "Measuring Cup" },
                   "measure" : { "M" : { 
-                                      "size" : { "S" : "2.5 Cup" } 
+                                      "size" : { "S" : "2.5cup" } 
                                       }
                               }
                    }
@@ -216,7 +261,7 @@
                   "label" : { "S" : "Measuring Bowl" },
                   "type" : { "S": "Measuring Cup" },
                   "measure" : { "M" : { 
-                                      "size" : { "S" : "4.5 Cup" } 
+                                      "size" : { "S" : "4.5cup" } 
                                       }
                               }
                    }
