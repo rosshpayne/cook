@@ -62,7 +62,7 @@
                 "PKey" : { "S": "R-20" },
                 "SortK" : { "N": "2"},
                 "RName" : { "S": "Campari and grapefruit sorbet"},
-                "Index" : { "SS" : ["sorbet", "campari", "grapefruit","campari sorbet"] }
+                "Index" : { "SS" : ["campari grapefruit sorbet"] }
             }
         }
         },

@@ -391,8 +391,8 @@
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "prep" :  { "L" : [
                                 { "M" :  {
-                                  "txt" : { "S" : "Preheat {used} to {temp}{unit}" },
-                                  "say" : { "S" : "Preheat {used} to {temp}{unit}"},
+                                  "txt" : { "S" : "Preheat {used} to {temp}" },
+                                  "say" : { "S" : "Preheat {used} to {temp}"},
                                   "time" : { "N" : "10" },
                                   "tplus" : { "N" : "5" },
                                   "unit" : { "S" : "min" },

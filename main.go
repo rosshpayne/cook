@@ -797,7 +797,11 @@ func main() {
 	//lambda.Start(handler)
 	fmt.Printf("%#v\n", os.Args)
 	p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
-
+	i, err := strconv.ParseFloat(os.Args[4], 64)
+	if err != nil {
+		panic(err)
+	}
+	pIngrdScale = i
 	p, _ := handler(p1)
 	if len(p.Error) > 0 {
 		fmt.Printf("%#v\n", p.Error)

@@ -4,6 +4,7 @@ import (
 	_ "encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
@@ -130,14 +131,10 @@ type PerformT struct {
 }
 
 type MeasureT struct {
-	//	type_     int    // 0 - normal qty being vol/weigth, 1 - qty being number of, 2 - qty being weight each, 3 - qty being vol each
-	Quantity  string `json:"qty"`
-	VerbalQty string `json:"vQty"`
-	//	Weight    string `json:"wgt"`
-	//	Volume    string `json:"vol"`
-	Size string `json:"size"`
-	Unit string `json:"unit"`
-	//	Comment   string `json:"comment"`
+	Number   string `json:"num"`  // instances of quantity
+	Quantity string `json:"qty"`  // weight, volume, dimension
+	Size     string `json:"size"` // large, medium, small
+	Unit     string `json:"unit"` // unit of measure, g, kg, cm, ml, litre, pinch, clove, etc.
 }
 
 // used for alternative ingredients only
@@ -309,8 +306,232 @@ func (m *MeasureCT) String() string {
 }
 
 var unitMap map[string]*Unit // populated in getActivity()
+var pIngrdScale float64 = 0.75
 
-func (m MeasureT) String() string {
+func (m *MeasureT) String() string {
+	if len(m.Quantity) > 0 && len(m.Size) > 0 {
+		return m.Quantity + " " + m.Size
+	}
+	//
+	if pIngrdScale > 0.85 {
+		mn := &MeasureT{Quantity: m.Quantity, Unit: m.Unit}
+		return mn.FormatString()
+	}
+	//
+	// Quantity scaling necessary ********************************************
+	//
+	const (
+		c_pinchof string = "pinch of"
+	)
+	roundTo5 := func(f float64) float64 {
+		i := int(f/10) * 10
+		var q int
+		switch int(f) - i {
+		case 0, 1, 2:
+			q = int(f) - (int(f) - i)
+		case 3, 4, 5, 6, 7:
+			q = int(f) - (int(f) - i) + 5
+		case 8, 9:
+			q = int(f) - (int(f) - i) + 10
+		}
+		return float64(q)
+	}
+	scaleFraction := func(s string) string {
+		// supported fractions: 1/8,1/4,1/2,3/4,1,1.25,1.5,2 2.5, 3
+		var (
+			n1       string
+			fraction string
+			f        float64
+			fstr     string
+		)
+		switch len(s) {
+		case 4:
+			// e.g. 31/2 ie. 3 and one half
+			n1 = string(s[0])
+			fraction = s[1:]
+		default:
+			fraction = s
+		}
+		switch fraction {
+		case "1/8":
+			f = 0.125
+		case "1/4":
+			f = 0.25
+		case "1/2":
+			f = 0.667
+		case "3/4":
+			f = 0.75
+		}
+		if len(n1) > 0 {
+			n, err := strconv.ParseFloat(n1, 64)
+			if err != nil {
+				panic(err)
+			}
+			f += n
+		}
+		f *= pIngrdScale
+		fint, frac := math.Modf(f)
+		if frac > 0.875 {
+			fint += 1
+		} else if frac > 0.625 {
+			fstr = "3/4"
+		} else if frac > 0.375 {
+			fstr = "1/2"
+		} else if frac > 0.1875 {
+			fstr = "1/4"
+		} else if frac > 0.075 {
+			fstr = "1/8"
+		} else {
+			fstr = c_pinchof
+		}
+		ff := strconv.FormatFloat(fint, 'g', -1, 64)
+		if fint == 0 {
+			fstr = fstr
+			return fstr
+		} else {
+			fstr = ff + " " + fstr
+			return fstr
+		}
+	}
+	scaleFloat := func(s string) string {
+		f, err := strconv.ParseFloat(s, 64)
+		if err != nil {
+			panic(fmt.Errorf("Error: cannot covert Quantity [%s] to float64 in *MeasureT.String()", s))
+		}
+		qty := f * 10 * pIngrdScale
+		//qty = math.Round(qty) / 10
+		qty = roundTo5(qty) / 10
+		return strconv.FormatFloat(qty, 'g', -1, 64)
+	}
+	scaleInt := func(s string) string {
+		i, err := strconv.Atoi(s)
+		if err != nil {
+			panic(fmt.Errorf("Error: cannot covert Quantity [%s] to int in *MeasureT.String()", s))
+		}
+		qty := float64(i) * 10 * pIngrdScale
+		//qty = math.Round(qty) / 10
+		qty = roundTo5(qty) / 10
+		return strconv.FormatFloat(qty, 'g', -1, 64)
+	}
+
+	//
+	//
+	if len(m.Quantity) > 0 && len(m.Unit) == 0 {
+		//
+		// case: only qty is defined
+		//
+		// fraction defined
+		if strings.IndexByte(m.Quantity, '/') > 0 {
+			s := scaleFraction(m.Quantity)
+			mn := &MeasureT{Quantity: s}
+			return mn.FormatString()
+		}
+		if strings.IndexByte(m.Quantity, '.') > 0 {
+			s := scaleFloat(m.Quantity)
+			mn := &MeasureT{Quantity: s}
+			return mn.FormatString()
+		}
+		s := scaleInt(m.Quantity)
+		mn := &MeasureT{Quantity: s}
+		return mn.FormatString()
+	}
+	var (
+		f      float64
+		qty    float64
+		qtyStr string
+		part   string
+	)
+
+	if len(m.Quantity) > 0 && len(m.Unit) > 0 {
+		//
+		if strings.IndexByte(m.Quantity, '/') > 0 {
+			s := scaleFraction(m.Quantity)
+			if s == c_pinchof {
+				mn := &MeasureT{Quantity: s}
+				return mn.FormatString()
+			} else {
+				mn := &MeasureT{Quantity: s, Unit: m.Unit}
+				return mn.FormatString()
+			}
+		}
+		if strings.IndexByte(m.Quantity, '.') > 0 {
+			var err error
+			f, err = strconv.ParseFloat(m.Quantity, 64)
+			if err != nil {
+				panic(fmt.Errorf("Error: cannot covert Quantity [%s] to float64 in *MeasureT.String()", m.Quantity))
+			}
+		} else {
+			i, err := strconv.Atoi(m.Quantity)
+			if err != nil {
+				panic(fmt.Errorf("Error: cannot covert Quantity [%s] to int in *MeasureT.String()", m.Quantity))
+			}
+			f = float64(i)
+		}
+		// *1000 as we are about to change to smaller unit
+		qty = f * 1000 * pIngrdScale
+		if qty < 1000 && (m.Unit == "l" || m.Unit == "cm" || m.Unit == "kg") {
+			var unit string
+			switch m.Unit {
+			case "l":
+				unit = "ml"
+			case "cm":
+				unit = "mm"
+			case "kg":
+				unit = "g"
+			default:
+				unit = m.Unit
+			}
+			//qty = math.Round(qty*10) / 10
+			fmt.Println("roundto5: ", qty)
+			qty = roundTo5(qty)
+			fmt.Println("roundto5: ", qty)
+			qtyStr = strconv.FormatFloat(float64(qty), 'g', -1, 64)
+			mn := &MeasureT{Quantity: qtyStr, Unit: unit}
+			return mn.FormatString()
+		}
+		qty /= 1000
+		//qty = math.Round(qty*10) / 10
+		fmt.Println("roundto5: ", qty)
+		qty = roundTo5(qty)
+		fmt.Println("roundto5: ", qty)
+		fint, frac := math.Modf(qty)
+		if frac > .825 {
+			fint += 1
+			part = ""
+		} else if frac > .625 {
+			part = "3/4"
+			//part = ".75"
+		} else if frac > .375 {
+			part = "1/2"
+			//part = ".5"
+		} else if frac > .175 {
+			part = "1/4"
+			//part = ".25"
+		} else if frac > .75 {
+			part = "1/8"
+			//part = ".125"
+		} else {
+			part = ""
+		}
+		ff := strconv.FormatFloat(fint, 'g', -1, 64)
+		if qty < 5 {
+			if fint == 0 {
+				mn := &MeasureT{Quantity: part, Unit: m.Unit}
+				return mn.FormatString()
+			} else {
+				mn := &MeasureT{Quantity: ff + " " + part, Unit: m.Unit}
+				return mn.FormatString()
+			}
+		} else {
+			mn := &MeasureT{Quantity: ff, Unit: m.Unit}
+			return mn.FormatString()
+		}
+
+	}
+	return ""
+}
+
+func (m *MeasureT) FormatString() string {
 	// is it  short or long units
 	var format string
 	if len(m.Unit) > 0 {
@@ -1268,7 +1489,8 @@ func (s *sessCtx) loadBaseRecipe() error {
 							if p.Measure == nil {
 								return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
 							}
-							fmt.Fprintf(&b, "%s", p.Measure.Quantity)
+							//fmt.Fprintf(&b, "%s", p.Measure.Quantity)
+							fmt.Fprintf(&b, "%s", p.Measure.String())
 						case "size":
 							if p.Measure == nil {
 								return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
