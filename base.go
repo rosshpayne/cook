@@ -243,7 +243,7 @@ func (u *Unit) String() string {
 		case "C", "F":
 			return "\u00B0" + u.Llabel
 		default:
-			return u.Llabel
+			return " " + u.Llabel
 		}
 	default:
 		return u.Slabel
@@ -311,32 +311,28 @@ func (m *MeasureCT) String() string {
 var unitMap map[string]*Unit // populated in getActivity()
 
 func (m MeasureT) String() string {
-
+	var format string
+	if len(m.Unit) > 0 {
+		u := unitMap[m.Unit]
+		switch writeCtx {
+		case uPrint:
+			format = u.Print
+		case uSay:
+			format = u.Say
+		case uDisplay:
+			format = u.Display
+		}
+	}
 	if len(m.Quantity) > 0 && len(m.Size) > 0 {
 		return m.Quantity + " " + m.Size
 	}
 	if len(m.Quantity) > 0 && len(m.Unit) > 0 {
 
-		if m.Unit == "tsp" || m.Unit == "tbsp" {
-			if strings.IndexByte(m.Quantity, '/') > 0 || m.Quantity == "1" {
+		if m.Unit == "tsp" || m.Unit == "tbsp" || m.Unit == "g" || m.Unit == "kg" {
+			if strings.IndexByte(m.Quantity, '/') > 0 && format != "l" {
 				return m.Quantity + " " + unitMap[m.Unit].String()
 			} else {
-				if writeCtx == uSay {
-					return m.Quantity + " " + unitMap[m.Unit].String() + "s"
-				} else {
-					return m.Quantity + unitMap[m.Unit].String()
-				}
-			}
-		}
-		if m.Unit == "g" || m.Unit == "kg" {
-			if strings.IndexByte(m.Quantity, '/') > 0 {
-				return m.Quantity + " " + unitMap[m.Unit].String()
-			} else {
-				if writeCtx == uSay {
-					return m.Quantity + " " + unitMap[m.Unit].String() + "s"
-				} else {
-					return m.Quantity + unitMap[m.Unit].String()
-				}
+				return m.Quantity + unitMap[m.Unit].String()
 			}
 		}
 		if strings.Index(strings.ToLower(m.Unit), "clove") >= 0 {
@@ -363,7 +359,6 @@ func (m MeasureT) String() string {
 		if strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0 || m.Quantity == "1" {
 			return m.Quantity + " " + unitMap[m.Unit].String()
 		} else {
-			//if unitMap[m.Unit].Print == "l" {
 			if writeCtx == uSay {
 				return m.Quantity + " " + unitMap[m.Unit].String() + "s"
 			} else {
