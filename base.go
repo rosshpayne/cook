@@ -311,6 +311,7 @@ func (m *MeasureCT) String() string {
 var unitMap map[string]*Unit // populated in getActivity()
 
 func (m MeasureT) String() string {
+	// is it  short or long units
 	var format string
 	if len(m.Unit) > 0 {
 		u := unitMap[m.Unit]
@@ -329,7 +330,7 @@ func (m MeasureT) String() string {
 	if len(m.Quantity) > 0 && len(m.Unit) > 0 {
 
 		if m.Unit == "tsp" || m.Unit == "tbsp" || m.Unit == "g" || m.Unit == "kg" {
-			if strings.IndexByte(m.Quantity, '/') > 0 && format != "l" {
+			if (strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0) && format != "l" {
 				return m.Quantity + " " + unitMap[m.Unit].String()
 			} else {
 				return m.Quantity + unitMap[m.Unit].String()
