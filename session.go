@@ -49,7 +49,7 @@ func (s sessCtx) updateSession() (int, error) {
 			}
 			t := time.Now()
 			t.Add(time.Hour * 24 * 1)
-			updateC = expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
+			updateC = updateC.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
 		} else {
 			// on update use ADD to increment an object related counter.
 			recid_ := fmt.Sprintf("RecId[%d]", objectMap[s.object])
@@ -144,6 +144,7 @@ func (s sessCtx) updateSession() (int, error) {
 	}
 	result, err := s.dynamodbSvc.UpdateItem(input) // do an updateitem and return original id value so only one call.
 	if err != nil {
+		fmt.Println("ERROR in UPDATE SESSION - updateItem ", err.Error)
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case dynamodb.ErrCodeProvisionedThroughputExceededException:

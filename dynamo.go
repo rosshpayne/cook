@@ -521,6 +521,7 @@ func (s *sessCtx) getTaskRecById() (alexaDialog, error) {
 	if err != nil {
 		return prepTaskRec{}, fmt.Errorf("Error: %s - %s", "in UnmarshalMap in getTaskRecById ", err.Error())
 	}
+	fmt.Printf("taskRec ingetTaskRecById [%#v]\n ", taskRec)
 	return taskRec, nil
 }
 

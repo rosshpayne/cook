@@ -1,0 +1,223 @@
+{
+      "Ingredient" : [ 
+         {
+         "PutRequest": { 
+            "Item": {
+                "PKey" : { "S" : "U" },
+                "SortK" : { "S" : "g" },
+                "llabel" : { "S": "gram" },
+                "desc" : { "S": "1000 grams per kilogram"},
+                "print": { "S": "s" },
+                "say": { "S": "l" },
+                "display": { "S": "s" }
+                }
+            }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                 "PKey" : { "S" : "U" },
+                "SortK" : { "S" : "kg" },
+                "llabel" : { "S": "kilogram" },
+                "print": { "S": "s" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
+                }
+            }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                 "PKey" : { "S" : "U" },
+                "SortK" : { "S" : "tbsp" },
+                "llabel" : { "S": "tablespoon" },
+                "print": { "S": "l" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
+                }
+            }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                 "PKey" : { "S" : "U" },
+                "SortK" : { "S" : "tsp" },
+                "llabel" : { "S": "teespoon" },
+                "desc" : { "S": "25g or 25ml of water is equivalent to 1 teespoon"},
+                "print": { "S": "l" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
+                }
+            }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                 "PKey" : { "S" : "U" },
+                "SortK" : { "S" : "l" },
+                "llabel" : { "S": "litre" },
+                "print": { "S": "l" },               
+                "say": { "S": "l" },
+                "display": { "S": "l" }
+                }
+            }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                 "PKey" : { "S" : "U" },
+                "SortK" : { "S" : "ml" },
+                "llabel" : { "S": "mill" },
+                "print": { "S": "s" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
+                }
+            }
+         },
+         {
+         "PutRequest": { 
+              "Item": {
+                 "PKey" : { "S" : "U" },
+                "SortK" : { "S" : "mm" },
+                "llabel" : { "S": "millimeter" },
+                "print": { "S": "s" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
+                }
+         }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                 "PKey" : { "S" : "U" },
+                "SortK" : { "S" : "cup" },
+                "llabel" : { "S": "cup" },
+                "desc" : { "S": "one cup is equivalent to 250ml"},
+                "print": { "S": "s" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
+                }
+            }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                 "PKey" : { "S" : "U" },
+                "SortK" : { "S" : "cm" },
+                "llabel" : { "S": "centimeter" },
+                "print": { "S": "s" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
+                }
+         }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                 "PKey" : { "S" : "U" },
+                "SortK" : { "S" : "m" },
+                "llabel" : { "S": "meter" },
+                "print": { "S": "l" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
+                }
+            }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                 "PKey" : { "S" : "U" },
+                "SortK" : { "S" : "C" },
+                "llabel" : { "S": "Celsius" },
+                "print": { "S": "s" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
+                }
+            }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                 "PKey" : { "S" : "U" },
+                "SortK" : { "S" : "F" },
+                "llabel" : { "S": "Fehrenhite" },
+                "print": { "S": "s" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
+                }
+            }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                 "PKey" : { "S" : "U" },
+                "SortK" : { "S" : "min" },
+                "llabel" : { "S": "minute" },
+                "print": { "S": "l" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
+                }
+            }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                 "PKey" : { "S" : "U" },
+                "SortK" : { "S" : "sec" },
+                "llabel" : { "S": "second" },
+                "print": { "S": "l" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
+                }
+            }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                 "PKey" : { "S" : "U" },
+                "SortK" : { "S" : "hr" },
+                "llabel" : { "S": "hour" },
+                "print": { "S": "l" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
+                }
+            }
+         },
+         {
+         "PutRequest": { 
+            "Item": {
+                 "PKey" : { "S" : "U" },
+                "SortK" : { "S" : "clove" },
+                "llabel" : { "S": "clove" },
+                "print": { "S": "s" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
+                }
+            }
+         },
+        {
+         "PutRequest": { 
+            "Item": {
+                 "PKey" : { "S" : "U" },
+                "SortK" : { "S" : "sachet" },
+                "llabel" : { "S": "sachet" },
+                "print": { "S": "s" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
+                }
+            }
+         },
+        {
+         "PutRequest": { 
+            "Item": {
+                 "PKey" : { "S" : "U" },
+                "SortK" : { "S" : "pinch" },
+                "llabel" : { "S": "pinch" },
+                "print": { "S": "s" },               
+                "say": { "S": "l" },
+                "display": { "S": "s" }
+                }
+            }
+         }
+    ]
+}  

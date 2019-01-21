@@ -10,15 +10,15 @@ import (
 	"strconv"
 	"strings"
 
+	//"github.com/aws/aws-lambda-go/events"
+	//"github.com/aws/aws-lambda-go/lambda"
+	//"github.com/aws/aws-lambda-go/lambdacontext"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	_ "github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	//"github.com/aws/aws-lambda-go/events"
-	//"github.com/aws/aws-lambda-go/lambda"
-	// "github.com/aws/aws-lambda-go/lambdacontext"
 )
 
 //TODO
@@ -455,13 +455,16 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 	//  if listing and not finished and object request changes object. Accept and zero or repeat last RecId for requested object.
 	if len(lastSess.Obj) > 0 {
 		//if !s.finishedListing(lastSess.RecId[objectMap[lastSess.Obj]], objectMap[lastSess.Obj]) && (lastSess.Obj != s.object) {
-		if s.eol != lastSess.RecId[objectMap[s.object]] && (lastSess.Obj != s.object) {
-			// show last listed entry otherwise list first entry
-			switch lastSess.RecId[objectMap[s.object]] {
-			case 0: // not listed before or been reset after previously completing list
-				s.updateAdd = 1 // show first entry
-			default: // in the process of listing
-				s.updateAdd = 0 // repeat last shown entry
+		fmt.Println(s.object)
+		if len(lastSess.RecId) > 0 {
+			if s.eol != lastSess.RecId[objectMap[s.object]] && (lastSess.Obj != s.object) {
+				// show last listed entry otherwise list first entry
+				switch lastSess.RecId[objectMap[s.object]] {
+				case 0: // not listed before or been reset after previously completing list
+					s.updateAdd = 1 // show first entry
+				default: // in the process of listing
+					s.updateAdd = 0 // repeat last shown entry
+				}
 			}
 		}
 	}
@@ -529,7 +532,9 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 		s.updateAdd = 1
 	}
 	// check if we have Dynamodb Recid Set defined, this will be useful in updateSession
+	fmt.Printf("\ncheck Recid is SET...\n")
 	if len(lastSess.RecId) == 0 {
+		fmt.Printf("\ncheck Recid is NOT NOT SET...\n")
 		s.recIdNotExists = true
 	}
 	//
@@ -562,14 +567,20 @@ func (s *sessCtx) getRecById() error {
 		return err
 	}
 	rec := at.Alexa()
-	s.dmsg = rec.Display
+	s.dmsg = expandIngrd(rec.Display)
 	if s.recId == rec.EOL {
-		s.vmsg = "and finally, " + rec.Verbal
-		s.dmsg = "and finally, " + rec.Display
+		writeCtx = uSay
+		s.vmsg = "and finally, " + expandIngrd(rec.Verbal)
+		writeCtx = uDisplay
+		s.dmsg = "and finally, " + expandIngrd(rec.Display)
 	} else {
-		s.vmsg = rec.Verbal
-		s.dmsg = rec.Display
+		writeCtx = uSay
+		s.vmsg = expandIngrd(rec.Verbal)
+		writeCtx = uDisplay
+		s.dmsg = expandIngrd(rec.Display)
 	}
+	fmt.Println(s.vmsg)
+	fmt.Println(s.dmsg)
 	// if EOL has changed because of object change then update session context with new EOL
 	//	use EOL on next session to determine if RecId is at EOL and print end-of-list message
 	// fmt.Println("getRecById rec.EOL, s.eol", rec.EOL, s.eol)
@@ -698,6 +709,7 @@ func handler(request InputEvent) (RespEvent, error) {
 	case "book", "recipe", "select", "search", "list", "yesno", "version":
 		sessctx.curreq = bookrecipe_
 		sessctx.request = pathItem[0]
+		sessctx.curreq = bookrecipe_
 		switch pathItem[0] {
 		case "book": // user reponse "open book" "close book"
 			// book id and name  populated in this section
@@ -775,16 +787,20 @@ func handler(request InputEvent) (RespEvent, error) {
 	//
 	// compare with last session if it exists and update remaining session data
 	//
+	fmt.Println("about to getRec..1")
 	err = sessctx.mergeAndValidateWithLastSession()
 	if err != nil {
+		fmt.Println(err.Error())
 		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata, Error: err.Error()}, nil
 	}
+	fmt.Println("about to getRec..2")
 	if sessctx.curreq == bookrecipe_ || sessctx.abort {
 		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata}, nil
 	}
 	//
 	// session ctx validated and fully populated - now fetch required record
 	//
+	fmt.Println("about to getRec..")
 	err = sessctx.getRecById() // returns [text, verbal] response
 	if err != nil {
 		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata, Error: err.Error()}, nil
@@ -795,13 +811,12 @@ func handler(request InputEvent) (RespEvent, error) {
 
 func main() {
 	//lambda.Start(handler)
-	fmt.Printf("%#v\n", os.Args)
-	p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
-	i, err := strconv.ParseFloat(os.Args[4], 64)
-	if err != nil {
-		panic(err)
-	}
-	pIngrdScale = i
+	//	p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
+	p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&rcp=Rhubarb and strawberry crumble cake"}
+	//var i float64 = 1.0
+
+	pIngrdScale = 0.5
+	writeCtx = uDisplay
 	p, _ := handler(p1)
 	if len(p.Error) > 0 {
 		fmt.Printf("%#v\n", p.Error)

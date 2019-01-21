@@ -453,3 +453,51 @@ func (s *sessCtx) purgeRecipe() error {
 	}
 	return nil
 }
+
+func expandIngrd(str string) string {
+	var (
+		b      strings.Builder // supports io.Write write expanded text/verbal text to this buffer before saving to Task or Verbal fields
+		tclose int
+		topen  int
+		nm     *MeasureT
+	)
+	fmt.Printf("In expandIngrd....[%s]\n", str)
+	for tclose, topen = 0, strings.IndexByte(str, '{'); topen != -1; {
+
+		b.WriteString(str[tclose:topen])
+		nextclose := strings.IndexByte(str[topen:], '}')
+		if nextclose == -1 {
+			panic(fmt.Errorf("Error: closing } not found in expandIngrd() [%s]", str))
+		}
+		nextopen := strings.IndexByte(str[topen+1:], '{')
+		if nextopen != -1 {
+			if nextclose > nextopen {
+				panic(fmt.Errorf("Error: closing } not found in expandIngrd() [%s]", str))
+			}
+		}
+		tclose += strings.IndexByte(str[tclose:], '}')
+		tclose_ := tclose
+		// examine tag to see if it references entities outside of current activity
+		//   currenlty only device oven and noncurrent activity is supported
+		pt := strings.Split(strings.ToLower(str[topen+1:tclose_]), "|")
+		if len(pt) == 4 {
+			fmt.Printf("pt.....[%#v]\n", pt)
+			nm = &MeasureT{Number: pt[3], Quantity: pt[0], Size: pt[2], Unit: pt[1]}
+			fmt.Printf("nm.....[%#v]\n", nm)
+		} else {
+			// Qty defined
+			nm = &MeasureT{Quantity: pt[0]}
+		}
+		b.WriteString(nm.String())
+		//
+		tclose += 1
+		topen = strings.IndexByte(str[tclose:], '{')
+		if topen == -1 {
+			b.WriteString(str[tclose:])
+		} else {
+			topen += tclose
+		}
+	}
+	return b.String()
+
+}

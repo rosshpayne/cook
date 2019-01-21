@@ -49,16 +49,6 @@ type respT struct {
 	msg   string
 }
 
-type Unit struct {
-	Unit    string `json:"PKey"`   // as used in recipe json
-	Slabel  string `json:"SortK"`  // short label
-	Llabel  string `json:"llabel"` // long label
-	Desc    string `json:"desc"`
-	Print   string `json:"print"`   // short or long label when printing unit in ingredients listing.
-	Say     string `json:"say"`     // format in verbal communication
-	Display string `json:"display"` // format in display of Alexa device
-}
-
 type MeasureCT struct {
 	Quantity  string `json:"qty"`
 	Size      string `json:"size"`
@@ -163,11 +153,11 @@ type Activity struct {
 	Coord         [2]float32  // X,Y
 	Task          []*PerformT `json:"task"`
 	Prep          []*PerformT `json:"prep"`
-	unitMap       map[string]*Unit
-	next          *Activity
-	prev          *Activity
-	nextTask      *Activity
-	nextPrep      *Activity
+	//	unitMap       map[string]*Unit
+	next     *Activity
+	prev     *Activity
+	nextTask *Activity
+	nextPrep *Activity
 }
 
 type ContainerMap map[string]*Container
@@ -206,47 +196,6 @@ const (
 	uSay
 	uDisplay
 )
-
-// String output unit text based on mode represented by package variable writeCtx [package_variable-Unit-mode]
-func (u *Unit) String() string {
-	// mode: Print ingredients
-	var format string
-	if u == nil {
-		panic(fmt.Errorf("%s", "Unit is nil in method (*Unit).String()"))
-	}
-	switch writeCtx {
-	case uPrint, uSay, uDisplay:
-	default:
-		panic(fmt.Errorf("%s", "write context not set"))
-	}
-	switch writeCtx {
-	case uPrint:
-		format = u.Print
-	case uSay:
-		format = u.Say
-	case uDisplay:
-		format = u.Display
-	}
-	switch format {
-	case "s":
-		switch u.Slabel {
-		case "C", "F":
-			return "\u00B0" + u.Slabel
-		default:
-			return u.Slabel
-		}
-	case "l":
-		switch u.Slabel {
-		case "C", "F":
-			return "\u00B0" + u.Llabel
-		default:
-			return " " + u.Llabel
-		}
-	default:
-		return u.Slabel
-	}
-
-}
 
 func (d *DeviceT) String() string {
 	var s string
@@ -305,7 +254,6 @@ func (m *MeasureCT) String() string {
 	return s
 }
 
-var unitMap map[string]*Unit // populated in getActivity()
 var pIngrdScale float64 = 0.75
 
 func (m *MeasureT) String() string {
@@ -545,11 +493,12 @@ func (m *MeasureT) FormatString() string {
 			format = u.Display
 		}
 	}
+
 	if len(m.Quantity) > 0 && len(m.Size) > 0 {
 		return m.Quantity + " " + m.Size
 	}
 	if len(m.Quantity) > 0 && len(m.Unit) > 0 {
-
+		fmt.Printf("FormatString: [%#v]\n", unitMap)
 		if m.Unit == "tsp" || m.Unit == "tbsp" || m.Unit == "g" || m.Unit == "kg" {
 			if (strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0) && format != "l" {
 				return m.Quantity + " " + unitMap[m.Unit].String()
@@ -709,43 +658,43 @@ func (s *sessCtx) loadIngredients() (Activities, error) {
 	// Table:  Unit
 	//
 	//proj := expression.NamesList(expression.Name("slabel"), expression.Name("llabel"), expression.Name("print"), expression.Name("desc"), expression.Name("say"), expression.Name("display"))
-	kcond = expression.KeyEqual(expression.Key("PKey"), expression.Value("U"))
-	expr, err = expression.NewBuilder().WithKeyCondition(kcond).Build()
-	if err != nil {
-		return nil, fmt.Errorf("%s", "Error in expression build of unit table: "+err.Error())
-	}
-	// Build the query input parameters
-	input = &dynamodb.QueryInput{
-		KeyConditionExpression:    expr.KeyCondition(),
-		FilterExpression:          expr.Filter(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-	}
-	input = input.SetTableName("Ingredient").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
-	//*dynamodb.DynamoDB,
-	resultS, err := s.dynamodbSvc.Query(input)
-	if err != nil {
-		return nil, fmt.Errorf("Error: in getIngredientData Query - %s", err.Error())
-	}
-	if int(*result.Count) == 0 {
-		return nil, fmt.Errorf("No Unit data found ")
-	}
-	//
-	// Note: unitMap is a package variable
-	//
-	unitMap = make(map[string]*Unit, int(*result.Count))
-	unit := make([]*Unit, int(*result.Count))
-	err = dynamodbattribute.UnmarshalListOfMaps(resultS.Items, &unit)
-	if err != nil {
-		return nil, fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
-	}
-	for _, v := range unit {
-		unitMap[v.Slabel] = v
-	}
+	// kcond = expression.KeyEqual(expression.Key("PKey"), expression.Value("U"))
+	// expr, err = expression.NewBuilder().WithKeyCondition(kcond).Build()
+	// if err != nil {
+	// 	return nil, fmt.Errorf("%s", "Error in expression build of unit table: "+err.Error())
+	// }
+	// // Build the query input parameters
+	// input = &dynamodb.QueryInput{
+	// 	KeyConditionExpression:    expr.KeyCondition(),
+	// 	FilterExpression:          expr.Filter(),
+	// 	ExpressionAttributeNames:  expr.Names(),
+	// 	ExpressionAttributeValues: expr.Values(),
+	// }
+	// input = input.SetTableName("Ingredient").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
+	// //*dynamodb.DynamoDB,
+	// resultS, err := s.dynamodbSvc.Query(input)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("Error: in getIngredientData Query - %s", err.Error())
+	// }
+	// if int(*result.Count) == 0 {
+	// 	return nil, fmt.Errorf("No Unit data found ")
+	// }
+	// //
+	// // Note: unitMap is a package variable
+	// //
+	// unitMap = make(map[string]*Unit, int(*result.Count))
+	// unit := make([]*Unit, int(*result.Count))
+	// err = dynamodbattribute.UnmarshalListOfMaps(resultS.Items, &unit)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
+	// }
+	// for _, v := range unit {
+	// 	unitMap[v.Slabel] = v
+	// }
 	// for k, v := range unitMap {
 	// 	fmt.Printf("%s - %#v\n", k, v)
 	// }
-	unit = nil
+	//unit = nil
 
 	return ActivityS, nil
 }
@@ -947,43 +896,43 @@ func (s *sessCtx) loadBaseRecipe() error {
 	//
 	// Table:  Unit
 	//
-	kcond = expression.KeyEqual(expression.Key("PKey"), expression.Value("U"))
-	expr, err = expression.NewBuilder().WithKeyCondition(kcond).Build()
-	if err != nil {
-		return fmt.Errorf("%s", "Error in expression build of unit table: "+err.Error())
-	}
-	// Build the query input parameters
-	input = &dynamodb.QueryInput{
-		KeyConditionExpression:    expr.KeyCondition(),
-		FilterExpression:          expr.Filter(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-	}
-	input = input.SetTableName("Ingredient").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
-	//*dynamodb.DynamoDB,
-	resultS, err := s.dynamodbSvc.Query(input)
-	if err != nil {
-		return fmt.Errorf("Error: in getIngredientData Query - %s", err.Error())
-	}
-	if int(*result.Count) == 0 {
-		return fmt.Errorf("No Unit data found ")
-	}
-	//
-	// Note: unitMap is a package variable
-	//
-	unitMap = make(map[string]*Unit, int(*result.Count))
-	unit := make([]*Unit, int(*result.Count))
-	err = dynamodbattribute.UnmarshalListOfMaps(resultS.Items, &unit)
-	if err != nil {
-		return fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
-	}
-	for _, v := range unit {
-		unitMap[v.Slabel] = v
-	}
+	// kcond = expression.KeyEqual(expression.Key("PKey"), expression.Value("U"))
+	// expr, err = expression.NewBuilder().WithKeyCondition(kcond).Build()
+	// if err != nil {
+	// 	return fmt.Errorf("%s", "Error in expression build of unit table: "+err.Error())
+	// }
+	// // Build the query input parameters
+	// input = &dynamodb.QueryInput{
+	// 	KeyConditionExpression:    expr.KeyCondition(),
+	// 	FilterExpression:          expr.Filter(),
+	// 	ExpressionAttributeNames:  expr.Names(),
+	// 	ExpressionAttributeValues: expr.Values(),
+	// }
+	// input = input.SetTableName("Ingredient").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
+	// //*dynamodb.DynamoDB,
+	// resultS, err := s.dynamodbSvc.Query(input)
+	// if err != nil {
+	// 	return fmt.Errorf("Error: in getIngredientData Query - %s", err.Error())
+	// }
+	// if int(*result.Count) == 0 {
+	// 	return fmt.Errorf("No Unit data found ")
+	// }
+	// //
+	// // Note: unitMap is a package variable
+	// //
+	// unitMap = make(map[string]*Unit, int(*result.Count))
+	// unit := make([]*Unit, int(*result.Count))
+	// err = dynamodbattribute.UnmarshalListOfMaps(resultS.Items, &unit)
+	// if err != nil {
+	// 	return fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
+	// }
+	// for _, v := range unit {
+	// 	unitMap[v.Slabel] = v
+	//}
 	// for k, v := range unitMap {
 	// 	fmt.Printf("%s - %#v\n", k, v)
 	// }
-	unit = nil
+	//unit = nil
 	//
 	//  Post fetch processing - assign container pointers in Activity and validate that all containers referenced exist
 	//
@@ -1477,7 +1426,10 @@ func (s *sessCtx) loadBaseRecipe() error {
 							if p.Measure == nil {
 								return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
 							}
-							fmt.Fprintf(&b, "%s", p.Measure.String())
+							m := p.Measure
+							fmt.Fprintf(&b, "%s", "{"+m.Quantity+"|"+m.Unit+"|"+m.Size+"|"+m.Number+"}")
+							//
+							//fmt.Fprintf(&b, "%s", p.Measure.String(formatonly))
 						case "actmeasure", "ameasure":
 							context = measure
 							// is it the task measure
@@ -1490,7 +1442,8 @@ func (s *sessCtx) loadBaseRecipe() error {
 								return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
 							}
 							//fmt.Fprintf(&b, "%s", p.Measure.Quantity)
-							fmt.Fprintf(&b, "%s", p.Measure.String())
+							fmt.Fprintf(&b, "%s", "{"+p.Measure.Quantity+"}")
+							//fmt.Fprintf(&b, "%s", p.Measure.String())
 						case "size":
 							if p.Measure == nil {
 								return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
