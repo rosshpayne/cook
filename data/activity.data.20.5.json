@@ -1,0 +1,495 @@
+{
+       "Ingredient" : [ 
+        {
+          "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-20-5" },
+                  "SortK" : { "S": "DryI" },
+                  "type" : { "S": "Bowl" },
+                  "label" : { "S": "Bowl" },
+                  "measure" : { "M" : { "size" : { "S" : "medium"}} },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "contents" : { "S": "dry ingredients" },
+                  "purpose": { "S": "holding" }
+                  }
+            }
+         }
+      ],
+      "Recipe" : [ 
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "R-20" },
+                "SortK" : { "N": "5"},
+                "Title" : { "S" : "Vineyard cake (aka Cleopatra-cake)" },
+                "RName" : { "S": "Vineyard cake"},
+                "Index" : { "SS" : ["Cleopatra-cake"] },
+                "Srv" : { "S" : "12" }
+        }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-5" },
+                "SortK" : { "N": "10"},
+                "label" : { "S": "flour"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "flour" },
+                "quali" : { "S" : "plain" },
+                "iQual" : { "S" : ", plus extra for dusting" },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "500" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                },
+                 "prep" : { "L" : [
+                                { "M" : { 
+                                  "txt" : { "S" : "sift the {ingrd}"},
+                                  "say" : { "S" : "sift the {ingrd}" },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "DryI"] }
+                                }}
+                                ]
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-5" },
+                "SortK" : { "N": "20"},
+                "label" : { "S": "baking poweder"},
+                "ingrd" : { "S" : "baking powder" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "2" } ,
+                                      "unit" : { "S" : "tbsp" }
+                                      }
+                },
+                "task" : { "L" : [
+                                { "M" : {
+                                  "txt" : { "S" : "In a {addtoc} with a lid, heat the {ingrd} over a medium-high heat and brown the meat on all sides. Remove the meat and put to one side." },
+                                  "say" : { "S" : "In a {addtoc} with a lid, heat the {ingrd} over a medium-high heat and brown the meat on all sides. Remove the meat and put to one side. " },
+                                  "time" : { "N" : "5" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "MeatP"] },
+                                  "label" : {"S" : "brown meat"}
+                                  }
+                                }
+                                ]}
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-5" },
+                "SortK" : { "N": "30"},
+                "ingrd" : { "S" : "bicarbonate of soda" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "1/2" } ,
+                                      "unit" : { "S" : "tsp" }
+                                      }
+                },
+                "task" : { "L" : [
+                                { "M" : {
+                                  "txt" : { "S" : "Pour the {ingrd} into the pan. Bring to the boil and reduce the liquid by half." },
+                                  "say" : { "S" : "Pour the {ingrd} into the pan. Bring to the boil and reduce the liquid by half." },
+                                  "time" : { "N" : "5" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "MeatP"] },
+                                  "label" : {"S" : "pasta workspace"}
+                                    }
+                                }
+                                ]
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-5" },
+                "SortK" : { "N": "40"},
+                "ingrd" : { "S" : "salt" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "3/4" } ,
+                                      "unit" : { "S" : "tsp" } 
+                }
+                },
+               "prep" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Add {ameasure} of {label} and a {measure} of water into the pan."},
+                                  "say" : { "S" : "Add {ameasure} of {label} and a {measure} of water into the pan." },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "MeatP"] },
+                                  "measure" : { "M" : { 
+                                      "qty" : { "S" : "100" } ,
+                                      "unit" : { "S" : "ml" } 
+                    
+                                    }}
+                                  }
+                                }
+                                ]
+                }
+            }
+            }
+            },
+           {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-5" },
+                "SortK" : { "N": "50"},
+                "label" : { "S": "sugar"},
+                "ingrd" : { "S" : "caster sugar" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "340" }  ,
+                                      "unit" : { "S" : "g" }  
+                    
+                }
+                },
+                "task" : { "L" : [
+                                { "M" :  {
+                                  "txt" : { "S" : "Add {measure} of {ingrd}" },
+                                  "say" : { "S" : "Add {measure} of {ingrd}" },
+                                  "time" : { "N" : "15" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "addToC" : { "SS" : [ "MeatP"] }
+                                }}
+                                ]
+                }
+            }
+            }
+            },
+           {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-5" },
+                "SortK" : { "N": "60"},
+                "label" : { "S": "butter"},
+                "ingrd" : { "S" : "unsalted butter" },
+                "iQual" : { "S" : ", at room temperature, plus extra for greasing" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "175" } ,
+                                      "unit" : { "S" : "g" } 
+                                      }
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Add {measure} {ingrd}" },
+                                  "say" : { "S" : "Add {measure} {ingrd}" },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "addToC" : { "SS" : [ "MeatP"] }
+                                    }
+                                }
+                                ]
+                }
+            }
+            }
+            },
+                        {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-5" },
+                "SortK" : { "N": "70"},
+                "label" : { "S": "oil"},
+                "ingrd" : { "S" : "olive oil" },
+                "quali" : { "S" : "extra virgin" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "75" } ,
+                                      "unit" : { "S" : "ml" } 
+                                      }
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Add {measure} {ingrd}" },
+                                  "say" : { "S" : "Add {measure} {ingrd}" },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "addToC" : { "SS" : [ "MeatP"] }
+                                    }
+                                } 
+                                ]
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-5" },
+                "SortK" : { "N": "80"},
+                "ingrd" : { "S" : "lemons" },
+                "qualm" : { "S" : "finely grated zest of" }, 
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "num" : { "S" : "2" } ,
+                                      "qty" : { "S" : "2" } ,
+                                      "unit" : { "S" : "tsp" }
+                                      }
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Add {measure} {ingrd}" },
+                                  "say" : { "S" : "Add {measure} {ingrd}" },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "addToC" : { "SS" : [ "MeatP"] }
+                                    }
+                                } 
+                                ]
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-5" },
+                "SortK" : { "N": "90"},
+                "ingrd" : { "S" : "orange" },
+                "qualm" : { "S" : "finely grated zest of" }, 
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "num" : { "S" : "1" } ,
+                                      "qty" : { "S" : "2" } ,
+                                      "unit" : { "S" : "tsp" },
+                                      "size" : {"S" : "medium" }
+                                      }
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Add {measure} {ingrd}" },
+                                  "say" : { "S" : "Add {measure} {ingrd}" },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "addToC" : { "SS" : [ "MeatP"] }
+                                    }
+                                } 
+                                ]
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-5" },
+                "SortK" : { "N": "100"},
+                "ingrd" : { "S" : "vanilla pod" },
+                "qualm" : { "S" : "scapped seeds of " }, 
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "num" : { "S" : "1/2" } 
+                                      }
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Add {measure} {ingrd}" },
+                                  "say" : { "S" : "Add {measure} {ingrd}" },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "addToC" : { "SS" : [ "MeatP"] }
+                                    }
+                                } 
+                                ]
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-5" },
+                "SortK" : { "N": "110"},
+                "ingrd" : { "S" : "eggs" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "4" } ,
+                                      "size" : { "S" : "large" }
+                                      }
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Add {measure} {ingrd}" },
+                                  "say" : { "S" : "Add {measure} {ingrd}" },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "addToC" : { "SS" : [ "MeatP"] }
+                                    }
+                                } 
+                                ]
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-5" },
+                "SortK" : { "N": "120"},
+                "ingrd" : { "S" : "Carte" },
+                "altIngrd" : { "S" : "Muscat de Beaumes de Venise wine" },
+                "iQual" : { "S" : ", at room temperature" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "450" } ,
+                                      "unit" : { "S" : "ml" }
+                                      }
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Add {measure} {ingrd}" },
+                                  "say" : { "S" : "Add {measure} {ingrd}" },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "addToC" : { "SS" : [ "MeatP"] }
+                                    }
+                                } 
+                                ]
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-5" },
+                "SortK" : { "N": "130"},
+                "ingrd" : { "S" : "red grapes" },
+                "quali" : { "S" : "seedless" },
+                "iQual" : { "S" : ", washed and halved lengthways" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "100" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Add {measure} {ingrd}" },
+                                  "say" : { "S" : "Add {measure} {ingrd}" },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "addToC" : { "SS" : [ "MeatP"] }
+                                    }
+                                } 
+                                ]
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-5" },
+                "SortK" : { "N": "140"},
+                "part" : { "S" : "Topping" },
+                "ingrd" : { "S" : "butter" },
+                "iQual" : { "S" : "unsalted" },
+                "quali" : { "S" : ", at room temperature" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "70" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Add {measure} {ingrd}" },
+                                  "say" : { "S" : "Add {measure} {ingrd}" },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "addToC" : { "SS" : [ "MeatP"] }
+                                    }
+                                } 
+                                ]
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-5" },
+                "SortK" : { "N": "150"},
+                "part" : { "S" : "Topping" },
+                "ingrd" : { "S" : "caster sugar" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "70" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Add {measure} {ingrd}" },
+                                  "say" : { "S" : "Add {measure} {ingrd}" },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "addToC" : { "SS" : [ "MeatP"] }
+                                    }
+                                } 
+                                ]
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-5" },
+                "SortK" : { "N": "160"},
+                "part" : { "S" : "Topping" },
+                "ingrd" : { "S" : "red grapes" },
+                "quali" : { "S" : "seedless" },
+                "iQual" : { "S" : ", washed and halved lengthways" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "100" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Add {measure} {ingrd}" },
+                                  "say" : { "S" : "Add {measure} {ingrd}" },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "addToC" : { "SS" : [ "MeatP"] }
+                                    }
+                                } 
+                                ]
+                }
+            }
+            }
+            }
+        ]
+} 
+  

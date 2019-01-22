@@ -46,7 +46,7 @@ func (s *sessCtx) loadIngredients() (Activities, error) {
 		return nil, fmt.Errorf("** Error during UnmarshalListOfMaps in getIngredientData - %s", err.Error())
 	}
 	// for _, v := range ActivityS {
-	// 	fmt.Printf("Activity [%s] %#v\n", v.AId, v.Measure)
+	// 	fmt.Printf("Activity [%d] %#v\n", v.AId, v.Measure)
 	// }
 	// Table:  Unit
 	//proj := expression.NamesList(expression.Name("slabel"), expression.Name("llabel"), expression.Name("print"), expression.Name("desc"), expression.Name("say"), expression.Name("display"))
@@ -789,7 +789,9 @@ func (s *sessCtx) loadBaseRecipe() error {
 							context = measure
 							// is it the task measure
 							if p.Measure != nil {
-								fmt.Fprintf(&b, "%s", p.Measure.String())
+								m := p.Measure
+								fmt.Fprintf(&b, "%s", "{"+m.Quantity+"|"+m.Unit+"|"+m.Size+"|"+m.Num+"}")
+								//fmt.Fprintf(&b, "%s", p.Measure.String())
 							}
 						case "qty":
 							context = measure
@@ -824,7 +826,9 @@ func (s *sessCtx) loadBaseRecipe() error {
 							}
 							context = device
 							fmt.Fprintf(&b, "%s", pt.UseDevice.String())
-						case "label":
+						case "label", "alabel":
+							fmt.Fprintf(&b, "%s", p.Label)
+						case "tlabel":
 							fmt.Fprintf(&b, "%s", pt.Label)
 						case "unit":
 							var (

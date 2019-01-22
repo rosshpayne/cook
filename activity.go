@@ -46,6 +46,15 @@ type respT struct {
 	msg   string
 }
 
+// Recipe Record
+//
+// type recT struct {
+// 	RName  string   `json:"RName"`
+// 	Title  string   `json:"Title"`
+// 	Index  []string `json:"Index"`
+// 	Serves string   `json:"Srv"`
+// }
+
 type MeasureCT struct {
 	Quantity  string `json:"qty"`
 	Size      string `json:"size"`
@@ -132,7 +141,7 @@ type Activity struct {
 	IngrdQualifer string      `json:"iQual"`    // (append) to ingredient
 	QualiferIngrd string      `json:"quali"`    // prepend  to ingredient.
 	QualMeasure   string      `json:"qualm"`    // qualifer before measure in ingredients output e.g. <qualm> of <measure> a <ingrd>
-	AltIngrd      []string    `json:"altIngrd"` // key into Ingredient table - used for alternate ingredients only
+	AltIngrd      string      `json:"altIngrd"` // key into Ingredient table - used for alternate ingredients only
 	Measure       *MeasureT   `json:"measure"`
 	AltMeasure    *MeasureT   `json:"altMeasure"`
 	Part          string      `json:"part"`      // ingredients are aggregated by part
@@ -499,10 +508,10 @@ func (m *MeasureT) String() string {
 }
 
 func (m *MeasureT) FormatString() string {
-	qty_ := m.Quantity
-	measureReset := func() {
-		m.Quantity = qty_
-	}
+	// qty_ := m.Quantity
+	// measureReset := func() {
+	// 	m.Quantity = qty_
+	// }
 	// is it  short or long units
 	var format string
 	if len(m.Unit) > 0 {
@@ -519,11 +528,12 @@ func (m *MeasureT) FormatString() string {
 			format = u.Display
 		}
 	}
-	if len(m.Num) > 0 {
-		m.Quantity = m.Num + " x " + m.Quantity
-		defer measureReset()
-	}
-	if len(m.Quantity) > 0 && len(m.Size) > 0 {
+	// **** String() should ignore num attribute as its handle outside of String()
+	// if len(m.Num) > 0 {
+	// 	m.Quantity = m.Num + " x " + m.Quantity
+	// 	defer measureReset()
+	// }
+	if len(m.Quantity) > 0 && len(m.Size) > 0 && len(m.Unit) == 0 {
 		return m.Quantity + " " + m.Size
 	}
 	if len(m.Quantity) > 0 && len(m.Unit) > 0 {
@@ -576,6 +586,55 @@ func (m *MeasureT) FormatString() string {
 
 func (a Activity) String() string {
 	var s string
+
+	addIngrdQual := func() {
+		if len(a.IngrdQualifer) > 0 {
+			if len(s) > 0 {
+				if a.IngrdQualifer[0] == ',' {
+					s += a.IngrdQualifer
+				} else {
+					s += " " + a.IngrdQualifer
+				}
+			} else {
+				s = a.IngrdQualifer
+			}
+		}
+	}
+
+	addNumber := func() {
+		if a.Measure != nil && len(a.Measure.Num) > 0 {
+			s = a.Measure.Num + " x"
+		}
+	}
+
+	addIngrd := func() {
+		if len(s) > 0 {
+			s += " " + a.Ingredient
+		} else {
+			s = a.Ingredient
+		}
+	}
+
+	addQualIngrd := func() {
+		if len(a.QualiferIngrd) > 0 {
+			if len(s) > 0 {
+				s += " " + a.QualiferIngrd
+			} else {
+				s = a.QualiferIngrd
+			}
+		}
+	}
+
+	addMeasure := func() {
+		if a.Measure != nil {
+			if len(s) > 0 {
+				s += " " + a.Measure.String()
+			} else {
+				s = a.Measure.String()
+			}
+		}
+	}
+
 	//sfmt.Println("string() ", a.AId, a.Ingredient)
 	// qualm, qty, unit, quali, i , iqual
 	//
@@ -583,41 +642,31 @@ func (a Activity) String() string {
 		return ""
 	}
 	if len(a.QualMeasure) > 0 {
-		s = a.QualMeasure
+		// [qualm] [measure.num size] [ingrd] ([measure.qty+measure.unit])
+		s = strings.TrimRight(a.QualMeasure, " ")
 		if s[len(s)-3:] != " of" {
 			s += " of"
 		}
-	}
-	if a.Measure != nil {
-		if len(s) > 0 {
-			s += " " + a.Measure.String()
-		} else {
-			s = a.Measure.String()
-		}
-	}
-	if len(a.QualiferIngrd) > 0 {
-		if len(s) > 0 {
-			s += " " + a.QualiferIngrd
-		} else {
-			s = a.QualiferIngrd
-		}
-	}
-	if len(s) > 0 {
-		s += " " + a.Ingredient
-	} else {
-		s = a.Ingredient
-	}
-	if len(a.IngrdQualifer) > 0 {
-		if len(s) > 0 {
-			if a.IngrdQualifer[0] == ',' {
-				s += a.IngrdQualifer
-			} else {
-				s += " " + a.IngrdQualifer
+		s = strings.TrimRight(s, " ")
+		if a.Measure != nil && len(a.Measure.Num) > 0 {
+			s += " " + a.Measure.Num
+			if len(a.Measure.Size) > 0 {
+				s += " " + a.Measure.Size
 			}
-		} else {
-			s = a.IngrdQualifer
 		}
+		addIngrd()
+		if a.Measure != nil && len(a.Measure.Quantity) > 0 && len(a.Measure.Unit) > 0 {
+			s += " (" + a.Measure.String() + ")"
+		}
+		addIngrdQual()
+		return s
 	}
+	//
+	addNumber()
+	addMeasure()
+	addQualIngrd()
+	addIngrd()
+	addIngrdQual()
 	return s
 }
 
@@ -644,6 +693,7 @@ func (as Activities) String() string {
 			}
 		}
 	}
+	fmt.Fprintf(&b, "\n\n")
 	for _, a := range partM["nopart_"] {
 		if s := a.String(); len(s) > 0 {
 			fmt.Fprintf(&b, "%s\n", strings.TrimLeft(s, " "))

@@ -683,6 +683,7 @@ func handler(request InputEvent) (RespEvent, error) {
 		// read base recipe data and generate tasks, container and device usage and save to dynamodb.
 		switch pathItem[0] {
 		case "load":
+			pIngrdScale = 1.0
 			sessctx.loadBaseRecipe()
 			if err != nil {
 				break
@@ -813,7 +814,7 @@ func main() {
 	//p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&rcp=Rhubarb and strawberry crumble cake"}
 	//var i float64 = 1.0
 
-	pIngrdScale = 0.5
+	pIngrdScale = 1.0
 	writeCtx = uDisplay
 	p, _ := handler(p1)
 	if len(p.Error) > 0 {

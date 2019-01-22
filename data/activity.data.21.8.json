@@ -332,11 +332,11 @@
                 "SortK" : { "N": "70"},
                 "label" : { "S": "lemon zest"},
                 "ingrd" : { "S" : "lemons" },
-                "iQual" : { "S" : "(finely grated)" },
-                "qualm" : { "S" : "zest of" },
+                "iQual" : { "S" : ", finely grated" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "qualm" : { "S" : "zest of" },
                 "measure" : { "M" : { 
-                                      "qty" : { "S" : "5" } 
+                                      "num" : { "S" : "3" } 
                                       }
                 },
                "prep" : { "L" : [ 

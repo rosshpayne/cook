@@ -426,7 +426,7 @@
                 "ingrd" : { "S" : "vanilla pod" },
                 "qualm" : { "S" : "scrapped seeds" },
                 "measure" : { "M" : { 
-                                      "qty" : { "S" : "1/2" } 
+                                      "num" : { "S" : "1/2" } 
                                       }
                 },
                 "task" : { "L" : [ 

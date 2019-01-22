@@ -58,7 +58,7 @@
             "PutRequest": { 
             "Item": { 
                 "PKey" : { "S": "A-21-10" },
-                "SortK" : { "N": "30"},
+                "SortK" : { "N": "20"},
                 "label" : { "S": "oil"},
                 "ingrd" : { "S" : "olive oil" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
@@ -86,7 +86,7 @@
             "PutRequest": { 
             "Item": { 
                 "PKey" : { "S": "A-21-10" },
-                "SortK" : { "N": "40"},
+                "SortK" : { "N": "30"},
                 "label" : { "S": "vinegar"},
                 "ingrd" : { "S" : "red wine vinegar" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
@@ -115,8 +115,8 @@
             "PutRequest": { 
             "Item": { 
                 "PKey" : { "S": "A-21-10" },
-                "SortK" : { "N": "50"},
-                "label" : { "S": "Wine"},
+                "SortK" : { "N": "40"},
+                "label" : { "S": "wine"},
                 "ingrd" : { "S" : "Chianti Classico" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
@@ -148,7 +148,7 @@
             "PutRequest": { 
             "Item": { 
                 "PKey" : { "S": "A-21-10" },
-                "SortK" : { "N": "60"},
+                "SortK" : { "N": "50"},
                 "label" : { "S": "peppercorns"},
                 "ingrd" : { "S" : "black peppercorns" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },

@@ -116,7 +116,7 @@
                 "ingrd" : { "S" : "lemon" },
                 "qualm" : { "S" : "juice" },
                 "measure" : { "M" : { 
-                                      "qty" : { "S" : "1" } 
+                                      "num" : { "S" : "1" } 
                                       }
                 },
                 "task" : { "L" : [ 
