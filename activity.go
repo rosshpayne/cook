@@ -682,21 +682,44 @@ func (as Activities) String() string {
 		}
 	}
 	var b strings.Builder
-	for k, v := range partM {
-		if k == "nopart_" {
-			continue
+	fmt.Fprintf(&b, "%s\n\n", "Title....")
+	if len(partM) > 2 {
+		// parts first..
+		for k, v := range partM {
+			if k == "nopart_" {
+				continue
+			}
+			fmt.Fprintf(&b, "\n%s\n\n", k)
+			for _, a := range v {
+				if s := a.String(); len(s) > 0 {
+					fmt.Fprintf(&b, "%s\n", strings.TrimLeft(s, " "))
+				}
+			}
 		}
-		fmt.Fprintf(&b, "\n\n%s\n\n", k)
-		for _, a := range v {
+		fmt.Fprintf(&b, "\n")
+		for _, a := range partM["nopart_"] {
 			if s := a.String(); len(s) > 0 {
 				fmt.Fprintf(&b, "%s\n", strings.TrimLeft(s, " "))
 			}
 		}
-	}
-	fmt.Fprintf(&b, "\n\n")
-	for _, a := range partM["nopart_"] {
-		if s := a.String(); len(s) > 0 {
-			fmt.Fprintf(&b, "%s\n", strings.TrimLeft(s, " "))
+	} else {
+		// part first..
+		for _, a := range partM["nopart_"] {
+			if s := a.String(); len(s) > 0 {
+				fmt.Fprintf(&b, "%s\n", strings.TrimLeft(s, " "))
+			}
+		}
+		fmt.Fprintf(&b, "\n")
+		for k, v := range partM {
+			if k == "nopart_" {
+				continue
+			}
+			fmt.Fprintf(&b, "\n%s\n\n", k)
+			for _, a := range v {
+				if s := a.String(); len(s) > 0 {
+					fmt.Fprintf(&b, "%s\n", strings.TrimLeft(s, " "))
+				}
+			}
 		}
 	}
 	return b.String()

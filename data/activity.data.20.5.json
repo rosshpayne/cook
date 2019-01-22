@@ -409,8 +409,8 @@
                 "SortK" : { "N": "140"},
                 "part" : { "S" : "Topping" },
                 "ingrd" : { "S" : "butter" },
-                "iQual" : { "S" : "unsalted" },
-                "quali" : { "S" : ", at room temperature" },
+                "quali" : { "S" : "unsalted" },
+                "iQual" : { "S" : ", at room temperature" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "70" } ,
