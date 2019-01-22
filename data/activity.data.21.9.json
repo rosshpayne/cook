@@ -1,0 +1,409 @@
+{
+       "Ingredient" : [ 
+        {
+          "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-21-9" },
+                  "SortK" : { "S": "Ricotta" },
+                  "type" : { "S": "Bowl" },
+                  "label" : { "S": "Bowl" },
+                  "measure" : { "M" : { "size" : { "S" : "medium"}} },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "contents" : { "S": "seasoned ricotta" },
+                  "purpose": { "S": "holding" }
+                  }
+            }
+         },
+         {
+          "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-21-9" },
+                  "SortK" : { "S": "WarmT" },
+                  "type" : { "S": "Sausepan" },
+                  "label" : { "S": "Sausepan" },
+                  "measure" : { "M" : { "size" : { "S" : "medium"}} },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "contents" : { "S": "tomator sause" },
+                  "purpose": { "S": "warming" }
+                  }
+            }
+         },
+         {
+         "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-21-9" },
+                  "SortK" : { "S": "PrepTomatoe" },
+                  "type" : { "S": "Tray" },
+                  "label" : { "S": "Tray" },
+                  "measure" : { "M" : {"size" : { "S" : "large" }  }},
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "contents" : { "S": "prepared tomatoes" },
+                  "purpose": { "S": "holding" }
+                  }
+            }
+         },
+         {
+         "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-21-9" },
+                  "SortK" : { "S": "TomotoeB" },
+                  "type" : { "S": "Bowl" },
+                  "label" : { "S": "Bowl" },
+                  "measure" : { "M" : {"size" : { "S" : "large" }  }},
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "contents" : { "S": "tomatoes+basil" },
+                  "purpose": { "S": "holding" }
+                  }
+            }
+         },
+         {
+         "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-21-9" },
+                  "SortK" : { "S": "RavioliPan" },
+                  "type" : { "S": "Tray" },
+                  "label" : { "S": "Tray" },
+                  "measure" : { "M" : {"size" : { "S" : "large" }  }},
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "contents" : { "S": "uncooked Ravioli" },
+                  "purpose": { "S": "holding" }
+                  }
+            }
+         }
+      ],
+      "Recipe" : [ 
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "R-21" },
+                "SortK" : { "N": "9"},
+                "RName" : { "S": "Ravioli with Ricotta, Raw Tomato and Basil"},
+                "Index" : { "SS" : ["Ravioli Pasta", "Ricotta", "Vegetarian"] }}
+        }
+        },
+       {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-21-9" },
+                "SortK" : { "N": "5"},
+                "label" : { "S": "seasoning"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "freshly grated nutmeg" }
+            }
+            }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-21-9" },
+                "SortK" : { "N": "10"},
+                "label" : { "S": "ricotta"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "ricotta" },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "750" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                },
+                 "task" : { "L" : [
+                                { "M" : { 
+                                  "txt" : { "S" : "To make the ravioli filling season {measure} of {ingrd} with sea salt, pepper and {ingrd.5} to taste, whisking with a fork. Set aside." },
+                                  "say" : { "S" : "To make the ravioli filling season {measure} of {ingrd} with sea salt, pepper and {ingrd.5} to taste, whisking with a fork. Set aside." },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "Ricotta"] },
+                                  "useD" : { "M" : { "type" : {"S": "fine grater" },
+                                                     "purpose" : {"S" : "grating nutmeg"}}}
+                                    }
+                                }
+                                ]
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-21-9" },
+                "SortK" : { "N": "30"},
+                "label" : { "S": "pasta"},
+                "ingrd" : { "S" : "Pasta" },
+                "quali" : { "S" : "fresh" },
+                "iQual" : { "S" : "(see recipe 'Fresh Pasta' in this book)" },
+                "qualm" : { "S" : "1 quantity" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "prep" : { "L" : [
+                                { "M" : {
+                                  "txt" : { "S" : "Make a batch of pasta as per the recipe Fresh Pasta in this book." },
+                                  "say" : { "S" : "Make a batch of pasta as per the recipe Fresh Pasta in this book. To follow the recipe say 'go to Fresh Pasta' " },
+                                  "time" : { "N" : "5" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "pasta"] },
+                                  "label" : {"S" : "pasta prep"}
+                                  }
+                                }
+                                ]
+                },
+                 "task" : { "L" : [
+                                { "M" : {
+                                  "txt" : { "S" : "Divide the pasta dough into small amounts, the size of a large egg, and wrap them in cling film." },
+                                  "say" : { "S" : "Divide the pasta dough into small amounts, the size of a large egg, and wrap them in cling film." },
+                                  "time" : { "N" : "5" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "pasta"] },
+                                  "label" : {"S" : "pasta prep"}
+                                  }
+                                },
+                                { "M" : {
+                                  "txt" : { "S" : "Using a {useD}, roll out one of the pieces of dough into a very thin, long strip (this is 1.5 thinness setting on our machine). Cut in half if too long." },
+                                  "say" : { "S" : "Using a {useD}, roll out one of the pieces of dough into a very thin, long strip (this is 1.5 thinness setting on our machine). Cut in half if too long." },
+                                  "time" : { "N" : "5" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "pasta"] },
+                                  "label" : {"S" : "pasta prep"},
+                                  "useD" : { "M" : { "type" : {"S": "past machine" }}}
+                                    }
+                                  }
+                                ]}
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-21-9" },
+                "SortK" : { "N": "40"},
+                "label" : { "S": "sugar"},
+                "ingrd" : { "S" : "semolina flour" },
+                "iQual" : { "S" : ", for dusting" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "task" : { "L" : [
+                                { "M" : {
+                                  "txt" : { "S" : "Dust a large work surface with {ingrd} and lay the sheet of pasta on this." },
+                                  "say" : { "S" : "Dust a large work surface with {ingrd} and lay the sheet of pasta on this." },
+                                  "time" : { "N" : "5" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "label" : {"S" : "pasta workspace"}
+                                    }
+                                } , 
+                                { "M" : {
+                                  "txt" : { "S" : "Put teaspoons of filling about a four fingers apart on the sheet, placing them in the centre of the half nearest to you, so that you can fold the other halve over." },
+                                  "say" : { "S" : "Put teaspoons of filling about a four fingers apart on the sheet, placing them in the centre of the half nearest to you, so that you can fold the other halve over."  },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "sourceC" : { "SS" : [ "Ricotta"] }
+                                  }
+                                },
+                                { "M" : {
+                                  "txt" : { "S" : "Brush the pasta around the filling with a {useD} dipped in water. Moisten enough so that the envolpes you are making will seal properly, but no so much that the pasta dough slides, then fold over  " },
+                                  "say" : { "S" : "Brush the pasta around the filling with a {useD} dipped in water. Moisten enough so that the envolpes you are making will seal properly, but no so much that the pasta dough slides, then fold over "  },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useD" : { "M" : { "type" : {"S": "pastry brush" },
+                                                     "purpose" : {"S" : "moisten pasta"} }
+                                  }
+                                  }
+                                },
+                                { "M" : {
+                                  "txt" : { "S" : "Using a {useD}, make each raviolo by cutting on three sides (the fourth is the fold)"  },
+                                  "say" : { "S" : "Using a {useD}, make each raviolo by cutting on three sides (the fourth is the fold)"  },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useD" : { "M" : { "type" : {"S": "pasta cutter" }}
+                                  }
+                                  }
+                                },
+                                { "M" : {
+                                  "txt" : { "S" : "Dust a {addToC} with semoina flour and carefully place the ravioli on it, making sure they do not touch."  },
+                                  "say" : { "S" : "Dust a {addToC} with semoina flour and carefully place the ravioli on it, making sure they do not touch."  },
+                                  "time" : { "N" : "3" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "RavioliPan"] }
+                                  }
+                                },
+                                { "M" : {
+                                  "txt" : { "S" : "Continue rolling, filling and folding the remaining pasta. You should have about fifty ravioli."  },
+                                  "say" : { "S" : "Continue rolling, filling and folding the remaining pasta. You should have about fifty ravioli."  },
+                                  "time" : { "N" : "15" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" }
+                                  }
+                                }
+                                ]
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-21-9" },
+                "SortK" : { "N": "50"},
+                "label" : { "S": "tomatoes"},
+                "ingrd" : { "S" : "tomatoes" },
+                "quali" : { "S" : "very ripe, fresh San Marzano plum" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "5" } 
+                                      }
+                },
+               "prep" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Cut {qty} {ingrd} in half, removing the core, and gently squeese out the seeds." },
+                                  "say" : { "S" : "Cut {qty} {ingrd} in half, removing the core, and gently squeese out the seeds." },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "PrepTomatoe"] }
+                                  }
+                                }
+                                ]
+                }
+            }
+            }
+            },
+           {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-21-9" },
+                "SortK" : { "N": "60"},
+                "label" : { "S": "basil"},
+                "ingrd" : { "S" : "basil leaves" },
+                "quali" : { "S" : "fresh" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "10" }  
+                                      }
+                },
+                "task" : { "L" : [
+                                { "M" :  {
+                                  "txt" : { "S" : "Now to make the tomatoe sause. Finely chop the {ingrd.50} you prepared earlier, and cut {qty} {ingrd}, then add to the {ingrd.50}" },
+                                  "say" : { "S" : "Now to make the tomatoe sause. Finely chop the {ingrd.50} you prepared earlier, and cut {qty} {ingrd}, then add to the {ingrd.50}" },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "sourceC" : { "SS" : [ "PrepTomatoe"]},
+                                  "addToC" : { "SS" : [ "TomotoeB"]}}
+                                }
+                                ]
+                }
+            }
+            }
+            },
+           {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-21-9" },
+                "SortK" : { "N": "70"},
+                "label" : { "S": "oil"},
+                "ingrd" : { "S" : "olive oil" },
+                "quali" : { "S" : "extra virgin" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "5" } 
+                                      }
+                },
+                "prep" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "warm the serving plates and keep warm until serving" },
+                                  "say" : { "S" : "warm the serving plates and keep warm until serving" },
+                                  "time" : { "N" : "5" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" }
+                                    }
+                                } 
+                                ]
+                },
+               "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "season well and stir in a generous amount of {quali} {ingrd}" },
+                                  "say" : { "S" : "season well and stir in a generous amount of {quali} {ingrd}." },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "addToC" : { "SS" : [ "TomotoeB"]},
+                                  "unit" : { "S" : "min" }
+                                    }
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" : "Now to cook the ravioli. Bring a {addToC} of water to the boil " },
+                                  "say" : { "S" : "Now to cook the ravioli. Bring a {addToC} of water to the boil" },
+                                  "time" : { "N" : "4" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : ["SAPN-L.cooking.ravioli"] }
+                                  }
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" : "add some salt to the boiling water, be generous, try a small handful" },
+                                  "say" : { "S" : "add some salt to the boiling water, be generous, try a small handful" },
+                                  "time" : { "N" : "10" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "addToC" : { "SS" : ["SAPN-L"] }
+                                  }
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" : "In small batches, put the ravioli into the boiling water, then lower the heat to a simmer. The ravioli will rise to the surface after about 30 seconds, but according to how thin your rolled the pasta, they may take upto 2 minutes to cook." },
+                                  "say" : { "S" : "In small batches, put the ravioli into the boiling water, then lower the heat to a simmer. The ravioli will rise to the surface after about 30 seconds, but according to how thin your rolled the pasta, they wimayll take upto 2 minutes to cook." },
+                                  "time" : { "N" : "3" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "sourceC" : { "SS" : [ "RavioliPan"] },
+                                  "addToC" : { "SS" : ["SAPN-L"] }
+                                  }
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" : "Test the pasta is cooked by sampling a small piece from the join of the envolope where the pasta is thickest. Remove the ravioli with a draining spoon." },
+                                  "say" : { "S" : "Test the pasta is cooked by sampling a small piece from the join of the envolope where the pasta is thickest. Remove the ravioli with a draining spoon." },
+                                  "time" : { "N" : "3" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useD" : { "M" : { "type" : {"S": "draining spoon" }}}
+                                  }
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" : "Very gently warm the tomato sause" },
+                                  "say" : { "S" : "Very gently warm the tomato sause" },
+                                  "time" : { "N" : "3" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : ["WarmT"] },
+                                  "sourceC" : { "SS" : ["TomotoeB"] }
+                                  }
+                                }
+                                ]
+                }
+            }
+            }
+            },
+           {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-21-9" },
+                "SortK" : { "N": "80"},
+                "label" : { "S": "flour"},
+                "ingrd" : { "S" : "salted ricotta" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Plate the ravioli and serve the tomatoe sause over the pasta with {ingrd} grated over" },
+                                  "say" : { "S" : "Plate the ravioli and serve the tomatoe sause over the pasta with {ingrd} grated over" },
+                                  "time" : { "N" : "3" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "sourceC" : { "SS" : ["WarmT"] }}}
+                                  ]}
+                }
+            }
+           }
+    ]
+}  

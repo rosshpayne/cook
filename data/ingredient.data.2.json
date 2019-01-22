@@ -1,0 +1,13 @@
+{
+      "Ingredient" : [ 
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "NI" },
+                "SortK" : { "S": "unsalted butter"}
+            }
+        }
+        }
+        ]
+}
+
