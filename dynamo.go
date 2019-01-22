@@ -123,7 +123,6 @@ func (a ContainerMap) saveContainerUsage(s *sessCtx) error {
 }
 
 func (s *sessCtx) getContainerRecById() (alexaDialog, error) {
-
 	type pKey struct {
 		PKey  string
 		SortK float64

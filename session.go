@@ -144,7 +144,6 @@ func (s sessCtx) updateSession() (int, error) {
 	}
 	result, err := s.dynamodbSvc.UpdateItem(input) // do an updateitem and return original id value so only one call.
 	if err != nil {
-		fmt.Println("ERROR in UPDATE SESSION - updateItem ", err.Error)
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case dynamodb.ErrCodeProvisionedThroughputExceededException:
@@ -172,7 +171,6 @@ func (s sessCtx) updateSession() (int, error) {
 		if err != nil {
 			return 1, err
 		}
-		fmt.Printf("\nin updateSession - lastSess: %#v ", lastSess)
 		// NB: UPDATE_NEW in return values will return only updated elements in a slice/set
 		//  In the case of SET all values are returned
 		//	In the case of ADD only the changed element in the set is returned.

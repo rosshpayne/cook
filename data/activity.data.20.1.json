@@ -223,8 +223,8 @@
                          },
                 "prep" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "lightly beat {qty} {size} {ingrd}" },
-                                  "say" : { "S" : "lightly beat {qty} {size} {ingrd}" },
+                                  "txt" : { "S" : "lightly beat {measure} {ingrd}" },
+                                  "say" : { "S" : "lightly beat {measure} {ingrd}" },
                                   "time" : { "N" : "5" },
                                   "unit" : { "S" : "min" },
                                   "addToC" : { "SS" : ["SAB-M"] }

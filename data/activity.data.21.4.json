@@ -52,8 +52,8 @@
                                         }   
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "trim {qty}{unit} of {ingrd} and set aside" },
-                                  "say" : { "S" : "trim {qty}{unit} of {ingrd} and set aside" },
+                                  "txt" : { "S" : "trim {measure} of {ingrd} and set aside" },
+                                  "say" : { "S" : "trim {measure} of {ingrd} and set aside" },
                                   "time" : { "N" : "3" },
                                   "unit" : { "S" : "min" }, 
                                   "useC" : { "SS" : ["SAB-M"] }
@@ -93,8 +93,8 @@
                  },
                 "task" : { "L" : [ 
                                 { "M" : { 
-                                  "txt" : { "S" : "Drain the breans and return to the warm sausepan (off the heat) with a {qty} of {quali} {ingrd}." },
-                                  "say" : { "S" : "Drain the breans and return to the warm sausepan (off the heat) with a {qty} of {quali} {ingrd}." },
+                                  "txt" : { "S" : "Drain the breans and return to the warm sausepan (off the heat) with a {measure}  of {quali} {ingrd}." },
+                                  "say" : { "S" : "Drain the breans and return to the warm sausepan (off the heat) with a {measure}  of {quali} {ingrd}." },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -121,8 +121,8 @@
                 },
                 "task" : { "L" : [ 
                             { "M" : { 
-                                  "txt" : { "S" : "Season with the {qualm} of {qty} and some black pepper" },
-                                  "say" : { "S" : "Season with the {qualm} of {qty} and some black pepper" },
+                                  "txt" : { "S" : "Season with the {qualm} of {measure} {ingrd} and some black pepper" },
+                                  "say" : { "S" : "Season with the {qualm} of {measure} {ingrd} and some black pepper" },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -150,8 +150,8 @@
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Grate the {ingrd} and stire in and keep stirring until the {ingrd} begins to go stringy and coats the beans. Server immediately" },
-                                  "say" : { "S" : "Grate the {ingrd} and stire in and keep stirring until the {ingrd} begins to go stringy and coats the beans. Server immediately" },
+                                  "txt" : { "S" : "Grate the {ingrd} and stir in and keep stirring until the {ingrd} begins to go stringy and coats the beans. Server immediately" },
+                                  "say" : { "S" : "Grate the {ingrd} and stir in and keep stirring until the {ingrd} begins to go stringy and coats the beans. Server immediately" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },

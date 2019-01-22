@@ -461,7 +461,6 @@ func expandIngrd(str string) string {
 		topen  int
 		nm     *MeasureT
 	)
-	fmt.Printf("In expandIngrd....[%s]\n", str)
 	for tclose, topen = 0, strings.IndexByte(str, '{'); topen != -1; {
 
 		b.WriteString(str[tclose:topen])
@@ -480,14 +479,7 @@ func expandIngrd(str string) string {
 		// examine tag to see if it references entities outside of current activity
 		//   currenlty only device oven and noncurrent activity is supported
 		pt := strings.Split(strings.ToLower(str[topen+1:tclose_]), "|")
-		if len(pt) == 4 {
-			fmt.Printf("pt.....[%#v]\n", pt)
-			nm = &MeasureT{Number: pt[3], Quantity: pt[0], Size: pt[2], Unit: pt[1]}
-			fmt.Printf("nm.....[%#v]\n", nm)
-		} else {
-			// Qty defined
-			nm = &MeasureT{Quantity: pt[0]}
-		}
+		nm = &MeasureT{Num: pt[3], Quantity: pt[0], Size: pt[2], Unit: pt[1]}
 		b.WriteString(nm.String())
 		//
 		tclose += 1

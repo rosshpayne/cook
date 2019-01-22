@@ -113,8 +113,8 @@
                  },
                  "prep" : { "L" : [
                                 { "M" : { 
-                                  "txt" : { "S" : "Peel {qty} {ingrd}, cut in half and remove the centre piece and set aside" },
-                                  "say" : { "S" : "Peel {qty} {ingrd}, cut in half and remove the centre piece and set aside" },
+                                  "txt" : { "S" : "Peel {measure} {ingrd}, cut in half and remove the centre piece and set aside" },
+                                  "say" : { "S" : "Peel {measure} {ingrd}, cut in half and remove the centre piece and set aside" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "useC" : { "SS" : ["SAP-S"] },
@@ -156,8 +156,8 @@
                 },
                 "task" : { "L" : [ 
                                 {"M" : { 
-                                  "txt" : { "S" : "Pulse the cavolo blend for a few more seconds while pouring in about {qty}{unit} of {quali} {ingrd}. This will make for a fairly liquid dark green puree " },
-                                  "say" : { "S" : "Pulse the cavolo blend for a few more seconds while pouring in about {qty}{unit} of {quali} {ingrd}. This will make for a fairly liquid dark green puree " },
+                                  "txt" : { "S" : "Pulse the cavolo blend for a few more seconds while pouring in about {measure} of {quali} {ingrd}. This will make for a fairly liquid dark green puree " },
+                                  "say" : { "S" : "Pulse the cavolo blend for a few more seconds while pouring in about {measure} of {quali} {ingrd}. This will make for a fairly liquid dark green puree " },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" }
@@ -216,9 +216,7 @@
                 "ingrd" : { "S" : "Parmesan" },
                 "quali" : { "S" : "freshly grated" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
-                "measure" : { "M" : { 
-                                      "qty" : { "S" : " " } }
-                },
+                "invisible" : { "BOOL" : true },
                 "task" : { "L" : [ 
                                 { "M" :  {
                                   "txt" : { "S" : "Pour over the remaining olive oil and serve with {quali} {ingrd}" },

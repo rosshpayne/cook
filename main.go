@@ -532,9 +532,7 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 		s.updateAdd = 1
 	}
 	// check if we have Dynamodb Recid Set defined, this will be useful in updateSession
-	fmt.Printf("\ncheck Recid is SET...\n")
 	if len(lastSess.RecId) == 0 {
-		fmt.Printf("\ncheck Recid is NOT NOT SET...\n")
 		s.recIdNotExists = true
 	}
 	//
@@ -811,8 +809,8 @@ func handler(request InputEvent) (RespEvent, error) {
 
 func main() {
 	//lambda.Start(handler)
-	//	p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
-	p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&rcp=Rhubarb and strawberry crumble cake"}
+	p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
+	//p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&rcp=Rhubarb and strawberry crumble cake"}
 	//var i float64 = 1.0
 
 	pIngrdScale = 0.5

@@ -341,8 +341,8 @@
                 },
                "prep" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "finely grate the {qualm} {qty} {ingrd} and set aside" },
-                                  "say" : { "S" : "finely grate the {qualm} {qty} {ingrd} and set aside" },
+                                  "txt" : { "S" : "finely grate the {qualm} {measure} {ingrd} and set aside" },
+                                  "say" : { "S" : "finely grate the {qualm} {measure} {ingrd} and set aside" },
                                   "time" : { "N" : "3" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
