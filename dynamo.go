@@ -533,8 +533,8 @@ func (s *sessCtx) recipeRSearch() error {
 		SortK float64
 	}
 	type recT struct {
-		RName  string   `json:"RName"`
-		Title  string   `json:"Title"`
+		RName string `json:"RName"`
+		//Title  string   `json:"Title"`
 		Index  []string `json:"Index"`
 		Serves string   `json:"Srv"`
 	}

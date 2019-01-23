@@ -90,9 +90,15 @@ func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 				// some reuse
 				for i := identicalC[v].num; i > 0; i-- {
 					b.WriteString(fmt.Sprintf(" ( "))
+					var newLine bool
 					for _, c := range identicalC[v].C {
 						if c.reused == i {
-							b.WriteString(fmt.Sprintf(" %s ", strings.ToLower(c.Contains)))
+							if !newLine {
+								b.WriteString(fmt.Sprintf(" %s ", strings.ToLower(c.Contains)))
+								newLine = true
+							} else {
+								b.WriteString(fmt.Sprintf(" ,%s ", strings.ToLower(c.Contains)))
+							}
 						}
 					}
 					b.WriteString(fmt.Sprintf(" ) "))

@@ -46,6 +46,7 @@ type respT struct {
 	msg   string
 }
 
+//TODO: activate Recipe type here. Also incorporate AltIngrd into output.
 // Recipe Record
 //
 // type recT struct {
@@ -603,7 +604,7 @@ func (a Activity) String() string {
 
 	addNumber := func() {
 		if a.Measure != nil && len(a.Measure.Num) > 0 {
-			s = a.Measure.Num + " x"
+			s = a.Measure.Num + " "
 		}
 	}
 
@@ -612,6 +613,9 @@ func (a Activity) String() string {
 			s += " " + a.Ingredient
 		} else {
 			s = a.Ingredient
+		}
+		if len(a.AltIngrd) > 0 {
+			s += " or " + a.AltIngrd
 		}
 	}
 
@@ -703,7 +707,7 @@ func (as Activities) String() string {
 			}
 		}
 	} else {
-		// part first..
+		// part last..
 		for _, a := range partM["nopart_"] {
 			if s := a.String(); len(s) > 0 {
 				fmt.Fprintf(&b, "%s\n", strings.TrimLeft(s, " "))

@@ -873,6 +873,12 @@ func (s *sessCtx) loadBaseRecipe() error {
 							}
 						case "ingrd":
 							fmt.Fprintf(&b, "%s", strings.ToLower(p.Ingredient))
+						case "ingrd_": // make singular if plural
+							if strings.ToLower(p.Ingredient[:len(p.Ingredient)-1]) == "s" {
+								fmt.Fprintf(&b, "%s", strings.ToLower(p.Ingredient[:len(p.Ingredient)-1]))
+							} else {
+								fmt.Fprintf(&b, "%s", strings.ToLower(p.Ingredient))
+							}
 						case "timeu":
 							fmt.Fprintf(&b, "%2.0f%s", pt.Time, unitMap[pt.Unit].String(pt))
 						case "time":
@@ -972,13 +978,9 @@ func (s *sessCtx) loadBaseRecipe() error {
 				typ := strings.ToLower(pp.UseDevice.Type)
 				if _, ok := DevicesM[typ]; !ok {
 					var str string
+
 					pp := pp.UseDevice
-					if len(pp.Set) > 0 {
-						str = "Set to " + pp.Set + ". "
-					}
-					if len(pp.Temp) > 0 {
-						str = "Set to " + pp.Temp + " " + pp.Unit + ". "
-					}
+					str = pp.String()
 					if len(pp.Purpose) > 0 {
 						str += pp.Purpose
 					}
@@ -995,12 +997,7 @@ func (s *sessCtx) loadBaseRecipe() error {
 				if _, ok := DevicesM[typ]; !ok {
 					var str string
 					pp := pp.UseDevice
-					if len(pp.Set) > 0 {
-						str = "Set to " + pp.Set + ". "
-					}
-					if len(pp.Temp) > 0 {
-						str = "Set to " + pp.Temp + " " + pp.Unit + ". "
-					}
+					str = pp.String()
 					if len(pp.Purpose) > 0 {
 						str += pp.Purpose
 					}
