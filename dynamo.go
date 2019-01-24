@@ -57,17 +57,6 @@ type indexRecT struct {
 	Authors  string
 }
 
-// use this struct as key into map
-type mkey struct {
-	size string
-	typE string
-}
-type clsort []mkey
-
-func (cs clsort) Len() int           { return len(cs) }
-func (cs clsort) Less(i, j int) bool { return cs[i].size < cs[j].size }
-func (cs clsort) Swap(i, j int)      { cs[i], cs[j] = cs[j], cs[i] }
-
 type prepTaskRec struct {
 	PKey   string  `json="PKey"`  // R-[BkId]
 	SortK  int     `json="SortK"` // monotonically increasing - task at which user is upto in recipe

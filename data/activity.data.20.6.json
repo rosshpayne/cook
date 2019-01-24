@@ -1,0 +1,535 @@
+{
+       "Ingredient" : [ 
+        {
+          "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-20-6" },
+                  "SortK" : { "S": "caketin" },
+                  "type" : { "S": "caketin" },
+                  "label" : { "S": "loaf tin" },
+                  "measure" : { "M" : {  "qty" : { "S" : "900" },
+                                         "unit" : {"S": "g" }
+                  } },
+                  "altLabel" : { "S": "springform cake tin" },
+                  "altMeasure" : { "M" : {  "shape" : { "S" : "round" },
+                                          "dim" : { "S" : "23"},
+                                         "unit" : {"S": "cm" }
+                  } },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  }
+                  }
+            }
+        },
+        {
+          "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-20-6" },
+                  "SortK" : { "S": "MixerBowl" },
+                  "type" : { "S": "ebowl" },
+                  "label" : { "S": "electric mixer bowl" },
+                  "measure" : { "M" : {  "size" : { "S" : "large" }
+                  } },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  }
+                  }
+            }
+         }
+      ],
+      "Recipe" : [ 
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "R-20" },
+                "SortK" : { "N": "6"},
+                "RName" : { "S": "Belinda's flourless coconut and chocolate cake"},
+                "Index" : { "SS" : ["flourless coconut cake", "belinda", "chocolate cake"]},
+                "Srv" : { "S" : "8" }
+        }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-6" },
+                "SortK" : { "N": "10"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "unsalted butter" },
+                "iQual": { "S" : ", at room temperature, plus extra for greasing" },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "200" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                },
+                "prep" : { "L" : [
+                                { "M" : { 
+                                  "txt" : { "S" : "Grease the base and sides of a {useC.form} and line with baking parchment, then set aside"},
+                                  "say" : { "S" : "Grease the base and sides of a {useC.form} and line with baking parchment, then set aside"},
+                                  "time" : { "N" : "3" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useC" : { "SS" : ["caketin"] }
+                                }},
+                                { "M" : { 
+                                  "txt" : { "S" : "Preheat the {useD} to {temp}"},
+                                  "say" : { "S" : "Preheat the {useD} to {temp}"},
+                                  "time" : { "N" : "15" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                   "useD" : { "M" : { "type" : {"S": "oven" },
+                                                      "temp" : { "S" : "180/160" },
+                                                      "set" : { "S" : "gas mark 4"},
+                                                     "unit" : { "S" : "C" }
+                                                    }}
+                                }}
+                                ]
+                },
+                 "task" : { "L" : [
+                                { "M" : { 
+                                  "txt" : { "S" : "Place {measure} of {ingrd} into {addtoC} "},
+                                  "say" : { "S" : "Place {measure} of {ingrd} into {addtoC}" },
+                                  "time" : { "N" : "1" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : ["MixerBowl"] }}}
+                                ] }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-6" },
+                "SortK" : { "N": "20"},
+                "label" : { "S": "sugar"},
+                "ingrd" : { "S" : "caster sugar" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "250" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                },
+                "task" : { "L" : [
+                                { "M" : {
+                                 "txt" : { "S" : "Add {measure} of {ingrd}  "},
+                                  "say" : { "S" : "Add {measure} of {ingrd} " },
+                                  "time" : { "N" : "30" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "addToC" : { "SS" : [ "MixerBowl"] }
+                                  }
+                                }
+                                ]}
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-6" },
+                "SortK" : { "N": "30"},
+                "ingrd" : { "S" : "desciccated coconut" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "60" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                },
+                "task" : { "L" : [
+                                { "M" : {
+                                  "txt" : { "S" : "Add {measure} of {ingrd} " },
+                                  "say" : { "S" : "Add {measure} of {ingrd} " },
+                                  "time" : { "N" : "30" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "addToC" : { "SS" : [ "MixerBowl"] }
+                                    }
+                                }
+                                ]
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-6" },
+                "SortK" : { "N": "40"},
+                "ingrd" : { "S" : "vanilla pod" },
+                "qualm" : { "S" : "scapped seeds of " }, 
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "num" : { "S" : "1/2" } 
+                                      }
+                },
+               "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Add {quali} of {measure} {ingrd} " },
+                                  "say" : { "S" : "Add {quali} of {measure} {ingrd} " },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "MixerBowl"] }
+                                  }
+                                }
+                                ]
+                }
+            }
+            }
+            },
+           {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-6" },
+                "SortK" : { "N": "50"},
+                "ingrd" : { "S" : "salt" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "1/4" }  ,
+                                      "unit" : { "S" : "tsp" }  
+                    
+                }
+                },
+                "task" : { "L" : [
+                                { "M" :  {
+                                  "txt" : { "S" : "Finally, add {measure} of {ingrd}" },
+                                  "say" : { "S" : "Finally, add {measure} of {ingrd}" },
+                                  "time" : { "N" : "15" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "addToC" : {"SS" : [ "MixerBowl"] }
+                                }},
+                                { "M" :  {
+                                  "txt" : { "S" : "Now fix the paddle attachment to the electric mixer" },
+                                  "say" : { "S" : "Now fix the paddle attachment to the electric mixer" },
+                                  "time" : { "N" : "30" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "useD" : { "M" : { "type" : {"S": "electric mixer" }
+                                                    }}}
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" : "Beat on a medium-high speed in an {useD}, until pale and fluffy: about {timeu}" },
+                                  "say" : { "S" : "Beat on a medium-high speed in an {useD}, until pale and fluffy: about {timeu}" },
+                                  "time" : { "N" : "3" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useD" : { "M" : { "type" : {"S": "electric mixer" }
+                                                    }}}
+                                }
+                                ]
+                }
+            }
+            }
+            },
+           {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-6" },
+                "SortK" : { "N": "60"},
+                "ingrd" : { "S" : "eggs" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "4" } ,
+                                      "size" : { "S" : "large" } 
+                                      }
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Add the {ingrd}, one at a time, beating well after each addition." },
+                                  "say" : { "S" : "Add the {ingrd}, one at a time, beating well after each addition." },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "MixerBowl"] }
+                                    }
+                                }
+                                ]
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-6" },
+                "SortK" : { "N": "70"},
+                "ingrd" : { "S" : "ground almonds" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "180" } ,
+                                      "unit" : { "S" : "g" } 
+                                      }
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Reduce the speed to low, add the {ingrd} and mix until just combined" },
+                                  "say" : { "S" : "Reduce the speed to low, add the {ingrd} and mix until just combined" },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "MixerBowl"] }
+                                    }
+                                } ,
+                                { "M" :  {
+                                  "txt" : { "S" : "Scrape the mixture into the prepared {addToC} and bake for either {timeu} if using the loaf tin or {t:50|min} if using the round tin, or until the cake is golden brown on top and a skewer inserted into the middle comes out clean" },
+                                  "say" : { "S" : "Scrape the mixture into the prepared {addToC} and bake for either {timeu} if using the loaf tin or {t:50|min} if using the round tin, or until the cake is golden brown on top and a skewer inserted into the middle comes out clean" },
+                                  "time" : { "N" : "40" },
+                                  "unit" : { "S" : "min" },
+                                  "sourceC" : { "SS" : [ "MixerBowl"] },
+                                  "addToC" : { "SS" : [ "caketin"] }
+                                    }
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" : "Remove the cake from the oven and set aside to cool in the tin before inverting on to a serving plate. Set aside until completely cool"},
+                                  "say" : { "S":  "Remove the cake from the oven and set aside to cool in the tin before inverting on to a serving plate. Set aside until completely cool"},
+                                  "time" : { "N" : "40" },
+                                  "tplus" : { "N" : "10" },
+                                  "unit" : { "S" : "min" },
+                                  "sourceC" : { "SS" : [ "MixerBowl"] },
+                                  "addToC" : { "SS" : [ "caketin"] }
+                                    }
+                                }
+                                ]
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-6" },
+                "SortK" : { "N": "80"},
+                "part" : { "S" : "Water Ganache"},
+                "ingrd" : { "S" : "chocolate" },
+                "quali" : { "S" : "cooking" }, 
+                "iQual" : { "S" : "(70% cocoa solids) chopped into {m:1|cm||} pieces" }, 
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "60" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                },
+                "prep" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "chop the {ingrd} into {measure} pieces."  },
+                                  "say" : { "S" : "chop the {ingrd} into {measure} pieces. "  },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "measure" : { "M" : { "qty" : {"S":"1"} ,
+                                                        "unit" : {"S":"cm" } }
+                                    }}
+                                } 
+                                ]
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Add the {ingrd_} zest to the bowl"  },
+                                  "say" : { "S" : "Add the {ingrd_} zest  to the bowl"  },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "sourceC" : { "SS" : [ "SAB-S"] },
+                                  "addToC" : { "SS" : [ "MixerBowl"] }
+                                    }
+                                } 
+                                ]
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-6" },
+                "SortK" : { "N": "90"},
+                "part" : { "S" : "Water Ganache"},
+                "ingrd" : { "S" : "caster sugar" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "25" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                },
+               "prep" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "zest enough {ingrd} to make {measure}. Set aside."  },
+                                  "say" : { "S" : "zest enough {ingrd} to make {measure}. Set aside."  },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "SAB-S"] }
+                                    }
+                                } 
+                                ]
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "now add the {ingrd_} zest to the bowl"  },
+                                  "say" : { "S" : "now add the {ingrd_} zest  to the bowl"  },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "sourceC" : { "SS" : [ "SAB-S"] },
+                                  "addToC" : { "SS" : [ "MixerBowl"] }
+                                    }
+                                } 
+                                ]
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-6" },
+                "SortK" : { "N": "100"},
+                "part" : { "S" : "Water Ganache"},
+                "ingrd" : { "S" : "liquid glucose" }, 
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "25" } ,
+                                      "unit" : { "S" : "g" } 
+                                      }
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Scape the seeds of {measure} a {ingrd} and add to the bowl" },
+                                  "say" : { "S" : "Scape the seeds of {measure} a {ingrd} and add to the bowl" },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "MixerBowl"] }
+                                    }
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" : "Now mix for {timeu}, on a medium-high speed until smooth and fluffy" },
+                                  "say" : { "S" : "SNow mix for {timeu}, on a medium-high speed until smooth and fluffy" },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "MixerBowl"] }
+                                    }
+                                }
+                                ]
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-6" },
+                "SortK" : { "N": "110"},
+                "part" : { "S" : "Water Ganache"},
+                "ingrd" : { "S" : "water" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "3" } ,
+                                      "size" : { "S" : "tbsp" }
+                                      }
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Add {measure} {ingrd}, one at a time, beating well after each addition." },
+                                  "say" : { "S" : "Add {measure} {ingrd}, one at a time, beating well after each addition." },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "MixerBowl"] }
+                                    }
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" : "Reduce the speed to low and add a third of the flour mix." },
+                                  "say" : { "S" : "Reduce the speed to low and add a third of the flour mix." },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "MixerBowl"] }
+                                    }
+                                }
+                                ]
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-6" },
+                "SortK" : { "N": "120"},
+                "ingrd" : { "S" : "vanilla pod" },
+                "part" : { "S" : "Water Ganache"},
+                "qualm" : { "S" : "scapped seeds of " }, 
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "num" : { "S" : "1/2" } 
+                                      }
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "now add {measure} or approximately a half of the {label} and blend" },
+                                  "say" : { "S" : "now add {measure} or approximately a half of the {label} and blend"  },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "addToC" : { "SS" : [ "MixerBowl"] },
+                                  "measure" : { "M" : { 
+                                      "qty" : { "S" : "225" } ,
+                                      "unit" : { "S" : "ml" }
+                                      }
+                                    } }
+                                }, 
+                                { "M" :  {
+                                  "txt" : { "S" : "Repeat with the remaining flour and wine, finishing with the final third of flour and continuing to mix on a low speed" },
+                                  "say" : { "S" : "Repeat with the remaining flour and wine, finishing with the final third of flour and continuing to mix on a low speed"  },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "MixerBowl"] }
+                                  }
+                                }
+                                ]
+                }
+            }
+            }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-6" },
+                "SortK" : { "N": "130"},
+                "ingrd" : { "S" : "unsalted butter" },
+                "part" : { "S" : "Water Ganache"},
+                "iQual" : { "S" : ", at room temperature, cut into {m:2|cm||} pieces" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "25" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Once combined, pour into the prepared cake tin and scatter {measure} of {ingrd} evenly on top. " },
+                                  "say" : { "S" : "Once combined, pour into the prepared cake tin and scatter {measure} of {ingrd} evenly on top." },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "sourceC" : { "SS" : [ "MixerBowl"] },
+                                  "addToC" : { "SS" : [ "caketin"] }
+                                    }
+                                } ,
+                                { "M" :  {
+                                  "txt" : { "S" : "Place in the oven and bake for {timeu}" },
+                                  "say" : { "S" : "Place in the oven and bake for {timeu}" },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useC" : { "SS" : [ "caketin"] }
+                                    }
+                                }
+                                ]
+                }
+            }
+            }
+            }
+        ]
+} 
+  

@@ -16,6 +16,17 @@ import (
 	_ "github.com/aws/aws-lambda-go/lambdacontext"
 )
 
+// use this struct as key into map
+type mkey struct {
+	size string
+	Type string
+}
+type clsort []mkey
+
+func (cs clsort) Len() int           { return len(cs) }
+func (cs clsort) Less(i, j int) bool { return cs[i].size < cs[j].size }
+func (cs clsort) Swap(i, j int)      { cs[i], cs[j] = cs[j], cs[i] }
+
 func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 	type ctCount struct {
 		C   []*Container
@@ -31,11 +42,22 @@ func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 	identicalC := make(map[mkey]*ctCount)
 	//
 	done := make(map[string]bool)
-	for _, v := range cm {
+	for k, v := range cm {
+		var size_ string
 		// for each container aggregate based on type and size
-		z := mkey{strings.ToLower(v.Measure.Size), strings.ToLower(v.Type)}
+		if v.Measure == nil {
+			continue
+		}
+		if len(v.Measure.Size) > 0 {
+			size_ = strings.ToLower(v.Measure.Size)
+		} else {
+			// where no size defined give each container its own size - order at the top
+			size_ = "AAA" + k
+		}
+		z := mkey{size: size_, Type: strings.ToLower(v.Type)}
+		// identical based on {size,Type}
 		if y, ok := identicalC[z]; !ok {
-			// does not exist - create first one
+			// {size,Type} does not exist - create first one
 			y := new(ctCount)
 			y.num = 1
 			y.C = append(y.C, v)
@@ -46,8 +68,8 @@ func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 			if !done[v.Cid] {
 				// for containers not already matched as ok to reuse
 				for _, oc := range y.C {
-					fmt.Printf("loop check for %s  %s\n", v.Cid, oc.Cid)
-					fmt.Printf("oc.last %d  < %d v.start,  v.last  %d  < %d oc.start \n", oc.last, v.start, v.last, oc.start)
+					// fmt.Printf("loop check for %s  %s\n", v.Cid, oc.Cid)
+					// fmt.Printf("oc.last %d  < %d v.start,  v.last  %d  < %d oc.start \n", oc.last, v.start, v.last, oc.start)
 					if oc.last <= v.start || v.last <= oc.start {
 						done[oc.Cid] = true // don't check for this Container again.
 						reuse = true
@@ -74,20 +96,20 @@ func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 	// use sorted key to index into container map - sorted by size attribute in container.measure.
 	sort.Sort(clsorted)
 	for _, v := range clsorted {
+		//
+		// containers belonging to same {size,type}
+		//
 		if len(identicalC[v].C) > 1 {
-			// use typE as this is the attribute that is used to aggregated the containers
+			// use Type as this is the attribute that is used to aggregated the containers
 			// and each container may have a different label. Not so if were dealing with just one container of course
-			b.WriteString(fmt.Sprintf(" %d %s %s", identicalC[v].num, strings.Title(v.size), v.typE))
-			if identicalC[v].num > 1 {
-				b.WriteString(fmt.Sprintf("%s", "s"))
-			}
+			b.WriteString(fmt.Sprintf(" %d %s %s", identicalC[v].num, strings.Title(v.size), v.Type))
+
 			if len(identicalC[v].C) != identicalC[v].num {
-				if v.typE == "measuring cup" {
-					output_ = append(output_, b.String())
-					b.Reset()
-					continue
+				b.WriteString(v.Type)
+				if identicalC[v].num > 1 {
+					b.WriteString(fmt.Sprintf("%s ", "s"))
 				}
-				// some reuse
+				// some containers are reused
 				for i := identicalC[v].num; i > 0; i-- {
 					b.WriteString(fmt.Sprintf(" ( "))
 					var newLine bool
@@ -104,42 +126,33 @@ func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 					b.WriteString(fmt.Sprintf(" ) "))
 				}
 			} else {
+				// no containers are reused.
+				if identicalC[v].num > 1 {
+					b.WriteString(fmt.Sprintf("%s ", "s"))
+				}
 				for i, d := range identicalC[v].C {
-					if d.Type == "Measuring Cup" {
-						continue
-					}
 					switch i {
 					case 0:
 						if len(d.Contains) > 0 {
 							b.WriteString(fmt.Sprintf(" one for %s ", strings.ToLower(d.Contains)))
 						}
 					default:
-						//TODO: what about container reuse.
-						var written bool
-						for _, oc := range identicalC[v].C {
-							if (oc.last <= d.start || d.last <= oc.start) && len(oc.Contains) > 0 {
-								b.WriteString(fmt.Sprintf("%s ", " and later "+strings.ToLower(oc.Contains)))
-								written = true
-							}
-						}
-						if !written && len(d.Contains) > 0 {
+						if len(d.Contains) > 0 {
 							b.WriteString(fmt.Sprintf(" another for %s ", strings.ToLower(d.Contains)))
-							written = false
 						}
 					}
 				}
 			}
 		} else {
-			// single container of this type and size
+			//
+			// only one logical container or only one physical container in the identical grouping
+			//
 			c := identicalC[v].C[0]
-			if len(v.size) > 0 {
-				b.WriteString(fmt.Sprintf(" %d %s %s", identicalC[v].num, strings.Title(v.size), strings.ToLower(c.Label)))
+			if v.size[:3] == "AAA" {
+				b.WriteString(" 1 ")
+				b.WriteString(c.String())
 			} else {
-				if len(c.Measure.Height) > 0 {
-					b.WriteString(fmt.Sprintf(" %d %sx%s%s %s ", identicalC[v].num, c.Measure.Height, c.Measure.Dimension, c.Measure.Unit, strings.ToLower(c.Label)))
-				} else {
-					b.WriteString(fmt.Sprintf(" %d %s%s %s ", identicalC[v].num, c.Measure.Dimension, c.Measure.Unit, strings.ToLower(c.Label)))
-				}
+				b.WriteString(fmt.Sprintf(" 1 %s %s", strings.Title(v.size), c.Label))
 			}
 			if len(c.Purpose) > 0 {
 				if c.Purpose[0] == '_' {
@@ -460,7 +473,7 @@ func (s *sessCtx) purgeRecipe() error {
 	return nil
 }
 
-func expandIngrd(str string) string {
+func expandLiteralTags(str string) string {
 	var (
 		b      strings.Builder // supports io.Write write expanded text/verbal text to this buffer before saving to Task or Verbal fields
 		tclose int
@@ -481,12 +494,21 @@ func expandIngrd(str string) string {
 			}
 		}
 		tclose += strings.IndexByte(str[tclose:], '}')
-		tclose_ := tclose
-		// examine tag to see if it references entities outside of current activity
-		//   currenlty only device oven and noncurrent activity is supported
-		pt := strings.Split(strings.ToLower(str[topen+1:tclose_]), "|")
-		nm = &MeasureT{Num: pt[3], Quantity: pt[0], Size: pt[2], Unit: pt[1]}
-		b.WriteString(nm.String())
+		//
+		tag := strings.Split(strings.ToLower(str[topen+1:tclose]), ":")
+		switch tag[0] {
+		case "m":
+			pt := strings.Split(strings.ToLower(tag[1]), "|")
+			nm = &MeasureT{Num: pt[3], Quantity: pt[0], Size: pt[2], Unit: pt[1]}
+			b.WriteString(nm.String())
+		case "t":
+			pt := strings.Split(strings.ToLower(tag[1]), "|")
+			//fmt.Printf("case t: [%#v]/n", pt)
+			b.WriteString(pt[0] + unitMap[pt[1]].String())
+		default:
+			// non-special tag - pass through
+			b.WriteString(str[topen : tclose+1])
+		}
 		//
 		tclose += 1
 		topen = strings.IndexByte(str[tclose:], '{')
@@ -496,6 +518,9 @@ func expandIngrd(str string) string {
 			topen += tclose
 		}
 	}
+	if tclose == 0 {
+		// no {} found
+		return str
+	}
 	return b.String()
-
 }

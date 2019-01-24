@@ -666,13 +666,13 @@ func (s *sessCtx) loadBaseRecipe() error {
 					// perform over slice of preps, tasks
 					switch interactionType {
 					case text:
-						writeCtx = uDisplay // unit formating
+						writeCtx = uDisplay // package variable to deterine String() formating
 						str = strings.TrimLeft(pt.Text, " ")
 						s := str[0]
-						str = strings.ToUpper(string(s)) + str[1:]
+						str = expandLiteralTags(strings.ToUpper(string(s)) + str[1:])
 					case voice:
-						writeCtx = uSay // unit formating
-						str = pt.Verbal
+						writeCtx = uSay // package variable to deterine String() formating
+						str = expandLiteralTags(pt.Verbal)
 					}
 					// if no {} then print and return to top of the loop
 					t1 := strings.IndexByte(str, '{')
@@ -687,6 +687,7 @@ func (s *sessCtx) loadBaseRecipe() error {
 						b.Reset()
 						continue
 					}
+
 					for tclose, topen = 0, strings.IndexByte(str, '{'); topen != -1; {
 						var (
 							el  string
@@ -747,26 +748,22 @@ func (s *sessCtx) loadBaseRecipe() error {
 							fmt.Fprintf(&b, "%s", p.QualiferIngrd)
 						case "usec", "addtoc":
 							var c *Container
+
 							if el == "usec" {
 								c = pt.UseCp[0]
 							} else {
 								c = pt.AddToCp[0]
 							}
-							m := c.Measure
 							// useC.form
 							if len(el2) > 0 {
 								switch el2 {
 								case "form": // depreciated - only alt used now. Still here to support existing
-									m = c.Measure
-								case "alt":
-									m = c.AltMeasure
+									b.WriteString(c.String())
 								default:
-									return fmt.Errorf(`Error: useC or addtoC tag not followed by "form" or "alt" type in AId [%d] [%s]`, p.AId, str)
+									return fmt.Errorf(`Error: useC or addtoC tag not followed by "form" or "type" type in AId [%d] [%s]`, p.AId, str)
 								}
-							}
-							if m != nil {
-								s := m.String()
-								fmt.Fprintf(&b, "%s", strings.ToLower(s+" "+c.Label))
+							} else {
+								b.WriteString(c.Type)
 							}
 						case "measure":
 							context = measure

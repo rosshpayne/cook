@@ -565,17 +565,17 @@ func (s *sessCtx) getRecById() error {
 		return err
 	}
 	rec := at.Alexa()
-	s.dmsg = expandIngrd(rec.Display)
+	s.dmsg = expandLiteralTags(rec.Display)
 	if s.recId == rec.EOL {
 		writeCtx = uSay
-		s.vmsg = "and finally, " + expandIngrd(rec.Verbal)
+		s.vmsg = "and finally, " + expandLiteralTags(rec.Verbal)
 		writeCtx = uDisplay
-		s.dmsg = "and finally, " + expandIngrd(rec.Display)
+		s.dmsg = "and finally, " + expandLiteralTags(rec.Display)
 	} else {
 		writeCtx = uSay
-		s.vmsg = expandIngrd(rec.Verbal)
+		s.vmsg = expandLiteralTags(rec.Verbal)
 		writeCtx = uDisplay
-		s.dmsg = expandIngrd(rec.Display)
+		s.dmsg = expandLiteralTags(rec.Display)
 	}
 	fmt.Println(s.vmsg)
 	fmt.Println(s.dmsg)

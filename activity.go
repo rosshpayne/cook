@@ -72,20 +72,22 @@ type taskT struct {
 }
 
 type Container struct {
-	// Rid      string     `json:"PKey"`
-	Cid        string     `json:"SortK"`
+	Cid      string     `json:"SortK"`
+	Type     string     `json:"type"`
+	Purpose  string     `json:"purpose"`
+	Coord    [2]float32 `json:"coord"`
+	Contains string     `json:"contents"`
+	Message  string     `json:"message"`
+	// two instances of this container
 	Label      string     `json:"label"`
-	Type       string     `json:"type"`
-	Purpose    string     `json:"purpose"`
-	Coord      [2]float32 `json:"coord"`
 	Measure    *MeasureCT `json:"measure"`
+	AltLabel   string     `json:"altLabel"`
 	AltMeasure *MeasureCT `json:"altMeasure"`
-	Contains   string     `json:"contents"`
-	Message    string     `json:"message"`
-	start      int        // first id in recipe tasks where container is used
-	last       int        // last id in recipe tasks where container is sourced from or recipe is complete.
-	reused     int        // links containers that can be the same physical container.
-	Activity   []taskT    // slice of tasks (Prep and Task activites) associated with container
+	// non-dynamo
+	start    int     // first id in recipe tasks where container is used
+	last     int     // last id in recipe tasks where container is sourced from or recipe is complete.
+	reused   int     // links containers that can be the same physical container.
+	Activity []taskT // slice of tasks (Prep and Task activites) associated with container
 }
 
 type DeviceT struct {
@@ -248,28 +250,51 @@ func (d *DeviceT) String() string {
 	return s
 }
 
+//type Container struct {
+
+func (c *Container) String() string {
+	var b strings.Builder
+	if c.Measure != nil {
+		b.WriteString(c.Measure.String() + " ")
+	}
+	if len(c.Label) > 0 {
+		b.WriteString(c.Label)
+	}
+	if len(c.AltLabel) > 0 {
+		b.WriteString(" or ")
+		if c.AltMeasure != nil {
+			b.WriteString(c.AltMeasure.String() + " ")
+		}
+		b.WriteString(c.AltLabel)
+	}
+	return b.String()
+}
+
 func (m *MeasureCT) String() string {
-	var s string
+	var b strings.Builder
 	if m == nil {
 		panic(fmt.Errorf("%s", "Measure is nil in method String() of Container"))
 	}
 	if len(m.Shape) > 0 {
-		s = m.Shape + " "
+		b.WriteString(m.Shape + " ")
 	}
 	if len(m.Dimension) > 0 {
-		s += m.Dimension
+		b.WriteString(m.Dimension)
 	}
 	if len(m.Height) > 0 {
-		s += "x" + m.Height
+		b.WriteString("x" + m.Height)
+	}
+	if len(m.Quantity) > 0 {
+		b.WriteString(m.Quantity)
 	}
 	if len(m.Unit) > 0 {
-		s += m.Unit
+		b.WriteString(m.Unit)
 	}
 	if len(m.Size) > 0 {
-		s = m.Size
+		b.WriteString(m.Size)
 	}
 	//fmt.Println(s)
-	return s
+	return b.String()
 }
 
 var pIngrdScale float64 = 0.75
@@ -280,7 +305,7 @@ func (m *MeasureT) String() string {
 		return m.FormatString()
 	}
 	//
-	// Quantity scaling necessary ********************************************
+	//************ ingredient scaling necessary *************
 	//
 	const (
 		c_pinchof string = "pinch of"
@@ -671,7 +696,7 @@ func (a Activity) String() string {
 	addQualIngrd()
 	addIngrd()
 	addIngrdQual()
-	return s
+	return expandLiteralTags(s)
 }
 
 func (as Activities) String() string {
@@ -693,7 +718,7 @@ func (as Activities) String() string {
 			if k == "nopart_" {
 				continue
 			}
-			fmt.Fprintf(&b, "\n%s\n\n", k)
+			fmt.Fprintf(&b, "\n%s\n\n", strings.ToUpper(k))
 			for _, a := range v {
 				if s := a.String(); len(s) > 0 {
 					fmt.Fprintf(&b, "%s\n", strings.TrimLeft(s, " "))
@@ -718,7 +743,7 @@ func (as Activities) String() string {
 			if k == "nopart_" {
 				continue
 			}
-			fmt.Fprintf(&b, "\n%s\n\n", k)
+			fmt.Fprintf(&b, "\n%s\n\n", strings.ToUpper(k))
 			for _, a := range v {
 				if s := a.String(); len(s) > 0 {
 					fmt.Fprintf(&b, "%s\n", strings.TrimLeft(s, " "))
