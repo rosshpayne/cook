@@ -7,7 +7,6 @@
                   "SortK" : { "S": "RisoPan" },
                   "label" : { "S" : "Risotto Pan" },
                   "type" : { "S": "Pan" },
-                  "contains" : { "S": "risotto ingredients" },
                   "measure" : { "M" : { 
                                       "dim" : { "N" : "30" } , 
                                       "height"   : { "N" : "2.5"  } ,
@@ -26,8 +25,8 @@
                 "PKey" : { "S": "R-21" },
                 "SortK" : { "N": "3"},
                 "RName" : { "S": "Risotto Nero with Swiss Chard"},
-                "Cat"  : { "S": "risotto" } ,
-                "Index" : { "SS" : ["cuttlefish","swiss-chard risotto"] }
+                "Index" : { "SS" : ["cuttlefish","swiss-chard risotto"] },
+                "Srv" : { "S": "8" } 
             }
         }
         },
@@ -369,11 +368,11 @@
                                       "unit" : {"S" : "sachet" }
                                       } 
                 },
-                "alt" : { "S" : "use the saved ink sac from the cuttle fish" },
+                "altIngrd" : { "S" : "use the saved ink sac from the cuttle fish" },
                 "task" :  { "L" : [
                                 { "M" : { 
-                                  "txt" : { "S" : "Now add {measure} of {ingrd} {alt} to the pan and stir in. When each grain of rice has become black proceed to next task" },
-                                  "say" : { "S" : "Now add {measure} of {ingrd} {alt} to the pan and stir in. When each grain of rice has become black proceed to next task" },
+                                  "txt" : { "S" : "Now add {measure} of {ingrd} or {altIngrd}, to the pan and stir in. When each grain of rice has become black proceed to next task" },
+                                  "say" : { "S" : "Now add {measure} of {ingrd} or {altIngrd}, to the pan and stir in. When each grain of rice has become black proceed to next task" },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },

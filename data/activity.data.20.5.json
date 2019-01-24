@@ -55,9 +55,7 @@
                   "label" : { "S": "electric mixer bowl" },
                   "measure" : { "M" : {  "size" : { "S" : "large" }
                   } },
-                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
-                  "contents" : { "S": "cake mixture" },
-                  "purpose": { "S": "mixer" }
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  }
                   }
             }
          }

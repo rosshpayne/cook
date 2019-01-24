@@ -165,7 +165,7 @@ func (s sessCtx) updateSession() (int, error) {
 	//
 	// RecId has been updated so copy new value to session context
 	//
-	lastSess := sessRecT{}
+	lastSess := sessRecipeT{}
 	if len(result.Attributes) > 0 && s.curreq != bookrecipe_ {
 		err = dynamodbattribute.UnmarshalMap(result.Attributes, &lastSess)
 		if err != nil {

@@ -102,10 +102,10 @@ func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 		if len(identicalC[v].C) > 1 {
 			// use Type as this is the attribute that is used to aggregated the containers
 			// and each container may have a different label. Not so if were dealing with just one container of course
+			fmt.Printf("v = %#v\n", v)
 			b.WriteString(fmt.Sprintf(" %d %s %s", identicalC[v].num, strings.Title(v.size), v.Type))
 
 			if len(identicalC[v].C) != identicalC[v].num {
-				b.WriteString(v.Type)
 				if identicalC[v].num > 1 {
 					b.WriteString(fmt.Sprintf("%s ", "s"))
 				}
@@ -119,7 +119,7 @@ func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 								b.WriteString(fmt.Sprintf(" %s ", strings.ToLower(c.Contains)))
 								newLine = true
 							} else {
-								b.WriteString(fmt.Sprintf(" ,%s ", strings.ToLower(c.Contains)))
+								b.WriteString(fmt.Sprintf(" then %s ", strings.ToLower(c.Contains)))
 							}
 						}
 					}
@@ -480,6 +480,16 @@ func expandLiteralTags(str string) string {
 		topen  int
 		nm     *MeasureT
 	)
+
+	resetScale := func() func() {
+		savedScale := pIngrdScale
+		pIngrdScale = 1
+		return func() { pIngrdScale = savedScale }
+
+	}
+	// literal tags are not scalable, set scale to 1 for duration of function.
+	defer resetScale()()
+
 	for tclose, topen = 0, strings.IndexByte(str, '{'); topen != -1; {
 
 		b.WriteString(str[tclose:topen])
@@ -498,15 +508,16 @@ func expandLiteralTags(str string) string {
 		tag := strings.Split(strings.ToLower(str[topen+1:tclose]), ":")
 		switch tag[0] {
 		case "m":
+			// measure literal
 			pt := strings.Split(strings.ToLower(tag[1]), "|")
 			nm = &MeasureT{Num: pt[3], Quantity: pt[0], Size: pt[2], Unit: pt[1]}
 			b.WriteString(nm.String())
 		case "t":
+			// time literal
 			pt := strings.Split(strings.ToLower(tag[1]), "|")
-			//fmt.Printf("case t: [%#v]/n", pt)
 			b.WriteString(pt[0] + unitMap[pt[1]].String())
 		default:
-			// non-special tag - pass through
+			// not a literal tag - pass through unchanged
 			b.WriteString(str[topen : tclose+1])
 		}
 		//

@@ -652,6 +652,12 @@ func (s *sessCtx) loadBaseRecipe() error {
 	//
 	//  replace all {tag} in text and verbal for each activity. Ignore Link'd activites - they are only relevant at print time
 	//
+	// for _, v := range ActivityS {
+	// 	fmt.Printf("Activity [%d] \n", v.AId)
+	// 	for _, v := range v.Task {
+	// 		fmt.Printf("text: [%s]\n", v.Text)
+	// 	}
+	// }
 	var pt []*PerformT
 	for _, taskType := range []PrepTask{prep, task} {
 		for _, interactionType := range []int{text, voice} {
@@ -663,6 +669,7 @@ func (s *sessCtx) loadBaseRecipe() error {
 					pt = p.Task
 				}
 				for _, pt := range pt {
+					//fmt.Printf("\nText:   [%s]\n", pt.Text)
 					// perform over slice of preps, tasks
 					switch interactionType {
 					case text:
@@ -687,7 +694,6 @@ func (s *sessCtx) loadBaseRecipe() error {
 						b.Reset()
 						continue
 					}
-
 					for tclose, topen = 0, strings.IndexByte(str, '{'); topen != -1; {
 						var (
 							el  string
@@ -722,6 +728,7 @@ func (s *sessCtx) loadBaseRecipe() error {
 						} else {
 							el, el2 = strings.ToLower(str[topen+1:tclose_]), ""
 						}
+						fmt.Printf("el: [%s]\n", el)
 						switch el {
 						case "device":
 							s := strings.Split(el2, ".")
@@ -760,7 +767,7 @@ func (s *sessCtx) loadBaseRecipe() error {
 								case "form": // depreciated - only alt used now. Still here to support existing
 									b.WriteString(c.String())
 								default:
-									return fmt.Errorf(`Error: useC or addtoC tag not followed by "form" or "type" type in AId [%d] [%s]`, p.AId, str)
+									panic(fmt.Errorf(`Error: useC or addtoC tag not followed by "form" or "type" type in AId [%d] [%s]`, p.AId, str))
 								}
 							} else {
 								b.WriteString(c.Type)
@@ -870,6 +877,8 @@ func (s *sessCtx) loadBaseRecipe() error {
 							}
 						case "ingrd":
 							fmt.Fprintf(&b, "%s", strings.ToLower(p.Ingredient))
+						case "altingrd":
+							fmt.Fprintf(&b, "%s", strings.ToLower(p.AltIngrd))
 						case "ingrd_": // make singular if plural
 							if strings.ToLower(p.Ingredient[:len(p.Ingredient)-1]) == "s" {
 								fmt.Fprintf(&b, "%s", strings.ToLower(p.Ingredient[:len(p.Ingredient)-1]))

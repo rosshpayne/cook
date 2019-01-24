@@ -35,7 +35,7 @@ func (ct ctRec) Alexa() dialog {
 	return dialog{ct.Verbal, ct.Text, ct.EOL}
 }
 
-type mRecT struct {
+type mRecipeT struct {
 	Id       int
 	IngrdCat string
 	RName    string
@@ -46,7 +46,7 @@ type mRecT struct {
 	Quantity string
 }
 
-type indexRecT struct {
+type indexRecipeT struct {
 	PKey     string
 	SortK    string
 	PreQual  string
@@ -201,7 +201,7 @@ func loadNonIngredientsMap(svc *dynamodb.DynamoDB) (map[string]bool, error) {
 
 func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[string]*Activity) error {
 
-	var indexRecS []indexRecT
+	var indexRecS []indexRecipeT
 	indexRow := make(map[string]bool)
 
 	saveIngdIndex := func() error {
@@ -224,7 +224,7 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 
 	indexBasicEntry := func(entry string) {
 		//
-		irec := indexRecT{SortK: s.reqBkId + "-" + s.reqRId, BkName: s.reqBkName, RName: s.reqRName, Authors: s.authors}
+		irec := indexRecipeT{SortK: s.reqBkId + "-" + s.reqRId, BkName: s.reqBkName, RName: s.reqRName, Authors: s.authors}
 		irec.PKey = strings.TrimRight(strings.TrimLeft(strings.ToLower(entry), " "), " ")
 		indexRecS = append(indexRecS, irec)
 		indexRow[irec.PKey] = true
@@ -232,7 +232,7 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 
 	makeIndexRecs := func(entry string, ap *Activity) {
 		// for each index property value, add to index
-		irec := indexRecT{SortK: s.reqBkId + "-" + s.reqRId, BkName: s.reqBkName, RName: s.reqRName, Authors: s.authors}
+		irec := indexRecipeT{SortK: s.reqBkId + "-" + s.reqRId, BkName: s.reqBkName, RName: s.reqRName, Authors: s.authors}
 		irec.PKey = entry
 		m := ap.Measure
 		if m != nil {
@@ -513,7 +513,7 @@ func (s *sessCtx) getTaskRecById() (alexaDialog, error) {
 	return taskRec, nil
 }
 
-func (s *sessCtx) recipeRSearch() error {
+func (s *sessCtx) recipeRSearch() (*RecipeT, error) {
 	//
 	// query on recipe name to get RecipeId and optionally book name and Id if not requested
 	//
@@ -521,20 +521,15 @@ func (s *sessCtx) recipeRSearch() error {
 		PKey  string
 		SortK float64
 	}
-	type recT struct {
-		RName string `json:"RName"`
-		//Title  string   `json:"Title"`
-		Index  []string `json:"Index"`
-		Serves string   `json:"Srv"`
-	}
+
 	rId, err := strconv.Atoi(s.reqRId)
 	if err != nil {
-		return fmt.Errorf("Error: in recipeRSearch converting reqId  [%s] to int - %s", s.reqRId, err.Error())
+		return nil, fmt.Errorf("Error: in recipeRSearch converting reqId  [%s] to int - %s", s.reqRId, err.Error())
 	}
 	pkey := pKey{PKey: "R-" + s.reqBkId, SortK: float64(rId)}
 	av, err := dynamodbattribute.MarshalMap(&pkey)
 	if err != nil {
-		return fmt.Errorf("%s: %s", "Error in MarshalMap of recipeIdLookup", err.Error())
+		return nil, fmt.Errorf("%s: %s", "Error in MarshalMap of recipeIdLookup", err.Error())
 	}
 	input := &dynamodb.GetItemInput{
 		Key:       av,
@@ -562,15 +557,15 @@ func (s *sessCtx) recipeRSearch() error {
 			// Message from an error.
 			fmt.Println(err.Error())
 		}
-		return fmt.Errorf("%s: %s", "Error in GetItem of recipeRSearch", err.Error())
+		return nil, fmt.Errorf("%s: %s", "Error in GetItem of recipeRSearch", err.Error())
 	}
 	if len(result.Item) == 0 {
-		return fmt.Errorf("No Recipe record found for R-%s-%s", s.reqBkId, s.reqRId)
+		return nil, fmt.Errorf("No Recipe record found for R-%s-%s", s.reqBkId, s.reqRId)
 	}
-	rec := recT{}
-	err = dynamodbattribute.UnmarshalMap(result.Item, &rec)
+	rec := &RecipeT{}
+	err = dynamodbattribute.UnmarshalMap(result.Item, rec)
 	if err != nil {
-		return fmt.Errorf("Error: in UnmarshalMaps of recipeRSearch [%s] err", s.reqRId, err.Error())
+		return nil, fmt.Errorf("Error: in UnmarshalMaps of recipeRSearch [%s] err", s.reqRId, err.Error())
 	}
 	// populate session context fields
 	s.reqRName = rec.RName
@@ -578,12 +573,12 @@ func (s *sessCtx) recipeRSearch() error {
 	err = s.bookNameLookup()
 	if err != nil {
 		s.reqBkName = ""
-		return err
+		return nil, err
 	}
 	s.dmsg = s.reqRName + " in " + s.reqBkName + " by " + s.authors
 	s.vmsg = "sFound " + s.reqRName + " in " + s.reqBkName + " by " + s.authors
 	s.vmsg += `What would you like to list?. Say "list container" or "List Ingredient" or "List Prep tasks" or "start Cooking" or "cancel"`
-	return nil
+	return rec, nil
 }
 
 func (s *sessCtx) ingredientSearch() error {
@@ -591,7 +586,7 @@ func (s *sessCtx) ingredientSearch() error {
 	// search for recipe by specifying ingredient and a category or sub-category.
 	// data must exist in this table for each recipe. Data is populated as part of the base activity processig.
 	//
-	type dynoRecT struct {
+	type dynoRecipeT struct {
 		PKey     string
 		SortK    string `json:"SortK"`
 		RName    string `json:"RName"`
@@ -656,7 +651,7 @@ func (s *sessCtx) ingredientSearch() error {
 			}
 		}
 	}
-	recS := make([]dynoRecT, int(*result.Count))
+	recS := make([]dynoRecipeT, int(*result.Count))
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &recS)
 	if err != nil {
 		return fmt.Errorf("Error: %s [%s] err", "in UnmarshalListMaps of ingredientSearch ", s.reqRName, err.Error())
@@ -680,7 +675,7 @@ func (s *sessCtx) ingredientSearch() error {
 			for i, v := range recS {
 				sortk := strings.Split(v.SortK, "-")
 				s.ddata += strconv.Itoa(i+1) + ": " + v.BkName + " by " + v.Authors + ". Quantity: " + v.Quantity + "\n "
-				rec := mRecT{Id: i + 1, IngrdCat: v.PKey, RName: v.RName, RId: sortk[1], BkName: v.BkName, BkId: sortk[0], Authors: v.Authors, Quantity: v.Quantity}
+				rec := mRecipeT{Id: i + 1, IngrdCat: v.PKey, RName: v.RName, RId: sortk[1], BkName: v.BkName, BkId: sortk[0], Authors: v.Authors, Quantity: v.Quantity}
 				s.mChoice = append(s.mChoice, rec)
 			}
 			s.reqRId, s.reqRName, s.reqBkId, s.reqBkName = "", "", "", ""
@@ -704,7 +699,7 @@ func (s *sessCtx) ingredientSearch() error {
 		for i, v := range recS {
 			sortk := strings.Split(v.SortK, "-")
 			s.ddata += strconv.Itoa(i+1) + ": " + v.BkName + " by " + v.Authors + ". Quantity: " + v.Quantity + "\n"
-			rec := mRecT{Id: i + 1, RName: v.RName, RId: sortk[1], BkName: v.BkName, BkId: sortk[0], Authors: v.Authors, Quantity: v.Quantity}
+			rec := mRecipeT{Id: i + 1, RName: v.RName, RId: sortk[1], BkName: v.BkName, BkId: sortk[0], Authors: v.Authors, Quantity: v.Quantity}
 			s.mChoice = append(s.mChoice, rec)
 		}
 		s.reqRId, s.reqRName, s.reqBkId, s.reqBkName = "", "", "", ""
@@ -791,7 +786,7 @@ func (s *sessCtx) recipeNameSearch() error {
 	// user "opens <book>". Alexa provides associated slot-type-id BkId value.
 	//
 	// used in recipe name
-	type dynoRecT struct {
+	type dynoRecipeT struct {
 		PKey  string
 		SortK int
 		RName string
@@ -829,7 +824,7 @@ func (s *sessCtx) recipeNameSearch() error {
 	}
 	// define a slice of struct as Query expects to return 1 or more rows so the slice represents a row
 	// and we ue unmarshallistofmaps to handle a batch like select
-	recS := make([]dynoRecT, int(*result.Count))
+	recS := make([]dynoRecipeT, int(*result.Count))
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &recS)
 	if err != nil {
 		return fmt.Errorf("Error: %s [%s] %s", "in UnmarshalMaps in recipeNameSearch ", s.reqRName, err.Error())
@@ -856,7 +851,7 @@ func (s *sessCtx) recipeNameSearch() error {
 			s.reqRName = recS[i].RName
 			err = s.bookNameLookup()
 			s.ddata += strconv.Itoa(i+1) + ". " + s.reqRName + " in " + s.reqBkName + " by " + s.authors + "\n"
-			rec := mRecT{Id: i + 1, RName: s.reqRName, RId: s.reqRId, BkName: s.reqBkName, BkId: s.reqBkId, Authors: s.authors}
+			rec := mRecipeT{Id: i + 1, RName: s.reqRName, RId: s.reqRId, BkName: s.reqBkName, BkId: s.reqBkId, Authors: s.authors}
 			s.mChoice = append(s.mChoice, rec)
 		}
 		// zero session context because mutli records means no-one record is active until user selects one.

@@ -45,12 +45,10 @@
                "Item": { 
                   "PKey" : { "S": "C-20-4" },
                   "SortK" : { "S": "EMixerBowl" },
-                  "type" : { "S": "Electric Mixer Bowl" },
+                  "type" : { "S": "eBowl" },
                   "label" : { "S": "Electric Mixer Bowl" },
                   "measure" : { "M" : { "size" : { "S" : "large" }}},
-                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
-                  "contents" : { "S": "cake mixture" },
-                  "purpose": { "S": "blending" }
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  }
                   }
             }
          },
@@ -61,6 +59,7 @@
                   "SortK" : { "S": "caketin" },
                   "type" : { "S": "caketin" },
                   "label" : { "S": "cake tin" },
+                  "AltLabel" : { "S": "cake tin" },
                   "message": { "S": "with springform or a tin with a removable base"},
                   "measure" : { "M" : {"shape" : { "S" : "round" },
                                        "dim" : { "S" : "23" },
@@ -80,7 +79,8 @@
                 "PKey" : { "S": "R-20" },
                 "SortK" : { "N": "4"},
                 "RName" : { "S": "Rhubarb and strawberry crumble cake"},
-                "Index" : { "SS" : ["strawberry crumble cake","rhubarb crumble cake","rhubarb strawberry"] }
+                "Index" : { "SS" : ["strawberry crumble cake","rhubarb crumble cake","rhubarb strawberry"] },
+                "Srv" : { "S" :"12" }
             }
         }
         },
@@ -302,7 +302,7 @@
                 "label" : { "S": "strawberry"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "strawberries" },
-                "iQual" : { "S" : ", hulled and sliced 0.5cm thick" },
+                "iQual" : { "S" : ", hulled and sliced {m:0.5|cm||} thick" },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "250" } ,
                                       "unit": { "S": "g"}
@@ -745,8 +745,8 @@
                                                     }}}
                                 },
                                  {"M" : { 
-                                  "txt" : { "S" : "To bake the cake we, we make use of a {useC.form}, but use a {usec.alt} if that is what you have. Eitherway, just make sure it is a springform or a tin with a removable base." },
-                                  "say" : { "S" : "To bake the cake we, we make use of a {useC.form}, but use a {usec.alt} if that is what you have. Eitherway, just make sure it is a springform or a tin with a removable base." },
+                                  "txt" : { "S" : "To bake the cake we, we make use of a {useC.form} if that is what you have. Eitherway, just make sure it is a springform or a tin with a removable base." },
+                                  "say" : { "S" : "To bake the cake we, we make use of a {useC.form} if that is what you have. Eitherway, just make sure it is a springform or a tin with a removable base." },
                                   "useC": {"SS" : ["caketin"] }}
                                  },
                                 {"M" : { 

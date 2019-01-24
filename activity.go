@@ -49,12 +49,12 @@ type respT struct {
 //TODO: activate Recipe type here. Also incorporate AltIngrd into output.
 // Recipe Record
 //
-// type recT struct {
-// 	RName  string   `json:"RName"`
-// 	Title  string   `json:"Title"`
-// 	Index  []string `json:"Index"`
-// 	Serves string   `json:"Srv"`
-// }
+type RecipeT struct {
+	RName string `json:"RName"`
+	//Title  string   `json:"Title"`
+	Index  []string `json:"Index"`
+	Serves string   `json:"Srv"`
+}
 
 type MeasureCT struct {
 	Quantity  string `json:"qty"`
@@ -253,19 +253,23 @@ func (d *DeviceT) String() string {
 //type Container struct {
 
 func (c *Container) String() string {
-	var b strings.Builder
+	var (
+		b strings.Builder
+	)
 	if c.Measure != nil {
 		b.WriteString(c.Measure.String() + " ")
 	}
 	if len(c.Label) > 0 {
 		b.WriteString(c.Label)
 	}
-	if len(c.AltLabel) > 0 {
+	if c.AltMeasure != nil {
 		b.WriteString(" or ")
 		if c.AltMeasure != nil {
 			b.WriteString(c.AltMeasure.String() + " ")
 		}
-		b.WriteString(c.AltLabel)
+		if len(c.AltLabel) > 0 {
+			b.WriteString(c.AltLabel)
+		}
 	}
 	return b.String()
 }
@@ -326,6 +330,7 @@ func (m *MeasureT) String() string {
 		}
 		return float64(q)
 	}
+
 	scaleFraction := func(s string) string {
 		// supported fractions: 1/8,1/4,1/2,3/4,1,1.25,1.5,2 2.5, 3
 		var (
@@ -372,7 +377,7 @@ func (m *MeasureT) String() string {
 		} else if frac > 0.075 {
 			fstr = "1/8"
 		} else {
-			fstr = c_pinchof
+			return c_pinchof
 		}
 		ff := strconv.FormatFloat(fint, 'g', -1, 64)
 		if fint == 0 {
@@ -383,6 +388,7 @@ func (m *MeasureT) String() string {
 			return fstr
 		}
 	}
+
 	scaleFloat := func(s string) string {
 		f, err := strconv.ParseFloat(s, 64)
 		if err != nil {
@@ -402,18 +408,34 @@ func (m *MeasureT) String() string {
 		} else if frac > 0.075 {
 			f = 0.125
 		} else {
-			f = 0
+			return c_pinchof
 		}
 		return strconv.FormatFloat(ff+f, 'g', -1, 64)
 	}
+
 	scaleInt := func(s string) string {
 		i, err := strconv.Atoi(s)
 		if err != nil {
 			panic(fmt.Errorf("Error: cannot covert Quantity [%s] to int in *MeasureT.String()", s))
 		}
 		qty := float64(i) * 10 * pIngrdScale
-		//qty = math.Round(qty) / 10
 		qty = roundTo5(qty) / 10
+		if qty < 1 {
+			if qty > 0.875 {
+				s = "1.0"
+			} else if qty > 0.625 {
+				s = "3/4"
+			} else if qty > 0.375 {
+				s = "1/2"
+			} else if qty > 0.1875 {
+				s = "1/4"
+			} else if qty > 0.075 {
+				s = "1/8"
+			} else {
+				s = c_pinchof
+			}
+			return s
+		}
 		return strconv.FormatFloat(qty, 'g', -1, 64)
 	}
 	// if len(m.Quantity) > 0 && len(m.Size) > 0 {
@@ -422,6 +444,32 @@ func (m *MeasureT) String() string {
 	//
 	//
 	//
+	fmt.Printf("%#v\n", m)
+	if len(m.Num) > 0 && len(m.Quantity) == 0 {
+		//
+		// case: only qty is defined
+		//
+		// fraction defined
+		fmt.Println("scale num int..", m.Num)
+		if strings.IndexByte(m.Num, '/') > 0 {
+			s := scaleFraction(m.Num)
+			mn := &MeasureT{Size: m.Size, Num: s, Unit: m.Unit}
+			return mn.FormatString()
+		}
+		if strings.IndexByte(m.Num, '.') > 0 {
+			var mn *MeasureT
+			s := scaleFloat(m.Num)
+			if s != c_pinchof {
+				mn = &MeasureT{Size: m.Size, Num: s, Unit: m.Unit}
+			} else {
+				mn = &MeasureT{Size: m.Size, Num: s, Unit: m.Unit}
+			}
+			return mn.FormatString()
+		}
+		s := scaleInt(m.Num)
+		mn := &MeasureT{Size: m.Size, Num: s, Unit: m.Unit}
+		return mn.FormatString()
+	}
 	if len(m.Quantity) > 0 && len(m.Unit) == 0 {
 		//
 		// case: only qty is defined
@@ -433,8 +481,13 @@ func (m *MeasureT) String() string {
 			return mn.FormatString()
 		}
 		if strings.IndexByte(m.Quantity, '.') > 0 {
+			var mn *MeasureT
 			s := scaleFloat(m.Quantity)
-			mn := &MeasureT{Quantity: s, Size: m.Size, Num: m.Num}
+			if s != c_pinchof {
+				mn = &MeasureT{Quantity: s, Size: m.Size, Num: m.Num}
+			} else {
+				mn = &MeasureT{Quantity: s, Size: m.Size, Num: m.Num}
+			}
 			return mn.FormatString()
 		}
 		s := scaleInt(m.Quantity)
@@ -453,7 +506,7 @@ func (m *MeasureT) String() string {
 		if strings.IndexByte(m.Quantity, '/') > 0 {
 			s := scaleFraction(m.Quantity)
 			if s == c_pinchof {
-				mn := &MeasureT{Quantity: s, Unit: m.Unit, Size: m.Size, Num: m.Num}
+				mn := &MeasureT{Quantity: s, Size: m.Size, Num: m.Num}
 				return mn.FormatString()
 			} else {
 				mn := &MeasureT{Quantity: s, Unit: m.Unit, Size: m.Size, Num: m.Num}
@@ -607,6 +660,14 @@ func (m *MeasureT) FormatString() string {
 		}
 		return m.Quantity
 	}
+	if len(m.Num) > 0 {
+		// Num has been written separately earlier
+		if len(m.Unit) > 0 {
+			return unitMap[m.Unit].String(m)
+		} else {
+			return m.Num
+		}
+	}
 	return "No-Measure"
 }
 
@@ -629,7 +690,14 @@ func (a Activity) String() string {
 
 	addNumber := func() {
 		if a.Measure != nil && len(a.Measure.Num) > 0 {
-			s = a.Measure.Num + " "
+			if len(a.Measure.Quantity) > 0 {
+				_, err := strconv.Atoi(a.Measure.Quantity[:1])
+				if err == nil {
+					s = a.Measure.Num + "x"
+					return
+				}
+			}
+			s = a.Measure.Num
 		}
 	}
 
@@ -657,7 +725,7 @@ func (a Activity) String() string {
 	addMeasure := func() {
 		if a.Measure != nil {
 			if len(s) > 0 {
-				s += " " + a.Measure.String()
+				s += a.Measure.String()
 			} else {
 				s = a.Measure.String()
 			}
@@ -677,8 +745,9 @@ func (a Activity) String() string {
 			s += " of"
 		}
 		s = strings.TrimRight(s, " ")
-		if a.Measure != nil && len(a.Measure.Num) > 0 {
-			s += " " + a.Measure.Num
+		if a.Measure != nil && (len(a.Measure.Num) > 0 || len(a.Measure.Quantity) > 0) {
+			//s += " " + a.Measure.Num
+			s += " " + a.Measure.String()
 			if len(a.Measure.Size) > 0 {
 				s += " " + a.Measure.Size
 			}
@@ -699,7 +768,7 @@ func (a Activity) String() string {
 	return expandLiteralTags(s)
 }
 
-func (as Activities) String() string {
+func (as Activities) String(r *RecipeT) string {
 	partM := make(map[string][]*Activity)
 	// find if there are any parts to recipe
 	for i := 0; i < len(as); i++ {
@@ -711,7 +780,8 @@ func (as Activities) String() string {
 		}
 	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s\n\n", "Title....")
+	fmt.Fprintf(&b, "%s\n\n", r.RName)
+	fmt.Fprintf(&b, "SERVES  %s\n\n", r.Serves)
 	if len(partM) > 2 {
 		// parts first..
 		for k, v := range partM {
