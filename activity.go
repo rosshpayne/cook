@@ -54,6 +54,17 @@ type RecipeT struct {
 	//Title  string   `json:"Title"`
 	Index  []string `json:"Index"`
 	Serves string   `json:"Srv"`
+	Part   []string `json:"Part"`
+	IPart  []string `json:"IPart"`
+}
+
+type Part struct {
+	RName string `json:"RName"`
+	//Title  string   `json:"Title"`
+	Index  []string `json:"Index"`
+	Serves string   `json:"Srv"`
+	Part   []string `json:"Part"`
+	IPart  []string `json:"IPart"`
 }
 
 type MeasureCT struct {
@@ -198,9 +209,20 @@ const (
 )
 
 func (m *MeasureT) uPlural() bool {
+	fmt.Println("in uPlural for Measure ", m.Quantity)
 	if len(m.Quantity) > 0 {
 		f, err := strconv.ParseFloat(m.Quantity, 32)
 		if err != nil {
+			s := strings.Split(m.Quantity, "-")
+			if len(s) > 1 {
+				f, err := strconv.ParseFloat(s[1], 32)
+				if err != nil {
+					return false
+				}
+				if f > 1 {
+					return true
+				}
+			}
 			return false
 		}
 		if f > 1 {
@@ -443,14 +465,11 @@ func (m *MeasureT) String() string {
 	// }
 	//
 	//
-	//
-	fmt.Printf("%#v\n", m)
 	if len(m.Num) > 0 && len(m.Quantity) == 0 {
 		//
 		// case: only qty is defined
 		//
 		// fraction defined
-		fmt.Println("scale num int..", m.Num)
 		if strings.IndexByte(m.Num, '/') > 0 {
 			s := scaleFraction(m.Num)
 			mn := &MeasureT{Size: m.Size, Num: s, Unit: m.Unit}
@@ -624,25 +643,16 @@ func (m *MeasureT) FormatString() string {
 			}
 		}
 		if strings.Index(strings.ToLower(m.Unit), "clove") >= 0 {
-			if strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0 || m.Quantity == "1" {
-				return m.Quantity + " " + m.Unit + " of"
-			} else {
-				return m.Quantity + " " + m.Unit + "s" + " of"
-			}
+			return m.Quantity + unitMap[m.Unit].String(m) + " of"
 		}
 		if strings.Index(strings.ToLower(m.Unit), "bunch") >= 0 {
-			if strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0 || m.Quantity == "1" {
-				return m.Quantity + " " + m.Unit + " of"
-			} else {
-				return m.Quantity + " " + m.Unit + "es" + " of"
-			}
+			return m.Quantity + unitMap[m.Unit].String(m) + " of"
 		}
 		if strings.Index(strings.ToLower(m.Unit), "sachet") >= 0 {
-			if strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0 || m.Quantity == "1" {
-				return m.Quantity + " " + m.Unit + " of"
-			} else {
-				return m.Quantity + " " + m.Unit + "s" + " of"
-			}
+			return m.Quantity + unitMap[m.Unit].String(m) + " of"
+		}
+		if strings.Index(strings.ToLower(m.Unit), "sprig") >= 0 {
+			return m.Quantity + unitMap[m.Unit].String(m) + " of"
 		}
 		if strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0 || m.Quantity == "1" {
 			return m.Quantity + unitMap[m.Unit].String(m)
@@ -707,8 +717,19 @@ func (a Activity) String() string {
 		} else {
 			s = a.Ingredient
 		}
-		if len(a.AltIngrd) > 0 {
-			s += " or " + a.AltIngrd
+	}
+
+	addAltIngrd := func() {
+		if a.AltMeasure != nil {
+			m := a.AltMeasure
+			nm := &MeasureT{Quantity: m.Quantity, Size: m.Size, Unit: m.Unit, Num: m.Num}
+			if len(a.AltIngrd) == 0 {
+				s += " (" + nm.String() + ")"
+			} else {
+				s += " (or " + nm.String() + " " + a.AltIngrd + ")"
+			}
+		} else if len(a.AltIngrd) > 0 {
+			s += " (or " + a.AltIngrd + ")"
 		}
 	}
 
@@ -756,6 +777,7 @@ func (a Activity) String() string {
 		if a.Measure != nil && len(a.Measure.Quantity) > 0 && len(a.Measure.Unit) > 0 {
 			s += " (" + a.Measure.String() + ")"
 		}
+		addAltIngrd()
 		addIngrdQual()
 		return s
 	}
@@ -764,6 +786,7 @@ func (a Activity) String() string {
 	addMeasure()
 	addQualIngrd()
 	addIngrd()
+	addAltIngrd()
 	addIngrdQual()
 	return expandLiteralTags(s)
 }
@@ -782,8 +805,13 @@ func (as Activities) String(r *RecipeT) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "%s\n\n", r.RName)
 	fmt.Fprintf(&b, "SERVES  %s\n\n", r.Serves)
-	if len(partM) > 2 {
-		// parts first..
+	if len(recipeParts) == 0 {
+		//legacy code - Part and IPart not defined in Recipe JSON
+		for _, a := range partM["nopart_"] {
+			if s := a.String(); len(s) > 0 {
+				fmt.Fprintf(&b, "%s\n", strings.TrimLeft(s, " "))
+			}
+		}
 		for k, v := range partM {
 			if k == "nopart_" {
 				continue
@@ -795,26 +823,19 @@ func (as Activities) String(r *RecipeT) string {
 				}
 			}
 		}
-		fmt.Fprintf(&b, "\n")
-		for _, a := range partM["nopart_"] {
-			if s := a.String(); len(s) > 0 {
-				fmt.Fprintf(&b, "%s\n", strings.TrimLeft(s, " "))
-			}
+		return b.String()
+	}
+	//
+	for _, a := range partM["nopart_"] {
+		if s := a.String(); len(s) > 0 {
+			fmt.Fprintf(&b, "%s\n", strings.TrimLeft(s, " "))
 		}
-	} else {
-		// part last..
-		for _, a := range partM["nopart_"] {
-			if s := a.String(); len(s) > 0 {
-				fmt.Fprintf(&b, "%s\n", strings.TrimLeft(s, " "))
-			}
-		}
-		fmt.Fprintf(&b, "\n")
-		for k, v := range partM {
-			if k == "nopart_" {
-				continue
-			}
-			fmt.Fprintf(&b, "\n%s\n\n", strings.ToUpper(k))
-			for _, a := range v {
+	}
+	// Use recipeParts to access tasks
+	if len(recipeParts) > 0 {
+		for _, v := range recipeParts {
+			fmt.Fprintf(&b, "\n%s\n\n", strings.ToUpper(RecipePM[v]))
+			for _, a := range partM[v] {
 				if s := a.String(); len(s) > 0 {
 					fmt.Fprintf(&b, "%s\n", strings.TrimLeft(s, " "))
 				}

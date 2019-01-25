@@ -18,6 +18,11 @@ import (
 	_ "github.com/aws/aws-lambda-go/lambdacontext"
 )
 
+//
+// Map of Parts in Recipe - used in ingredient listing
+// e.g. RecipePM["S"] = "Sweet Pastry"
+var RecipePM map[string]string
+
 // recipe lookup
 type RnLkup struct {
 	BkId   string `json:"PKey"`
@@ -513,6 +518,8 @@ func (s *sessCtx) getTaskRecById() (alexaDialog, error) {
 	return taskRec, nil
 }
 
+var recipeParts []string
+
 func (s *sessCtx) recipeRSearch() (*RecipeT, error) {
 	//
 	// query on recipe name to get RecipeId and optionally book name and Id if not requested
@@ -578,6 +585,13 @@ func (s *sessCtx) recipeRSearch() (*RecipeT, error) {
 	s.dmsg = s.reqRName + " in " + s.reqBkName + " by " + s.authors
 	s.vmsg = "sFound " + s.reqRName + " in " + s.reqBkName + " by " + s.authors
 	s.vmsg += `What would you like to list?. Say "list container" or "List Ingredient" or "List Prep tasks" or "start Cooking" or "cancel"`
+	if len(rec.Part) > 0 {
+		recipeParts = rec.IPart
+		RecipePM = make(map[string]string, len(rec.Part))
+		for i := 0; i < len(rec.Part); i++ {
+			RecipePM[rec.IPart[i]] = rec.Part[i]
+		}
+	}
 	return rec, nil
 }
 

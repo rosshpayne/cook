@@ -40,23 +40,23 @@ type sessCtx struct {
 	swapBkName     string
 	swapBkId       string
 	authorS        []string
-	authors        string      // siRNames of the first two authors
-	index          []string    // user defined entries under which recipe is indexed. Sourced from recipe not ingredient.
-	indexRecs      []indexRecT // processed index entries as saved to dynamo
-	dbatchNum      string      // mulit-records sent to display in fixed batch sizes (6 say).
-	reset          bool        // zeros []RecId in session table during changes to recipe, as []RecId is recipe dependent
-	curreq         int         // bookrecipe_, object_(ingredient,task,container,utensil), listing_(next,prev,goto,modify,repeat)
-	questionId     int         // what question is the user responding to with a yes|no.
+	authors        string         // siRNames of the first two authors
+	index          []string       // user defined entries under which recipe is indexed. Sourced from recipe not ingredient.
+	indexRecs      []indexRecipeT // processed index entries as saved to dynamo
+	dbatchNum      string         // mulit-records sent to display in fixed batch sizes (6 say).
+	reset          bool           // zeros []RecId in session table during changes to recipe, as []RecId is recipe dependent
+	curreq         int            // bookrecipe_, object_(ingredient,task,container,utensil), listing_(next,prev,goto,modify,repeat)
+	questionId     int            // what question is the user responding to with a yes|no.
 	dynamodbSvc    *dynamodb.DynamoDB
 	closeBook      bool
-	object         string  //container,ingredient,instruction,utensil. Sourced from Sessions table or request
-	updateAdd      int     // dynamodb Update ADD. Operation dependent
-	gotoRecId      int     // sourced from request
-	recId          int     // current record id for object list (ingredient,task,container,utensil) - sourced from Sessions table (updateSession()
-	recIdNotExists bool    // determines whether to create []RecId set attribute in Session  table
-	abort          bool    // early return to Alexa
-	eol            int     // sourced from Sessions table
-	mChoice        []mRecT // multi-choice select. Recipe name and ingredient searches can result in mutliple records being returned. Results are saved.
+	object         string     //container,ingredient,instruction,utensil. Sourced from Sessions table or request
+	updateAdd      int        // dynamodb Update ADD. Operation dependent
+	gotoRecId      int        // sourced from request
+	recId          int        // current record id for object list (ingredient,task,container,utensil) - sourced from Sessions table (updateSession()
+	recIdNotExists bool       // determines whether to create []RecId set attribute in Session  table
+	abort          bool       // early return to Alexa
+	eol            int        // sourced from Sessions table
+	mChoice        []mRecipeT // multi-choice select. Recipe name and ingredient searches can result in mutliple records being returned. Results are saved.
 	makeSelect     bool
 	showList       bool // show what ever is in the current list (books, recipes)
 	// vPreMsg        string
@@ -71,7 +71,7 @@ type sessCtx struct {
 
 // Session table record
 // only items from session context that need to be preserved between sessions are persisted.
-type sessRecT struct {
+type sessRecipeT struct {
 	Obj     string // Object - to which operation (listing) apply
 	BkId    string // Book Id
 	BkName  string // Book name - saves a lookup under some circumstances
@@ -87,8 +87,8 @@ type sessRecT struct {
 	Dmsg    string
 	Vmsg    string
 	DData   string
-	//SrchLst []mRecT
-	RnLst  []mRecT
+	//SrchLst []mRecipeT
+	RnLst  []mRecipeT
 	Select bool
 }
 
@@ -179,7 +179,7 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 			return nil
 		}
 	}
-	lastSess := sessRecT{}
+	lastSess := sessRecipeT{}
 	err = dynamodbattribute.UnmarshalMap(result.Item, &lastSess)
 	if err != nil {
 		return err
@@ -655,7 +655,7 @@ func handler(request InputEvent) (RespEvent, error) {
 			sessctx.pkey += "-" + sessctx.reqVersion
 		}
 		// fetch recipe name and book name
-		err = sessctx.recipeRSearch()
+		_, err = sessctx.recipeRSearch()
 		if err != nil {
 			break
 		}
@@ -667,6 +667,7 @@ func handler(request InputEvent) (RespEvent, error) {
 		sessctx.abort, sessctx.reset = true, true
 	//
 	case "load", "print":
+		var r *RecipeT
 		sessctx.reqBkId = request.QueryStringParameters["bkid"]
 		sessctx.reqRId = request.QueryStringParameters["rid"]
 		sessctx.reqVersion = request.QueryStringParameters["ver"]
@@ -676,7 +677,7 @@ func handler(request InputEvent) (RespEvent, error) {
 			sessctx.pkey += "-" + sessctx.reqVersion
 		}
 		// fetch recipe name and book name
-		err = sessctx.recipeRSearch()
+		r, err = sessctx.recipeRSearch()
 		if err != nil {
 			break
 		}
@@ -695,7 +696,7 @@ func handler(request InputEvent) (RespEvent, error) {
 			if err != nil {
 				fmt.Printf("error: %s", err.Error())
 			}
-			fmt.Printf("%s\n", as.String())
+			fmt.Printf("%s\n", as.String(r))
 		}
 		sessctx.abort, sessctx.reset = true, true
 	//
