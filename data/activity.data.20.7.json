@@ -57,7 +57,7 @@
             "Item": { 
                 "PKey" : { "S": "A-20-7" },
                 "SortK" : { "N": "20"},
-                "label" : { "S": "sugar"},
+                "label" : { "S": "butter"},
                 "part" : { "S" : "F" },
                 "ingrd" : { "S" : "unsalted butter" },
                 "iqual" : { "S" : "cubed" },
@@ -149,7 +149,8 @@
                 "PKey" : { "S": "A-20-7" },
                 "SortK" : { "N": "50"},
                 "part" : { "S" : "F" },
-                "ingrd" : { "S" : "cooking chocolate" },
+                "ingrd" : { "S" : "chocolate" },
+                "quali": { "S" : "cooking" },
                 "iQual" : { "S" : "(70% cocoa solids), finely chopped" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
@@ -207,7 +208,7 @@
                 "PKey" : { "S": "A-20-7" },
                 "SortK" : { "N": "70"},
                 "part" : { "S" : "F" },
-                "ingrd" : { "S" : "caster sugar" },
+                "ingrd" : { "S" : "icing sugar" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "90" } ,
@@ -235,8 +236,7 @@
                 "PKey" : { "S": "A-20-7" },
                 "SortK" : { "N": "80"},
                 "part" : { "S" : "F" },
-                "ingrd" : { "S" : "chocolate" },
-                "quali" : { "S" : "cocoa powder" }, 
+                "ingrd" : { "S" : "cocoa powder" }, 
                 "quali" : { "S" : "Dutch-processed" }, 
                 "iQual" : { "S" : ", to serve" }, 
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
@@ -420,36 +420,6 @@
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "300" } ,
-                                      "unit" : { "S" : "g" }
-                                      }
-                },
-                "task" : { "L" : [ 
-                                { "M" :  {
-                                  "txt" : { "S" : "Once combined, pour into the prepared cake tin and scatter {measure} of {ingrd} evenly on top. " },
-                                  "say" : { "S" : "Once combined, pour into the prepared cake tin and scatter {measure} of {ingrd} evenly on top." },
-                                  "time" : { "N" : "20" },
-                                  "tplus" : { "N" : "0" },
-                                  "unit" : { "S" : "sec" },
-                                  "sourceC" : { "SS" : [ "MixerBowl"] },
-                                  "addToC" : { "SS" : [ "caketin"] }
-                                    }
-                                } 
-                                ]
-                }
-            }
-            }
-            } ,
-            {
-            "PutRequest": { 
-            "Item": { 
-                "PKey" : { "S": "A-20-7" },
-                "SortK" : { "N": "150"},
-                "part" : { "S" :"S" },
-                "ingrd" : { "S" : "plain flour" },
-                "quali" : { "S" : "chopped roasted" },
-                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
-                "measure" : { "M" : { 
-                                      "qty" : { "S" : "90" } ,
                                       "unit" : { "S" : "g" }
                                       }
                 },

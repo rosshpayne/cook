@@ -293,6 +293,7 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 			indexRecS = append(indexRecS, irec)
 		}
 	}
+
 	AddEntry := func(entry string) {
 		entry = strings.Replace(entry, "-", " ", 1)
 		entry = strings.TrimRight(strings.TrimLeft(strings.ToLower(entry), " "), " ")

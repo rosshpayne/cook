@@ -138,30 +138,6 @@ func (s *sessCtx) loadBaseRecipe() error {
 		}
 	}
 	//
-	activityStart = &ActivityS[0]
-	ActivityM := make(map[string]*Activity)
-	IngredientM := make(map[string]*Activity)
-	LabelM := make(map[string]*Activity)
-	for i, v := range ActivityS {
-		aid := strconv.Itoa(v.AId)
-		ActivityM[aid] = &ActivityS[i]
-		if len(v.Ingredient) > 0 {
-			ingrd := strings.ToLower(v.Ingredient)
-			IngredientM[ingrd] = &ActivityS[i]
-			if ingrd[len(ingrd)-1] == 's' {
-				// make singular entry as well
-				IngredientM[ingrd[:len(ingrd)-1]] = &ActivityS[i]
-			}
-		}
-		if len(v.Label) > 0 {
-			label := strings.ToLower(v.Label)
-			LabelM[label] = &ActivityS[i]
-			if label[len(label)-1] == 's' {
-				// make singular entry as well
-				LabelM[label[:len(label)-1]] = &ActivityS[i]
-			}
-		}
-	}
 	// link activities together via next, prev, nextTask, nextPrep pointers. Order in ActivityS is sorted from dynamodb sort key.
 	// not sure how useful have next, prev pointers will be but its easy to setup so keep for time being. Do use prev in other part of code.
 	for i := 0; i < len(ActivityS)-1; i++ {
@@ -170,6 +146,67 @@ func (s *sessCtx) loadBaseRecipe() error {
 			ActivityS[i].prev = &ActivityS[i-1]
 		}
 	}
+	activityStart = &ActivityS[0]
+	ActivityM := make(map[string]*Activity)
+	IngredientM := make(map[string]*Activity)
+	LabelM := make(map[string]*Activity)
+	//
+	//for i, v := range ActivityS { // inefficient - ActivityS entry must be copied into v foreach loop
+	// These maps are only used in generateAndSaveIndex
+	//
+	for v := &ActivityS[0]; v != nil; v = v.next {
+		aid := strconv.Itoa(v.AId)
+		ActivityM[aid] = v
+		if len(v.Ingredient) > 0 {
+			ingrd := strings.ToLower(v.Ingredient)
+			// check if ingrd not already entered into map
+			if found, ok := IngredientM[ingrd]; ok {
+				fmt.Println("Duplicate ingredients - find largest amount - ", found.Ingredient)
+				var fe float64
+				var fn float64
+				//TODO algorithm to compare measures. Here we choose largest by quantity presuming its a number
+				if m := found.Measure; m != nil {
+
+					if len(m.Quantity) > 0 {
+						fe, err = strconv.ParseFloat(m.Quantity, 64)
+						if err != nil {
+							fe = 0.0
+						}
+					}
+					if v.Measure != nil && len(v.Measure.Quantity) > 0 {
+						fn, err = strconv.ParseFloat(v.Measure.Quantity, 64)
+						if err != nil {
+							fn = 0.0
+						}
+					}
+					fmt.Println("fe,fn:", fe, fn)
+					if fn > fe {
+						// replace
+						IngredientM[ingrd] = v
+						if ingrd[len(ingrd)-1] == 's' {
+							// make singular entry as well
+							IngredientM[ingrd[:len(ingrd)-1]] = v
+						}
+					}
+				}
+			} else {
+				IngredientM[ingrd] = v
+				if ingrd[len(ingrd)-1] == 's' {
+					// make singular entry as well
+					IngredientM[ingrd[:len(ingrd)-1]] = v
+				}
+			}
+		}
+		// if len(v.Label) > 0 {
+		// 	label := strings.ToLower(v.Label)
+		// 	LabelM[label] = &ActivityS[i]
+		// 	if label[len(label)-1] == 's' {
+		// 		// make singular entry as well
+		// 		LabelM[label[:len(label)-1]] = &ActivityS[i]
+		// 	}
+		// }
+	}
+	fmt.Printf("IngredientM %#v\n", IngredientM)
 	//
 	// link Task Activities - taskctl is a package variable.
 	//
@@ -728,7 +765,6 @@ func (s *sessCtx) loadBaseRecipe() error {
 						} else {
 							el, el2 = strings.ToLower(str[topen+1:tclose_]), ""
 						}
-						fmt.Printf("el: [%s]\n", el)
 						switch el {
 						case "device":
 							s := strings.Split(el2, ".")

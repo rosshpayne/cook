@@ -34,7 +34,7 @@
             "PutRequest": { 
             "Item": { 
                 "PKey" : { "S": "A-20-7" },
-                "SortK" : { "N": "210"},
+                "SortK" : { "N": "220"},
                 "part" : { "S" : "C" },
                 "ingrd" : { "S" : "rosemary" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
@@ -50,13 +50,12 @@
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Once combined, pour into the prepared cake tin and scatter {measure} of {ingrd} evenly on top. " },
-                                  "say" : { "S" : "Once combined, pour into the prepared cake tin and scatter {measure} of {ingrd} evenly on top." },
-                                  "time" : { "N" : "20" },
+                                  "txt" : { "S" : "lay the {ingrd} flat on a chopping board and, one at a time, and using a {useD}, lightly brush each side with the egg white. " },
+                                  "say" : { "S" : "lay the {ingrd} flat on a chopping board and, one at a time, and using a {useD}, lightly brush each side with the egg white" },
+                                  "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
-                                  "unit" : { "S" : "sec" },
-                                  "sourceC" : { "SS" : [ "MixerBowl"] },
-                                  "addToC" : { "SS" : [ "caketin"] }
+                                  "unit" : { "S" : "min" }, 
+                                  "useD" : { "M" : { "type" : {"S": "pastry brush" }}}
                                     }
                                 } 
                                 ]
@@ -68,7 +67,7 @@
             "PutRequest": { 
             "Item": { 
                 "PKey" : { "S": "A-20-7" },
-                "SortK" : { "N": "220"},
+                "SortK" : { "N": "210"},
                 "part" : { "S" : "C" },
                 "ingrd" : { "S" : "egg white" },
                 "iQual" : { "S" : ", lightly whisked" },
@@ -80,13 +79,12 @@
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Once combined, pour into the prepared cake tin and scatter {measure} of {ingrd} evenly on top. " },
-                                  "say" : { "S" : "Once combined, pour into the prepared cake tin and scatter {measure} of {ingrd} evenly on top." },
-                                  "time" : { "N" : "20" },
+                                  "txt" : { "S" : "if crystallizing the {ingrd.220} for garnishing, separate a {size} egg and save half the {ingrd} and whisk lightly. " },
+                                  "say" : { "S" : "if crystallizing the {ingrd.220} for garnishing, separate a {size} egg and save half the {ingrd} and whisk lightly." },
+                                  "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
-                                  "unit" : { "S" : "sec" },
-                                  "sourceC" : { "SS" : [ "MixerBowl"] },
-                                  "addToC" : { "SS" : [ "caketin"] }
+                                  "unit" : { "S" : "min" },
+                                  "useD" : { "M" : { "type" : {"S": "whisk" }}}
                                     }
                                 }
                                 ]
@@ -109,13 +107,12 @@
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Once combined, pour into the prepared cake tin and scatter {measure} of {ingrd} evenly on top. " },
-                                  "say" : { "S" : "Once combined, pour into the prepared cake tin and scatter {measure} of {ingrd} evenly on top." },
-                                  "time" : { "N" : "20" },
+                                  "txt" : { "S" : "sprinkle {measure} of {ingrd} evenly and lightly over both sides of the leaves, then set aside in a cool dry place on a {useD} for about {timeu}, until crisp" },
+                                  "say" : { "S" : "sprinkle {measure} of {ingrd} evenly and lightly over both sides of the leaves, then set aside in a cool dry place on a {useD} for about {timeu}, until crisp"},
+                                  "time" : { "N" : "8" },
                                   "tplus" : { "N" : "0" },
-                                  "unit" : { "S" : "sec" },
-                                  "sourceC" : { "SS" : [ "MixerBowl"] },
-                                  "addToC" : { "SS" : [ "caketin"] }
+                                  "unit" : { "S" : "hr" },
+                                  "useD" : { "M" : { "type" : {"S": "wire rack" }}}
                                     }
                                 }
                                 ]
