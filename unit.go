@@ -36,6 +36,7 @@ var unitS []*Unit = []*Unit{
 	&Unit{Slabel: "sachet", Llabel: "sachet", Print: "l", Say: "l", Display: "s", Plural: "s"},
 	&Unit{Slabel: "bunch", Llabel: "bunch", Print: "l", Say: "l", Display: "s", Plural: "es"},
 	&Unit{Slabel: "sprig", Llabel: "sprig", Print: "l", Say: "l", Display: "s", Plural: "s"},
+	&Unit{Slabel: "stick", Llabel: "sprig", Print: "l", Say: "l", Display: "s", Plural: "s"},
 }
 
 // String output unit text based on mode represented by package variable writeCtx [package_variable-Unit-mode]

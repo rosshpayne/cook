@@ -23,8 +23,25 @@
                 "RName" : { "S": "Chocolate tart with hazelnut, rosemary and orange"},
                 "Index" : { "SS" : ["chocolate hazelnut tart"]},
                 "Srv" : { "S" : "8-10" },
-                "Part" : { "SS" : ["CRYSTALIZED ROSEMARY GARNISH|(OPTIONAL)","FILLING","HAZELNUT 'BRITTLE'","SWEET SHORTCRUST PASTRY|(YOU WILL ONLY NEED 1/2 QUANTITY)"]},
-                "IPart" : { "SS" : ["C","F","H","S"]}
+                "Part" : { "L" : [
+                                { "M" : { 
+                                  "Idx" : { "S" : "C"},
+                                  "Title" : { "S" : "CRYSTALIZED ROSEMARY GARNISH|(OPTIONAL)" }}
+                                },
+                                { "M" : { 
+                                  "Idx" : { "S" : "H"},
+                                  "Title" : { "S" : "HAZELNUT 'BRITTLE" }}
+                                },
+                                { "M" : { 
+                                  "Idx" : { "S" : "F"},
+                                  "Title" : { "S" : "FILLING" }}
+                                },
+                                { "M" : { 
+                                  "Idx" : { "S" : "S"},
+                                  "Title" : { "S" : "SWEET SHORTCRUST PASTRY|(YOU WILL ONLY NEED 1/2 QUANTITY)" }}
+                                }
+                                ]
+                }
         }
         }
         },

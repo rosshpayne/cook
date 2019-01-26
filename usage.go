@@ -182,6 +182,24 @@ func (a Activities) GenerateTasks(pKey string) prepTaskS {
 	}
 	var ptS prepTaskS // this type satisfies sort interface.
 	processed := make(map[atvTask]bool, prepctl.cnt)
+
+	nextPart := func(i int) int {
+		for n := i + 1; n < len(ptS); n++ {
+			if ptS[n].Part == ptS[i].Part {
+				return ptS[n].SortK
+			}
+		}
+		return -1
+	}
+
+	prevPart := func(i int) int {
+		for n := i - 1; n >= 0; n-- {
+			if ptS[n].Part == ptS[i].Part {
+				return ptS[n].SortK
+			}
+		}
+		return -1
+	}
 	//
 	// sort parallelisable prep tasks
 	//
@@ -196,14 +214,14 @@ func (a Activities) GenerateTasks(pKey string) prepTaskS {
 			if pp.Parallel && pp.WaitOn == 0 || add {
 				add = false
 				processed[atvTask{p.AId, ia}] = true
-				pt := prepTaskRec{PKey: pKey, AId: p.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, taskp: pp}
-				ptS = append(ptS, pt)
+				pt := prepTaskRec{PKey: pKey, AId: p.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Part: p.Part, taskp: pp}
+				ptS = append(ptS, &pt)
 			}
 		}
 	}
 	sort.Sort(ptS)
 	//
-	// generate Task Ids
+	// generate SortK Ids
 	//
 	var i int = 1 // start at one as works better with Dynamodb UpateItem ADD semantics.
 	for j := 0; j < len(ptS); i++ {
@@ -222,8 +240,8 @@ func (a Activities) GenerateTasks(pKey string) prepTaskS {
 				continue
 			}
 			processed[atvTask{p.AId, ia}] = true
-			pt := prepTaskRec{PKey: pKey, SortK: i, AId: p.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, taskp: pp}
-			ptS = append(ptS, pt)
+			pt := prepTaskRec{PKey: pKey, SortK: i, AId: p.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Part: p.Part, taskp: pp}
+			ptS = append(ptS, &pt)
 			i++
 		}
 	}
@@ -233,8 +251,8 @@ func (a Activities) GenerateTasks(pKey string) prepTaskS {
 			if _, ok := processed[atvTask{p.AId, ia}]; ok {
 				continue
 			}
-			pt := prepTaskRec{PKey: pKey, SortK: i, AId: p.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, taskp: pp}
-			ptS = append(ptS, pt)
+			pt := prepTaskRec{PKey: pKey, SortK: i, AId: p.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Part: p.Part, taskp: pp}
+			ptS = append(ptS, &pt)
 			i++
 		}
 	}
@@ -243,91 +261,33 @@ func (a Activities) GenerateTasks(pKey string) prepTaskS {
 	//
 	for p := taskctl.start; p != nil; p = p.nextTask {
 		for _, pp := range p.Task {
-			pt := prepTaskRec{PKey: pKey, SortK: i, AId: p.AId, Type: 'T', time: pp.Time, Text: pp.text, Verbal: pp.verbal, taskp: pp}
-			ptS = append(ptS, pt)
+			pt := prepTaskRec{PKey: pKey, SortK: i, AId: p.AId, Type: 'T', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Part: p.Part, taskp: pp}
+			ptS = append(ptS, &pt)
 			i++
 		}
 	}
 	// now that we know the size of the list assign End-Of-List field. This approach replaces MaxId[] set stored in Recipe table
 	// this mean each record knows how long the list is - helpful in a stateless Lambda app.
 	eol := len(ptS)
-	for i := range ptS {
-		ptS[i].EOL = eol
+	//TODO : replace 5
+	pcnt := make(map[string]int, 5)
+	// number of instructions per part
+	for _, v := range ptS {
+		pcnt[v.Part] += 1
 	}
-	// store number of records in recipe table
+	//
+	//	Link all instructions aggregated by part. The links are used in by-part mode.
+	//
+	for i, v := range ptS {
+		v.EOL = eol
+		v.Next = nextPart(i)
+		v.PEOL = pcnt[v.Part]
+	}
+	for i := len(ptS) - 1; i >= 0; i-- {
+		ptS[i].Prev = prevPart(i)
+	}
+	//
 	return ptS
-}
-
-func (a Activities) PrintRecipe(rId string) (prepTaskS, string) {
-	//
-	var ptS prepTaskS
-	pid := 0                                     // index in prepOrder
-	processed := make(map[int]bool, prepctl.cnt) // set of tasks
-	//
-	// sort parallelisable prep tasks
-	//
-	for p := prepctl.start; p != nil; p = p.nextPrep {
-		var add bool
-		for _, pp := range p.Prep {
-			if pp.UseDevice != nil {
-				if strings.ToLower(pp.UseDevice.Type) == "oven" {
-					add = true
-				}
-
-				if pp.Parallel && !pp.Link || add {
-					if p.prev != nil && len(p.prev.Prep) != 0 {
-						if p.prev.Prep[len(p.prev.Prep)-1].Link {
-							continue // exclude if part of linked activity in last prep task of previous activity
-						}
-					}
-					processed[p.AId] = true
-					pt := prepTaskRec{time: pp.Time, Text: pp.text}
-					ptS = append(ptS, pt)
-				}
-			}
-		}
-	}
-	sort.Sort(ptS)
-	//
-	// append remaining prep tasks - these are serial tasks so order unimportant
-	//
-	for p := prepctl.start; p != nil; p = p.nextPrep {
-		if _, ok := processed[p.AId]; ok {
-			continue
-		}
-		for _, pp := range p.Prep {
-			var txt string
-			var stime float32
-			var count int
-			if pp.Link {
-				for ; pp.Link; p = p.nextPrep {
-					//handle Link prep tasks. Link tasks can only have a single prep task per activity
-					txt += p.Prep[0].text + " and "
-					stime += p.Prep[0].Time
-					count++
-				}
-				txt += pp.text
-				stime += pp.Time
-				//
-				pt := prepTaskRec{time: stime, Text: txt}
-				ptS = append(ptS, pt)
-			} else {
-				pt := prepTaskRec{time: pp.Time, Text: pp.text}
-				ptS = append(ptS, pt)
-			}
-			pid++
-		}
-	}
-	var b strings.Builder
-	b.WriteString(fmt.Sprintf("{ %q : [", jsonKey))
-	for i, pt := range ptS {
-		b.WriteString(fmt.Sprintf("%q", pt.Text))
-		if i < len(ptS)-1 {
-			b.WriteString(",")
-		}
-	}
-	b.WriteString("] } ")
-	return ptS, b.String()
 }
 
 // Recipe table

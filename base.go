@@ -45,48 +45,19 @@ func (s *sessCtx) loadIngredients() (Activities, error) {
 	if err != nil {
 		return nil, fmt.Errorf("** Error during UnmarshalListOfMaps in getIngredientData - %s", err.Error())
 	}
+	// link up activities via next,prev pointers
+	for i := 0; i < len(ActivityS)-1; i++ {
+		ActivityS[i].next = &ActivityS[i+1]
+		if i > 0 {
+			ActivityS[i].prev = &ActivityS[i-1]
+		}
+	}
+	// generate a normalized quantity for each ingredient
+	//
+	//
 	// for _, v := range ActivityS {
 	// 	fmt.Printf("Activity [%d] %#v\n", v.AId, v.Measure)
 	// }
-	// Table:  Unit
-	//proj := expression.NamesList(expression.Name("slabel"), expression.Name("llabel"), expression.Name("print"), expression.Name("desc"), expression.Name("say"), expression.Name("display"))
-	// kcond = expression.KeyEqual(expression.Key("PKey"), expression.Value("U"))
-	// expr, err = expression.NewBuilder().WithKeyCondition(kcond).Build()
-	// if err != nil {
-	// 	return nil, fmt.Errorf("%s", "Error in expression build of unit table: "+err.Error())
-	// }
-	// // Build the query input parameters
-	// input = &dynamodb.QueryInput{
-	// 	KeyConditionExpression:    expr.KeyCondition(),
-	// 	FilterExpression:          expr.Filter(),
-	// 	ExpressionAttributeNames:  expr.Names(),
-	// 	ExpressionAttributeValues: expr.Values(),
-	// }
-	// input = input.SetTableName("Ingredient").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
-	// //*dynamodb.DynamoDB,
-	// resultS, err := s.dynamodbSvc.Query(input)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("Error: in getIngredientData Query - %s", err.Error())
-	// }
-	// if int(*result.Count) == 0 {
-	// 	return nil, fmt.Errorf("No Unit data found ")
-	// }
-	// //
-	// // Note: unitMap is a package variable
-	// //
-	// unitMap = make(map[string]*Unit, int(*result.Count))
-	// unit := make([]*Unit, int(*result.Count))
-	// err = dynamodbattribute.UnmarshalListOfMaps(resultS.Items, &unit)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
-	// }
-	// for _, v := range unit {
-	// 	unitMap[v.Slabel] = v
-	// }
-	// for k, v := range unitMap {
-	// 	fmt.Printf("%s - %#v\n", k, v)
-	// }
-	//unit = nil
 
 	return ActivityS, nil
 }
@@ -122,12 +93,23 @@ func (s *sessCtx) loadBaseRecipe() error {
 		return fmt.Errorf("** Error during UnmarshalListOfMaps in processBaseRecipe - %s", err.Error())
 	}
 	//
+	// link activities together via next, prev, nextTask, nextPrep pointers. Order in ActivityS is sorted from dynamodb sort key.
+	// not sure how useful have next, prev pointers will be but its easy to setup so keep for time being. Do use prev in other part of code.
+	activityStart = &ActivityS[0]
+	for i := 0; i < len(ActivityS)-1; i++ {
+		ActivityS[i].next = &ActivityS[i+1]
+		if i > 0 {
+			ActivityS[i].prev = &ActivityS[i-1]
+		}
+	}
+	//
 	// Create maps based on AId, Ingredient (plural and singular) and Label (plural and singular)
 	//
 	idx := 0
 	//TODO does id get used??
 	s.activityS = ActivityS
-	for _, p := range ActivityS {
+	//	for _, p := range ActivityS {
+	for p := &ActivityS[0]; p != nil; p = p.next {
 		for _, p := range p.Prep {
 			idx++
 			p.id = idx
@@ -138,27 +120,22 @@ func (s *sessCtx) loadBaseRecipe() error {
 		}
 	}
 	//
-	// link activities together via next, prev, nextTask, nextPrep pointers. Order in ActivityS is sorted from dynamodb sort key.
-	// not sure how useful have next, prev pointers will be but its easy to setup so keep for time being. Do use prev in other part of code.
-	for i := 0; i < len(ActivityS)-1; i++ {
-		ActivityS[i].next = &ActivityS[i+1]
-		if i > 0 {
-			ActivityS[i].prev = &ActivityS[i-1]
-		}
-	}
-	activityStart = &ActivityS[0]
 	ActivityM := make(map[string]*Activity)
 	IngredientM := make(map[string]*Activity)
 	LabelM := make(map[string]*Activity)
 	//
-	//for i, v := range ActivityS { // inefficient - ActivityS entry must be copied into v foreach loop
+	//for i, v := range ActivityS { // inefficient - ActivityS struct entry must be copied into v foreach loop
 	// These maps are only used in generateAndSaveIndex
 	//
 	for v := &ActivityS[0]; v != nil; v = v.next {
 		aid := strconv.Itoa(v.AId)
 		ActivityM[aid] = v
-		if len(v.Ingredient) > 0 {
-			ingrd := strings.ToLower(v.Ingredient)
+		ingrd := v.Ingredient
+		if len(v.Alias) > 0 {
+			ingrd = v.Alias
+		}
+		if len(ingrd) > 0 {
+			ingrd := strings.ToLower(ingrd)
 			// check if ingrd not already entered into map
 			if found, ok := IngredientM[ingrd]; ok {
 				fmt.Println("Duplicate ingredients - find largest amount - ", found.Ingredient)
@@ -206,15 +183,15 @@ func (s *sessCtx) loadBaseRecipe() error {
 		// 	}
 		// }
 	}
-	fmt.Printf("IngredientM %#v\n", IngredientM)
+	//fmt.Printf("IngredientM %#v\n", IngredientM)
 	//
 	// link Task Activities - taskctl is a package variable.
 	//
-	var j int
-	for i, v := range ActivityS {
+	//var j int
+	for i, v := 0, &ActivityS[0]; v != nil; v = v.next {
 		if v.Task != nil {
-			taskctl.start = &ActivityS[i]
-			j = i
+			taskctl.start = v
+			j := i
 			taskctl.cnt++
 			for i := j + 1; i < len(ActivityS); i++ {
 				if len(ActivityS[i].Task) > 0 {
@@ -225,14 +202,15 @@ func (s *sessCtx) loadBaseRecipe() error {
 			}
 			break
 		}
+		i++
 	}
 	//
 	// link Prep Activities - prepctl is a package variable.
 	//
-	for i, v := range ActivityS {
+	for i, v := 0, &ActivityS[0]; v != nil; v = v.next {
 		if v.Prep != nil {
 			prepctl.start = &ActivityS[i]
-			j = i
+			j := i
 			prepctl.cnt++
 			for i := j + 1; i < len(ActivityS); i++ {
 				if len(ActivityS[i].Prep) > 0 {
@@ -243,6 +221,7 @@ func (s *sessCtx) loadBaseRecipe() error {
 			}
 			break
 		}
+		i++
 	}
 	//
 	//

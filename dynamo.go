@@ -19,9 +19,6 @@ import (
 )
 
 //
-// Map of Parts in Recipe - used in ingredient listing
-// e.g. RecipePM["S"] = "Sweet Pastry"
-var RecipePM map[string]string
 
 // recipe lookup
 type RnLkup struct {
@@ -54,8 +51,6 @@ type mRecipeT struct {
 type indexRecipeT struct {
 	PKey     string
 	SortK    string
-	PreQual  string
-	PostQual string
 	Quantity string
 	BkName   string
 	RName    string
@@ -63,22 +58,28 @@ type indexRecipeT struct {
 }
 
 type prepTaskRec struct {
-	PKey   string  `json="PKey"`  // R-[BkId]
-	SortK  int     `json="SortK"` // monotonically increasing - task at which user is upto in recipe
-	AId    int     `json="AId"`   // Activity Id
-	Type   byte    `json="Type"`
+	PKey   string  `json:"PKey"`  // R-[BkId]
+	SortK  int     `json:"SortK"` // monotonically increasing - task at which user is upto in recipe
+	AId    int     `json:"AId"`   // Activity Id
+	Type   byte    `json:"Type"`
 	time   float32 // all Linked preps sum time components into this field
-	Text   string  `json="Text"` // all Linked preps combined text into this field
-	Verbal string  `json="Verbal"`
-	EOL    int     `json="EOL"` // End-Of-List. Max Id assigned to each record
-	taskp  *PerformT
+	Text   string  `json:"Text"` // all Linked preps combined text into this field
+	Verbal string  `json:"Verbal"`
+	EOL    int     `json:"EOL"` // End-Of-List. Max Id assigned to each record
+	// Recipe Part metadata
+	PEOL int    `json:"PEOL"` // End-of-List-for-part
+	Part string `json:"PT"`   // part index name
+	Next int    `json:"nxt"`  // next SortK (recId)
+	Prev int    `json:"prv"`  // previous SortK (recId) when in part mode as opposed to full recipe mode
+	// not persisted
+	taskp *PerformT
 }
 
 func (pt prepTaskRec) Alexa() dialog {
 	return dialog{pt.Verbal, pt.Text, pt.EOL}
 }
 
-type prepTaskS []prepTaskRec
+type prepTaskS []*prepTaskRec
 
 func (od prepTaskS) Len() int           { return len(od) }
 func (od prepTaskS) Less(i, j int) bool { return od[i].time > od[j].time }
@@ -208,6 +209,8 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 
 	var indexRecS []indexRecipeT
 	indexRow := make(map[string]bool)
+	// any string() methods will be writing for the display
+	writeCtx = uDisplay
 
 	saveIngdIndex := func() error {
 		for _, v := range indexRecS {
@@ -239,54 +242,7 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 		// for each index property value, add to index
 		irec := indexRecipeT{SortK: s.reqBkId + "-" + s.reqRId, BkName: s.reqBkName, RName: s.reqRName, Authors: s.authors}
 		irec.PKey = entry
-		m := ap.Measure
-		if m != nil {
-			if len(m.Quantity) > 0 && len(m.Unit) > 0 {
-				// if len(m.Weight) > 0 {
-				// 	irec.Quantity = m.Quantity + " " + ap.Ingredient + " of " + m.Weight + m.Unit + " each"
-				// }
-				// if len(m.Volume) > 0 {
-				// 	irec.Quantity = m.Quantity + " " + ap.Ingredient + " of " + m.Volume + m.Unit + " each"
-				// }
-				// if len(m.Volume) == 0 && len(m.Weight) == 0 {
-				irec.Quantity = ap.Measure.Quantity + ap.Measure.Unit + " " + ap.Ingredient
-				// }
-			} else {
-				if len(m.Size) > 0 {
-					irec.Quantity = m.Quantity + " " + m.Size + " " + ap.Ingredient
-				} else {
-					qty := strings.ToLower(m.Quantity)
-					if qty != "bunch" {
-						qty_, err := strconv.Atoi(m.Quantity)
-						if err != nil {
-							irec.Quantity = m.Quantity + " " + ap.Ingredient
-						} else {
-							if qty_ > 0 {
-								if ap.Ingredient[len(ap.Ingredient)-1] != 's' {
-									irec.Quantity = m.Quantity + " " + ap.Ingredient + "s"
-								} else {
-									irec.Quantity = m.Quantity + " " + ap.Ingredient
-								}
-							} else {
-								irec.Quantity = m.Quantity + " " + ap.Ingredient
-							}
-						}
-
-					} else {
-						irec.Quantity = m.Quantity + " " + ap.Ingredient
-					}
-				}
-			}
-			if len(m.Size) > 0 && len(m.Quantity) == 0 {
-				irec.Quantity = m.Size
-			}
-			if len(ap.IngrdQualifer) > 0 {
-				irec.PreQual = ap.IngrdQualifer
-			}
-			if len(ap.QualiferIngrd) > 0 {
-				irec.PostQual = ap.QualiferIngrd
-			}
-		}
+		irec.Quantity = ap.String()
 		if !indexRow[irec.PKey] {
 			// only append unique values..
 			indexRow[irec.PKey] = true
@@ -586,13 +542,7 @@ func (s *sessCtx) recipeRSearch() (*RecipeT, error) {
 	s.dmsg = s.reqRName + " in " + s.reqBkName + " by " + s.authors
 	s.vmsg = "sFound " + s.reqRName + " in " + s.reqBkName + " by " + s.authors
 	s.vmsg += `What would you like to list?. Say "list container" or "List Ingredient" or "List Prep tasks" or "start Cooking" or "cancel"`
-	if len(rec.Part) > 0 {
-		recipeParts = rec.IPart
-		RecipePM = make(map[string]string, len(rec.Part))
-		for i := 0; i < len(rec.Part); i++ {
-			RecipePM[rec.IPart[i]] = rec.Part[i]
-		}
-	}
+	s.recipe = rec
 	return rec, nil
 }
 
@@ -725,7 +675,7 @@ func (s *sessCtx) ingredientSearch() error {
 func (s *sessCtx) generateSlotEntries() error {
 	//
 	type Index struct {
-		PKey string `json="PKey"`
+		PKey string `json:"PKey"`
 	}
 	type SrchKeyS Index
 	var str string

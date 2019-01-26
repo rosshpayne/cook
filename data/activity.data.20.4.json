@@ -80,7 +80,22 @@
                 "SortK" : { "N": "4"},
                 "RName" : { "S": "Rhubarb and strawberry crumble cake"},
                 "Index" : { "SS" : ["strawberry crumble cake","rhubarb crumble cake","rhubarb strawberry"] },
-                "Srv" : { "S" :"12" }
+                "Srv" : { "S" :"12" },
+                "Part" : { "L" : [
+                                { "M" : { 
+                                  "Idx" : { "S" : "cr"},
+                                  "Title" : { "S" : "crumble" }}
+                                },
+                                { "M" : { 
+                                  "Idx" : { "S" : "fr"},
+                                  "Title" : { "S" : "fruit" }}
+                                },
+                                { "M" : { 
+                                  "Idx" : { "S" : "ck"},
+                                  "Title" : { "S" : "cake" }}
+                                }
+                                ]
+                }
             }
         }
         },
@@ -89,7 +104,7 @@
             "Item": { 
                 "PKey" : { "S": "A-20-4" },
                 "SortK" : { "N": "10"},
-                "part" :  {"S":"crumble"},
+                "part" :  {"S": "cr"},
                 "label" : { "S": "butter"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "butter" },
@@ -119,7 +134,7 @@
             "Item": { 
                 "PKey" : { "S": "A-20-4" },
                 "SortK" : { "N": "20"},
-                "part" : {"S": "crumble"},
+                "part" :  {"S": "cr"},
                 "label" : { "S": "sugar"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "sugar" },
@@ -150,7 +165,7 @@
             "Item": { 
                 "PKey" : { "S": "A-20-4" },
                 "SortK" : { "N": "30"},
-                "part" : {"S": "crumble"},
+                "part" :  {"S": "cr"},
                 "label" : { "S": "flour"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "flour" },
@@ -181,7 +196,7 @@
             "Item": { 
                 "PKey" : { "S": "A-20-4" },
                 "SortK" : { "N": "40"},
-                "part" : {"S": "crumble"},
+                "part" :  {"S": "cr"},
                 "label" : { "S": "coconut"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "coconut" },
@@ -211,7 +226,7 @@
             "Item": { 
                 "PKey" : { "S": "A-20-4" },
                 "SortK" : { "N": "50"},
-                "part" : {"S": "crumble"},
+                "part" :  {"S": "cr"},
                 "label" : { "S": "salt"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "salt" },
@@ -264,18 +279,19 @@
             "Item": { 
                 "PKey" : { "S": "A-20-4" },
                 "SortK" : { "N": "60"},
-                "part" : {"S": "fruit"},
+                "part" :  {"S": "fr"},
                 "label" : { "S": "rhubarb"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "rhubarb" },
-                "iqual" : { "S" : "cut into 1cm slices" },
+                "iqual" : { "S" : "cut into {m:1|cm||} slices" },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "250" } ,
                                       "unit": { "S": "g"}
                                       }
                 },
                 "altMeasure" : { "M" : { 
-                                      "qty" : { "S" : "2 or 3 sticks" } 
+                                      "qty" : { "S" : "2-3" }, 
+                                       "unit": { "S": "stick"}
                                       }
                 },
                "task" : { "L" : [ 
@@ -298,11 +314,12 @@
             "Item": { 
                 "PKey" : { "S": "A-20-4" },
                 "SortK" : { "N": "70"},
-                "part" : {"S": "fruit"},
+                "part" :  {"S": "fr"},
                 "label" : { "S": "strawberry"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "strawberries" },
-                "iQual" : { "S" : ", hulled and sliced {m:0.5|cm||} thick" },
+                "alias" : { "S" : "strawberry" },
+                "iQual" : { "S" : ", hulled and sliced {m:1/2|cm||} thick" },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "250" } ,
                                       "unit": { "S": "g"}
@@ -328,7 +345,7 @@
             "Item": { 
                 "PKey" : { "S": "A-20-4" },
                 "SortK" : { "N": "80"},
-                "part" : {"S": "fruit"},
+                "part" :  {"S": "fr"},
                 "label" : { "S": "brown sugar"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "brown sugar" },
@@ -359,7 +376,7 @@
             "Item": { 
                 "PKey" : { "S": "A-20-4" },
                 "SortK" : { "N": "90"},
-                "part" : {"S": "fruit"},
+                "part" :  {"S": "fr"},
                 "label" : { "S": "tapioca flour"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "tapioca flour" },
@@ -390,7 +407,7 @@
             "Item": { 
                 "PKey" : { "S": "A-20-4" },
                 "SortK" : { "N": "100"},
-                "part" : {"S": "fruit"},
+                "part" :  {"S": "fr"},
                 "label" : { "S": "lemon juice"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "lemon juice" },
@@ -420,7 +437,7 @@
             "Item": { 
                 "PKey" : { "S": "A-20-4" },
                 "SortK" : { "N": "110"},
-                "part" : {"S": "fruit"},
+                "part" :  {"S": "fr"},
                 "label" : { "S": "vanilla pod"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "vanilla pod" },
@@ -450,7 +467,7 @@
             "Item": { 
                 "PKey" : { "S": "A-20-4" },
                 "SortK" : { "N": "120"},
-                "part" : {"S": "fruit"},
+                "part" :  {"S": "fr"},
                 "label" : { "S": "salt"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "salt" },
@@ -489,7 +506,7 @@
             "Item": { 
                 "PKey" : { "S": "A-20-4" },
                 "SortK" : { "N": "130"},
-                "part" : {"S": "cake"},
+                "part" :  {"S": "ck"},
                 "label" : { "S": "flour"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "plain flour" },
@@ -530,7 +547,7 @@
             "Item": { 
                 "PKey" : { "S": "A-20-4" },
                 "SortK" : { "N": "140"},
-                "part" : {"S": "cake"},
+                "part" :  {"S": "ck"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "baking powder" },
                 "measure" : { "M" : { 
@@ -559,7 +576,7 @@
             "Item": { 
                 "PKey" : { "S": "A-20-4" },
                 "SortK" : { "N": "150"},
-                "part" : {"S": "cake"},
+                "part" :  {"S": "ck"},
                 "label" : { "S": "salt"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "salt" },
@@ -589,7 +606,7 @@
             "Item": { 
                 "PKey" : { "S": "A-20-4" },
                 "SortK" : { "N": "160"},
-                "part" : {"S": "cake"},
+                "part" :  {"S": "ck"},
                 "label" : { "S": "butter"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "unsalted butter" },
@@ -633,7 +650,7 @@
             "Item": { 
                 "PKey" : { "S": "A-20-4" },
                 "SortK" : { "N": "170"},
-                "part" : {"S": "cake"},
+                "part" :  {"S": "ck"},
                 "label" : { "S": "icing sugar"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "icing sugar" },
@@ -685,7 +702,7 @@
             "Item": { 
                 "PKey" : { "S": "A-20-4" },
                 "SortK" : { "N": "180"},
-                "part" : {"S": "cake"},
+                "part" :  {"S": "ck"},
                 "label" : { "S": "eggs"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "eggs" },
@@ -723,7 +740,7 @@
             "Item": { 
                 "PKey" : { "S": "A-20-4" },
                 "SortK" : { "N": "190"},
-                "part" : {"S": "cake"},
+                "part" :  {"S": "ck"},
                 "label" : { "S": "vanilla"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "ingrd" : { "S" : "vanilla extract" },

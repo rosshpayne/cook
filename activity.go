@@ -49,13 +49,16 @@ type respT struct {
 //TODO: activate Recipe type here. Also incorporate AltIngrd into output.
 // Recipe Record
 //
+type PartT struct {
+	Index string `json:"Idx"`   // short name which is attached to each activity JSON
+	Title string `json:"Title"` // long name which is printed out in the ingredients listing
+}
 type RecipeT struct {
 	RName string `json:"RName"`
 	//Title  string   `json:"Title"`
 	Index  []string `json:"Index"`
 	Serves string   `json:"Srv"`
-	Part   []string `json:"Part"`
-	IPart  []string `json:"IPart"`
+	Part   []PartT  `json:"Part"` // order list of recipe parts
 }
 
 type Part struct {
@@ -119,15 +122,17 @@ type MeasureT struct {
 	Num      string `json:"num"`  // instance x quantity
 	Quantity string `json:"qty"`  // weight, volume, dimension
 	Size     string `json:"size"` // large, medium, small
+	// normalized quantity
+	nzQty float64
 }
 
 type PerformT struct {
 	//	type      PrepTask q // Prep or Task Activity
 	id          int       // order as appears in Activity JSON
 	Text        string    `json:"txt"` // original from db - contains {tag}
-	text        string    // has {tag} replaced
+	text        string    // has {tag} replaced with actual activity attribute
 	Verbal      string    `json:"say"` // original from db - contains {tag}
-	verbal      string    // has {tag} replaced
+	verbal      string    // has {tag} replaced with actual activity attribute
 	Label       string    `json:"label"`
 	IngredientS []string  `json:"ingrd"` // case where ingredient prepping produces other ingredients e.g. separating eggs
 	Time        float32   `json:"time"`
@@ -152,6 +157,7 @@ type Activity struct {
 	AId           int         `json:"SortK"`
 	Label         string      `json:"label"`    // used in container listing rather than using ingredient
 	Ingredient    string      `json:"ingrd"`    //
+	Alias         string      `json:"alias"`    // used to index recipe when Ingredient is not suitable.
 	IngrdQualifer string      `json:"iQual"`    // (append) to ingredient
 	QualiferIngrd string      `json:"quali"`    // prepend  to ingredient.
 	QualMeasure   string      `json:"qualm"`    // qualifer before measure in ingredients output e.g. <qualm> of <measure> a <ingrd>
@@ -792,35 +798,26 @@ func (a Activity) String() string {
 }
 
 func (as Activities) String(r *RecipeT) string {
+	// map of parts containing activities
 	partM := make(map[string][]*Activity)
 	// find if there are any parts to recipe
-	for i := 0; i < len(as); i++ {
-		a := as[i]
+	for a := &as[0]; a != nil; a = a.next {
+		// aggregate activities by their associated Part - if assigned.
+		// a.Part is the part short name. It must match the Idx entry in recipe.Part
 		if len(a.Part) > 0 {
-			partM[a.Part] = append(partM[a.Part], &a)
+			partM[a.Part] = append(partM[a.Part], a)
 		} else {
-			partM["nopart_"] = append(partM["nopart_"], &a)
+			partM["nopart_"] = append(partM["nopart_"], a)
 		}
 	}
 	var b strings.Builder
 	fmt.Fprintf(&b, "%s\n\n", r.RName)
 	fmt.Fprintf(&b, "SERVES  %s\n\n", r.Serves)
-	if len(recipeParts) == 0 {
-		//legacy code - Part and IPart not defined in Recipe JSON
+	if len(r.Part) == 0 {
+		//legacy code - Recipe not divided into parts.
 		for _, a := range partM["nopart_"] {
 			if s := a.String(); len(s) > 0 {
 				fmt.Fprintf(&b, "%s\n", strings.TrimLeft(s, " "))
-			}
-		}
-		for k, v := range partM {
-			if k == "nopart_" {
-				continue
-			}
-			fmt.Fprintf(&b, "\n%s\n\n", strings.ToUpper(k))
-			for _, a := range v {
-				if s := a.String(); len(s) > 0 {
-					fmt.Fprintf(&b, "%s\n", strings.TrimLeft(s, " "))
-				}
 			}
 		}
 		return b.String()
@@ -831,14 +828,12 @@ func (as Activities) String(r *RecipeT) string {
 			fmt.Fprintf(&b, "%s\n", strings.TrimLeft(s, " "))
 		}
 	}
-	// Use recipeParts to access tasks
-	if len(recipeParts) > 0 {
-		for _, v := range recipeParts {
-			fmt.Fprintf(&b, "\n%s\n\n", strings.ToUpper(RecipePM[v]))
-			for _, a := range partM[v] {
-				if s := a.String(); len(s) > 0 {
-					fmt.Fprintf(&b, "%s\n", strings.TrimLeft(s, " "))
-				}
+	// r.Part is an ordered list of recipe parts
+	for _, v := range r.Part {
+		fmt.Fprintf(&b, "\n%s\n\n", strings.ToUpper(v.Title))
+		for _, a := range partM[v.Index] {
+			if s := a.String(); len(s) > 0 {
+				fmt.Fprintf(&b, "%s\n", strings.TrimLeft(s, " "))
 			}
 		}
 	}

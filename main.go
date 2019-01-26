@@ -37,6 +37,7 @@ type sessCtx struct {
 	reqIngrdCat    string // search for recipe. Query ingredients table.
 	reqVersion     string // version id, starts at 0 which is blank??
 	pkey           string // primary key
+	recipe         *RecipeT
 	swapBkName     string
 	swapBkId       string
 	authorS        []string
