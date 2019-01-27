@@ -306,21 +306,27 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 	for k, _ := range partM {
 		rPart[k] = false
 		for _, v := range ptS {
+			fmt.Println("SortK, Part ", v.SortK, v.Part)
 			// scan thru instructions looking for first instruct for part
-			if len(v.Part) == 0 && !rPart["nopart_"] {
-				r.Start = v.SortK
-				rPart["nopart_"] = true
-				break
-			}
-			// found first instruction for part in ptS list
-			if v.Part == k {
+			if len(v.Part) == 0 {
+				if !rPart["nopart_"] {
+					r.Start = v.SortK
+					rPart["nopart_"] = true
+					break
+				}
+			} else if v.Part == k {
 				// find recipe part entry and update Start
 				for _, rp := range r.Part {
+					fmt.Println("rp: ", rp.Index)
 					if rp.Index == k {
 						rPart[k] = true
+						fmt.Println(v.Part, v.SortK)
 						rp.Start = v.SortK
 						break
 					}
+				}
+				if rPart[k] {
+					break
 				}
 			}
 		}
