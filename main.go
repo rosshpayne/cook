@@ -82,7 +82,7 @@ type sessRecipeT struct {
 	RId     string // Recipe Id
 	Oper    string // Operation (next, prev, repeat, modify)
 	Qid     int    // Question id
-	RecId   []int  // current record in object list.
+	RecId   []int  // current record in object list. (SortK in Recipe table)
 	Ver     string
 	EOL     int // last RecId of current list. Used to determine when last record is reached or exceeded in the case of goto operation
 	Dmsg    string
@@ -91,6 +91,10 @@ type sessRecipeT struct {
 	//SrchLst []mRecipeT
 	RnLst  []mRecipeT
 	Select bool
+	Part   string
+	Next   int
+	Prev   int
+	PEOL   int
 }
 
 const (
@@ -686,7 +690,7 @@ func handler(request InputEvent) (RespEvent, error) {
 		switch pathItem[0] {
 		case "load":
 			pIngrdScale = 1.0
-			sessctx.loadBaseRecipe()
+			err = sessctx.loadBaseRecipe()
 			if err != nil {
 				break
 			}
@@ -788,20 +792,17 @@ func handler(request InputEvent) (RespEvent, error) {
 	//
 	// compare with last session if it exists and update remaining session data
 	//
-	fmt.Println("about to getRec..1")
 	err = sessctx.mergeAndValidateWithLastSession()
 	if err != nil {
 		fmt.Println(err.Error())
 		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata, Error: err.Error()}, nil
 	}
-	fmt.Println("about to getRec..2")
 	if sessctx.curreq == bookrecipe_ || sessctx.abort {
 		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata}, nil
 	}
 	//
 	// session ctx validated and fully populated - now fetch required record
 	//
-	fmt.Println("about to getRec..")
 	err = sessctx.getRecById() // returns [text, verbal] response
 	if err != nil {
 		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata, Error: err.Error()}, nil

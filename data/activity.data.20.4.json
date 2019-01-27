@@ -712,8 +712,8 @@
                 },
                 "prep" : { "L" : [ 
                                 {"M" : { 
-                                  "txt" : { "S" : "set aside {qty} {size} {ingrd} to come to room temperature" },
-                                  "say" : { "S" : "set aside {qty} {size} {ingrd} to come to room temperature " },
+                                  "txt" : { "S" : "set aside {measure} {ingrd} to come to room temperature" },
+                                  "say" : { "S" : "set aside {measure} {ingrd} to come to room temperature " },
                                   "time" : { "N" : "20" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "sec" }

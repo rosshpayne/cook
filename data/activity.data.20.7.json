@@ -29,12 +29,12 @@
                                   "Title" : { "S" : "CRYSTALIZED ROSEMARY GARNISH|(OPTIONAL)" }}
                                 },
                                 { "M" : { 
-                                  "Idx" : { "S" : "H"},
-                                  "Title" : { "S" : "HAZELNUT 'BRITTLE" }}
-                                },
-                                { "M" : { 
                                   "Idx" : { "S" : "F"},
                                   "Title" : { "S" : "FILLING" }}
+                                },
+                                { "M" : { 
+                                  "Idx" : { "S" : "H"},
+                                  "Title" : { "S" : "HAZELNUT 'BRITTLE" }}
                                 },
                                 { "M" : { 
                                   "Idx" : { "S" : "S"},

@@ -183,7 +183,20 @@ func (s *sessCtx) loadBaseRecipe() error {
 		// 	}
 		// }
 	}
-	//fmt.Printf("IngredientM %#v\n", IngredientM)
+	//
+	// aggregate activities to recipe partitions
+	// if no partition then all activities will be aggregated to the "nopart_" partition
+	//
+	partM := make(map[string][]*Activity)
+	// find if there are any parts to recipe
+	for a := &ActivityS[0]; a != nil; a = a.next {
+		if len(a.Part) > 0 {
+			partM[a.Part] = append(partM[a.Part], a)
+		} else {
+			partM["nopart_"] = append(partM["nopart_"], a)
+		}
+	}
+	// sum time for each activity so we know how long each partition will take.
 	//
 	// link Task Activities - taskctl is a package variable.
 	//
@@ -664,6 +677,7 @@ func (s *sessCtx) loadBaseRecipe() error {
 		str     string
 		tclose  int
 		topen   int
+		ok      bool
 	)
 	//
 	//  replace all {tag} in text and verbal for each activity. Ignore Link'd activites - they are only relevant at print time
@@ -735,11 +749,13 @@ func (s *sessCtx) loadBaseRecipe() error {
 							// dot notation used. Breakdown object being referenced.
 							s := strings.SplitN(strings.ToLower(str[topen+1:tclose]), ".", 2)
 							el, el2 = s[0], s[1]
+							// reference to attribute in noncurrent activity e.g. {ingrd.30}
+							p_ := p
 							if el == "ingrd" {
-								// reference to attribute in noncurrent activity e.g. {ingrd.30}
-								p = ActivityM[str[topen+1+tdot+1:tclose]]
+								if p, ok = ActivityM[str[topen+1+tdot+1:tclose]]; !ok {
+									return fmt.Errorf("Error: in processBaseRecipe. Reference to non-existent activity in [%d]\n", p_.AId)
+								}
 								tclose_ -= len(str[topen+1+tdot+1:tclose]) + 1
-								//el = str[topen+1 : tclose_]
 							}
 						} else {
 							el, el2 = strings.ToLower(str[topen+1:tclose_]), ""
@@ -852,7 +868,6 @@ func (s *sessCtx) loadBaseRecipe() error {
 						case "unit":
 							var (
 								u      *Unit
-								ok     bool
 								plural bool
 							)
 							switch context {
@@ -874,11 +889,13 @@ func (s *sessCtx) loadBaseRecipe() error {
 								if pt.Time > 0 {
 									plural = true
 								}
-								if len(pt.Unit) == 1 {
+								if len(pt.Unit) > 0 && len(pt.Unit) == 1 {
 									return fmt.Errorf("in processBaseRecipe. Unit for time, [%s], not defined for Activity [%d]\n", pt.Unit, p.AId)
 								}
-								if u, ok = unitMap[pt.Unit]; !ok {
-									return fmt.Errorf("in processBaseRecipe. Unit for time, [%s], not defined in unitM for Activity [%d]\n", pt.Unit, p.AId)
+								if len(pt.Unit) > 0 {
+									if u, ok = unitMap[pt.Unit]; !ok {
+										return fmt.Errorf("in processBaseRecipe. Unit for time, [%s], not defined in unitM for Activity [%d]\n", pt.Unit, p.AId)
+									}
 								}
 							}
 							if context == device {

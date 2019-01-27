@@ -170,7 +170,7 @@ func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 	return output_
 }
 
-func (a Activities) GenerateTasks(pKey string) prepTaskS {
+func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS {
 	// Merge and Populate prepTask and then sort.
 	//  1. first load parrellelisable tasks identified by words or prep property "parallel" or device (=oven)
 	//  2. sort
@@ -183,7 +183,7 @@ func (a Activities) GenerateTasks(pKey string) prepTaskS {
 	var ptS prepTaskS // this type satisfies sort interface.
 	processed := make(map[atvTask]bool, prepctl.cnt)
 
-	nextPart := func(i int) int {
+	nextPartInstructon := func(i int) int {
 		for n := i + 1; n < len(ptS); n++ {
 			if ptS[n].Part == ptS[i].Part {
 				return ptS[n].SortK
@@ -192,7 +192,7 @@ func (a Activities) GenerateTasks(pKey string) prepTaskS {
 		return -1
 	}
 
-	prevPart := func(i int) int {
+	prevPartInstructon := func(i int) int {
 		for n := i - 1; n >= 0; n-- {
 			if ptS[n].Part == ptS[i].Part {
 				return ptS[n].SortK
@@ -276,16 +276,65 @@ func (a Activities) GenerateTasks(pKey string) prepTaskS {
 		pcnt[v.Part] += 1
 	}
 	//
-	//	Link all instructions aggregated by part. The links are used in by-part mode.
+	//	order of instruction in part or no-part recipe, is driven by recipe.SortK which inturn is defined by activity.AId
 	//
 	for i, v := range ptS {
 		v.EOL = eol
-		v.Next = nextPart(i)
+		v.Next = nextPartInstructon(i)
 		v.PEOL = pcnt[v.Part]
 	}
 	for i := len(ptS) - 1; i >= 0; i-- {
-		ptS[i].Prev = prevPart(i)
+		ptS[i].Prev = prevPartInstructon(i)
 	}
+	//
+	// Link first instruction for each partition of recipe to recipe part data.
+	//
+	partM := make(map[string]struct{})
+	rPart := make(map[string]bool)
+	// find if there are any parts to recipe
+	for a := &a[0]; a != nil; a = a.next {
+		if len(a.Part) > 0 {
+			partM[a.Part] = struct{}{}
+		} else {
+			partM["nopart_"] = struct{}{}
+		}
+	}
+	fmt.Printf("%#v\n", partM)
+	//
+	// assign first instruction record id (SortK) for each partition or non-partition Recipes in Recipe data
+	//
+	for k, _ := range partM {
+		rPart[k] = false
+		for _, v := range ptS {
+			// scan thru instructions looking for first instruct for part
+			if len(v.Part) == 0 && !rPart["nopart_"] {
+				r.Start = v.SortK
+				rPart["nopart_"] = true
+				break
+			}
+			// found first instruction for part in ptS list
+			if v.Part == k {
+				// find recipe part entry and update Start
+				for _, rp := range r.Part {
+					if rp.Index == k {
+						rPart[k] = true
+						rp.Start = v.SortK
+						break
+					}
+				}
+			}
+		}
+	}
+	//
+	// Error if part in Activity is not represented in Recipe data
+	//
+	for k, v := range rPart {
+		if !v {
+			panic(fmt.Errorf("Error: no Recipe entry for recipe part [%s]", k))
+		}
+	}
+	//
+	s.updateRecipe(r)
 	//
 	return ptS
 }

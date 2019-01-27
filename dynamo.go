@@ -355,7 +355,7 @@ func (a Activities) generateAndSaveTasks(s *sessCtx) (prepTaskS, error) {
 	var rows int
 	// only prep & task verbal and its text equivalent are saved.
 	// Generate prep and tasks from Activities.
-	ptS := a.GenerateTasks("T-" + s.pkey)
+	ptS := a.GenerateTasks("T-"+s.pkey, s.recipe, s)
 	//
 	// Fast bulk load is not a priority - trickle insert will suffice atleast for the moment.
 	//
@@ -375,6 +375,64 @@ func (a Activities) generateAndSaveTasks(s *sessCtx) (prepTaskS, error) {
 		//time.Sleep(50 * time.Millisecond)
 	}
 	return ptS, nil
+}
+
+func (s *sessCtx) updateRecipe(r *RecipeT) error {
+	//
+	type pKey struct {
+		PKey  string
+		SortK float64
+	}
+	//var updateC expression.UpdateBuilder
+
+	rId, err := strconv.Atoi(s.reqRId)
+	if err != nil {
+		return fmt.Errorf("Error: in recipeRSearch converting reqId  [%s] to int - %s", s.reqRId, err.Error())
+	}
+	pkey := pKey{PKey: "R-" + s.reqBkId, SortK: float64(rId)}
+	fmt.Printf("updateREcipe PKEY %#v\n", pkey)
+	av, err := dynamodbattribute.MarshalMap(&pkey)
+	if err != nil {
+		return fmt.Errorf("%s: %s", "Error in MarshalMap of recipeIdLookup", err.Error())
+	}
+
+	updateC := expression.Set(expression.Name("Start"), expression.Value(r.Start))
+	updateC = updateC.Set(expression.Name("Part"), expression.Value(r.Part))
+	expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
+	if err != nil {
+		//return prepTaskRec{}, fmt.Errorf("Error in Query of Tasks: " + err.Error())
+		panic(err)
+	}
+	input := &dynamodb.UpdateItemInput{
+		TableName:                 aws.String("Recipe"),
+		Key:                       av, // accepts []map[]*attributeValues not string so must use marshal rather than expression
+		UpdateExpression:          expr.Update(),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+		ReturnValues:              aws.String("UPDATED_NEW"),
+	}
+	_, err = s.dynamodbSvc.UpdateItem(input) // do an updateitem and return original id value so only one call.
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case dynamodb.ErrCodeProvisionedThroughputExceededException:
+				fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
+			case dynamodb.ErrCodeResourceNotFoundException:
+				fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
+			case dynamodb.ErrCodeInternalServerError:
+				fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
+			default:
+				fmt.Println(aerr.Error())
+			}
+		} else {
+			// Print the error, cast err to awserr.Error to get the Code and
+			// Message from an error.
+			fmt.Println(err.Error())
+		}
+		return err
+	}
+
+	return nil
 }
 
 func (s *sessCtx) updateSessionEOL() error {

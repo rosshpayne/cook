@@ -68,7 +68,14 @@
                 "SortK" : { "N": "5"},
                 "RName" : { "S": "Vineyard cake"},
                 "Index" : { "SS" : ["Carte"] },
-                "Srv" : { "S" : "12" }
+                "Srv" : { "S" : "12" },
+                "Part" : { "L" : [
+                                { "M" : { 
+                                  "Idx" : { "S" : "T"},
+                                  "Title" : { "S" : "Topping" }}
+                                }
+                               ]
+                }
         }
         }
         },
@@ -542,7 +549,7 @@
             "Item": { 
                 "PKey" : { "S": "A-20-5" },
                 "SortK" : { "N": "140"},
-                "part" : { "S" : "Topping" },
+                "part" : { "S" : "T" },
                 "ingrd" : { "S" : "butter" },
                 "quali" : { "S" : "unsalted" },
                 "iQual" : { "S" : ", at room temperature" },
@@ -573,7 +580,7 @@
             "Item": { 
                 "PKey" : { "S": "A-20-5" },
                 "SortK" : { "N": "150"},
-                "part" : { "S" : "Topping" },
+                "part" : { "S" : "T" },
                 "ingrd" : { "S" : "caster sugar" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
@@ -613,7 +620,7 @@
             "Item": { 
                 "PKey" : { "S": "A-20-5" },
                 "SortK" : { "N": "160"},
-                "part" : { "S" : "Topping" },
+                "part" : { "S" : "T" },
                 "ingrd" : { "S" : "red grapes" },
                 "quali" : { "S" : "seedless" },
                 "iQual" : { "S" : ", washed and halved lengthways" },

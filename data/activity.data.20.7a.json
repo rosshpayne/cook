@@ -67,7 +67,7 @@
             "PutRequest": { 
             "Item": { 
                 "PKey" : { "S": "A-20-7" },
-                "SortK" : { "N": "210"},
+                "SortK" : { "N": "230"},
                 "part" : { "S" : "C" },
                 "ingrd" : { "S" : "egg white" },
                 "iQual" : { "S" : ", lightly whisked" },
@@ -96,7 +96,7 @@
             "PutRequest": { 
             "Item": { 
                 "PKey" : { "S": "A-20-7" },
-                "SortK" : { "N": "230"},
+                "SortK" : { "N": "240"},
                 "part" : { "S" : "C" },
                 "ingrd" : { "S" : "caster sugar" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },

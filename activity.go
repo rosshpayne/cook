@@ -52,13 +52,15 @@ type respT struct {
 type PartT struct {
 	Index string `json:"Idx"`   // short name which is attached to each activity JSON
 	Title string `json:"Title"` // long name which is printed out in the ingredients listing
+	Start int    `json:"Start"` // SortK value in T-?-? that has first instruction for the partition
 }
 type RecipeT struct {
 	RName string `json:"RName"`
 	//Title  string   `json:"Title"`
 	Index  []string `json:"Index"`
 	Serves string   `json:"Srv"`
-	Part   []PartT  `json:"Part"` // order list of recipe parts
+	Part   []*PartT `json:"Part"`  // order list of recipe parts
+	Start  int      `json:"Start"` // SortK value in T-?-? to first instruction of no-part
 }
 
 type Part struct {
@@ -142,11 +144,12 @@ type PerformT struct {
 	Measure     *MeasureT `json:"measure"` // used by those tasks that use some portion of the ingredient.
 	WaitOn      int       `json:"waitOn"`  // depenency on other activity to complete
 	//DeviceT
-	AddToC   []string     `json:"addToC"`
-	UseC     []string     `json:"useC"`
-	SourceC  []string     `json:"sourceC"`
-	Parallel bool         `json:"parallel"`
-	Link     bool         `json:"link"`
+	AddToC   []string `json:"addToC"`
+	UseC     []string `json:"useC"`
+	SourceC  []string `json:"sourceC"`
+	Parallel bool     `json:"parallel"`
+	Link     bool     `json:"link"`
+	//
 	AddToCp  []*Container // it is thought that only one addToC will be used per activity - but lets be flexible.
 	UseCp    []*Container // ---"---
 	SourceCp []*Container // ---"---
