@@ -289,52 +289,51 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 	//
 	// Link first instruction for each partition of recipe to recipe part data.
 	//
-	partM := make(map[string]struct{})
-	rPart := make(map[string]bool)
+	partM := make(map[string]bool)
 	// find if there are any parts to recipe
 	for a := &a[0]; a != nil; a = a.next {
 		if len(a.Part) > 0 {
-			partM[a.Part] = struct{}{}
+			partM[a.Part] = false
 		} else {
-			partM["nopart_"] = struct{}{}
+			partM["nopart_"] = false
 		}
 	}
-	fmt.Printf("%#v\n", partM)
 	//
 	// assign first instruction record id (SortK) for each partition or non-partition Recipes in Recipe data
 	//
 	for k, _ := range partM {
-		rPart[k] = false
 		for _, v := range ptS {
-			fmt.Println("SortK, Part ", v.SortK, v.Part)
 			// scan thru instructions looking for first instruct for part
 			if len(v.Part) == 0 {
-				if !rPart["nopart_"] {
+				if !partM["nopart_"] {
 					r.Start = v.SortK
-					rPart["nopart_"] = true
+					partM["nopart_"] = true
 					break
 				}
 			} else if v.Part == k {
 				// find recipe part entry and update Start
 				for _, rp := range r.Part {
-					fmt.Println("rp: ", rp.Index)
 					if rp.Index == k {
-						rPart[k] = true
-						fmt.Println(v.Part, v.SortK)
 						rp.Start = v.SortK
+						partM[k] = true
 						break
 					}
 				}
-				if rPart[k] {
+				if partM[k] {
 					break
+				} else {
+					panic(fmt.Errorf("Error: no part entry found in recipe part data [%s]", k))
 				}
+			}
+			if partM[k] {
+				break
 			}
 		}
 	}
 	//
 	// Error if part in Activity is not represented in Recipe data
 	//
-	for k, v := range rPart {
+	for k, v := range partM {
 		if !v {
 			panic(fmt.Errorf("Error: no Recipe entry for recipe part [%s]", k))
 		}
