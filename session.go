@@ -14,7 +14,91 @@ import (
 	_ "github.com/aws/aws-lambda-go/lambdacontext"
 )
 
-func (s sessCtx) updateSession() (int, error) {
+// Session table record
+// only items from session context that need to be preserved between sessions are persisted.
+type sessRecipeT struct {
+	Obj     string // Object - to which operation (listing) apply
+	BkId    string // Book Id
+	BkName  string // Book name - saves a lookup under some circumstances
+	RName   string // Recipe name - saves a lookup under some circumstances
+	SwpBkNm string
+	SwpBkId string
+	RId     string // Recipe Id
+	Oper    string // Operation (next, prev, repeat, modify)
+	Qid     int    // Question id
+	RecId   []int  // current record in object list. (SortK in Recipe table)
+	Ver     string
+	EOL     int // last RecId of current list. Used to determine when last record is reached or exceeded in the case of goto operation
+	Dmsg    string
+	Vmsg    string
+	DData   string
+	//SrchLst []mRecipeT
+	RnLst  []mRecipeT
+	Select bool
+	//
+	Part    []*PartT // PartT.Idx - short name for Recipe Part
+	CurPart string
+	Next    int `json:"NextR"`
+	Prev    int `json:"PrevR"`
+	PEOL    int `json:"PEOL"`
+}
+
+func (s *sessCtx) GetSession() (lastSess *sessRecipeT, err error) {
+	//
+	// Table:  Sessions
+	//
+	type pKey struct {
+		Sid string
+	}
+
+	pkey := pKey{s.sessionId}
+	av, err := dynamodbattribute.MarshalMap(&pkey)
+	input := &dynamodb.GetItemInput{
+		Key:       av,
+		TableName: aws.String("Sessions"),
+	}
+	result, err := s.dynamodbSvc.GetItem(input)
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case dynamodb.ErrCodeProvisionedThroughputExceededException:
+				fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
+			case dynamodb.ErrCodeResourceNotFoundException:
+				fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
+			//case dynamodb.ErrCodeRequestLimitExceeded:
+			//	fmt.Println(dynamodb.ErrCodeRequestLimitExceeded, aerr.Error())
+			case dynamodb.ErrCodeInternalServerError:
+				fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
+			default:
+				fmt.Println(aerr.Error())
+			}
+		} else {
+			// Print the error, cast err to awserr.Error to get the Code and
+			// Message from an error.
+			fmt.Println(err.Error())
+		}
+		return nil, err
+	}
+	if len(result.Item) == 0 {
+		// *** no session data then ignore validating the session and insert it
+		// session with what we've got in the session context
+		// if s.curreq != bookrecipe_ {
+		// 	s.dmsg = `You must specify a book and recipe from that book. To get started, please say "open", followed by the name of the book`
+		// 	s.vmsg = `You must specify a book and recipe from that book. To get started, please say "open", followed by the name of the book`
+		// 	s.abort = true
+		// 	return nil, nil
+		//
+		return &sessRecipeT{}, nil
+	}
+	lastSess = &sessRecipeT{}
+	err = dynamodbattribute.UnmarshalMap(result.Item, lastSess)
+	if err != nil {
+		return nil, err
+	}
+	return lastSess, nil
+}
+
+func (s sessCtx) updateSession() error {
 	// state data that must be maintained across sessions
 	//
 	type pKey struct {
@@ -53,7 +137,8 @@ func (s sessCtx) updateSession() (int, error) {
 		} else {
 			// on update use ADD to increment an object related counter.
 			recid_ := fmt.Sprintf("RecId[%d]", objectMap[s.object])
-			updateC = expression.Add(expression.Name(recid_), expression.Value(s.updateAdd))
+			//updateC = expression.Add(expression.Name(recid_), expression.Value(s.updateAdd))
+			updateC = expression.Set(expression.Name(recid_), expression.Value(s.recId))
 		}
 	}
 
@@ -127,6 +212,41 @@ func (s sessCtx) updateSession() (int, error) {
 	} else {
 		updateC = updateC.Set(expression.Name("Ver"), expression.Value(""))
 	}
+	//
+	// Data related to Part mode ie. when using a recipe part. Values are blank if no part available or in no-part mode.
+	//
+	if len(s.parts) > 0 {
+		updateC = updateC.Set(expression.Name("Parts"), expression.Value(s.parts))
+	} else {
+		updateC = updateC.Set(expression.Name("Parts"), expression.Value(""))
+	}
+	if len(s.part) > 0 {
+		updateC = updateC.Set(expression.Name("Part"), expression.Value(s.part))
+	} else {
+		updateC = updateC.Set(expression.Name("Part"), expression.Value(""))
+	}
+	if s.peol > 0 {
+		updateC = updateC.Set(expression.Name("PEOL"), expression.Value(s.peol))
+	} else {
+		updateC = updateC.Set(expression.Name("PEOL"), expression.Value(""))
+	}
+	//
+	// NextR (nextRecord) and PrevR (PrevRecord) sourced from Recipe R- data (nxt,prv) for mode Part ie. when listing recipe by part.
+	//  value is SortK
+	//
+	if s.next > 0 {
+		updateC = updateC.Set(expression.Name("Next"), expression.Value(s.next))
+	} else {
+		updateC = updateC.Set(expression.Name("Next"), expression.Value(""))
+	}
+	if s.prev > 0 {
+		updateC = updateC.Set(expression.Name("Prev"), expression.Value(s.prev))
+	} else {
+		updateC = updateC.Set(expression.Name("Prev"), expression.Value(""))
+	}
+	//
+	//
+	//
 	updateC = updateC.Set(expression.Name("Select"), expression.Value(s.makeSelect)) // make a selection
 	updateC = updateC.Set(expression.Name("ATime"), expression.Value(time.Now().String()))
 	expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
@@ -140,7 +260,7 @@ func (s sessCtx) updateSession() (int, error) {
 		UpdateExpression:          expr.Update(),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
-		ReturnValues:              aws.String("UPDATED_NEW"), //aws.String("ALL_NEW"),
+		ReturnValues:              aws.String("UPDATED_NEW"), // //aws.String("UPDATED_NEW"), -
 	}
 	result, err := s.dynamodbSvc.UpdateItem(input) // do an updateitem and return original id value so only one call.
 	if err != nil {
@@ -160,26 +280,43 @@ func (s sessCtx) updateSession() (int, error) {
 			// Message from an error.
 			fmt.Println(err.Error())
 		}
-		return 1, err
+		return err
 	}
 	//
 	// RecId has been updated so copy new value to session context
+	// TODO - maybe we should take control of RecId  (ie. not use ADD but SET instead)
 	//
-	lastSess := sessRecipeT{}
+	currentSess := sessRecipeT{}
 	if len(result.Attributes) > 0 && s.curreq != bookrecipe_ {
-		err = dynamodbattribute.UnmarshalMap(result.Attributes, &lastSess)
+		err = dynamodbattribute.UnmarshalMap(result.Attributes, &currentSess)
 		if err != nil {
-			return 1, err
+			return err
 		}
 		// NB: UPDATE_NEW in return values will return only updated elements in a slice/set
 		//  In the case of SET all values are returned
 		//	In the case of ADD only the changed element in the set is returned.
-		switch len(lastSess.RecId) {
-		case 1:
-			return lastSess.RecId[0], nil
-		default:
-			return lastSess.RecId[objectMap[s.object]], nil
+		if len(currentSess.Obj) > 0 && s.recId > 0 {
+			fmt.Println("here..", currentSess.Obj)
+			fmt.Println("here..", objectMap[currentSess.Obj])
+			if currentSess.RecId[0] != s.recId {
+				return fmt.Errorf("Error: in UpdateSession. Returned RecId does not match RecId used.")
+			}
 		}
+		// if len(currentSess.CurPart) > 0 {
+		// 	//TODO what about previous request from user. Here we presume only going forward
+		// 	// TODO what about end ie. NextR = -1
+		// 	return currentSess.NextR
+		// }
+		// switch len(currentSess.RecId) {
+		// case 1:
+		// 	return currentSess.RecId[0], nil
+		// default:
+		// 	return currentSess.RecId[objectMap[s.object]], nil
+		// }
 	}
-	return 1, nil
+	//TODO does this return get executed and if so is it the correct value
+	if len(result.Attributes) == 0 {
+		return fmt.Errorf("Error: zero attributes updated in updateSession")
+	}
+	return nil
 }

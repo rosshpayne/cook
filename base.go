@@ -187,15 +187,15 @@ func (s *sessCtx) loadBaseRecipe() error {
 	// aggregate activities to recipe partitions
 	// if no partition then all activities will be aggregated to the "nopart_" partition
 	//
-	partM := make(map[string][]*Activity)
-	// find if there are any parts to recipe
-	for a := &ActivityS[0]; a != nil; a = a.next {
-		if len(a.Part) > 0 {
-			partM[a.Part] = append(partM[a.Part], a)
-		} else {
-			partM["nopart_"] = append(partM["nopart_"], a)
-		}
-	}
+	// partM := make(map[string][]*Activity)
+	// // find if there are any parts to recipe
+	// for a := &ActivityS[0]; a != nil; a = a.next {
+	// 	if len(a.Part) > 0 {
+	// 		partM[a.Part] = append(partM[a.Part], a)
+	// 	} else {
+	// 		partM["nopart_"] = append(partM["nopart_"], a)
+	// 	}
+	// }
 	// sum time for each activity so we know how long each partition will take.
 	//
 	// link Task Activities - taskctl is a package variable.

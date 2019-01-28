@@ -10,15 +10,9 @@ import (
 	"strconv"
 	"strings"
 
-	//"github.com/aws/aws-lambda-go/events"
-	//"github.com/aws/aws-lambda-go/lambda"
-	//"github.com/aws/aws-lambda-go/lambdacontext"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	_ "github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 )
 
 //TODO
@@ -27,31 +21,31 @@ import (
 // Session Context - assigned from request and Session table.
 //  also contains state information relevant to current session and not the next session.
 type sessCtx struct {
-	operation      string // sourced from Sessions table or request
-	sessionId      string // sourced from request. Used as PKey to Sessions table
-	request        string // book or recipe request
-	reqRName       string // requested recipe name - query param of recipe request
-	reqBkName      string // requested book name - query param
-	reqRId         string // Recipe Id - 0 means no recipe id has been assigned.  All RId's start at 1.
-	reqBkId        string
-	reqIngrdCat    string // search for recipe. Query ingredients table.
-	reqVersion     string // version id, starts at 0 which is blank??
-	pkey           string // primary key
-	recipe         *RecipeT
-	swapBkName     string
-	swapBkId       string
-	authorS        []string
-	authors        string         // siRNames of the first two authors
-	index          []string       // user defined entries under which recipe is indexed. Sourced from recipe not ingredient.
-	indexRecs      []indexRecipeT // processed index entries as saved to dynamo
-	dbatchNum      string         // mulit-records sent to display in fixed batch sizes (6 say).
-	reset          bool           // zeros []RecId in session table during changes to recipe, as []RecId is recipe dependent
-	curreq         int            // bookrecipe_, object_(ingredient,task,container,utensil), listing_(next,prev,goto,modify,repeat)
-	questionId     int            // what question is the user responding to with a yes|no.
-	dynamodbSvc    *dynamodb.DynamoDB
-	closeBook      bool
-	object         string     //container,ingredient,instruction,utensil. Sourced from Sessions table or request
-	updateAdd      int        // dynamodb Update ADD. Operation dependent
+	operation   string // sourced from Sessions table or request
+	sessionId   string // sourced from request. Used as PKey to Sessions table
+	request     string // book or recipe request
+	reqRName    string // requested recipe name - query param of recipe request
+	reqBkName   string // requested book name - query param
+	reqRId      string // Recipe Id - 0 means no recipe id has been assigned.  All RId's start at 1.
+	reqBkId     string
+	reqIngrdCat string // search for recipe. Query ingredients table.
+	reqVersion  string // version id, starts at 0 which is blank??
+	pkey        string // primary key
+	recipe      *RecipeT
+	swapBkName  string
+	swapBkId    string
+	authorS     []string
+	authors     string         // siRNames of the first two authors
+	index       []string       // user defined entries under which recipe is indexed. Sourced from recipe not ingredient.
+	indexRecs   []indexRecipeT // processed index entries as saved to dynamo
+	dbatchNum   string         // mulit-records sent to display in fixed batch sizes (6 say).
+	reset       bool           // zeros []RecId in session table during changes to recipe, as []RecId is recipe dependent
+	curreq      int            // bookrecipe_, object_(ingredient,task,container,utensil), listing_(next,prev,goto,modify,repeat)
+	questionId  int            // what question is the user responding to with a yes|no.
+	dynamodbSvc *dynamodb.DynamoDB
+	closeBook   bool
+	object      string //container,ingredient,instruction,utensil. Sourced from Sessions table or request
+	//updateAdd      int        // dynamodb Update ADD. Operation dependent
 	gotoRecId      int        // sourced from request
 	recId          int        // current record id for object list (ingredient,task,container,utensil) - sourced from Sessions table (updateSession()
 	recIdNotExists bool       // determines whether to create []RecId set attribute in Session  table
@@ -68,33 +62,12 @@ type sessCtx struct {
 	ddata      string
 	selectItem int // value selected by user of index in itemList
 	yesno      string
-}
-
-// Session table record
-// only items from session context that need to be preserved between sessions are persisted.
-type sessRecipeT struct {
-	Obj     string // Object - to which operation (listing) apply
-	BkId    string // Book Id
-	BkName  string // Book name - saves a lookup under some circumstances
-	RName   string // Recipe name - saves a lookup under some circumstances
-	SwpBkNm string
-	SwpBkId string
-	RId     string // Recipe Id
-	Oper    string // Operation (next, prev, repeat, modify)
-	Qid     int    // Question id
-	RecId   []int  // current record in object list. (SortK in Recipe table)
-	Ver     string
-	EOL     int // last RecId of current list. Used to determine when last record is reached or exceeded in the case of goto operation
-	Dmsg    string
-	Vmsg    string
-	DData   string
-	//SrchLst []mRecipeT
-	RnLst  []mRecipeT
-	Select bool
-	Part   string
-	Next   int
-	Prev   int
-	PEOL   int
+	// Recipe Part data
+	peol  int      // End-of-List-for-part
+	part  string   // part index name - if no value then no part is being used eventhough recipe may be have a part defined i.e nopart_ & a part
+	parts []*PartT // sourced from Recipe (R-)
+	next  int      // next SortK (recId)
+	prev  int      // previous SortK (recId) when in part mode as opposed to full recipe mode
 }
 
 const (
@@ -137,55 +110,11 @@ type dialog struct {
 	EOL     int
 }
 
-func (s *sessCtx) mergeAndValidateWithLastSession() error {
-	// TODO - add TTL so records are removed automatically.
+func (s *sessCtx) processRequest() error {
 	//
-	// Table:  Sessions
+	// merge and validate with last session
 	//
-	type pKey struct {
-		Sid string
-	}
-
-	pkey := pKey{s.sessionId}
-	av, err := dynamodbattribute.MarshalMap(&pkey)
-	input := &dynamodb.GetItemInput{
-		Key:       av,
-		TableName: aws.String("Sessions"),
-	}
-	result, err := s.dynamodbSvc.GetItem(input)
-	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			case dynamodb.ErrCodeProvisionedThroughputExceededException:
-				fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
-			case dynamodb.ErrCodeResourceNotFoundException:
-				fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
-			//case dynamodb.ErrCodeRequestLimitExceeded:
-			//	fmt.Println(dynamodb.ErrCodeRequestLimitExceeded, aerr.Error())
-			case dynamodb.ErrCodeInternalServerError:
-				fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
-			default:
-				fmt.Println(aerr.Error())
-			}
-		} else {
-			// Print the error, cast err to awserr.Error to get the Code and
-			// Message from an error.
-			fmt.Println(err.Error())
-		}
-		return err
-	}
-	if len(result.Item) == 0 {
-		// *** no session data then ignore validating the session and insert it
-		// session with what we've got in the session context
-		if s.curreq != bookrecipe_ {
-			s.dmsg = `You must specify a book and recipe from that book. To get started, please say "open", followed by the name of the book`
-			s.vmsg = `You must specify a book and recipe from that book. To get started, please say "open", followed by the name of the book`
-			s.abort = true
-			return nil
-		}
-	}
-	lastSess := sessRecipeT{}
-	err = dynamodbattribute.UnmarshalMap(result.Item, &lastSess)
+	lastSess, err := s.GetSession()
 	if err != nil {
 		return err
 	}
@@ -205,13 +134,13 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 				s.vmsg = fmt.Sprintf(`%s is closed. You can now search across all recipe books`, lastSess.BkName)
 				s.dmsg = fmt.Sprintf(`%s is closed. You can now search across all recipe books`, lastSess.BkName)
 				s.reqBkId, s.reqBkName, s.reqRName, s.reqRId, s.eol, s.reset = "", "", "", "", 0, true
-				_, err = s.updateSession()
+				err = s.updateSession()
 			case 21:
 				// swap book
 				s.reqBkId, s.reqBkName, s.reset = lastSess.SwpBkId, lastSess.SwpBkNm, true
 				s.vmsg = fmt.Sprintf(`Book [%s] is now open. You can now search or open a recipe within this book`, lastSess.BkName)
 				s.dmsg = fmt.Sprintf(`Book [%s] is now open. You can now search or open a recipe within this book`, lastSess.BkName)
-				_, err = s.updateSession()
+				err = s.updateSession()
 			default:
 				// TODO: log error to error table
 			}
@@ -233,7 +162,7 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 		s.reqRId, s.reqRName, s.reqBkId, s.reqBkName = p.RId, p.RName, p.BkId, p.BkName
 		s.dmsg = fmt.Sprintf(`Now that you have selected [%s] recipe would you like to list ingredients, cooking instructions, utensils or containers or cancel`, s.reqRName)
 		s.vmsg = fmt.Sprintf(`Now that you have selected {%s] recipe would you like to list ingredients, cooking instructions, utensils or containers or cancel`, s.reqRName)
-		_, err := s.updateSession()
+		err := s.updateSession()
 		if err != nil {
 			return fmt.Errorf("Error: in mergeAndValidateWithLastSession of updateSession() - %s", err.Error())
 		}
@@ -305,7 +234,7 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 				panic(err)
 			}
 			s.eol, s.reset = 0, true
-			_, err = s.updateSession()
+			err = s.updateSession()
 			if err != nil {
 				return err
 			}
@@ -340,7 +269,7 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 				}
 				//
 				s.eol = 0
-				_, err := s.updateSession()
+				err := s.updateSession()
 				if err != nil {
 					return err
 				}
@@ -363,7 +292,7 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 						}
 						// Book initialises. No recipe provided. Persist.
 						s.eol, s.reset = 0, true
-						_, err := (*s).updateSession()
+						err := (*s).updateSession()
 						if err != nil {
 							return err
 						}
@@ -386,7 +315,7 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 							}
 							// save book details to swap attributes in Session table
 							//s.eol, s.reset = 0, true - depends on yes/no answer
-							_, err := s.updateSession()
+							err := s.updateSession()
 							if err != nil {
 								return err
 							}
@@ -403,7 +332,7 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 							}
 							// new book selected, zero recipe etc
 							s.eol, s.reset, s.reqRId, s.reqRName = 0, true, "", ""
-							_, err := (*s).updateSession()
+							err := (*s).updateSession()
 							if err != nil {
 								return err
 							}
@@ -434,14 +363,16 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 			if err != nil {
 				return err
 			}
+			fmt.Println("search result: ", s.reqBkId, s.reqRName, s.reqRId)
 			s.eol, s.reset = 0, true
-			_, err = s.updateSession()
+			err = s.updateSession()
 			if err != nil {
 				return err
 			}
 			return nil
 		}
 	}
+	fmt.Println("here..1")
 	//
 	// request must set recipe id before proceeding to list an object
 	if s.curreq == listing_ && len(lastSess.RId) == 0 || s.curreq == object_ && len(lastSess.RId) == 0 {
@@ -466,9 +397,9 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 				// show last listed entry otherwise list first entry
 				switch lastSess.RecId[objectMap[s.object]] {
 				case 0: // not listed before or been reset after previously completing list
-					s.updateAdd = 1 // show first entry
+					s.recId = 1 // show first entry
 				default: // in the process of listing
-					s.updateAdd = 0 // repeat last shown entry
+					s.recId = lastSess.RecId[objectMap[s.object]] // repeat last shown entry
 				}
 			}
 		}
@@ -478,9 +409,9 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 		// show last listed entry otherwise list first entry
 		switch lastSess.RecId[objectMap[s.object]] {
 		case 0: // not listed before or been reset after previously completing list
-			s.updateAdd = 1 // show first entry
+			s.recId = 1 // show first entry
 		default: // in the process of listing
-			s.updateAdd = 0 // repeat last shown entry
+			s.recId = lastSess.RecId[objectMap[s.object]] // repeat last shown entry
 		}
 	}
 	//  If listing and not finished and object request  has changed (task, ingredient, container, utensil) reset RecId
@@ -495,21 +426,64 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 	//	This will prevent "repeat" from being recorded in session table.
 	//  Must assign a new value s.recId if not calling updateSession based on the request operation.
 	//  Next task will be select the record from the object table based on the s.recId.
+	// switch s.operation {
+	// case "goto":
+	// 	fmt.Printf("gotoRecId = %d  %d\n", s.gotoRecId, lastSess.EOL)
+	// 	if s.gotoRecId > lastSess.EOL { //EOL of current object (ingredients,tasks..) data
+	// 		// do a repeat operation ie. display current record and define new message
+	// 		s.dmsg = "request goes beyond last item in list. Please say again"
+	// 		s.vmsg = "request goes beyond last item in list. Please say again"
+	// 		s.recId = lastSess.RecId[objectMap[s.object]]
+	// 		fmt.Printf("gotoRecId = %d  %d %d\n", s.gotoRecId, lastSess.EOL, s.recId)
+	// 		s.abort = true
+	// 		return nil
+	// 	} else {
+	// 		// use updateAdd value to assign new recId during updateSession
+	// 		s.updateAdd = s.gotoRecId - lastSess.RecId[objectMap[s.object]]
+	// 	}
+	// case "repeat":
+	// 	// return - no need to updateSession as nothing has changed.  Select current recId.
+	// 	s.recId = lastSess.RecId[objectMap[s.object]]
+	// 	s.dmsg, s.vmsg, s.ddata = lastSess.Dmsg, lastSess.Vmsg, lastSess.DData
+	// 	s.abort = true
+	// 	return nil
+	// case "prev":
+	// 	if lastSess.RecId[objectMap[s.object]] == 1 {
+	// 		// s.dPreMsg = "You are at the beginning. "
+	// 		// s.vPreMsg = "You are at the beginning. "
+	// 		s.recId = lastSess.RecId[objectMap[s.object]]
+	// 		return nil
+	// 	}
+	// 	s.updateAdd = -1
+	// case "next":
+	// 	if lastSess.EOL > 0 && len(lastSess.RecId) > 0 {
+	// 		if lastSess.RecId[objectMap[s.object]] == s.eol {
+	// 			s.recId = lastSess.EOL
+	// 			// s.dPreMsg = "You have reached the end. "
+	// 			// s.vPreMsg = "You have reached the end. "
+	// 			s.abort = true
+	// 			return nil
+	// 		}
+	// 	}
+	// 	s.updateAdd = 1
+	// }
+	fmt.Println("here.. ", s.operation)
 	switch s.operation {
 	case "goto":
 		fmt.Printf("gotoRecId = %d  %d\n", s.gotoRecId, lastSess.EOL)
-		if s.gotoRecId > lastSess.EOL { //EOL of current object (ingredients,tasks..) data
-			// do a repeat operation ie. display current record and define new message
-			s.dmsg = "request goes beyond last item in list. Please say again"
-			s.vmsg = "request goes beyond last item in list. Please say again"
-			s.recId = lastSess.RecId[objectMap[s.object]]
-			fmt.Printf("gotoRecId = %d  %d %d\n", s.gotoRecId, lastSess.EOL, s.recId)
-			s.abort = true
-			return nil
-		} else {
-			// use updateAdd value to assign new recId during updateSession
-			s.updateAdd = s.gotoRecId - lastSess.RecId[objectMap[s.object]]
-		}
+		//TODO goto not implemented - maybe no use case
+		// if s.gotoRecId > lastSess.EOL { //EOL of current object (ingredients,tasks..) data
+		// 	// do a repeat operation ie. display current record and define new message
+		// 	s.dmsg = "request goes beyond last item in list. Please say again"
+		// 	s.vmsg = "request goes beyond last item in list. Please say again"
+		// 	s.recId = lastSess.RecId[objectMap[s.object]]
+		// 	fmt.Printf("gotoRecId = %d  %d %d\n", s.gotoRecId, lastSess.EOL, s.recId)
+		// 	s.abort = true
+		// 	return nil
+		// } else {
+		// 	// use updateAdd value to assign new recId during updateSession
+		// 	s.updateAdd = s.gotoRecId - lastSess.RecId[objectMap[s.object]]
+		// }
 	case "repeat":
 		// return - no need to updateSession as nothing has changed.  Select current recId.
 		s.recId = lastSess.RecId[objectMap[s.object]]
@@ -517,25 +491,57 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 		s.abort = true
 		return nil
 	case "prev":
-		if lastSess.RecId[objectMap[s.object]] == 1 {
-			// s.dPreMsg = "You are at the beginning. "
-			// s.vPreMsg = "You are at the beginning. "
-			s.recId = lastSess.RecId[objectMap[s.object]]
-			return nil
-		}
-		s.updateAdd = -1
-	case "next":
-		if lastSess.EOL > 0 && len(lastSess.RecId) > 0 {
-			if lastSess.RecId[objectMap[s.object]] == s.eol {
-				s.recId = lastSess.EOL
-				// s.dPreMsg = "You have reached the end. "
-				// s.vPreMsg = "You have reached the end. "
+		if len(s.part) == 0 {
+			if len(s.object) == 0 {
+				return fmt.Errorf("Error: no object defined when in processRequest - next")
+			}
+			if lastSess.EOL > 0 && len(lastSess.RecId) > 0 {
+				if lastSess.RecId[objectMap[s.object]] == 1 {
+					s.recId = lastSess.RecId[objectMap[s.object]]
+					// s.dPreMsg = "You have reached the end. "
+					// s.vPreMsg = "You have reached the end. "
+					return nil
+				}
+				if len(s.object) == 0 {
+					return fmt.Errorf("Error: no object defined when in processRequest - next")
+				}
+				s.recId = lastSess.RecId[objectMap[s.object]] - 1
+			}
+		} else {
+			s.recId = lastSess.Prev
+			if s.recId == -1 {
 				s.abort = true
 				return nil
 			}
 		}
-		s.updateAdd = 1
+	case "next":
+		fmt.Println("here.. at next..operation")
+		if len(s.part) == 0 {
+			if len(s.object) == 0 {
+				return fmt.Errorf("Error: no object defined when in processRequest - next")
+			}
+			if lastSess.EOL > 0 && len(lastSess.RecId) > 0 {
+				if lastSess.RecId[objectMap[s.object]] == s.eol {
+					s.recId = lastSess.EOL
+					// s.dPreMsg = "You have reached the end. "
+					// s.vPreMsg = "You have reached the end. "
+					s.abort = true
+					return nil
+				}
+			}
+			s.recId = lastSess.RecId[objectMap[s.object]] + 1
+			fmt.Printf("recId  [%d]\n", s.recId)
+		} else {
+			s.recId = lastSess.Next
+			fmt.Printf("recId  [%d]\n", s.recId)
+			if s.recId == -1 {
+				s.abort = true
+				return nil
+			}
+		}
 	}
+	fmt.Printf("recId  %d\n", s.recId)
+	fmt.Println("here.x. 3")
 	// check if we have Dynamodb Recid Set defined, this will be useful in updateSession
 	if len(lastSess.RecId) == 0 {
 		s.recIdNotExists = true
@@ -546,10 +552,10 @@ func (s *sessCtx) mergeAndValidateWithLastSession() error {
 	// Act of updating the table will generate a new record id (ADD in updateItem) which we assign to the session context field recId.
 	// We will use sessctx.recId to pick the next record for the response.
 	//
-	s.recId, err = s.updateSession()
-	if err != nil {
-		return err
-	}
+	// s.recId, err = s.updateSession()
+	// if err != nil {
+	// 	return err
+	// }
 	return nil
 }
 
@@ -570,7 +576,7 @@ func (s *sessCtx) getRecById() error {
 		return err
 	}
 	rec := at.Alexa()
-	s.dmsg = expandLiteralTags(rec.Display)
+	//	s.dmsg = expandLiteralTags(rec.Display)
 	if s.recId == rec.EOL {
 		writeCtx = uSay
 		s.vmsg = "and finally, " + expandLiteralTags(rec.Verbal)
@@ -584,15 +590,28 @@ func (s *sessCtx) getRecById() error {
 	}
 	fmt.Println(s.vmsg)
 	fmt.Println(s.dmsg)
+	//
+	// save state to dynamo
+	//
+	err = s.updateSession()
+	if err != nil {
+		return err
+	}
+	return nil
+	//
 	// if EOL has changed because of object change then update session context with new EOL
 	//	use EOL on next session to determine if RecId is at EOL and print end-of-list message
 	// fmt.Println("getRecById rec.EOL, s.eol", rec.EOL, s.eol)
-	if s.eol != rec.EOL {
-		s.eol = rec.EOL
-		s.updateSessionEOL()
-	}
+	// also save next, prev to session table if using part mode
+	// if s.eol != rec.EOL {
+	// 	s.eol = rec.EOL
+	// 	s.updateSessionEOL()
+	// }
+	// if len(s.curPart) > 0 {
+	// 	// update next & prev values
 
-	return nil
+	// }
+
 }
 
 type InputEvent struct {
@@ -712,7 +731,6 @@ func handler(request InputEvent) (RespEvent, error) {
 		}
 		sessctx.abort, sessctx.reset = true, true
 	case "book", "recipe", "select", "search", "list", "yesno", "version":
-		sessctx.curreq = bookrecipe_
 		sessctx.request = pathItem[0]
 		sessctx.curreq = bookrecipe_
 		switch pathItem[0] {
@@ -792,9 +810,8 @@ func handler(request InputEvent) (RespEvent, error) {
 	//
 	// compare with last session if it exists and update remaining session data
 	//
-	err = sessctx.mergeAndValidateWithLastSession()
+	err = sessctx.processRequest()
 	if err != nil {
-		fmt.Println(err.Error())
 		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata, Error: err.Error()}, nil
 	}
 	if sessctx.curreq == bookrecipe_ || sessctx.abort {
@@ -813,8 +830,8 @@ func handler(request InputEvent) (RespEvent, error) {
 
 func main() {
 	//lambda.Start(handler)
-	p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
-	//p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&rcp=Rhubarb and strawberry crumble cake"}
+	//p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
+	p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&rcp=Rhubarb and strawberry crumble cake"}
 	//var i float64 = 1.0
 
 	pIngrdScale = 1.0
@@ -823,6 +840,7 @@ func main() {
 	if len(p.Error) > 0 {
 		fmt.Printf("%#v\n", p.Error)
 	} else {
-		fmt.Printf("%s\n", p.Text)
+		fmt.Printf("output:   %s\n", p.Text)
+		fmt.Printf("output:   %s\n", p.Verbal)
 	}
 }

@@ -50,7 +50,7 @@ type respT struct {
 // Recipe Record
 //
 type PartT struct {
-	Index string `json:"Idx"`   // short name which is attached to each activity JSON
+	Index string `json:"Idx"`   // short name which is attached to each activity JSON.
 	Title string `json:"Title"` // long name which is printed out in the ingredients listing
 	Start int    `json:"Start"` // SortK value in T-?-? that has first instruction for the partition
 }
@@ -59,18 +59,17 @@ type RecipeT struct {
 	//Title  string   `json:"Title"`
 	Index  []string `json:"Index"`
 	Serves string   `json:"Srv"`
-	Part   []*PartT `json:"Part"`  // order list of recipe parts
-	Start  int      `json:"Start"` // SortK value in T-?-? to first instruction of no-part
+	Part   []*PartT `json:"Part"` // order list of recipe parts. Load will prepend "nopart_" if parts are detected in Activities and some are not assigned part.
 }
 
-type Part struct {
-	RName string `json:"RName"`
-	//Title  string   `json:"Title"`
-	Index  []string `json:"Index"`
-	Serves string   `json:"Srv"`
-	Part   []string `json:"Part"`
-	IPart  []string `json:"IPart"`
-}
+// type Part struct {
+// 	RName string `json:"RName"`
+// 	//Title  string   `json:"Title"`
+// 	Index  []string `json:"Index"`
+// 	Serves string   `json:"Srv"`
+// 	Part   []string `json:"Part"`
+// 	IPart  []string `json:"IPart"`
+// }
 
 type MeasureCT struct {
 	Quantity  string `json:"qty"`
@@ -824,12 +823,6 @@ func (as Activities) String(r *RecipeT) string {
 			}
 		}
 		return b.String()
-	}
-	//
-	for _, a := range partM["nopart_"] {
-		if s := a.String(); len(s) > 0 {
-			fmt.Fprintf(&b, "%s\n", strings.TrimLeft(s, " "))
-		}
 	}
 	// r.Part is an ordered list of recipe parts
 	for _, v := range r.Part {

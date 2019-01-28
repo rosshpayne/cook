@@ -6,7 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
+	_ "time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -387,7 +387,7 @@ func (s *sessCtx) updateRecipe(r *RecipeT) error {
 
 	rId, err := strconv.Atoi(s.reqRId)
 	if err != nil {
-		return fmt.Errorf("Error: in recipeRSearch converting reqId  [%s] to int - %s", s.reqRId, err.Error())
+		return fmt.Errorf("Error: in updateRecipe converting reqRId  [%s] to int - %s", s.reqRId, err.Error())
 	}
 	pkey := pKey{PKey: "R-" + s.reqBkId, SortK: float64(rId)}
 	fmt.Printf("updateREcipe PKEY %#v\n", pkey)
@@ -395,9 +395,8 @@ func (s *sessCtx) updateRecipe(r *RecipeT) error {
 	if err != nil {
 		return fmt.Errorf("%s: %s", "Error in MarshalMap of recipeIdLookup", err.Error())
 	}
-
-	updateC := expression.Set(expression.Name("Start"), expression.Value(r.Start))
-	updateC = updateC.Set(expression.Name("Part"), expression.Value(r.Part))
+	// update Part attribute
+	updateC := expression.Set(expression.Name("Part"), expression.Value(r.Part))
 	expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
 	if err != nil {
 		//return prepTaskRec{}, fmt.Errorf("Error in Query of Tasks: " + err.Error())
@@ -405,62 +404,6 @@ func (s *sessCtx) updateRecipe(r *RecipeT) error {
 	}
 	input := &dynamodb.UpdateItemInput{
 		TableName:                 aws.String("Recipe"),
-		Key:                       av, // accepts []map[]*attributeValues not string so must use marshal rather than expression
-		UpdateExpression:          expr.Update(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-		ReturnValues:              aws.String("UPDATED_NEW"),
-	}
-	_, err = s.dynamodbSvc.UpdateItem(input) // do an updateitem and return original id value so only one call.
-	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			case dynamodb.ErrCodeProvisionedThroughputExceededException:
-				fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
-			case dynamodb.ErrCodeResourceNotFoundException:
-				fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
-			case dynamodb.ErrCodeInternalServerError:
-				fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
-			default:
-				fmt.Println(aerr.Error())
-			}
-		} else {
-			// Print the error, cast err to awserr.Error to get the Code and
-			// Message from an error.
-			fmt.Println(err.Error())
-		}
-		return err
-	}
-
-	return nil
-}
-
-func (s *sessCtx) updateSessionEOL() error {
-	// state data that must be maintained across sessions
-	//
-	//		Sid - session id
-	//		BkId - Book id
-	//		RId - RecipeId
-	//		[]RecId - id of last record returned
-	//		ATime - access time, updated each time
-	//		Oper - operation - next,prev,goto,repeat,showall,modify
-	//		Obj -  object - task, ingredient, utensil, container
-	//		Qid - questionId
-	//		EOF
-	//
-	type pKey struct {
-		Sid string
-	}
-	var updateC expression.UpdateBuilder
-	updateC = expression.Set(expression.Name("EOL"), expression.Value(s.eol))
-	updateC = updateC.Set(expression.Name("ATime"), expression.Value(time.Now().String()))
-	expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
-	//
-	pkey := pKey{Sid: s.sessionId}
-	av, err := dynamodbattribute.MarshalMap(&pkey)
-
-	input := &dynamodb.UpdateItemInput{
-		TableName:                 aws.String("Sessions"),
 		Key:                       av, // accepts []map[]*attributeValues not string so must use marshal rather than expression
 		UpdateExpression:          expr.Update(),
 		ExpressionAttributeNames:  expr.Names(),
@@ -529,7 +472,15 @@ func (s *sessCtx) getTaskRecById() (alexaDialog, error) {
 	if err != nil {
 		return prepTaskRec{}, fmt.Errorf("Error: %s - %s", "in UnmarshalMap in getTaskRecById ", err.Error())
 	}
-	fmt.Printf("taskRec ingetTaskRecById [%#v]\n ", taskRec)
+	fmt.Printf("taskRec in . getTaskRecById [%#v]\n ", taskRec)
+	//
+	s.eol = taskRec.EOL
+	if len(taskRec.Part) > 0 {
+		s.peol = taskRec.PEOL
+		s.part = taskRec.Part
+		s.next = taskRec.Next
+		s.prev = taskRec.Prev
+	}
 	return taskRec, nil
 }
 
@@ -546,7 +497,7 @@ func (s *sessCtx) recipeRSearch() (*RecipeT, error) {
 
 	rId, err := strconv.Atoi(s.reqRId)
 	if err != nil {
-		return nil, fmt.Errorf("Error: in recipeRSearch converting reqId  [%s] to int - %s", s.reqRId, err.Error())
+		return nil, fmt.Errorf("Error: in recipeRSearch converting reqRId  [%s] to int - %s", s.reqRId, err.Error())
 	}
 	pkey := pKey{PKey: "R-" + s.reqBkId, SortK: float64(rId)}
 	av, err := dynamodbattribute.MarshalMap(&pkey)
@@ -601,6 +552,7 @@ func (s *sessCtx) recipeRSearch() (*RecipeT, error) {
 	s.vmsg = "sFound " + s.reqRName + " in " + s.reqBkName + " by " + s.authors
 	s.vmsg += `What would you like to list?. Say "list container" or "List Ingredient" or "List Prep tasks" or "start Cooking" or "cancel"`
 	s.recipe = rec
+	s.parts = rec.Part
 	return rec, nil
 }
 

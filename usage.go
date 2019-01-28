@@ -203,9 +203,9 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 	//
 	// sort parallelisable prep tasks
 	//
-	for p := prepctl.start; p != nil; p = p.nextPrep {
+	for pa := prepctl.start; pa != nil; pa = pa.nextPrep {
 		var add bool
-		for ia, pp := range p.Prep { // slice of prep tasks
+		for ia, pp := range pa.Prep { // slice of prep tasks
 			if pp.UseDevice != nil {
 				if strings.ToLower(pp.UseDevice.Type) == "oven" {
 					add = true
@@ -213,8 +213,8 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 			}
 			if pp.Parallel && pp.WaitOn == 0 || add {
 				add = false
-				processed[atvTask{p.AId, ia}] = true
-				pt := prepTaskRec{PKey: pKey, AId: p.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Part: p.Part, taskp: pp}
+				processed[atvTask{pa.AId, ia}] = true
+				pt := prepTaskRec{PKey: pKey, AId: pa.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Part: pa.Part, taskp: pp}
 				ptS = append(ptS, &pt)
 			}
 		}
@@ -231,27 +231,27 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 	//
 	// append remaining prep tasks - these are serial tasks so order unimportant
 	//
-	for p := prepctl.start; p != nil; p = p.nextPrep {
-		for ia, pp := range p.Prep {
+	for pa := prepctl.start; pa != nil; pa = pa.nextPrep {
+		for ia, pp := range pa.Prep {
 			if pp.WaitOn > 0 {
 				continue
 			}
-			if _, ok := processed[atvTask{p.AId, ia}]; ok {
+			if _, ok := processed[atvTask{pa.AId, ia}]; ok {
 				continue
 			}
-			processed[atvTask{p.AId, ia}] = true
-			pt := prepTaskRec{PKey: pKey, SortK: i, AId: p.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Part: p.Part, taskp: pp}
+			processed[atvTask{pa.AId, ia}] = true
+			pt := prepTaskRec{PKey: pKey, SortK: i, AId: pa.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Part: pa.Part, taskp: pp}
 			ptS = append(ptS, &pt)
 			i++
 		}
 	}
 	// now for all WaitOn prep tasks
-	for p := prepctl.start; p != nil; p = p.nextPrep {
-		for ia, pp := range p.Prep {
-			if _, ok := processed[atvTask{p.AId, ia}]; ok {
+	for pa := prepctl.start; pa != nil; pa = pa.nextPrep {
+		for ia, pp := range pa.Prep {
+			if _, ok := processed[atvTask{pa.AId, ia}]; ok {
 				continue
 			}
-			pt := prepTaskRec{PKey: pKey, SortK: i, AId: p.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Part: p.Part, taskp: pp}
+			pt := prepTaskRec{PKey: pKey, SortK: i, AId: pa.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Part: pa.Part, taskp: pp}
 			ptS = append(ptS, &pt)
 			i++
 		}
@@ -259,9 +259,9 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 	//
 	// append tasks
 	//
-	for p := taskctl.start; p != nil; p = p.nextTask {
-		for _, pp := range p.Task {
-			pt := prepTaskRec{PKey: pKey, SortK: i, AId: p.AId, Type: 'T', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Part: p.Part, taskp: pp}
+	for pa := taskctl.start; pa != nil; pa = pa.nextTask {
+		for _, pp := range pa.Task {
+			pt := prepTaskRec{PKey: pKey, SortK: i, AId: pa.AId, Type: 'T', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Part: pa.Part, taskp: pp}
 			ptS = append(ptS, &pt)
 			i++
 		}
@@ -287,7 +287,7 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 		ptS[i].Prev = prevPartInstructon(i)
 	}
 	//
-	// Link first instruction for each partition of recipe to recipe part data.
+	// Link first instruction for each partition of recipe to Recipe data.
 	//
 	partM := make(map[string]bool)
 	// find if there are any parts to recipe
@@ -301,43 +301,60 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 	//
 	// assign first instruction record id (SortK) for each partition or non-partition Recipes in Recipe data
 	//
-	for k, _ := range partM {
-		for _, v := range ptS {
-			// scan thru instructions looking for first instruct for part
-			if len(v.Part) == 0 {
-				if !partM["nopart_"] {
-					r.Start = v.SortK
-					partM["nopart_"] = true
-					break
-				}
-			} else if v.Part == k {
-				// find recipe part entry and update Start
-				for _, rp := range r.Part {
-					if rp.Index == k {
-						rp.Start = v.SortK
-						partM[k] = true
+	if len(partM) > 1 {
+		// only "nopart_", so no parts really
+		for k, _ := range partM {
+			fmt.Printf("loop: %s \n", k)
+			for _, v := range ptS {
+				// scan thru instructions looking for first instruct for part
+				if len(v.Part) == 0 {
+					if k == "nopart_" && !partM["nopart_"] {
+						partM["nopart_"] = true
+						// make a new nopart entry for Recipe.Part
+						var found bool
+						for _, v2 := range r.Part {
+							if v2.Index == "nopart_" {
+								v2.Start = v.SortK
+								found = true
+							}
+						}
+						if !found {
+							r.Part = append([]*PartT{&PartT{Index: "nopart_", Start: v.SortK}}, r.Part...)
+						}
 						break
+					}
+				} else if v.Part == k {
+					// search recipe data for part entry and update Start
+					for _, rp := range r.Part {
+						if rp.Index == k {
+							rp.Start = v.SortK
+							partM[k] = true
+							break
+						}
+					}
+					if partM[k] {
+						break
+					} else {
+						panic(fmt.Errorf("Error: no part entry found in recipe part data [%s]", k))
 					}
 				}
 				if partM[k] {
 					break
-				} else {
-					panic(fmt.Errorf("Error: no part entry found in recipe part data [%s]", k))
 				}
 			}
-			if partM[k] {
-				break
+		}
+		//
+		// Error if part in Activity is not represented in Recipe data
+		//
+		for k, v := range partM {
+			fmt.Printf("Should be all true: %s %v\n", k, v)
+			if !v {
+				panic(fmt.Errorf("Error: no Recipe entry for recipe part [%s]", k))
 			}
 		}
 	}
 	//
-	// Error if part in Activity is not represented in Recipe data
-	//
-	for k, v := range partM {
-		if !v {
-			panic(fmt.Errorf("Error: no Recipe entry for recipe part [%s]", k))
-		}
-	}
+	// Add (or update) part data to Recipe record (R-)
 	//
 	s.updateRecipe(r)
 	//
@@ -505,7 +522,7 @@ func expandLiteralTags(str string) string {
 	defer resetScale()()
 
 	for tclose, topen = 0, strings.IndexByte(str, '{'); topen != -1; {
-
+		fmt.Println("Here in expandLiteralTags ", str[tclose:topen])
 		b.WriteString(str[tclose:topen])
 		nextclose := strings.IndexByte(str[topen:], '}')
 		if nextclose == -1 {
@@ -532,7 +549,10 @@ func expandLiteralTags(str string) string {
 			b.WriteString(pt[0] + unitMap[pt[1]].String())
 		default:
 			// not a literal tag - pass through unchanged
-			b.WriteString(str[topen : tclose+1])
+			//b.WriteString(str[topen : tclose+1])
+			pt := strings.Split(strings.ToLower(tag[0]), "|")
+			nm = &MeasureT{Num: pt[3], Quantity: pt[0], Size: pt[2], Unit: pt[1]}
+			b.WriteString(nm.String())
 		}
 		//
 		tclose += 1

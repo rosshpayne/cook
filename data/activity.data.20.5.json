@@ -414,7 +414,7 @@
                                 },
                                 { "M" :  {
                                   "txt" : { "S" : "Now mix for {timeu}, on a medium-high speed until smooth and fluffy" },
-                                  "say" : { "S" : "SNow mix for {timeu}, on a medium-high speed until smooth and fluffy" },
+                                  "say" : { "S" : "Now mix for {timeu}, on a medium-high speed until smooth and fluffy" },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -559,13 +559,24 @@
                                       "unit" : { "S" : "g" }
                                       }
                 },
+               "prep" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Cut {measure} of {ingrd} into {m:2|cm||} pieces and set aside to come to room temperature. " },
+                                  "say" : { "S" : "Cut {measure} of {ingrd} into {m:2|cm||} pieces and set aside to come to room temperature. " },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "SAB-M"] }
+                                }}]
+                },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "To make the sugar crust topping while the cake is in the oven, place {measure} of {ingrd} into a {addToC} " },
-                                  "say" : { "S" : "To make the sugar crust topping while the cake is in the oven, place {measure} of {ingrd} into a {addToC}" },
+                                  "txt" : { "S" : "To make the sugar crust topping, place the butter you set aside earlier into a {addToC} " },
+                                  "say" : { "S" : "To make the sugar crust topping, place the butter you set aside earlier into a {addToC}" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
+                                  "sourceC" : { "SS" : [ "SAB-M"] },
                                   "addToC" : { "SS" : [ "topbowl"] },
                                   "useD" : { "M" : { "type" : {"S": "wooden spoon" }
                                                     }} }
