@@ -548,8 +548,7 @@ func expandLiteralTags(str string) string {
 			pt := strings.Split(strings.ToLower(tag[1]), "|")
 			b.WriteString(pt[0] + unitMap[pt[1]].String())
 		default:
-			// not a literal tag - pass through unchanged
-			//b.WriteString(str[topen : tclose+1])
+			// not a literal tag
 			pt := strings.Split(strings.ToLower(tag[0]), "|")
 			nm = &MeasureT{Num: pt[3], Quantity: pt[0], Size: pt[2], Unit: pt[1]}
 			b.WriteString(nm.String())

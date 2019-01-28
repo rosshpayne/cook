@@ -706,10 +706,11 @@ func (s *sessCtx) loadBaseRecipe() error {
 						writeCtx = uDisplay // package variable to deterine String() formating
 						str = strings.TrimLeft(pt.Text, " ")
 						s := str[0]
-						str = expandLiteralTags(strings.ToUpper(string(s)) + str[1:])
+						str = strings.ToUpper(string(s)) + str[1:]
 					case voice:
 						writeCtx = uSay // package variable to deterine String() formating
-						str = expandLiteralTags(pt.Verbal)
+						str = pt.Verbal
+						//TODO: why use expandTags here..
 					}
 					// if no {} then print and return to top of the loop
 					t1 := strings.IndexByte(str, '{')
@@ -788,8 +789,14 @@ func (s *sessCtx) loadBaseRecipe() error {
 							var c *Container
 
 							if el == "usec" {
+								if len(pt.UseCp) == 0 {
+									panic(fmt.Errorf(`Error: useC not suitable in AId [%d] [%s]`, p.AId, str))
+								}
 								c = pt.UseCp[0]
 							} else {
+								if len(pt.AddToCp) == 0 {
+									panic(fmt.Errorf(`Error: useC not suitable in AId [%d] [%s]`, p.AId, str))
+								}
 								c = pt.AddToCp[0]
 							}
 							// useC.form
