@@ -45,7 +45,7 @@
                "Item": { 
                   "PKey" : { "S": "C-20-4" },
                   "SortK" : { "S": "EMixerBowl" },
-                  "type" : { "S": "eBowl" },
+                  "type" : { "S": "ebowl" },
                   "label" : { "S": "Electric Mixer Bowl" },
                   "measure" : { "M" : { "size" : { "S" : "large" }}},
                   "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  }
@@ -722,8 +722,8 @@
                                 },
                 "task" : { "L" : [ 
                                 {"M" : { 
-                                  "txt" : { "S" : "add {ingrd} one at a time blending well between each" },
-                                  "say" : { "S" : "add {ingrd} one at a time blending well between each" },
+                                  "txt" : { "S" : "add the {measure} {ingrd} one at a time blending well between each" },
+                                  "say" : { "S" : "add the {measure} {ingrd} one at a time blending well between each" },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },

@@ -298,6 +298,48 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 			partM["nopart_"] = false
 		}
 	}
+	type prepTaskRec struct {
+		PKey   string  `json:"PKey"`  // R-[BkId]
+		SortK  int     `json:"SortK"` // monotonically increasing - task at which user is upto in recipe
+		AId    int     `json:"AId"`   // Activity Id
+		Type   byte    `json:"Type"`
+		time   float32 // all Linked preps sum time components into this field
+		Text   string  `json:"Text"` // all Linked preps combined text into this field
+		Verbal string  `json:"Verbal"`
+		EOL    int     `json:"EOL"` // End-Of-List. Max Id assigned to each record
+		// Recipe Part metadata
+		PEOL int    `json:"PEOL"` // End-of-List-for-part
+		PId  int    `json:"PId"`  // instruction id within a part
+		Part string `json:"PT"`   // part index name
+		Next int    `json:"nxt"`  // next SortK (recId)
+		Prev int    `json:"prv"`  // previous SortK (recId) when in part mode as opposed to full recipe mode
+		// not persisted
+		taskp *PerformT
+	}
+	//
+	// assign PId, record (instruction) id within a part. For no part this is the SortK value.
+	//
+	Parts := s.parts // Part slice within RecipeT
+	for k, _ := range partM {
+		var (
+			start int
+			peol  int
+		)
+		for _, r := range Parts {
+			if r.Index == k {
+				start = r.Start
+			}
+		}
+		fmt.Printf("start = %d\n", start)
+		peol = ptS[start].PEOL
+		for i, p := 1, ptS[start-1]; i <= peol; i++ {
+			fmt.Printf("%#v\n", p)
+			p.PId = i
+			if p.Next > 0 {
+				p = ptS[p.Next-1]
+			}
+		}
+	}
 	//
 	// assign first instruction record id (SortK) for each partition or non-partition Recipes in Recipe data
 	//
@@ -504,6 +546,66 @@ func (s *sessCtx) purgeRecipe() error {
 	return nil
 }
 
+// scalable tags are non-literal tags in the form : {q|u|s|n}
+// where q-quantity, u-unit, s-size, n-num
+// scalable tags are a halfway point, between using the data model to convey a measurement and explicitly stating it.
+// scalable tags are ideal in the instruction records (T-?-?) where the data model is not available but you
+// don't want to write the measurement explicitly. Its partial parsed form makes it compact and scalable.
+
+func expandScalableTags(str string) string {
+	var (
+		b      strings.Builder // supports io.Write write expanded text/verbal text to this buffer before saving to Task or Verbal fields
+		tclose int
+		topen  int
+		nm     *MeasureT
+	)
+
+	for tclose, topen = 0, strings.IndexByte(str, '{'); topen != -1; {
+		b.WriteString(str[tclose:topen])
+		nextclose := strings.IndexByte(str[topen:], '}')
+		if nextclose == -1 {
+			panic(fmt.Errorf("Error: closing } not found in expandIngrd() [%s]", str))
+		}
+		nextopen := strings.IndexByte(str[topen+1:], '{')
+		if nextopen != -1 {
+			if nextclose > nextopen {
+				panic(fmt.Errorf("Error: closing } not found in expandIngrd() [%s]", str))
+			}
+		}
+		tclose += strings.IndexByte(str[tclose:], '}')
+		//
+		tag := strings.Split(strings.ToLower(str[topen+1:tclose]), ":")
+		switch tag[0] {
+		case "m", "t":
+			//literal tags, pass through
+			b.WriteString(str[topen : tclose+1])
+		default:
+			// scalable literal - use string method to perform any scaling
+			pt := strings.Split(strings.ToLower(tag[0]), "|")
+			nm = &MeasureT{Num: pt[3], Quantity: pt[0], Size: pt[2], Unit: pt[1]}
+			b.WriteString(nm.String())
+		}
+		//
+		tclose += 1
+		topen = strings.IndexByte(str[tclose:], '{')
+		if topen == -1 {
+			b.WriteString(str[tclose:])
+		} else {
+			topen += tclose
+		}
+	}
+	if tclose == 0 {
+		// no {} found
+		return str
+	}
+	return b.String()
+}
+
+// literal tags are non-scalable tags in the form : {type:q|u|s|n}
+// where type is "m" for measure or "t" for time
+// literal tags are provided to add flexibility to embed a measurement anywhere beyond what the data
+// model is designed to handle.
+
 func expandLiteralTags(str string) string {
 	var (
 		b      strings.Builder // supports io.Write write expanded text/verbal text to this buffer before saving to Task or Verbal fields
@@ -522,7 +624,6 @@ func expandLiteralTags(str string) string {
 	defer resetScale()()
 
 	for tclose, topen = 0, strings.IndexByte(str, '{'); topen != -1; {
-		fmt.Println("Here in expandLiteralTags ", str[tclose:topen])
 		b.WriteString(str[tclose:topen])
 		nextclose := strings.IndexByte(str[topen:], '}')
 		if nextclose == -1 {
@@ -548,10 +649,8 @@ func expandLiteralTags(str string) string {
 			pt := strings.Split(strings.ToLower(tag[1]), "|")
 			b.WriteString(pt[0] + unitMap[pt[1]].String())
 		default:
-			// not a literal tag
-			pt := strings.Split(strings.ToLower(tag[0]), "|")
-			nm = &MeasureT{Num: pt[3], Quantity: pt[0], Size: pt[2], Unit: pt[1]}
-			b.WriteString(nm.String())
+			// not a literal tag, pass through
+			b.WriteString(str[topen : tclose+1])
 		}
 		//
 		tclose += 1

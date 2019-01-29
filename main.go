@@ -68,6 +68,7 @@ type sessCtx struct {
 	parts []*PartT // sourced from Recipe (R-)
 	next  int      // next SortK (recId)
 	prev  int      // previous SortK (recId) when in part mode as opposed to full recipe mode
+	pid   int      // record id within a part 1..peol
 }
 
 const (
@@ -108,6 +109,9 @@ type dialog struct {
 	Verbal  string
 	Display string
 	EOL     int
+	PID     int // instruction ID within part
+	PEOL    int
+	PART    string
 }
 
 func (s *sessCtx) processRequest() error {
@@ -372,7 +376,6 @@ func (s *sessCtx) processRequest() error {
 			return nil
 		}
 	}
-	fmt.Println("here..1")
 	//
 	// request must set recipe id before proceeding to list an object
 	if s.curreq == listing_ && len(lastSess.RId) == 0 || s.curreq == object_ && len(lastSess.RId) == 0 {
@@ -467,7 +470,6 @@ func (s *sessCtx) processRequest() error {
 	// 	}
 	// 	s.updateAdd = 1
 	// }
-	fmt.Println("here.. ", s.operation)
 	switch s.operation {
 	case "goto":
 		fmt.Printf("gotoRecId = %d  %d\n", s.gotoRecId, lastSess.EOL)
@@ -515,7 +517,6 @@ func (s *sessCtx) processRequest() error {
 			}
 		}
 	case "next":
-		fmt.Println("here.. at next..operation")
 		if len(s.part) == 0 {
 			if len(s.object) == 0 {
 				return fmt.Errorf("Error: no object defined when in processRequest - next")
@@ -579,14 +580,19 @@ func (s *sessCtx) getRecById() error {
 	//	s.dmsg = expandLiteralTags(rec.Display)
 	if s.recId == rec.EOL {
 		writeCtx = uSay
-		s.vmsg = "and finally, " + expandLiteralTags(rec.Verbal)
+		s.vmsg = "and finally, " + expandScalableTags(expandLiteralTags(rec.Verbal))
 		writeCtx = uDisplay
-		s.dmsg = "and finally, " + expandLiteralTags(rec.Display)
+		s.dmsg = "and finally, " + expandScalableTags(expandLiteralTags(rec.Display))
 	} else {
 		writeCtx = uSay
-		s.vmsg = expandLiteralTags(rec.Verbal)
+		s.vmsg = expandScalableTags(expandLiteralTags(rec.Verbal))
 		writeCtx = uDisplay
-		s.dmsg = expandLiteralTags(rec.Display)
+		s.dmsg = expandScalableTags(expandLiteralTags(rec.Display))
+	}
+	if len(s.part) > 0 {
+		s.dmsg = "[" + strconv.Itoa(s.pid) + "|" + strconv.Itoa(s.peol) + "|" + strconv.Itoa(s.eol) + "]  " + s.dmsg
+	} else {
+		s.dmsg = "[" + strconv.Itoa(s.pid) + "|" + strconv.Itoa(s.eol) + "]  " + s.dmsg
 	}
 	//
 	// save state to dynamo
@@ -630,9 +636,10 @@ func (r *InputEvent) init() {
 }
 
 type RespEvent struct {
-	Text   string `json:"Text"`
-	Verbal string `json:"Verbal"`
-	Error  string `json:"Error"`
+	Position string `json:"Position"` // recId|EOL|PEOL|PName
+	Text     string `json:"Text"`
+	Verbal   string `json:"Verbal"`
+	Error    string `json:"Error"`
 }
 
 //

@@ -34,7 +34,7 @@ type ctRec struct {
 }
 
 func (ct ctRec) Alexa() dialog {
-	return dialog{ct.Verbal, ct.Text, ct.EOL}
+	return dialog{Verbal: ct.Verbal, Display: ct.Text, EOL: ct.EOL}
 }
 
 type mRecipeT struct {
@@ -68,6 +68,7 @@ type prepTaskRec struct {
 	EOL    int     `json:"EOL"` // End-Of-List. Max Id assigned to each record
 	// Recipe Part metadata
 	PEOL int    `json:"PEOL"` // End-of-List-for-part
+	PId  int    `json:"PId"`  // instruction id within a part
 	Part string `json:"PT"`   // part index name
 	Next int    `json:"nxt"`  // next SortK (recId)
 	Prev int    `json:"prv"`  // previous SortK (recId) when in part mode as opposed to full recipe mode
@@ -76,7 +77,7 @@ type prepTaskRec struct {
 }
 
 func (pt prepTaskRec) Alexa() dialog {
-	return dialog{pt.Verbal, pt.Text, pt.EOL}
+	return dialog{Verbal: pt.Verbal, Display: pt.Text, EOL: pt.EOL, PEOL: pt.PEOL, PID: pt.PId, PART: pt.Part}
 }
 
 type prepTaskS []*prepTaskRec
@@ -474,12 +475,15 @@ func (s *sessCtx) getTaskRecById() (alexaDialog, error) {
 	}
 	fmt.Printf("taskRec in . getTaskRecById [%#v]\n ", taskRec)
 	//
+	// save to Session Context
+	//
 	s.eol = taskRec.EOL
 	if len(taskRec.Part) > 0 {
 		s.peol = taskRec.PEOL
 		s.part = taskRec.Part
 		s.next = taskRec.Next
 		s.prev = taskRec.Prev
+		s.pid = taskRec.PId
 	}
 	return taskRec, nil
 }

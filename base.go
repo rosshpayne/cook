@@ -808,7 +808,7 @@ func (s *sessCtx) loadBaseRecipe() error {
 									panic(fmt.Errorf(`Error: useC or addtoC tag not followed by "form" or "type" type in AId [%d] [%s]`, p.AId, str))
 								}
 							} else {
-								b.WriteString(c.Type)
+								b.WriteString(c.Label)
 							}
 						case "measure":
 							context = measure

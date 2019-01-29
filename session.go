@@ -296,8 +296,6 @@ func (s sessCtx) updateSession() error {
 		//  In the case of SET all values are returned
 		//	In the case of ADD only the changed element in the set is returned.
 		if len(currentSess.Obj) > 0 && s.recId > 0 {
-			fmt.Println("here..", currentSess.Obj)
-			fmt.Println("here..", objectMap[currentSess.Obj])
 			if currentSess.RecId[0] != s.recId {
 				return fmt.Errorf("Error: in UpdateSession. Returned RecId does not match RecId used.")
 			}
