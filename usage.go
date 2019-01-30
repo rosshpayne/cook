@@ -330,10 +330,8 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 				start = r.Start
 			}
 		}
-		fmt.Printf("start = %d\n", start)
 		peol = ptS[start].PEOL
 		for i, p := 1, ptS[start-1]; i <= peol; i++ {
-			fmt.Printf("%#v\n", p)
 			p.PId = i
 			if p.Next > 0 {
 				p = ptS[p.Next-1]

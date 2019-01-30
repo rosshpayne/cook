@@ -55,6 +55,8 @@ type PartT struct {
 	Start int    `json:"Start"` // SortK value in T-?-? that has first instruction for the partition
 }
 type RecipeT struct {
+	PKey  string `json:"PKey"`
+	SortK int    `json:"PKey"`
 	RName string `json:"RName"`
 	//Title  string   `json:"Title"`
 	Index  []string `json:"Index"`

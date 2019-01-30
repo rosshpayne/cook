@@ -36,11 +36,14 @@ type sessRecipeT struct {
 	RnLst  []mRecipeT
 	Select bool
 	//
-	Part    []*PartT // PartT.Idx - short name for Recipe Part
-	CurPart string
-	Next    int `json:"NextR"`
-	Prev    int `json:"PrevR"`
-	PEOL    int `json:"PEOL"`
+	// Recipe Part related data
+	//
+	Parts []*PartT `json:"Parts"` // PartT.Idx - short name for Recipe Part
+	Part  string   `json:"Part"`
+	Next  int      `json:"Next"`
+	Prev  int      `json:"Prev"`
+	PEOL  int      `json:"PEOL"`
+	PId   int      `json:"PId"`
 }
 
 func (s *sessCtx) GetSession() (lastSess *sessRecipeT, err error) {
@@ -171,13 +174,9 @@ func (s sessCtx) updateSession() error {
 	}
 	if len(s.operation) > 0 {
 		updateC = updateC.Set(expression.Name("Oper"), expression.Value(s.operation)) // next,prev,repeat,modify,goto
-	} else {
-		updateC = updateC.Set(expression.Name("Oper"), expression.Value(""))
 	}
 	if len(s.object) > 0 {
 		updateC = updateC.Set(expression.Name("Obj"), expression.Value(s.object)) // ingredient,task,container,utensil
-	} else {
-		updateC = updateC.Set(expression.Name("Obj"), expression.Value(""))
 	}
 	if s.questionId > 0 {
 		updateC = updateC.Set(expression.Name("Qid"), expression.Value(s.questionId))
@@ -202,48 +201,17 @@ func (s sessCtx) updateSession() error {
 	} else {
 		updateC = updateC.Set(expression.Name("closeB"), expression.Value(false))
 	}
-	if len(s.vmsg) > 0 {
-		updateC = updateC.Set(expression.Name("Vmsg"), expression.Value(s.vmsg))
-	} else {
-		updateC = updateC.Set(expression.Name("Vmsg"), expression.Value(""))
-	}
-	if len(s.reqVersion) > 0 {
-		updateC = updateC.Set(expression.Name("Ver"), expression.Value(s.reqVersion))
-	} else {
-		updateC = updateC.Set(expression.Name("Ver"), expression.Value(""))
-	}
+	updateC = updateC.Set(expression.Name("Vmsg"), expression.Value(s.vmsg))
+	updateC = updateC.Set(expression.Name("Ver"), expression.Value(s.reqVersion))
 	//
 	// Data related to Part mode ie. when using a recipe part. Values are blank if no part available or in no-part mode.
 	//
-	if len(s.parts) > 0 {
-		updateC = updateC.Set(expression.Name("Parts"), expression.Value(s.parts))
-	} else {
-		updateC = updateC.Set(expression.Name("Parts"), expression.Value(""))
-	}
-	if len(s.part) > 0 {
-		updateC = updateC.Set(expression.Name("Part"), expression.Value(s.part))
-	} else {
-		updateC = updateC.Set(expression.Name("Part"), expression.Value(""))
-	}
-	if s.peol > 0 {
-		updateC = updateC.Set(expression.Name("PEOL"), expression.Value(s.peol))
-	} else {
-		updateC = updateC.Set(expression.Name("PEOL"), expression.Value(""))
-	}
-	//
-	// NextR (nextRecord) and PrevR (PrevRecord) sourced from Recipe R- data (nxt,prv) for mode Part ie. when listing recipe by part.
-	//  value is SortK
-	//
-	if s.next > 0 {
-		updateC = updateC.Set(expression.Name("Next"), expression.Value(s.next))
-	} else {
-		updateC = updateC.Set(expression.Name("Next"), expression.Value(""))
-	}
-	if s.prev > 0 {
-		updateC = updateC.Set(expression.Name("Prev"), expression.Value(s.prev))
-	} else {
-		updateC = updateC.Set(expression.Name("Prev"), expression.Value(""))
-	}
+	updateC = updateC.Set(expression.Name("Parts"), expression.Value(s.parts))
+	updateC = updateC.Set(expression.Name("Part"), expression.Value(s.part))
+	updateC = updateC.Set(expression.Name("PEOL"), expression.Value(s.peol))
+	updateC = updateC.Set(expression.Name("PId"), expression.Value(s.pid))
+	updateC = updateC.Set(expression.Name("Next"), expression.Value(s.next))
+	updateC = updateC.Set(expression.Name("Prev"), expression.Value(s.prev))
 	//
 	//
 	//

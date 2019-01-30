@@ -176,7 +176,6 @@ func (s *sessCtx) processRequest() error {
 	//
 	// initialise session data from last session where missing from current request data
 	//
-
 	if len(s.object) == 0 {
 		s.object = lastSess.Obj
 	}
@@ -199,6 +198,27 @@ func (s *sessCtx) processRequest() error {
 	fmt.Println("len(s.reqVersion) = ", len(s.reqVersion))
 	if len(s.reqVersion) == 0 {
 		s.reqVersion = lastSess.Ver
+	}
+	//
+	// Recipe Part related data
+	//
+	if len(s.part) == 0 {
+		s.part = lastSess.Part
+	}
+	if len(s.parts) == 0 {
+		s.parts = lastSess.Parts
+	}
+	if s.peol == 0 {
+		s.peol = lastSess.PEOL
+	}
+	if lastSess.PId > 0 {
+		s.pid = lastSess.PId
+	}
+	if lastSess.Prev != 0 {
+		s.prev = lastSess.Prev
+	}
+	if lastSess.Next != 0 {
+		s.next = lastSess.Next
 	}
 	//
 	// assign primary key - used for most dyamo accesses
@@ -367,7 +387,6 @@ func (s *sessCtx) processRequest() error {
 			if err != nil {
 				return err
 			}
-			fmt.Println("search result: ", s.reqBkId, s.reqRName, s.reqRId)
 			s.eol, s.reset = 0, true
 			err = s.updateSession()
 			if err != nil {
@@ -424,52 +443,6 @@ func (s *sessCtx) processRequest() error {
 		// object is same as last call
 		s.object = lastSess.Obj
 	}
-	// evaluate edge cases for the current session "operation"
-	//	execute updateSession only when necessary ie. when a real state change has occured.
-	//	This will prevent "repeat" from being recorded in session table.
-	//  Must assign a new value s.recId if not calling updateSession based on the request operation.
-	//  Next task will be select the record from the object table based on the s.recId.
-	// switch s.operation {
-	// case "goto":
-	// 	fmt.Printf("gotoRecId = %d  %d\n", s.gotoRecId, lastSess.EOL)
-	// 	if s.gotoRecId > lastSess.EOL { //EOL of current object (ingredients,tasks..) data
-	// 		// do a repeat operation ie. display current record and define new message
-	// 		s.dmsg = "request goes beyond last item in list. Please say again"
-	// 		s.vmsg = "request goes beyond last item in list. Please say again"
-	// 		s.recId = lastSess.RecId[objectMap[s.object]]
-	// 		fmt.Printf("gotoRecId = %d  %d %d\n", s.gotoRecId, lastSess.EOL, s.recId)
-	// 		s.abort = true
-	// 		return nil
-	// 	} else {
-	// 		// use updateAdd value to assign new recId during updateSession
-	// 		s.updateAdd = s.gotoRecId - lastSess.RecId[objectMap[s.object]]
-	// 	}
-	// case "repeat":
-	// 	// return - no need to updateSession as nothing has changed.  Select current recId.
-	// 	s.recId = lastSess.RecId[objectMap[s.object]]
-	// 	s.dmsg, s.vmsg, s.ddata = lastSess.Dmsg, lastSess.Vmsg, lastSess.DData
-	// 	s.abort = true
-	// 	return nil
-	// case "prev":
-	// 	if lastSess.RecId[objectMap[s.object]] == 1 {
-	// 		// s.dPreMsg = "You are at the beginning. "
-	// 		// s.vPreMsg = "You are at the beginning. "
-	// 		s.recId = lastSess.RecId[objectMap[s.object]]
-	// 		return nil
-	// 	}
-	// 	s.updateAdd = -1
-	// case "next":
-	// 	if lastSess.EOL > 0 && len(lastSess.RecId) > 0 {
-	// 		if lastSess.RecId[objectMap[s.object]] == s.eol {
-	// 			s.recId = lastSess.EOL
-	// 			// s.dPreMsg = "You have reached the end. "
-	// 			// s.vPreMsg = "You have reached the end. "
-	// 			s.abort = true
-	// 			return nil
-	// 		}
-	// 	}
-	// 	s.updateAdd = 1
-	// }
 	switch s.operation {
 	case "goto":
 		fmt.Printf("gotoRecId = %d  %d\n", s.gotoRecId, lastSess.EOL)
@@ -518,6 +491,7 @@ func (s *sessCtx) processRequest() error {
 		}
 	case "next":
 		if len(s.part) == 0 {
+			// no part mode ie. user has not elected to follow a part if one exists, so follows normal non-part mode.
 			if len(s.object) == 0 {
 				return fmt.Errorf("Error: no object defined when in processRequest - next")
 			}
@@ -531,18 +505,17 @@ func (s *sessCtx) processRequest() error {
 				}
 			}
 			s.recId = lastSess.RecId[objectMap[s.object]] + 1
-			fmt.Printf("recId  [%d]\n", s.recId)
 		} else {
 			s.recId = lastSess.Next
-			fmt.Printf("recId  [%d]\n", s.recId)
 			if s.recId == -1 {
+				// TODO: finished current part. Options go onto next or has recipe been completed - how to determine?
+				// CptPart[k]=true
+				// save ComPlTedPart to session to keep track completed Part for user.
 				s.abort = true
 				return nil
 			}
 		}
 	}
-	fmt.Printf("recId  %d\n", s.recId)
-	fmt.Println("here.x. 3")
 	// check if we have Dynamodb Recid Set defined, this will be useful in updateSession
 	if len(lastSess.RecId) == 0 {
 		s.recIdNotExists = true
@@ -835,8 +808,8 @@ func handler(request InputEvent) (RespEvent, error) {
 
 func main() {
 	//lambda.Start(handler)
-	p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
-	//p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&rcp=Rhubarb and strawberry crumble cake"}
+	//p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
+	p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&rcp=Rhubarb and strawberry crumble cake"}
 	//var i float64 = 1.0
 
 	pIngrdScale = 1.0

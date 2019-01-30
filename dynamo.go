@@ -554,7 +554,7 @@ func (s *sessCtx) recipeRSearch() (*RecipeT, error) {
 	}
 	s.dmsg = s.reqRName + " in " + s.reqBkName + " by " + s.authors
 	s.vmsg = "sFound " + s.reqRName + " in " + s.reqBkName + " by " + s.authors
-	s.vmsg += `What would you like to list?. Say "list container" or "List Ingredient" or "List Prep tasks" or "start Cooking" or "cancel"`
+	s.vmsg += `What would you like to list?. Say "list containers" or "List Ingredients" or "start Cooking" or "cancel"`
 	s.recipe = rec
 	s.parts = rec.Part
 	return rec, nil
@@ -765,7 +765,7 @@ func (s *sessCtx) recipeNameSearch() error {
 	// user "opens <book>". Alexa provides associated slot-type-id BkId value.
 	//
 	// used in recipe name
-	type dynoRecipeT struct {
+	type RecipeT_ struct {
 		PKey  string
 		SortK int
 		RName string
@@ -803,7 +803,7 @@ func (s *sessCtx) recipeNameSearch() error {
 	}
 	// define a slice of struct as Query expects to return 1 or more rows so the slice represents a row
 	// and we ue unmarshallistofmaps to handle a batch like select
-	recS := make([]dynoRecipeT, int(*result.Count))
+	recS := make([]RecipeT_, int(*result.Count))
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &recS)
 	if err != nil {
 		return fmt.Errorf("Error: %s [%s] %s", "in UnmarshalMaps in recipeNameSearch ", s.reqRName, err.Error())
@@ -814,7 +814,20 @@ func (s *sessCtx) recipeNameSearch() error {
 		s.reqBkId = recS[0].PKey[2:] // trim prefix "R-"
 		s.reqRId = strconv.Itoa(recS[0].SortK)
 		s.reqRName = recS[0].RName
+		//
+		// populate Session Context Part data for a recipe
+		//
+		_, err = s.recipeRSearch()
+		if err != nil {
+			return fmt.Errorf("Error: %s [%s] %s", "in recipeNameSearch of recipeRSearch ", s.reqRName, err.Error())
+		}
+		//
+		// populate session context Book related data
+		//
 		err = s.bookNameLookup()
+		if err != nil {
+			return fmt.Errorf("Error: %s [%s] %s", "in UnmarrecipeNameSearch of shalMaps bookNameLookup ", s.reqRName, err.Error())
+		}
 		//
 		s.dmsg = s.reqRName + " in " + s.reqBkName + " by " + s.authors
 		s.vmsg = "yFound " + s.reqRName + " in " + s.reqBkName + " by " + s.authors
