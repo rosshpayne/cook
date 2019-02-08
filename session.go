@@ -187,7 +187,7 @@ func (s sessCtx) updateSession() error {
 		updateC = updateC.Set(expression.Name("DBat"), expression.Value(s.dbatchNum))
 	}
 	if len(s.mChoice) > 0 {
-		updateC = updateC.Set(expression.Name("RnLst"), expression.Value(s.mChoice)) //recipename
+		updateC = updateC.Set(expression.Name("mChoice"), expression.Value(s.mChoice)) //recipename
 	}
 	if len(s.dmsg) > 0 {
 		updateC = updateC.Set(expression.Name("Dmsg"), expression.Value(s.dmsg))

@@ -200,6 +200,12 @@ func (s *sessCtx) processRequest() error {
 		s.reqVersion = lastSess.Ver
 	}
 	//
+	// multiple choice - displayed and selected either verbally or by touch
+	//
+	if len(lastSess.mChoice) > 0 {
+		s.mChoice = lastSess.mChoice
+	}
+	//
 	// Recipe Part related data
 	//
 	if len(s.part) == 0 {
@@ -253,6 +259,7 @@ func (s *sessCtx) processRequest() error {
 		//
 		if s.request == "search" {
 			// we have fully populated session context from previous session e.g. BkName etc, now lets see what recipes we find
+			// populates sessCtx.mChoice if search results in a list.
 			err := s.ingredientSearch()
 			if err != nil {
 				panic(err)
@@ -526,7 +533,7 @@ func (s *sessCtx) processRequest() error {
 	// Act of updating the table will generate a new record id (ADD in updateItem) which we assign to the session context field recId.
 	// We will use sessctx.recId to pick the next record for the response.
 	//
-	// s.recId, err = s.updateSession()
+	// s.recId, err = s.updateSession() // *** now performed in getRecById() - after record is retrieved ***
 	// if err != nil {
 	// 	return err
 	// }
@@ -608,11 +615,18 @@ func (r *InputEvent) init() {
 	r.PathItem = strings.Split(r.Path, "/")
 }
 
+type Item struct {
+	Title     string
+	SubTitle1 string
+	SubTitle2 string
+	Text      string
+}
 type RespEvent struct {
 	Position string `json:"Position"` // recId|EOL|PEOL|PName
 	Text     string `json:"Text"`
 	Verbal   string `json:"Verbal"`
 	Error    string `json:"Error"`
+	List     []Item `json:"List"` // id|Title1|subTitle1|SubTitle2|Text
 }
 
 //
@@ -793,6 +807,14 @@ func handler(request InputEvent) (RespEvent, error) {
 		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata, Error: err.Error()}, nil
 	}
 	if sessctx.curreq == bookrecipe_ || sessctx.abort {
+
+		if len(sessctx.mChoice) > 0 {
+			mchoice := make([]string, len(sessctx.mChoice))
+			for i, v := range sessctx.mChoice {
+				mchoice = append(mchoice, Item{v.IngrdCat, v.RName, v.BkName, v.Quantity})
+			}
+			return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata, List: mchoice}, nil
+		}
 		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata}, nil
 	}
 	//

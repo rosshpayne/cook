@@ -2,8 +2,6 @@
 const Alexa = require('ask-sdk-core');
 var AWS = require('aws-sdk');
 var main = require('./main.js');
-//const data = require('./data.json')
-const data =  { "listdata": ["abc","def","gHij","klm","nopq","rst","uvw","xyz"] };
 
 
 //var   recipe = { Response :[] };
@@ -265,7 +263,7 @@ const SearchIntentHandler = {
     const querystring = require('querystring');
     var speechText;
     var displayText;
-    var recipe ;
+    var resp ;
     //TODO is querystring necessary here as I believe AWS may escape it.
     const srch='&srch='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.ingrdcat.resolutions.resolutionsPerAuthority[0].values[0].value.name);
     const sid="sid="+handlerInput.requestEnvelope.session.sessionId;
@@ -281,13 +279,16 @@ const SearchIntentHandler = {
     });
     
     return promise.then((body) => {
-          recipe = JSON.parse(body);
-          speechText=recipe.Text ;
-          displayText = recipe.Verbal;
+          resp = JSON.parse(body);
+          const data = {
+            text: resp.Text,
+            verbal: resp.Verbal,
+            mchoice: resp.List
+          }
         return  handlerInput.responseBuilder
-                          .speak(speechText)
-                          .reprompt(speechText)
-                          .withSimpleCard('Instructions', displayText)
+                          .speak(resp.Text)
+                          .reprompt(resp.Text)
+                          .addDirective(main(data))
                           .getResponse();
       }).catch(function (err) { console.log(err, err.stack);  } );
   },
@@ -342,8 +343,40 @@ const BookIntentHandler = {
     invokeParams.Payload = '{ "Path" : "book" ,"Param" : "'+sid+bkid+'" }';
     //const data = '["Ross","Payne","gHij","klm","nopq","rst","uvw","xyz"] '
     //const data = "["+'"Ross",'+'"Payne"'+"]"
+    const L1 = {
+      Title: "Title1",
+      SubTitle1: "SubTitle1..",
+      SubTitle2: "SubTitle2...",
+      Text: "more text here .."
+    }
+    const L2 = {
+      Title: "Title2",
+      SubTitle1: "SubTitle12..",
+      SubTitle2: "SubTitle22...",
+      Text: "more text here 2  .."
+    }
+    const L3 = {
+      Title: "Title3",
+      SubTitle1: "SubTitle13..",
+      SubTitle2: "SubTitle23...",
+      Text: "more text here 3  .."
+    }
+    const L4 = {
+      Title: "Title4",
+      SubTitle1: "SubTitle14..",
+      SubTitle2: "SubTitle24...",
+      Text: "more text here 4  .."
+    }
+    const L5 = {
+      Title: "Title5",
+      SubTitle1: "SubTitle15..",
+      SubTitle2: "SubTitle25...",
+      Text: "more text here 5  .."
+    }
     const data = {
-      item : ["abcd","defsdj"]
+      text: "abcd",
+      verbal: "defsdj",
+      list: [L1, L2, L3, L4, L5]
     }
     
     promise = new Promise((resolve, reject) => {
@@ -361,8 +394,6 @@ const BookIntentHandler = {
           displayText = recipe.Verbal;
         return  handlerInput.responseBuilder
                           .speak(speechText)
-                          .reprompt(speechText)
-                          .withSimpleCard('Instructions', displayText)
                           .addDirective(main(data))
                           .getResponse();
       }).catch(function (err) { console.log(err, err.stack);  } );
@@ -565,6 +596,27 @@ const ErrorHandler = {
   },
 };
 
+const EventHandler = {
+  canHandle: handlerInput =>
+    handlerInput.requestEnvelope.request.type === 'Alexa.Presentation.APL.UserEvent',
+  
+  handle: handlerInput => {
+    const args = handlerInput.requestEnvelope.request.arguments;
+    const event = args[0];
+    const ordinal = args[1];
+    const data = args[2];
+
+    switch (event) {
+    case 'ItemSelected':
+        console.log(data)
+        return handlerInput.responseBuilder
+      .speak('Where would you like to explore ' + ordinal + ' ' + data)
+      .reprompt('Where would you like to explore?')
+      .getResponse();
+    } 
+    },
+};
+
 const skillBuilder = Alexa.SkillBuilders.custom();
 
 exports.handler = skillBuilder
@@ -585,7 +637,8 @@ exports.handler = skillBuilder
     ContainerIntentHandler,
     HelpIntentHandler,
     CancelAndStopIntentHandler,
-    SessionEndedRequestHandler
+    SessionEndedRequestHandler,
+    EventHandler
   )
   .addErrorHandlers(ErrorHandler)
   .lambda();
