@@ -1,7 +1,6 @@
 
 const Alexa = require('ask-sdk-core');
 var AWS = require('aws-sdk');
-var main = require('./main.js');
 
 
 //var   recipe = { Response :[] };
@@ -37,10 +36,7 @@ const SelectIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'SelectIntent';
   },
   handle(handlerInput) {
-    const querystring = require('querystring');
-    var speechText;
-    var displayText;
-    var recipe ;
+    const select = require('APL/select.js');
     const sid='sid='+handlerInput.requestEnvelope.session.sessionId   ; 
     const selid='&sId='+handlerInput.requestEnvelope.request.intent.slots.integerValue.resolutions.resolutionsPerAuthority[0].values[0].value.id;
     invokeParams.Payload = '{ "Path" : "select" ,"Param" : "'+sid+selid+'" }';
@@ -55,13 +51,12 @@ const SelectIntentHandler = {
     });
     
     return promise.then((body) => {
-          recipe = JSON.parse(body);
-          speechText=recipe.Text ;
-          displayText = recipe.Verbal;
+        var  resp = JSON.parse(body);
+        console.log(resp)
         return  handlerInput.responseBuilder
-                          .speak(speechText)
-                          .reprompt(speechText)
-                          .withSimpleCard('Instructions', displayText)
+                          .speak(resp.Verbal)
+                          .reprompt(resp.Verbal)
+                          .addDirective(select(resp.Header,resp.List))
                           .getResponse();
       }).catch(function (err) { console.log(err, err.stack);  } );
   
@@ -113,7 +108,6 @@ const NextIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'NextIntent';
   },
   handle(handlerInput) {
-    const querystring = require('querystring');
     var speechText;
     var displayText;
     var recipe ;
@@ -260,10 +254,8 @@ const SearchIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'SearchIntent';
   },
   handle(handlerInput) {
+    const search = require('APL/search.js');
     const querystring = require('querystring');
-    var speechText;
-    var displayText;
-    var resp ;
     //TODO is querystring necessary here as I believe AWS may escape it.
     const srch='&srch='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.ingrdcat.resolutions.resolutionsPerAuthority[0].values[0].value.name);
     const sid="sid="+handlerInput.requestEnvelope.session.sessionId;
@@ -279,16 +271,11 @@ const SearchIntentHandler = {
     });
     
     return promise.then((body) => {
-          resp = JSON.parse(body);
-          const data = {
-            text: resp.Text,
-            verbal: resp.Verbal,
-            mchoice: resp.List
-          }
+        var resp = JSON.parse(body);
         return  handlerInput.responseBuilder
-                          .speak(resp.Text)
+                          .speak(resp.Verbal)
                           .reprompt(resp.Text)
-                          .addDirective(main(data))
+                          .addDirective(search(resp.Header,resp.List))
                           .getResponse();
       }).catch(function (err) { console.log(err, err.stack);  } );
   },
@@ -335,66 +322,16 @@ const BookIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'BookIntent';
   },
   handle(handlerInput) {
-    var speechText;
-    var displayText;
-    var recipe ;
     const sid="sid="+handlerInput.requestEnvelope.session.sessionId;
     const bkid='&bkid='+handlerInput.requestEnvelope.request.intent.slots.BookName.resolutions.resolutionsPerAuthority[0].values[0].value.id;
     invokeParams.Payload = '{ "Path" : "book" ,"Param" : "'+sid+bkid+'" }';
     //const data = '["Ross","Payne","gHij","klm","nopq","rst","uvw","xyz"] '
     //const data = "["+'"Ross",'+'"Payne"'+"]"
-    const L1 = {
-      Title: "Title1",
-      SubTitle1: "SubTitle1..",
-      SubTitle2: "SubTitle2...",
-      Text: "more text here .."
-    }
-    const L2 = {
-      Title: "Title2",
-      SubTitle1: "SubTitle12..",
-      SubTitle2: "SubTitle22...",
-      Text: "more text here 2  .."
-    }
-    const L3 = {
-      Title: "Title3",
-      SubTitle1: "SubTitle13..",
-      SubTitle2: "SubTitle23...",
-      Text: "more text here 3  .."
-    }
-    const L4 = {
-      Title: "Title4",
-      SubTitle1: "SubTitle14..",
-      SubTitle2: "SubTitle24...",
-      Text: "more text here 4  .."
-    }
-    const L5 = {
-      Title: "Title5",
-      SubTitle1: "SubTitle15..",
-      SubTitle2: "SubTitle25...",
-      Text: "more text here 5  .."
-    }
-    const data = {
-      text: "abcd",
-      verbal: "defsdj",
-      list: [L1, L2, L3, L4, L5]
-    }
-    
-    promise = new Promise((resolve, reject) => {
-      lambda.invoke(invokeParams, function(err, data) {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(data.Payload);  }
-        });
-    });
     
     return promise.then((body) => {
-          recipe = JSON.parse(body);
-          speechText=recipe.Text ;
-          displayText = recipe.Verbal;
+          var resp = JSON.parse(body);
         return  handlerInput.responseBuilder
-                          .speak(speechText)
-                          .addDirective(main(data))
+                          .speak(resp.Verbal)
                           .getResponse();
       }).catch(function (err) { console.log(err, err.stack);  } );
   },
@@ -406,7 +343,7 @@ const CloseBookIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'CloseBookIntent';
   },
   handle(handlerInput) {
-    var speechText;
+    var speechText; 
     var displayText;
     var recipe ;
     var sid="sid="+handlerInput.requestEnvelope.session.sessionId;
@@ -446,7 +383,7 @@ const YesNoIntentHandler = {
     var sid="sid="+handlerInput.requestEnvelope.session.sessionId;
     var yesno='&yn='+handlerInput.requestEnvelope.request.intent.slots.YesNo.resolutions.resolutionsPerAuthority[0].values[0].value.id;
     invokeParams.Payload = '{ "Path" : "yesno" ,"Param" : "'+sid+yesno+'" }';
-
+ 
     promise = new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
         if (err) {
@@ -610,11 +547,11 @@ const EventHandler = {
     case 'ItemSelected':
         console.log(data)
         return handlerInput.responseBuilder
-      .speak('Where would you like to explore ' + ordinal + ' ' + data)
-      .reprompt('Where would you like to explore?')
-      .getResponse();
+                           .speak('Where would you like to explore ' + ordinal + ' ' + data)
+                           .reprompt('Where would you like to explore?')
+                          .getResponse();
     } 
-    },
+  },
 };
 
 const skillBuilder = Alexa.SkillBuilders.custom();

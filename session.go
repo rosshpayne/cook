@@ -32,9 +32,15 @@ type sessRecipeT struct {
 	Dmsg    string
 	Vmsg    string
 	DData   string
-	//SrchLst []mRecipeT
-	RnLst  []mRecipeT
-	Select bool
+	//
+	// search
+	//
+	Search  string
+	MChoice []mRecipeT
+	//
+	// select
+	//
+	CtxSel selectCtxT // select a recipe or other which is (ingred, task, container, utensil)
 	//
 	// Recipe Part related data
 	//
@@ -186,8 +192,12 @@ func (s sessCtx) updateSession() error {
 	if len(s.dbatchNum) > 0 {
 		updateC = updateC.Set(expression.Name("DBat"), expression.Value(s.dbatchNum))
 	}
+	if len(s.reqIngrdCat) > 0 {
+		updateC = updateC.Set(expression.Name("Search"), expression.Value(s.reqIngrdCat)) //recipename
+	}
+	//TODO: when should MChoice be cleared??. Maybe one interaction after select.
 	if len(s.mChoice) > 0 {
-		updateC = updateC.Set(expression.Name("mChoice"), expression.Value(s.mChoice)) //recipename
+		updateC = updateC.Set(expression.Name("MChoice"), expression.Value(s.mChoice))
 	}
 	if len(s.dmsg) > 0 {
 		updateC = updateC.Set(expression.Name("Dmsg"), expression.Value(s.dmsg))
@@ -201,6 +211,8 @@ func (s sessCtx) updateSession() error {
 	} else {
 		updateC = updateC.Set(expression.Name("closeB"), expression.Value(false))
 	}
+	updateC = updateC.Set(expression.Name("CtxSel"), expression.Value(s.Select))
+	//
 	updateC = updateC.Set(expression.Name("Vmsg"), expression.Value(s.vmsg))
 	updateC = updateC.Set(expression.Name("Ver"), expression.Value(s.reqVersion))
 	//
@@ -215,7 +227,7 @@ func (s sessCtx) updateSession() error {
 	//
 	//
 	//
-	updateC = updateC.Set(expression.Name("Select"), expression.Value(s.makeSelect)) // make a selection
+	//updateC = updateC.Set(expression.Name("Select"), expression.Value(s.makeSelect)) // make a selection
 	updateC = updateC.Set(expression.Name("ATime"), expression.Value(time.Now().String()))
 	expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
 

@@ -165,47 +165,6 @@ func (s *sessCtx) getContainerRecById() (alexaDialog, error) {
 	return ctrec, nil
 }
 
-func loadNonIngredientsMap(svc *dynamodb.DynamoDB) (map[string]bool, error) {
-	type recT struct {
-		SortK string
-	}
-	//kcond := expression.KeyBeginsWith(expression.Key("PKey"), "NI-")
-	kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value("NI"))
-	expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
-	if err != nil {
-		panic(err)
-	}
-	input := &dynamodb.QueryInput{
-		KeyConditionExpression:    expr.KeyCondition(),
-		FilterExpression:          expr.Filter(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-	}
-	input = input.SetTableName("Ingredient").SetConsistentRead(false)
-	//
-	result, err := svc.Query(input)
-	if err != nil {
-		return nil, fmt.Errorf("Error: %s  %s", "in Query in loadNonIngredients  ", err.Error())
-	}
-	if int(*result.Count) == 0 {
-		fmt.Println("No Data Returned in Query in loadNonIngredients  ")
-	}
-	ingdS := make([]recT, int(*result.Count))
-	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &ingdS)
-	if err != nil {
-		return nil, fmt.Errorf("Error: %s", "in UnmarshalListMaps of loadNonIngredients  ", err.Error())
-	}
-	notIngrd := make(map[string]bool)
-	for _, v := range ingdS {
-		ingrd := v.SortK
-		if _, ok := notIngrd[ingrd]; !ok {
-			notIngrd[ingrd] = true
-		}
-	}
-	return notIngrd, nil
-
-}
-
 func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[string]*Activity) error {
 
 	var indexRecS []indexRecipeT
@@ -313,8 +272,6 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 			AddEntry(e[1] + " " + e[2])
 		}
 	}
-	//TODO: determine if running as Lambda or standalone executable
-	// Before saving index to table generate slot entries
 	s.indexRecs = indexRecS
 	err := s.generateSlotEntries()
 	if err != nil {
@@ -579,7 +536,7 @@ func (s *sessCtx) ingredientSearch() error {
 		err      error
 	)
 	if len(s.reqBkId) > 0 {
-		// look for recipes in current book only - reqIngrdCat in lower case before searching
+		// look for recipes in current book only
 		kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value(s.reqIngrdCat))
 		kcond = kcond.And(expression.KeyBeginsWith(expression.Key("SortK"), s.reqBkId+"-"))
 		expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
@@ -648,8 +605,8 @@ func (s *sessCtx) ingredientSearch() error {
 			sortk := strings.Split(recS[0].SortK, "-")
 			s.reqRId, s.reqRName, s.reqBkId, s.reqBkName = sortk[1], recS[0].RName, sortk[0], recS[0].BkName
 		default:
-			s.makeSelect = true
-			s.vmsg = fmt.Sprintf(`No %s recipes found in [%s] but where found in severalother  books. Please see list and select one by saying "select" followed by its number`, s.reqIngrdCat, s.reqBkName)
+			//s.makeSelect = true
+			s.vmsg = fmt.Sprintf(`No %s recipes found in [%s] but where found in severalother books. Please see list and select one by saying "select" followed by its number`, s.reqIngrdCat, s.reqBkName)
 			s.dmsg = fmt.Sprintf(`No %s recipes found in [%s], but were found in the following. Please select one. `, s.reqIngrdCat)
 			for i, v := range recS {
 				sortk := strings.Split(v.SortK, "-")
@@ -672,7 +629,7 @@ func (s *sessCtx) ingredientSearch() error {
 		sortk := strings.Split(recS[0].SortK, "-")
 		s.reqRId, s.reqRName, s.reqBkId, s.reqBkName = sortk[1], recS[0].RName, sortk[0], recS[0].BkName
 	default:
-		s.makeSelect = true
+		//s.makeSelect = true
 		s.vmsg = fmt.Sprintf("Multiple %s recipes found. See display", s.reqIngrdCat)
 		s.dmsg = fmt.Sprintf(`%s recipes. Please select one by saying "select [number-in-list]"\n`, s.reqIngrdCat)
 		for i, v := range recS {
@@ -834,7 +791,7 @@ func (s *sessCtx) recipeNameSearch() error {
 		s.vmsg += `What would you like to list?. Say "list container" or "List Ingredient" or "List Prep tasks" or "start Cooking" or "cancel"`
 	default:
 		// more than one recipe-book found
-		s.makeSelect = true
+		//s.makeSelect = true
 		s.dmsg = `Recipe appears in more than one book. Please make a selection from the list below. Say "select number\n" `
 		s.vmsg = `the recipe appears in more than one book. I will recite the first 6. Please say "next" to hear each one and "select" to choose or "cancel" to exit\n" `
 		for i := 0; i < len(recS); i++ {
@@ -900,9 +857,8 @@ func (s *sessCtx) bookNameLookup() error {
 		switch i {
 		case 0:
 			authors = v[strings.LastIndex(v, " ")+1:]
-		case 1:
+		default:
 			authors += ", " + v[strings.LastIndex(v, " ")+1:]
-			break
 		}
 	}
 	s.authors = authors

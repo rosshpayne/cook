@@ -1,6 +1,6 @@
 
 
-module.exports = (data) => { return {
+module.exports = (header, data) => { return {
     type: 'Alexa.Presentation.APL.RenderDocument',
     token: 'splash-screen',
     document: {
@@ -38,14 +38,14 @@ module.exports = (data) => { return {
           items: [
               {
               type: "AlexaHeader",
-              headerTitle: "Recipe List",
+              headerTitle: header,
               headerBackgroundColor: "red",
-              headerSubtitle: "Header Subtitle",
+              headerSubtitle: "Header Subtitle"
               },
               {
               type: "Sequence",
-              data: "${payload.listdata.properties.data.list}",
               scrollDirection: "vertical",
+              data: "${payload.listdata.properties.data}",
               numbered: true,
               grow: 1,
               shrink: 1,
@@ -82,40 +82,6 @@ module.exports = (data) => { return {
                                           shrink: 1,
                                           spacing: 4,
                                           fontSize: "30dp"
-                                          },
-                                          {
-                                          type: "Container",
-                                          direction: "row",
-                                          spacing: 0,
-                                          width: "100vw",
-                                          alignItems: "left",
-                                          items:  [ {
-                                                          type: "Text",
-                                                          text: "${data.SubTitle1}",
-                                                          grow: 0,
-                                                          shrink: 0,
-                                                          width: "50vw",
-                                                          spacing: 4,
-                                                          fontSize: "18dp"
-                                                          },
-                                                          {
-                                                          type: "Text",
-                                                          text: "${data.SubTitle2}",
-                                                          width: "50vw",
-                                                          grow: 0,
-                                                          shrink: 0,
-                                                          spacing: 4,
-                                                          fontSize: "18dp"
-                                                          }
-                                                ]
-                                          },
-                                          {
-                                          type: "Text",
-                                          text: "${data.Text}",
-                                          grow: 0,
-                                          shrink: 1,
-                                          spacing: 4,
-                                          fontSize: "22dp"
                                           }
                                           ]   
                         }
