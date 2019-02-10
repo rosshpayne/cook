@@ -37,6 +37,7 @@ const SelectIntentHandler = {
   },
   handle(handlerInput) {
     const select = require('APL/select.js');
+    const ingredient = require('APL/ingredients.js');
     const sid='sid='+handlerInput.requestEnvelope.session.sessionId   ; 
     const selid='&sId='+handlerInput.requestEnvelope.request.intent.slots.integerValue.resolutions.resolutionsPerAuthority[0].values[0].value.id;
     invokeParams.Payload = '{ "Path" : "select" ,"Param" : "'+sid+selid+'" }';
@@ -52,12 +53,20 @@ const SelectIntentHandler = {
     
     return promise.then((body) => {
         var  resp = JSON.parse(body);
-        console.log(resp)
-        return  handlerInput.responseBuilder
-                          .speak(resp.Verbal)
-                          .reprompt(resp.Verbal)
-                          .addDirective(select(resp.Header,resp.List))
-                          .getResponse();
+        console.log(resp);
+        if (resp.Type === "Ingredient") {
+          return  handlerInput.responseBuilder
+                            .speak(resp.Verbal)
+                            .reprompt(resp.Verbal)
+                            .addDirective(ingredient(resp.Header,resp.SubHdr, resp.List))
+                            .getResponse();
+        } else {
+          return  handlerInput.responseBuilder
+                            .speak(resp.Verbal)
+                            .reprompt(resp.Verbal)
+                            .addDirective(select(resp.Header,resp.SubHdr, resp.List))
+                            .getResponse();     
+        }
       }).catch(function (err) { console.log(err, err.stack);  } );
   
   },

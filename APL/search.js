@@ -40,7 +40,7 @@ module.exports = (header, data) => { return {
               type: "AlexaHeader",
               headerTitle: header,
               headerBackgroundColor: "red",
-              headerSubtitle: "Header Subtitle",
+              headerSubtitle: "Header Subtitle"
               },
               {
               type: "Sequence",

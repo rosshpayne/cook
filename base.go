@@ -15,7 +15,7 @@ import (
 	_ "github.com/aws/aws-lambda-go/lambdacontext"
 )
 
-func (s *sessCtx) loadIngredients() (Activities, error) {
+func (s *sessCtx) loadActivities() (Activities, error) {
 	//
 	// Table:  Activity
 	//
@@ -52,12 +52,6 @@ func (s *sessCtx) loadIngredients() (Activities, error) {
 			ActivityS[i].prev = &ActivityS[i-1]
 		}
 	}
-	// generate a normalized quantity for each ingredient
-	//
-	//
-	// for _, v := range ActivityS {
-	// 	fmt.Printf("Activity [%d] %#v\n", v.AId, v.Measure)
-	// }
 
 	return ActivityS, nil
 }

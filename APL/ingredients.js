@@ -52,41 +52,20 @@ module.exports = (header, subhdr, data) => { return {
               width: "100vw",
               height: "100vh",
               item: {
-                  type: "TouchWrapper",
-                  onPress: {
-                     type: "SendEvent",
-                     arguments : [
-                       'ItemSelected',
-                       '${ordinal}' ,
-                       '${data.Title}' 
-                     ]
-                  },
-                  item: {
                         type: "Container",
                         direction: "column",
-                        style: "textStylePressable",
                         spacing: 0,
-                        height: 90,
+                        height: 40,
                         alignItems: "left",
                         item: {
-                                  type: "Container",
-                                  direction: "column",
-                                  style: "textStylePressable",
-                                  spacing: 0,
-                                  alignItems: "left",
-                                  items: [
-                                          {
                                           type: "Text",
-                                          text: "${data.Id}. ${data.Title}",
+                                          text: "  ${data.Title}",
                                           grow: 0,
                                           shrink: 1,
                                           spacing: 4,
                                           fontSize: "30dp"
-                                          }
-                                          ]   
                         }
                   }
-                }
               },
               {
                 type: "AlexaFooter",

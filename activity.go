@@ -333,7 +333,7 @@ func (m *MeasureCT) String() string {
 	return b.String()
 }
 
-var pIngrdScale float64 = 0.75
+var pIngrdScale float64 = 1.00
 
 func (m *MeasureT) String() string {
 
@@ -815,8 +815,6 @@ func (as Activities) String(r *RecipeT) string {
 		}
 	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s\n\n", r.RName)
-	fmt.Fprintf(&b, "SERVES  %s\n\n", r.Serves)
 	if len(r.Part) == 0 {
 		//legacy code - Recipe not divided into parts.
 		for _, a := range partM["nopart_"] {

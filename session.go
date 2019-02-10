@@ -199,6 +199,12 @@ func (s sessCtx) updateSession() error {
 	if len(s.mChoice) > 0 {
 		updateC = updateC.Set(expression.Name("MChoice"), expression.Value(s.mChoice))
 	}
+	updateC = updateC.Set(expression.Name("CtxSel"), expression.Value(s.selCtx))
+	if s.selClear {
+		updateC = updateC.Set(expression.Name("MChoice"), expression.Value(nil))
+		updateC = updateC.Set(expression.Name("CtxSel"), expression.Value(""))
+	}
+	//
 	if len(s.dmsg) > 0 {
 		updateC = updateC.Set(expression.Name("Dmsg"), expression.Value(s.dmsg))
 		updateC = updateC.Set(expression.Name("DData"), expression.Value(s.ddata))
@@ -211,7 +217,7 @@ func (s sessCtx) updateSession() error {
 	} else {
 		updateC = updateC.Set(expression.Name("closeB"), expression.Value(false))
 	}
-	updateC = updateC.Set(expression.Name("CtxSel"), expression.Value(s.Select))
+
 	//
 	updateC = updateC.Set(expression.Name("Vmsg"), expression.Value(s.vmsg))
 	updateC = updateC.Set(expression.Name("Ver"), expression.Value(s.reqVersion))
