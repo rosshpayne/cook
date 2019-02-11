@@ -183,6 +183,15 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 	var ptS prepTaskS // this type satisfies sort interface.
 	processed := make(map[atvTask]bool, prepctl.cnt)
 
+	firstInstructon := func(idx string) int {
+		for n := 0; n < len(ptS); n++ {
+			if ptS[n].Part == idx {
+				return ptS[n].SortK
+			}
+		}
+		return -1
+	}
+
 	nextPartInstructon := func(i int) int {
 		for n := i + 1; n < len(ptS); n++ {
 			if ptS[n].Part == ptS[i].Part {
@@ -275,6 +284,13 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 	for _, v := range ptS {
 		pcnt[v.Part] += 1
 	}
+	// are parts used
+	if len(pcnt) == 1 {
+		for _, v := range ptS {
+			v.EOL = eol
+		}
+		return ptS
+	}
 	//
 	//	order of instruction in part or no-part recipe, is driven by recipe.SortK which inturn is defined by activity.AId
 	//
@@ -298,28 +314,16 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 			partM["nopart_"] = false
 		}
 	}
-	type prepTaskRec struct {
-		PKey   string  `json:"PKey"`  // R-[BkId]
-		SortK  int     `json:"SortK"` // monotonically increasing - task at which user is upto in recipe
-		AId    int     `json:"AId"`   // Activity Id
-		Type   byte    `json:"Type"`
-		time   float32 // all Linked preps sum time components into this field
-		Text   string  `json:"Text"` // all Linked preps combined text into this field
-		Verbal string  `json:"Verbal"`
-		EOL    int     `json:"EOL"` // End-Of-List. Max Id assigned to each record
-		// Recipe Part metadata
-		PEOL int    `json:"PEOL"` // End-of-List-for-part
-		PId  int    `json:"PId"`  // instruction id within a part
-		Part string `json:"PT"`   // part index name
-		Next int    `json:"nxt"`  // next SortK (recId)
-		Prev int    `json:"prv"`  // previous SortK (recId) when in part mode as opposed to full recipe mode
-		// not persisted
-		taskp *PerformT
+	//
+	// assign recipe.Start of first SortK value for a part.
+	//
+	Parts := s.parts
+	for i := 0; i < len(Parts); i++ {
+		Parts[i].Start = firstInstructon(Parts[i].Index)
 	}
 	//
 	// assign PId, record (instruction) id within a part. For no part this is the SortK value.
 	//
-	Parts := s.parts // Part slice within RecipeT
 	for k, _ := range partM {
 		var (
 			start int
@@ -330,7 +334,7 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 				start = r.Start
 			}
 		}
-		peol = ptS[start].PEOL
+		peol = ptS[start-1].PEOL
 		for i, p := 1, ptS[start-1]; i <= peol; i++ {
 			p.PId = i
 			if p.Next > 0 {
@@ -344,7 +348,6 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 	if len(partM) > 1 {
 		// only "nopart_", so no parts really
 		for k, _ := range partM {
-			fmt.Printf("loop: %s \n", k)
 			for _, v := range ptS {
 				// scan thru instructions looking for first instruct for part
 				if len(v.Part) == 0 {
@@ -367,7 +370,7 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 					// search recipe data for part entry and update Start
 					for _, rp := range r.Part {
 						if rp.Index == k {
-							rp.Start = v.SortK
+							//rp.Start = v.SortK
 							partM[k] = true
 							break
 						}

@@ -36,7 +36,8 @@
                 "PKey" : { "S": "R-21" },
                 "SortK" : { "N": "7"},
                 "RName" : { "S": "Dover Sole with Capers and Marjoram"},
-                "Index" : { "SS" : ["fish", "dover sole", "marjoram"] }
+                "Index" : { "SS" : ["fish", "dover sole", "marjoram"] },
+                "Srv" :  { "S": "4"}
             }
         }
         },
@@ -142,10 +143,9 @@
             "Item": { 
                 "PKey" : { "S": "A-21-7" },
                 "SortK" : { "N": "40"},
-                "label" : { "S": "Sole"},
+                "label" : { "S": "Fish"},
                 "ingrd" : { "S" : "Sole" },
                 "quali" : { "S" : "whole Dover" },
-                "index" : { "SS" : ["sole", "dover sole"] },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
                                       "num" : { "S" : "4" } ,

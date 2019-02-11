@@ -168,14 +168,14 @@ func (s *sessCtx) loadBaseRecipe() error {
 				}
 			}
 		}
-		// if len(v.Label) > 0 {
-		// 	label := strings.ToLower(v.Label)
-		// 	LabelM[label] = &ActivityS[i]
-		// 	if label[len(label)-1] == 's' {
-		// 		// make singular entry as well
-		// 		LabelM[label[:len(label)-1]] = &ActivityS[i]
-		// 	}
-		// }
+		if len(v.Label) > 0 {
+			label := strings.ToLower(v.Label)
+			LabelM[label] = v
+			if label[len(label)-1] == 's' {
+				// make singular entry as well
+				LabelM[label[:len(label)-1]] = v
+			}
+		}
 	}
 	//
 	// aggregate activities to recipe partitions

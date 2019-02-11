@@ -24,7 +24,7 @@ type sessRecipeT struct {
 	SwpBkNm string
 	SwpBkId string
 	RId     string // Recipe Id
-	Oper    string // Operation (next, prev, repeat, modify)
+	Request string // Request e.g.next, prev, repeat, modify)
 	Qid     int    // Question id
 	RecId   []int  // current record in object list. (SortK in Recipe table)
 	Ver     string
@@ -40,7 +40,7 @@ type sessRecipeT struct {
 	//
 	// select
 	//
-	CtxSel selectCtxT // select a recipe or other which is (ingred, task, container, utensil)
+	SelCtx selectCtxT // select a recipe or other which is (ingred, task, container, utensil)
 	//
 	// Recipe Part related data
 	//
@@ -50,6 +50,11 @@ type sessRecipeT struct {
 	Prev  int      `json:"Prev"`
 	PEOL  int      `json:"PEOL"`
 	PId   int      `json:"PId"`
+	//
+	// Display header for APL - NB: this is probably not required as display will persist last assigned value.
+	//
+	//dispHdr  string `json:"DHdr"`  // Display header
+	//dispSHdr string `json:"DsHdr"` // Display subheader
 }
 
 func (s *sessCtx) GetSession() (lastSess *sessRecipeT, err error) {
@@ -94,7 +99,6 @@ func (s *sessCtx) GetSession() (lastSess *sessRecipeT, err error) {
 		// if s.curreq != bookrecipe_ {
 		// 	s.dmsg = `You must specify a book and recipe from that book. To get started, please say "open", followed by the name of the book`
 		// 	s.vmsg = `You must specify a book and recipe from that book. To get started, please say "open", followed by the name of the book`
-		// 	s.abort = true
 		// 	return nil, nil
 		//
 		return &sessRecipeT{}, nil
@@ -115,7 +119,7 @@ func (s sessCtx) updateSession() error {
 	}
 	var updateC expression.UpdateBuilder
 	//book-recipe requests don't need a RecId set.
-	if s.curreq != bookrecipe_ || s.reset { // reset on change of book or recipe
+	if s.curReqType != initialiseRequest || s.reset { // reset on change of book or recipe
 		// for the first object request in a session the RecId set will not exist - we need to SET. All other times we will ADD.
 		//  we determine the first time using a len(recID) > 0 on the session query in the calling func.
 		if s.reset || s.recIdNotExists {
@@ -178,8 +182,8 @@ func (s sessCtx) updateSession() error {
 		updateC = updateC.Set(expression.Name("SwpBkNm"), expression.Value(s.swapBkName))
 		updateC = updateC.Set(expression.Name("SwpBkId"), expression.Value(s.swapBkId))
 	}
-	if len(s.operation) > 0 {
-		updateC = updateC.Set(expression.Name("Oper"), expression.Value(s.operation)) // next,prev,repeat,modify,goto
+	if len(s.request) > 0 {
+		updateC = updateC.Set(expression.Name("Request"), expression.Value(s.request)) // next,prev,repeat,modify,goto
 	}
 	if len(s.object) > 0 {
 		updateC = updateC.Set(expression.Name("Obj"), expression.Value(s.object)) // ingredient,task,container,utensil
@@ -199,10 +203,10 @@ func (s sessCtx) updateSession() error {
 	if len(s.mChoice) > 0 {
 		updateC = updateC.Set(expression.Name("MChoice"), expression.Value(s.mChoice))
 	}
-	updateC = updateC.Set(expression.Name("CtxSel"), expression.Value(s.selCtx))
+	updateC = updateC.Set(expression.Name("SelCtx"), expression.Value(s.selCtx))
 	if s.selClear {
 		updateC = updateC.Set(expression.Name("MChoice"), expression.Value(nil))
-		updateC = updateC.Set(expression.Name("CtxSel"), expression.Value(""))
+		updateC = updateC.Set(expression.Name("SelCtx"), expression.Value(""))
 	}
 	//
 	if len(s.dmsg) > 0 {
@@ -231,7 +235,8 @@ func (s sessCtx) updateSession() error {
 	updateC = updateC.Set(expression.Name("Next"), expression.Value(s.next))
 	updateC = updateC.Set(expression.Name("Prev"), expression.Value(s.prev))
 	//
-	//
+	// updateC = updateC.Set(expression.Name("DHdr"), expression.Value(s.dispHdr))
+	// updateC = updateC.Set(expression.Name("DsHdr"), expression.Value(s.dispSHdr))
 	//
 	//updateC = updateC.Set(expression.Name("Select"), expression.Value(s.makeSelect)) // make a selection
 	updateC = updateC.Set(expression.Name("ATime"), expression.Value(time.Now().String()))
@@ -273,7 +278,7 @@ func (s sessCtx) updateSession() error {
 	// TODO - maybe we should take control of RecId  (ie. not use ADD but SET instead)
 	//
 	currentSess := sessRecipeT{}
-	if len(result.Attributes) > 0 && s.curreq != bookrecipe_ {
+	if len(result.Attributes) > 0 && s.curReqType != initialiseRequest {
 		err = dynamodbattribute.UnmarshalMap(result.Attributes, &currentSess)
 		if err != nil {
 			return err
