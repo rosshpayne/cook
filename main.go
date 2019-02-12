@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"log"
 	"net/url"
-	"os"
+	_ "os"
 	"strconv"
 	"strings"
 
-	_ "github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -90,8 +90,8 @@ const (
 type selectCtxT int
 
 const (
-	ctxRecipe selectCtxT = 1
-	ctxAction            = 2
+	ctxRecipe     selectCtxT = 1
+	ctxObjectList            = 2
 )
 
 // type objectT int
@@ -107,7 +107,8 @@ const (
 
 const (
 	// user request grouped into three types
-	initialiseRequest = iota
+	xx = iota
+	initialiseRequest
 	objectRequest
 	instructionRequest
 )
@@ -148,10 +149,13 @@ func (s *sessCtx) validateRequest() error {
 	//
 	// merge and validate with last session
 	//
+	fmt.Println("here in validateRequest....about to GetSession")
 	lastSess, err := s.GetSession()
 	if err != nil {
+		fmt.Println("Error from GetSession ", err.Error())
 		return err
 	}
+	fmt.Println("Post GetSession..")
 	//
 	if len(s.object) == 0 {
 		s.object = lastSess.Obj
@@ -260,8 +264,10 @@ func (s *sessCtx) validateRequest() error {
 	//
 	// respond to select from displayed items
 	//
-	if s.selId > 0 && len(lastSess.MChoice) > 0 {
+	fmt.Println("in validateRequest .  Select: ", s.selId, lastSess.SelCtx)
+	if s.selId > 0 {
 		// selId is the response from Alexa on the index (ordinal value) of the selected display item
+		fmt.Println("Select: ", s.selId, lastSess.SelCtx)
 		switch lastSess.SelCtx {
 		case ctxRecipe:
 			// select from: multiple recipes
@@ -270,7 +276,7 @@ func (s *sessCtx) validateRequest() error {
 			s.dmsg = fmt.Sprintf(`Now that you have selected [%s] recipe would you like to list ingredients, cooking instructions, utensils or containers or cancel`, s.reqRName)
 			s.vmsg = fmt.Sprintf(`Now that you have selected {%s] recipe would you like to list ingredients, cooking instructions, utensils or containers or cancel`, s.reqRName)
 			// chosen recipe, so set select context to object (ingredient, utensil, container, task
-			s.selCtx = ctxAction
+			s.selCtx = ctxObjectList
 			//
 			r, err := s.recipeRSearch()
 			if err != nil {
@@ -287,13 +293,14 @@ func (s *sessCtx) validateRequest() error {
 				return err
 			}
 			return nil
-		case ctxAction:
+
+		case ctxObjectList:
 			//	select from: list ingredient, list utensils, list containers, start cooking
 			fmt.Println("selId: ", s.selId)
 			s.object = objectS[s.selId-1]
 			fmt.Println("object: ", s.object)
 			// object chosen, nothing more to select for the time being
-			s.selCtx = 0
+			//s.selCtx = 0
 			switch s.object {
 			case task_:
 				//  "lets start cooking" selected
@@ -318,6 +325,13 @@ func (s *sessCtx) validateRequest() error {
 				}
 				// generate ingredient listing
 				s.ingrdList = as.String(r)
+				//
+				err = s.updateSession()
+				if err != nil {
+					return err
+				}
+				s.displayHdr = s.reqRName
+				s.displaySubHdr = "Book:  " + s.reqBkName
 				return nil
 			case container_:
 				return nil
@@ -344,9 +358,17 @@ func (s *sessCtx) validateRequest() error {
 				panic(err)
 			}
 			s.eol, s.reset, s.object = 0, true, ""
+			if len(s.mChoice) == 0 {
+				// single recipe found in search. Select context must now reflect object list. Persist value.
+				s.selCtx = ctxObjectList
+			}
 			err = s.updateSession()
 			if err != nil {
 				return err
+			}
+			if len(s.mChoice) == 0 {
+				// single recipe found in search. change request so  APL data structure is populated
+				s.request = "select"
 			}
 			return nil
 		}
@@ -852,7 +874,9 @@ func handler(request InputEvent) (RespEvent, error) {
 			if err != nil {
 				err = fmt.Errorf("%s: %s", "Error in converting int of select request \n\n", err.Error())
 			} else {
+				fmt.Printf("select call: %d\n", i)
 				sessctx.selId = i
+				fmt.Println("sessctx.curReqType :", sessctx.curReqType)
 			}
 			// remainder of sessctx populated in validateRequest
 		}
@@ -878,62 +902,78 @@ func handler(request InputEvent) (RespEvent, error) {
 		// case "yes":  check questions asked from last session (session table)
 		// case "no":
 	}
+
 	if err != nil {
+		fmt.Println("err: .", err.Error())
 		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata, Error: err.Error()}, nil
 	}
 	//
 	// validate the request and populate session context with appropriate metadata associated with request
 	//
+	fmt.Println("about to validateRequest..")
 	err = sessctx.validateRequest()
+	fmt.Println("post validateRequest..")
 	if err != nil {
+		fmt.Println("Error: ", err.Error())
 		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata, Error: err.Error()}, nil
 	}
 	//
-	// package the response data into RespEvent (an Alexa aware "display" structure) and return
+	// package the response data into RespEvent (an APL aware "display" structure) and return
 	//
+	fmt.Println("sessctx.curReqType :", sessctx.curReqType)
+	fmt.Println("noGetRecRequired ; ", sessctx.noGetRecRequired)
+	fmt.Println("request ; ", sessctx.request)
+	fmt.Println("object ; ", sessctx.object)
 	if sessctx.curReqType == initialiseRequest || sessctx.noGetRecRequired {
 
 		switch {
 		case sessctx.request == "select" && sessctx.object == ingredient_:
-			var mchoice []Item
+
+			var ingrdlst []Item
 			for _, v := range strings.Split(sessctx.ingrdList, "\n") {
 				item := Item{Title: v}
-				mchoice = append(mchoice, item)
+				ingrdlst = append(ingrdlst, item)
 			}
 			s := sessctx
-			return RespEvent{Type: "Ingredient", Header: s.displayHdr, SubHdr: s.displaySubHdr, List: mchoice}, nil
+			return RespEvent{Type: "Ingredient", Header: s.reqRName, SubHdr: "Ingredients", List: ingrdlst}, nil
 
 		case sessctx.request == "select" && sessctx.object == container_:
+
 			var mchoice []Item
 			for _, v := range sessctx.getContainers() {
 				item := Item{Title: v.Verbal}
 				mchoice = append(mchoice, item)
 			}
 			s := sessctx
-			return RespEvent{Type: "Ingredient", Header: s.displayHdr, SubHdr: s.displaySubHdr, List: mchoice}, nil
+			return RespEvent{Type: "Ingredient", Header: s.reqRName, SubHdr: "Containers", List: mchoice}, nil
 
 		case sessctx.request == "search" && len(sessctx.mChoice) > 0:
+			// search ingredient/title keywords may return list of recipes
 			var mchoice []Item
 			for _, v := range sessctx.mChoice {
-				var (
-					subTitle2 string
-					title     string
-				)
+				var item Item
 				id := strconv.Itoa(v.Id)
-				if a := strings.Split(v.Authors, ","); len(a) > 1 {
-					subTitle2 = "Authors: " + v.Authors
+				if len(v.Serves) > 0 {
+					item = Item{Id: id, Title: v.RName, SubTitle1: "Book: " + v.BkName, SubTitle2: "Serves:  " + v.Serves, Text: v.Quantity}
 				} else {
-					subTitle2 = "Author: " + v.Authors
+					var (
+						subTitle2 string
+						title     string
+					)
+					if a := strings.Split(v.Authors, ","); len(a) > 1 {
+						subTitle2 = "Authors: " + v.Authors
+					} else {
+						subTitle2 = "Author: " + v.Authors
+					}
+					item = Item{Id: id, Title: title, SubTitle1: "Book: " + v.BkName, SubTitle2: subTitle2, Text: v.Quantity}
 				}
-				title = v.RName + "           (serves: " + v.Serves + ")"
-				item := Item{Id: id, Title: title, SubTitle1: "Book: " + v.BkName, SubTitle2: subTitle2, Text: v.Quantity}
 				mchoice = append(mchoice, item)
 			}
-			//fmt.Println(lines)
 			s := sessctx
 			return RespEvent{Header: "Search results for: " + s.reqIngrdCat, Text: s.vmsg, Verbal: s.dmsg, List: mchoice}, nil
 
-		case sessctx.request == "select" && sessctx.selCtx == ctxAction:
+		case sessctx.request == "select" && sessctx.selCtx == ctxObjectList:
+
 			s := sessctx
 			mchoice := make([]Item, 4)
 			//for i, v := range []string{ingredient_, utensil_, container_, task_} {
@@ -964,19 +1004,19 @@ func handler(request InputEvent) (RespEvent, error) {
 }
 
 func main() {
-	//lambda.Start(handler)
-	p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
+	lambda.Start(handler)
+	// p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
 	//p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&rcp=Rhubarb and strawberry crumble cake"}
 	//var i float64 = 1.0
 	// p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + "&srch=" + os.Args[2]}
 	// //
-	pIngrdScale = 1.0
-	writeCtx = uDisplay
-	p, _ := handler(p1)
-	if len(p.Error) > 0 {
-		fmt.Printf("%#v\n", p.Error)
-	} else {
-		fmt.Printf("output:   %s\n", p.Text)
-		fmt.Printf("output:   %s\n", p.Verbal)
-	}
+	// pIngrdScale = 1.0
+	// writeCtx = uDisplay
+	// p, _ := handler(p1)
+	// if len(p.Error) > 0 {
+	// 	fmt.Printf("%#v\n", p.Error)
+	// } else {
+	// 	fmt.Printf("output:   %s\n", p.Text)
+	// 	fmt.Printf("output:   %s\n", p.Verbal)
+	// }
 }

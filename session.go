@@ -64,16 +64,20 @@ func (s *sessCtx) GetSession() (lastSess *sessRecipeT, err error) {
 	type pKey struct {
 		Sid string
 	}
-
+	fmt.Println("enter  getSEssion..", s.sessionId)
 	pkey := pKey{s.sessionId}
 	av, err := dynamodbattribute.MarshalMap(&pkey)
 	input := &dynamodb.GetItemInput{
 		Key:       av,
 		TableName: aws.String("Sessions"),
 	}
+	fmt.Println("enter  2 getSEssion..", s.sessionId)
 	result, err := s.dynamodbSvc.GetItem(input)
+	fmt.Println("GetItem completed..")
 	if err != nil {
+		fmt.Println("error  2a getSEssion..")
 		if aerr, ok := err.(awserr.Error); ok {
+			fmt.Println("error  3a getSEssion..")
 			switch aerr.Code() {
 			case dynamodb.ErrCodeProvisionedThroughputExceededException:
 				fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
@@ -87,12 +91,15 @@ func (s *sessCtx) GetSession() (lastSess *sessRecipeT, err error) {
 				fmt.Println(aerr.Error())
 			}
 		} else {
+			fmt.Println("error  4a getSEssion..")
 			// Print the error, cast err to awserr.Error to get the Code and
 			// Message from an error.
 			fmt.Println(err.Error())
 		}
+		fmt.Println("return  5a getSEssion..")
 		return nil, err
 	}
+	fmt.Println("enter  3 getSEssion..", s.sessionId)
 	if len(result.Item) == 0 {
 		// *** no session data then ignore validating the session and insert it
 		// session with what we've got in the session context
@@ -101,13 +108,17 @@ func (s *sessCtx) GetSession() (lastSess *sessRecipeT, err error) {
 		// 	s.vmsg = `You must specify a book and recipe from that book. To get started, please say "open", followed by the name of the book`
 		// 	return nil, nil
 		//
+		fmt.Println("No data found..")
 		return &sessRecipeT{}, nil
 	}
+	fmt.Println("enter  4 getSEssion..", s.sessionId)
 	lastSess = &sessRecipeT{}
 	err = dynamodbattribute.UnmarshalMap(result.Item, lastSess)
 	if err != nil {
+		fmt.Println("error  5 getSEssion..", s.sessionId)
 		return nil, err
 	}
+	fmt.Println("about to leave getSEssion..")
 	return lastSess, nil
 }
 

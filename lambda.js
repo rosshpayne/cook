@@ -2,9 +2,17 @@
 /* eslint-disable  no-console */
 
 const Alexa = require('ask-sdk-core');
-var   recipe = { response :[] }
+var AWS = require('aws-sdk');
 
-// Options to be used by request 
+//var   recipe = { Response :[] };
+var   invokeParams = {
+        FunctionName: 'apigw-lambda-stack-3-TestFunction-1W27R33Q8ONM2',
+        Qualifier: 'dev'
+};
+
+var lambda = new AWS.Lambda();
+AWS.config.region = 'us-east-1';
+
 
 const LaunchRequestHandler = {
   canHandle(handlerInput) {
@@ -12,12 +20,13 @@ const LaunchRequestHandler = {
   },
   
   handle(handlerInput) {
-    var speechText = 'Hi. Do you want to search for a recipe based on ingredient or open a recipe? Say "open at" to select a recipe or search for recipes by saying search for chocolate cake recipes to display a list of recipes of chocolate cakes.';
+    var speechText = 'Hi. I do. i Do. Do you want to search for a recipe based on ingredient or open a recipe? Say "open at" to select a recipe or search for recipes by saying search for chocolate cake recipes to display a list of recipes of chocolate cakes.';
+    var displayText = 'Hi. Do you want to search for a recipe based on ingredient or open a recipe? Say "open at" to select a recipe or search for recipes by saying search for chocolate cake recipes to display a list of recipes of chocolate cakes.';
 
         return  handlerInput.responseBuilder
                           .speak(speechText)
                           .reprompt(speechText)
-                          .withSimpleCard('Recipe World', speechText)
+                          .withSimpleCard('Recipe World', displayText)
                           .getResponse();
   },
 }
@@ -28,56 +37,33 @@ const SelectIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'SelectIntent';
   },
   handle(handlerInput) {
-    var speechText = '';
-    var displayText = '';
-    const http = require('https');
-    const path_='&sId='+handlerInput.requestEnvelope.request.intent.slots.integerValue.resolutions.resolutionsPerAuthority[0].values[0].value.id;
-    var params = {
-      host: '5h6o821oqg.execute-api.us-east-1.amazonaws.com',
-      port: '443',
-      path: '/Prod/select?sid='+handlerInput.requestEnvelope.session.sessionId+path_
-    };
-    
-    // this is a get, so there's no post data
+    const querystring = require('querystring');
+    var speechText;
+    var displayText;
+    var recipe ;
+    const sid='sid='+handlerInput.requestEnvelope.session.sessionId   ; 
+    const selid='&sId='+handlerInput.requestEnvelope.request.intent.slots.integerValue.resolutions.resolutionsPerAuthority[0].values[0].value.id;
+    invokeParams.Payload = '{ "Path" : "select" ,"Param" : "'+sid+selid+'" }';
+
     promise = new Promise((resolve, reject) => {
-        var req = http.request(params, function(res) {
-            // reject on bad status
-            if (res.statusCode < 200 || res.statusCode >= 300) {
-                return reject(new Error('statusCode=' + res.statusCode));
-            }
-            // cumulate data
-            var body = [];
-            res.on('data', function(chunk) {
-                body.push(chunk);
-                recipe = JSON.parse(body)
-                speechText=recipe.response[0] 
-                displayText = recipe.response[1]
-            });
-            // resolve on end
-            res.on('end', function() {
-                try {
-                    body = body;
-                } catch(e) {
-                    reject(e);
-                }
-                resolve(body);
-            });
+      lambda.invoke(invokeParams, function(err, data) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data.Payload)  }
         });
-        // reject on request error
-        req.on('error', function(err) {
-            // This is not a "Second reject", just a different sort of failure
-            reject(err);
-        });
-        // IMPORTANT
-        req.end();
     });
+    
     return promise.then((body) => {
+          recipe = JSON.parse(body);
+          speechText=recipe.Text ;
+          displayText = recipe.Verbal;
         return  handlerInput.responseBuilder
                           .speak(speechText)
                           .reprompt(speechText)
-                          .withSimpleCard('Select', displayText)
+                          .withSimpleCard('Instructions', displayText)
                           .getResponse();
-      }).catch(function (err) { console.log(err) } );
+      }).catch(function (err) { console.log(err, err.stack);  } );
   
   },
 };
@@ -89,57 +75,33 @@ const GotoIntentHandler = {
   },
 
   handle(handlerInput) {
-    var speechText = '';
-    var displayText = '';
-    const http = require('https');
-    const path_='&goId='+handlerInput.requestEnvelope.request.intent.slots.gotoId.resolutions.resolutionsPerAuthority[0].values[0].value.id;
-    console.log(path_)
-    var params = {
-      host: '5h6o821oqg.execute-api.us-east-1.amazonaws.com',
-      port: '443',
-      path: '/Prod/goto?sid='+handlerInput.requestEnvelope.session.sessionId + path_
-    };
-    // this is a get, so there's no post data
+    const querystring = require('querystring');
+    var speechText;
+    var displayText;
+    var recipe ;
+    const sid='sid='+handlerInput.requestEnvelope.session.sessionId;
+    const goId='&goId='+handlerInput.requestEnvelope.request.intent.slots.gotoId.resolutions.resolutionsPerAuthority[0].values[0].value.id;
+    invokeParams.Payload = '{ "Path" : "goto" ,"Param" : "'+sid+goId+'" }';
+
     promise = new Promise((resolve, reject) => {
-        var req = http.request(params, function(res) {
-            // reject on bad status
-            if (res.statusCode < 200 || res.statusCode >= 300) {
-                return reject(new Error('statusCode=' + res.statusCode));
-            }
-            // cumulate data
-            var body = [];
-            res.on('data', function(chunk) {
-                body.push(chunk);
-                recipe = JSON.parse(body)
-                speechText=recipe.response[0] 
-                displayText = recipe.response[1]
-            });
-            // resolve on end
-            res.on('end', function() {
-                try {
-                    body = body;
-                } catch(e) {
-                    reject(e);
-                }
-                resolve(body);
-            });
+      lambda.invoke(invokeParams, function(err, data) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data.Payload)  }
         });
-        // reject on request error
-        req.on('error', function(err) {
-            // This is not a "Second reject", just a different sort of failure
-            reject(err);
-        });
-        // IMPORTANT
-        req.end();
     });
-    speechText="You will need the following containers. "+speechText
+    
     return promise.then((body) => {
+          recipe = JSON.parse(body);
+          speechText=recipe.Text ;
+          displayText = recipe.Verbal;
         return  handlerInput.responseBuilder
                           .speak(speechText)
                           .reprompt(speechText)
                           .withSimpleCard('Instructions', displayText)
                           .getResponse();
-      }).catch(function (err) { console.log(err) } );
+      }).catch(function (err) { console.log(err, err.stack);  } );
   
   },
 };
@@ -151,54 +113,32 @@ const NextIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'NextIntent';
   },
   handle(handlerInput) {
-    var speechText = '';
-    var displayText = '';
-    const http = require('https');
-    var params = {
-      host: '5h6o821oqg.execute-api.us-east-1.amazonaws.com',
-      port: '443',
-      path: '/Prod/next?sid='+handlerInput.requestEnvelope.session.sessionId 
-    };
-    // this is a get, so there's no post data
+    const querystring = require('querystring');
+    var speechText;
+    var displayText;
+    var recipe ;
+    const sid='sid='+handlerInput.requestEnvelope.session.sessionId;
+    invokeParams.Payload = '{ "Path" : "next" ,"Param" : "'+sid+'" }';
+
     promise = new Promise((resolve, reject) => {
-        var req = http.request(params, function(res) {
-            // reject on bad status
-            if (res.statusCode < 200 || res.statusCode >= 300) {
-                return reject(new Error('statusCode=' + res.statusCode));
-            }
-            // cumulate data
-            var body = [];
-            res.on('data', function(chunk) {
-                body.push(chunk);
-                speechText=recipe.response[0] 
-                displayText = recipe.response[1]
-            });
-            // resolve on end
-            res.on('end', function() {
-                try {
-                    body = body;
-                } catch(e) {
-                    reject(e);
-                }
-                resolve(body);
-            });
+      lambda.invoke(invokeParams, function(err, data) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data.Payload)  }
         });
-        // reject on request error
-        req.on('error', function(err) {
-            // This is not a "Second reject", just a different sort of failure
-            reject(err);
-        });
-        // IMPORTANT
-        req.end();
     });
-    speechText="You will need the following containers. "+speechText
+    
     return promise.then((body) => {
+          recipe = JSON.parse(body);
+          speechText=recipe.Text ;
+          displayText = recipe.Verbal;
         return  handlerInput.responseBuilder
                           .speak(speechText)
                           .reprompt(speechText)
                           .withSimpleCard('Instructions', displayText)
                           .getResponse();
-      }).catch(function (err) { console.log(err) } );
+      }).catch(function (err) { console.log(err, err.stack);  } );
   
   },
 };
@@ -209,54 +149,31 @@ const RepeatIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'RepeatIntent';
   },
   handle(handlerInput) {
-    var speechText = '';
-    var displayText = '';
-    const http = require('https');
-    var params = {
-      host: '5h6o821oqg.execute-api.us-east-1.amazonaws.com',
-      port: '443',
-      path: '/Prod/repeat?sid='+handlerInput.requestEnvelope.session.sessionId 
-    };
-    // this is a get, so there's no post data
+    var speechText;
+    var displayText;
+    var recipe ;
+    const sid='sid='+handlerInput.requestEnvelope.session.sessionId;
+    invokeParams.Payload = '{ "Path" : "repeat" ,"Param" : "'+sid+'" }';
+
     promise = new Promise((resolve, reject) => {
-        var req = http.request(params, function(res) {
-            // reject on bad status
-            if (res.statusCode < 200 || res.statusCode >= 300) {
-                return reject(new Error('statusCode=' + res.statusCode));
-            }
-            // cumulate data
-            var body = [];
-            res.on('data', function(chunk) {
-                body.push(chunk);
-                recipe = JSON.parse(body)
-                speechText=recipe.response[0] 
-                displayText = recipe.response[1]
-            });
-            // resolve on end
-            res.on('end', function() {
-                try {
-                    body = body;
-                } catch(e) {
-                    reject(e);
-                }
-                resolve(body);
-            });
+      lambda.invoke(invokeParams, function(err, data) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data.Payload)  }
         });
-        // reject on request error
-        req.on('error', function(err) {
-            // This is not a "Second reject", just a different sort of failure
-            reject(err);
-        });
-        // IMPORTANT
-        req.end();
     });
+    
     return promise.then((body) => {
+          recipe = JSON.parse(body);
+          speechText=recipe.Text ;
+          displayText = recipe.Verbal;
         return  handlerInput.responseBuilder
                           .speak(speechText)
                           .reprompt(speechText)
                           .withSimpleCard('Instructions', displayText)
                           .getResponse();
-      }).catch(function (err) { console.log(err) } );
+      }).catch(function (err) { console.log(err, err.stack);  } );
   
   },
 };
@@ -267,54 +184,31 @@ const PrevIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'PrevIntent';
   },
   handle(handlerInput) {
-    var speechText = '';
-    var displayText = '';
-    const http = require('https');
-    var params = {
-      host: '5h6o821oqg.execute-api.us-east-1.amazonaws.com',
-      port: '443',
-      path: '/Prod/prev?sid='+handlerInput.requestEnvelope.session.sessionId 
-    };
-    // this is a get, so there's no post data
+    var speechText;
+    var displayText;
+    var recipe ;
+    const sid='sid='+handlerInput.requestEnvelope.session.sessionId;
+    invokeParams.Payload = '{ "Path" : "prev" ,"Param" : "'+sid+'" }';
+
     promise = new Promise((resolve, reject) => {
-        var req = http.request(params, function(res) {
-            // reject on bad status
-            if (res.statusCode < 200 || res.statusCode >= 300) {
-                return reject(new Error('statusCode=' + res.statusCode));
-            }
-            // cumulate data
-            var body = [];
-            res.on('data', function(chunk) {
-                body.push(chunk);
-                recipe = JSON.parse(body)
-                speechText=recipe.response[0] 
-                displayText = recipe.response[1]
-            });
-            // resolve on end
-            res.on('end', function() {
-                try {
-                    body = body;
-                } catch(e) {
-                    reject(e);
-                }
-                resolve(body);
-            });
+      lambda.invoke(invokeParams, function(err, data) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data.Payload)  }
         });
-        // reject on request error
-        req.on('error', function(err) {
-            // This is not a "Second reject", just a different sort of failure
-            reject(err);
-        });
-        // IMPORTANT
-        req.end();
     });
+    
     return promise.then((body) => {
+          recipe = JSON.parse(body);
+          speechText=recipe.Text ;
+          displayText = recipe.Verbal;
         return  handlerInput.responseBuilder
                           .speak(speechText)
                           .reprompt(speechText)
                           .withSimpleCard('Instructions', displayText)
                           .getResponse();
-      }).catch(function (err) { console.log(err) } );
+      }).catch(function (err) { console.log(err, err.stack);  } );
   
   },
 };
@@ -325,67 +219,38 @@ const RecipeIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'RecipeIntent';
   },
   handle(handlerInput) {
-    var speechText = '';
-    var displayText = '';
-    const http = require('https');
-    var querystring = require("querystring");
-    
-    //var bookname_ = handlerInput.requestEnvelope.request.intent.slots.recipe.value;
-    const bkIdRId =handlerInput.requestEnvelope.request.intent.slots.recipe.resolutions.resolutionsPerAuthority[0].values[0].value.id;
-    const rname = +querystring.escape(handlerInput.requestEnvelope.request.intent.slots.recipe.resolutions.resolutionsPerAuthority[0].values[0].value.name);
-    //var  recipeEncoded = querystring.stringify({query: recipeName});
-    var path_='&rcp='+bkIdRId
-    if ( bkIdRId.length == 0 ) {
-      path_='&rcp='+querystring.escape(rname);
-    }
-    var params = {
-      host: '5h6o821oqg.execute-api.us-east-1.amazonaws.com',
-      port: '443',
-      path: '/Prod/recipe?sid='+handlerInput.requestEnvelope.session.sessionId+path_
-    };
-    
-    // this is a get, so there's no post data
-    promise = new Promise((resolve, reject) => {
-        var req = http.request(params, function(res) {
-            // reject on bad status
-            if (res.statusCode < 200 || res.statusCode >= 300) {
-                return reject(new Error('statusCode=' + res.statusCode));
-            }
-            // cumulate data
-            var body = [];
-            res.on('data', function(chunk) {
-                body.push(chunk);
-                recipe = JSON.parse(body)
-                speechText=recipe.response[0] 
-                displayText = recipe.response[1]
-            });
-            // resolve on end
-            res.on('end', function() {
-                try {
-                    body = body;
-                } catch(e) {
-                    reject(e);
-                }
-                resolve(body);
-            });
-        });
-        // reject on request error
-        req.on('error', function(err) {
-            // This is not a "Second reject", just a different sort of failure
-            reject(err);
-        });
-        // IMPORTANT
-        req.end();
-    });
+    var speechText;
+    var displayText;
+    var recipe ;
+    const querystring = require("querystring");
+    //const bkIdRId = handlerInput.requestEnvelope.request.intent.slots.recipe.resolutions.resolutionsPerAuthority[0].values[0].value.id;
+    const rname = querystring.escape(handlerInput.requestEnvelope.request.intent.slots.recipe.resolutions.resolutionsPerAuthority[0].values[0].value.name);
+    const sid='sid='+handlerInput.requestEnvelope.session.sessionId;
+    //var path_='&rcp='+bkIdRId
+    //if ( bkIdRId.length == 0 ) {
+      path_='&rcp='+rname;
+    //}
+    invokeParams.Payload = '{ "Path" : "recipe" ,"Param" : "'+sid+path_+'" }';
 
+    promise = new Promise((resolve, reject) => {
+      lambda.invoke(invokeParams, function(err, data) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data.Payload)  }
+        });
+    });
+    
     return promise.then((body) => {
+          recipe = JSON.parse(body);
+          speechText=recipe.Text ;
+          displayText = recipe.Verbal;
         return  handlerInput.responseBuilder
                           .speak(speechText)
                           .reprompt(speechText)
-                          .withSimpleCard('Instructions', dispalyText)
+                          .withSimpleCard('Instructions', displayText)
                           .getResponse();
-      }).catch(function (err) { console.log(err) } );
-  
+      }).catch(function (err) { console.log(err, err.stack);  } );
   },
 };
 
@@ -396,58 +261,68 @@ const SearchIntentHandler = {
   },
   handle(handlerInput) {
     const querystring = require('querystring');
-    var speechText = '';
-    var displayText = '';
-    const http = require('https');
-    const path_='&srch='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.ingrdcat.resolutions.resolutionsPerAuthority[0].values[0].value.name);
-    console.log(path_)
-    var params = {
-      host: '5h6o821oqg.execute-api.us-east-1.amazonaws.com',
-      port: '443',
-      path: '/Prod/search?sid='+handlerInput.requestEnvelope.session.sessionId+path_
-    };
-    
-    // this is a get, so there's no post data
+    var speechText;
+    var displayText;
+    var recipe ;
+    //TODO is querystring necessary here as I believe AWS may escape it.
+    const srch='&srch='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.ingrdcat.resolutions.resolutionsPerAuthority[0].values[0].value.name);
+    const sid="sid="+handlerInput.requestEnvelope.session.sessionId;
+    invokeParams.Payload = '{ "Path" : "search" ,"Param" : "'+sid+srch+'" }';
+
     promise = new Promise((resolve, reject) => {
-        var req = http.request(params, function(res) {
-            // reject on bad status
-            if (res.statusCode < 200 || res.statusCode >= 300) {
-                return reject(new Error('statusCode=' + res.statusCode));
-            }
-            // cumulate data
-            var body = [];
-            res.on('data', function(chunk) {
-                body.push(chunk);
-                recipe = JSON.parse(body)
-                speechText=recipe.response[0] 
-                displayText = recipe.response[1]
-            });
-            // resolve on end
-            res.on('end', function() {
-                try {
-                    body = body;
-                } catch(e) {
-                    reject(e);
-                }
-                resolve(body);
-            });
+      lambda.invoke(invokeParams, function(err, data) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data.Payload)  }
         });
-        // reject on request error
-        req.on('error', function(err) {
-            // This is not a "Second reject", just a different sort of failure
-            reject(err);
-        });
-        // IMPORTANT
-        req.end();
     });
+    
     return promise.then((body) => {
+          recipe = JSON.parse(body);
+          speechText=recipe.Text ;
+          displayText = recipe.Verbal;
         return  handlerInput.responseBuilder
                           .speak(speechText)
                           .reprompt(speechText)
-                          .withSimpleCard('List of recipes', displayText)
+                          .withSimpleCard('Instructions', displayText)
                           .getResponse();
-      }).catch(function (err) { console.log(err) } );
-  
+      }).catch(function (err) { console.log(err, err.stack);  } );
+  },
+};
+
+const VersionIntentHandler = {
+  canHandle(handlerInput) {
+    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+      && handlerInput.requestEnvelope.request.intent.name === 'VersionIntent';
+  },
+  handle(handlerInput) {
+    var speechText;
+    var displayText;
+    var recipe ;
+    const sid='sid='+handlerInput.requestEnvelope.session.sessionId;
+    const ver='&ver='+handlerInput.requestEnvelope.request.intent.slots.version.resolutions.resolutionsPerAuthority[0].values[0].value.name;
+    invokeParams.Payload = '{ "Path" : "version" ,"Param" : "'+sid+ver+'" }';
+
+    promise = new Promise((resolve, reject) => {
+      lambda.invoke(invokeParams, function(err, data) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data.Payload)  }
+        });
+    });
+    
+    return promise.then((body) => {
+          recipe = JSON.parse(body);
+          speechText=recipe.Text ;
+          displayText = recipe.Verbal;
+        return  handlerInput.responseBuilder
+                          .speak(speechText)
+                          .reprompt(speechText)
+                          .withSimpleCard('Instructions', displayText)
+                          .getResponse();
+      }).catch(function (err) { console.log(err, err.stack);  } );
   },
 };
 
@@ -457,117 +332,66 @@ const BookIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'BookIntent';
   },
   handle(handlerInput) {
-    var speechText = '';
-    var displayText = '';
-    const http = require('https');
-    const path_='&bkid='+handlerInput.requestEnvelope.request.intent.slots.BookName.resolutions.resolutionsPerAuthority[0].values[0].value.id;
-    var params = {
-      host: '5h6o821oqg.execute-api.us-east-1.amazonaws.com',
-      port: '443',
-      path: '/Prod/book?sid='+handlerInput.requestEnvelope.session.sessionId+path_
-    };
+    var speechText;
+    var displayText;
+    var recipe ;
+    const sid="sid="+handlerInput.requestEnvelope.session.sessionId;
+    const bkid='&bkid='+handlerInput.requestEnvelope.request.intent.slots.BookName.resolutions.resolutionsPerAuthority[0].values[0].value.id;
+    invokeParams.Payload = '{ "Path" : "book" ,"Param" : "'+sid+bkid+'" }';
     
-    // this is a get, so there's no post data
     promise = new Promise((resolve, reject) => {
-        var req = http.request(params, function(res) {
-            // reject on bad status
-            if (res.statusCode < 200 || res.statusCode >= 300) {
-                return reject(new Error('statusCode=' + res.statusCode));
-            }
-            // cumulate data
-            var body = [];
-            res.on('data', function(chunk) {
-                body.push(chunk);
-                recipe = JSON.parse(body)
-                speechText=recipe.response[0] 
-                displayText = recipe.response[1]
-            });
-            // resolve on end
-            res.on('end', function() {
-                try {
-                    body = body;
-                } catch(e) {
-                    reject(e);
-                }
-                resolve(body);
-            });
+      lambda.invoke(invokeParams, function(err, data) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data.Payload)  }
         });
-        // reject on request error
-        req.on('error', function(err) {
-            // This is not a "Second reject", just a different sort of failure
-            reject(err);
-        });
-        // IMPORTANT
-        req.end();
     });
+    
     return promise.then((body) => {
+          recipe = JSON.parse(body);
+          speechText=recipe.Text ;
+          displayText = recipe.Verbal;
         return  handlerInput.responseBuilder
                           .speak(speechText)
                           .reprompt(speechText)
                           .withSimpleCard('Instructions', displayText)
                           .getResponse();
-      }).catch(function (err) { console.log(err) } );
-  
+      }).catch(function (err) { console.log(err, err.stack);  } );
   },
 };
 
-const CloseBookintentHandler = {
+const CloseBookIntentHandler = {
   canHandle(handlerInput) {
     return handlerInput.requestEnvelope.request.type === 'IntentRequest'
       && handlerInput.requestEnvelope.request.intent.name === 'CloseBookIntent';
   },
   handle(handlerInput) {
-    var speechText = '';
-    var displayText = '';
-    const http = require('https');
-    var params = {
-      host: '5h6o821oqg.execute-api.us-east-1.amazonaws.com',
-      port: '443',
-      path: '/Prod/book/close?sid='+handlerInput.requestEnvelope.session.sessionId 
-    };
-    // this is a get, so there's no post data
+    var speechText;
+    var displayText;
+    var recipe ;
+    var sid="sid="+handlerInput.requestEnvelope.session.sessionId;
+    invokeParams.Payload = '{ "Path" : "book/close" ,"Param" : "'+sid+'" }';
+
     promise = new Promise((resolve, reject) => {
-        var req = http.request(params, function(res) {
-            // reject on bad status
-            if (res.statusCode < 200 || res.statusCode >= 300) {
-                return reject(new Error('statusCode=' + res.statusCode));
-            }
-            // cumulate data
-            var body = [];
-            res.on('data', function(chunk) {
-                body.push(chunk);
-                //console.log("body:"+body.String)
-                recipe = JSON.parse(body)
-                //console.log("recipe:"+recipe.String)
-                //recipe = 'XXYYZZ'
-                speechText=recipe.response[0] 
-                displayText = recipe.response[1]
-            });
-            // resolve on end
-            res.on('end', function() {
-                try {
-                    body = body;
-                } catch(e) {
-                    reject(e);
-                }
-                resolve(body);
-            });
+      lambda.invoke(invokeParams, function(err, data) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data.Payload)  }
         });
-        // reject on request error
-        req.on('error', function(err) {
-            // This is not a "Second reject", just a different sort of failure
-            reject(err);
-        });
-        // IMPORTANT
-        req.end();
     });
+    
     return promise.then((body) => {
+          recipe = JSON.parse(body);
+          speechText=recipe.Text ;
+          displayText = recipe.Verbal;
         return  handlerInput.responseBuilder
                           .speak(speechText)
                           .reprompt(speechText)
-                          .withSimpleCard('Containers', displayText)
+                          .withSimpleCard('Instructions', displayText)
                           .getResponse();
-      }).catch(function (err) { console.log(err) } );
+      }).catch(function (err) { console.log(err, err.stack);  } );
   },
 };
 
@@ -577,57 +401,32 @@ const YesNoIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'YesNoIntent';
   },
   handle(handlerInput) {
-    var speechText = '';
-    var displayText = '';
-    const http = require('https');
-    const path_='&yn='+handlerInput.requestEnvelope.request.intent.slots.YesNo.resolutions.resolutionsPerAuthority[0].values[0].value.id;
-    var params = {
-      host: '5h6o821oqg.execute-api.us-east-1.amazonaws.com',
-      port: '443',
-      path: '/Prod/book?sid='+handlerInput.requestEnvelope.session.sessionId+path_
-    };
-    
-    // this is a get, so there's no post data
+    var speechText;
+    var displayText;
+    var recipe ;
+    var sid="sid="+handlerInput.requestEnvelope.session.sessionId;
+    var yesno='&yn='+handlerInput.requestEnvelope.request.intent.slots.YesNo.resolutions.resolutionsPerAuthority[0].values[0].value.id;
+    invokeParams.Payload = '{ "Path" : "yesno" ,"Param" : "'+sid+yesno+'" }';
+
     promise = new Promise((resolve, reject) => {
-        var req = http.request(params, function(res) {
-            // reject on bad status
-            if (res.statusCode < 200 || res.statusCode >= 300) {
-                return reject(new Error('statusCode=' + res.statusCode));
-            }
-            // cumulate data
-            var body = [];
-            res.on('data', function(chunk) {
-                body.push(chunk);
-                recipe = JSON.parse(body)
-                speechText=recipe.response[0] 
-                displayText = recipe.response[1]
-            });
-            // resolve on end
-            res.on('end', function() {
-                try {
-                    body = body;
-                } catch(e) {
-                    reject(e);
-                }
-                resolve(body);
-            });
+      lambda.invoke(invokeParams, function(err, data) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data.Payload)  }
         });
-        // reject on request error
-        req.on('error', function(err) {
-            // This is not a "Second reject", just a different sort of failure
-            reject(err);
-        });
-        // IMPORTANT
-        req.end();
     });
+    
     return promise.then((body) => {
+          recipe = JSON.parse(body);
+          speechText=recipe.Text ;
+          displayText = recipe.Verbal;
         return  handlerInput.responseBuilder
                           .speak(speechText)
                           .reprompt(speechText)
                           .withSimpleCard('Instructions', displayText)
                           .getResponse();
-      }).catch(function (err) { console.log(err) } );
-  
+      }).catch(function (err) { console.log(err, err.stack);  } );
   },
 };
 
@@ -638,78 +437,32 @@ const TaskIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'TaskIntent';
   },
   handle(handlerInput) {
-    var speechText = '';
-    var displayText = '';
-        const http = require('https');
-    var params = {
-      host: '5h6o821oqg.execute-api.us-east-1.amazonaws.com',
-      port: '443',
-      path: '/Prod/task?sid='+handlerInput.requestEnvelope.session.sessionId 
-    };
-    // this is a get, so there's no post data
+    var speechText;
+    var displayText;
+    var recipe ;
+    var sid="sid="+handlerInput.requestEnvelope.session.sessionId;
+    invokeParams.Payload = '{ "Path" : "task" ,"Param" : "'+sid+'" }';
+
     promise = new Promise((resolve, reject) => {
-        var req = http.request(params, function(res) {
-            // reject on bad status
-            if (res.statusCode < 200 || res.statusCode >= 300) {
-                return reject(new Error('statusCode=' + res.statusCode));
-            }
-            // cumulate data
-            var body = [];
-            res.on('data', function(chunk) {
-                body.push(chunk);
-                recipe = JSON.parse(body)
-                speechText=recipe.response[0] 
-                displayText = recipe.response[1]
-            });
-            // resolve on end
-            res.on('end', function() {
-                try {
-                    body = body;
-                } catch(e) {
-                    reject(e);
-                }
-                resolve(body);
-            });
+      lambda.invoke(invokeParams, function(err, data) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data.Payload)  }
         });
-        // reject on request error
-        req.on('error', function(err) {
-            // This is not a "Second reject", just a different sort of failure
-            reject(err);
-        });
-        // IMPORTANT
-        req.end();
     });
+    
     return promise.then((body) => {
+          recipe = JSON.parse(body);
+          speechText=recipe.Text ;
+          displayText = recipe.Verbal;
         return  handlerInput.responseBuilder
                           .speak(speechText)
                           .reprompt(speechText)
                           .withSimpleCard('Instructions', displayText)
                           .getResponse();
-      }).catch(function (err) { console.log(err) } );
+      }).catch(function (err) { console.log(err, err.stack);  } );
   },
-      
-  //   var AWS = require('aws-sdk');
-  //   AWS.config.region = 'us-east-1';
-  //   var lambda = new AWS.Lambda();
-  //   var params = {
-  //       FunctionName: 'apigw-lambda-stack-3-TestFunction-1W27R33Q8ONM2', // the lambda function we are going to invoke
-  //       InvocationType: 'RequestResponse',
-  //       LogType: 'Tail',
-  //       Payload: '{ "action" : "task" }'
-  //   };
-    
-  //   lambda.invoke(params, function(err, data) {
-  //     if (err) console.log(err, err.stack); // an error occurred
-  //     else     console.log(data);           // successful response
-  //     });
-
-
-  //   return  handlerInput.responseBuilder
-  //                         .speak(speechText)
-  //                         .reprompt(speechText)
-  //                         .withSimpleCard('Instructions', speechText)
-  //                         .getResponse();
-  // },
 };
 
 const ContainerIntentHandler = {
@@ -718,57 +471,31 @@ const ContainerIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'ContainerIntent';
   },
   handle(handlerInput) {
-    var speechText = '';
-    var displayText = '';
-    const http = require('https');
-    var params = {
-      host: '5h6o821oqg.execute-api.us-east-1.amazonaws.com',
-      port: '443',
-      path: '/Prod/container?sid='+handlerInput.requestEnvelope.session.sessionId 
-    };
-    // this is a get, so there's no post data
+        var speechText;
+    var displayText;
+    var recipe ;
+    var sid="sid="+handlerInput.requestEnvelope.session.sessionId;
+    invokeParams.Payload = '{ "Path" : "container" ,"Param" : "'+sid+'" }';
+
     promise = new Promise((resolve, reject) => {
-        var req = http.request(params, function(res) {
-            // reject on bad status
-            if (res.statusCode < 200 || res.statusCode >= 300) {
-                return reject(new Error('statusCode=' + res.statusCode));
-            }
-            // cumulate data
-            var body = [];
-            res.on('data', function(chunk) {
-                body.push(chunk);
-                //console.log("body:"+body.String)
-                recipe = JSON.parse(body)
-                //console.log("recipe:"+recipe.String)
-                //recipe = 'XXYYZZ'
-                speechText=recipe.response[0] 
-                displayText = recipe.response[1]
-            });
-            // resolve on end
-            res.on('end', function() {
-                try {
-                    body = body;
-                } catch(e) {
-                    reject(e);
-                }
-                resolve(body);
-            });
+      lambda.invoke(invokeParams, function(err, data) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data.Payload)  }
         });
-        // reject on request error
-        req.on('error', function(err) {
-            // This is not a "Second reject", just a different sort of failure
-            reject(err);
-        });
-        // IMPORTANT
-        req.end();
     });
+    
     return promise.then((body) => {
+          recipe = JSON.parse(body);
+          speechText=recipe.Text ;
+          displayText = recipe.Verbal;
         return  handlerInput.responseBuilder
                           .speak(speechText)
                           .reprompt(speechText)
-                          .withSimpleCard('Containers', displayText)
+                          .withSimpleCard('Instructions', displayText)
                           .getResponse();
-      }).catch(function (err) { console.log(err) } );
+      }).catch(function (err) { console.log(err, err.stack);  } );
   },
 };
 
@@ -838,6 +565,7 @@ exports.handler = skillBuilder
     BookIntentHandler,
     CloseBookIntentHandler,
     RecipeIntentHandler,
+    VersionIntentHandler,
     TaskIntentHandler,
     NextIntentHandler,
     YesNoIntentHandler,

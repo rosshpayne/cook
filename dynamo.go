@@ -160,7 +160,7 @@ func (s *sessCtx) getContainers() []containerT {
 	recS := make([]containerT, int(*result.Count))
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &recS)
 	if err != nil {
-		panic(fmt.Errorf("Error: %s [%s] err", "in UnmarshalListMaps of ingredientSearch ", s.reqRName, err.Error()))
+		panic(fmt.Errorf("Error: %s [%s] err", "in UnmarshalListMaps of getContainers ", s.reqRName, err.Error()))
 	}
 	return recS
 }
@@ -667,6 +667,8 @@ func (s *sessCtx) ingredientSearch() error {
 			s.dmsg = fmt.Sprintf("%s not found in [%s], but was found in [%s]. ", s.reqIngrdCat, s.reqBkName, recS[0].BkName)
 			sortk := strings.Split(recS[0].SortK, "-")
 			s.reqRId, s.reqRName, s.reqBkId, s.reqBkName, s.serves = sortk[1], recS[0].RName, sortk[0], recS[0].BkName, recS[0].Serves
+			// set session ctx to display object menu (ingredient,containers,utensils) list
+
 		default:
 			//s.makeSelect = true
 			s.vmsg = fmt.Sprintf(`No %s recipes found in [%s] but where found in severalother books. Please see list and select one by saying "select" followed by its number`, s.reqIngrdCat, s.reqBkName)
@@ -691,6 +693,7 @@ func (s *sessCtx) ingredientSearch() error {
 		s.dmsg = "The following recipe, " + recS[0].RName + " in book " + recS[0].BkName + ` by authors ` + recS[0].Authors + ` contains the ingredient. You can list other ingredients or containers, utensils used in the recipe or list the prep tasks or you can start cooking`
 		sortk := strings.Split(recS[0].SortK, "-")
 		s.reqRId, s.reqRName, s.reqBkId, s.reqBkName, s.serves = sortk[1], recS[0].RName, sortk[0], recS[0].BkName, recS[0].Serves
+		// set session ctx to display object menu (ingredient,containers,utensils) list
 	default:
 		//s.makeSelect = true
 		s.vmsg = fmt.Sprintf("Multiple %s recipes found. See display", s.reqIngrdCat)

@@ -284,7 +284,9 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 	for _, v := range ptS {
 		pcnt[v.Part] += 1
 	}
-	// are parts used
+	//
+	// if parts not used assign EOL and return
+	//
 	if len(pcnt) == 1 {
 		for _, v := range ptS {
 			v.EOL = eol

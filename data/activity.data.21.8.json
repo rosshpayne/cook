@@ -83,7 +83,8 @@
                 "PKey" : { "S": "R-21" },
                 "SortK" : { "N": "8"},
                 "RName" : { "S": "Hazelnut and Ricotta Cake"},
-                "Index" : { "SS" : ["Hazelnut Ricotta Cake"] }}
+                "Index" : { "SS" : ["Hazelnut Ricotta Cake"] },
+                "Srv" : { "S" : "8-10" } }
         }
         },
         {
