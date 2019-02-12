@@ -56,7 +56,7 @@ module.exports = (header, subhdr, data) => { return {
                   onPress: {
                      type: "SendEvent",
                      arguments : [
-                       'ItemSelected',
+                       'select',
                        '${ordinal}' ,
                        '${data.Title}' 
                      ]
@@ -68,13 +68,7 @@ module.exports = (header, subhdr, data) => { return {
                         spacing: 0,
                         height: 90,
                         alignItems: "left",
-                        item: {
-                                  type: "Container",
-                                  direction: "column",
-                                  style: "textStylePressable",
-                                  spacing: 0,
-                                  alignItems: "left",
-                                  items: [
+                        items: [
                                           {
                                           type: "Text",
                                           text: "${data.Id}. ${data.Title}",
@@ -86,7 +80,6 @@ module.exports = (header, subhdr, data) => { return {
                                           ]   
                         }
                   }
-                }
               },
               {
                 type: "AlexaFooter",

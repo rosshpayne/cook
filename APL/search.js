@@ -56,7 +56,7 @@ module.exports = (header, data) => { return {
                   onPress: {
                      type: "SendEvent",
                      arguments : [
-                       'ItemSelected',
+                       'select',
                        '${ordinal}' ,
                        '${data.Title}' 
                      ]
@@ -68,13 +68,7 @@ module.exports = (header, data) => { return {
                         spacing: 0,
                         height: 120,
                         alignItems: "left",
-                        item: {
-                                  type: "Container",
-                                  direction: "column",
-                                  style: "textStylePressable",
-                                  spacing: 0,
-                                  alignItems: "left",
-                                  items: [
+                       items: [
                                           {
                                           type: "Text",
                                           text: "${ordinal}. ${data.Title}",
@@ -118,7 +112,6 @@ module.exports = (header, data) => { return {
                                           fontSize: "22dp"
                                           }
                                           ]   
-                        }
                   }
                 }
               },

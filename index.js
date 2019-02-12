@@ -30,6 +30,61 @@ const LaunchRequestHandler = {
   },
 }
 
+const EventHandler = {
+  canHandle: handlerInput =>
+    handlerInput.requestEnvelope.request.type === 'Alexa.Presentation.APL.UserEvent',
+  
+  handle: handlerInput => {
+    const args = handlerInput.requestEnvelope.request.arguments;
+    const event = args[0];
+    const ordinal = args[1];
+    const data = args[2];
+    const sid='sid='+handlerInput.requestEnvelope.session.sessionId   ; 
+
+
+    switch (event) {
+    case 'select':
+        const select = require('APL/select.js');
+        const ingredient = require('APL/ingredients.js');
+        const selid='&sId='+ordinal;
+        invokeParams.Payload = '{ "Path" : "select" ,"Param" : "'+sid+selid+'" }';
+
+        promise = new Promise((resolve, reject) => {
+           lambda.invoke(invokeParams, function(err, data) {
+           if (err) {
+             reject(err);
+           } else {
+             resolve(data.Payload);  }
+           });
+        });
+        return promise.then((body) => {
+        var  resp = JSON.parse(body);
+        console.log(resp);
+        if (resp.Type === "Ingredient") {
+          return  handlerInput.responseBuilder
+                            .speak('Got it..Where would you like to explore ' + ordinal + ' ' + data)
+                            .reprompt(resp.Verbal)
+                            .addDirective(ingredient(resp.Header,resp.SubHdr, resp.List))
+                            .getResponse();
+        } else {
+          return  handlerInput.responseBuilder
+                            .speak('Got it..Where would you like to explore ' + ordinal + ' ' + data)
+                            .reprompt(resp.Verbal)
+                            .addDirective(select(resp.Header,resp.SubHdr, resp.List))
+                            .getResponse();     
+        }
+        }).catch(function (err) { console.log(err, err.stack);  } );
+      
+      case 'ItemSelected':
+        console.log(data)
+        return handlerInput.responseBuilder
+                           .speak('Where would you like to explore ' + ordinal + ' ' + data)
+                           .reprompt('Where would you like to explore?')
+                          .getResponse();
+    } 
+  },
+};
+
 const SelectIntentHandler = {
   canHandle(handlerInput) {
     return handlerInput.requestEnvelope.request.type === 'IntentRequest'
@@ -542,26 +597,7 @@ const ErrorHandler = {
   },
 };
 
-const EventHandler = {
-  canHandle: handlerInput =>
-    handlerInput.requestEnvelope.request.type === 'Alexa.Presentation.APL.UserEvent',
-  
-  handle: handlerInput => {
-    const args = handlerInput.requestEnvelope.request.arguments;
-    const event = args[0];
-    const ordinal = args[1];
-    const data = args[2];
 
-    switch (event) {
-    case 'ItemSelected':
-        console.log(data)
-        return handlerInput.responseBuilder
-                           .speak('Where would you like to explore ' + ordinal + ' ' + data)
-                           .reprompt('Where would you like to explore?')
-                          .getResponse();
-    } 
-  },
-};
 
 const skillBuilder = Alexa.SkillBuilders.custom();
 
