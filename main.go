@@ -84,7 +84,7 @@ type sessCtx struct {
 	prev  int      // previous SortK (recId) when in part mode as opposed to full recipe mode
 	pid   int      // record id within a part 1..peol
 	//
-	backPressed bool // back button pressed on display
+	back bool // back button pressed on display
 }
 
 const (
@@ -154,7 +154,7 @@ type dialog struct {
 	PART    string
 }
 
-func (s *sessCtx) validateRequest() error {
+func (s *sessCtx) orchestrateRequest() error {
 	//
 	// merge and validate with last session
 	//
@@ -289,7 +289,7 @@ func (s *sessCtx) validateRequest() error {
 		switch s.selCtx {
 		case ctxRecipe:
 			// select from: multiple recipes
-			if s.backPressed {
+			if s.back {
 				return nil
 			}
 			p := lastState.MChoice[s.selId-1]
@@ -362,7 +362,7 @@ func (s *sessCtx) validateRequest() error {
 	if s.curReqType == initialiseRequest {
 		//
 		if s.request == "search" {
-			if s.backPressed {
+			if s.back {
 				return nil // have all the results in lastSess
 			}
 			// search only applies to recipes, ie. select context Recipe (ctxRecipe).
@@ -746,9 +746,8 @@ type RespEvent struct {
 func handler(request InputEvent) (RespEvent, error) {
 
 	var (
-		pathItem      []string
-		err           error
-		requestSwitch func() error
+		pathItem []string
+		err      error
 	)
 
 	(&request).init()
@@ -782,168 +781,154 @@ func handler(request InputEvent) (RespEvent, error) {
 	//                     unecessary type when user follows displayed interaction
 	//   * instructionRequest - requests associated with displaying an instruction record.
 	//
-	requestSwitch = func() error {
+	switch sessctx.request {
+	case "purge":
+		sessctx.reqBkId = request.QueryStringParameters["bkid"]
+		sessctx.reqRId = request.QueryStringParameters["rid"]
+		sessctx.reqVersion = request.QueryStringParameters["ver"]
+		//
+		sessctx.pkey = sessctx.reqBkId + "-" + sessctx.reqRId
+		if sessctx.reqVersion != "" {
+			sessctx.pkey += "-" + sessctx.reqVersion
+		}
+		// fetch recipe name and book name
+		_, err = sessctx.recipeRSearch()
+		if err != nil {
+			break
+		}
+		// read base recipe data and generate tasks, container and device usage and save to dynamodb.
+		err = sessctx.purgeRecipe()
+		if err != nil {
+			break
+		}
+		sessctx.noGetRecRequired, sessctx.reset = true, true
+	//
+	case "load", "print":
+		//
+		//   these requests are used for the standalone executable
+		//   print :ingredients" also accessible in the Alexa interaction via screen interaction
+		//
+		var r *RecipeT
+		sessctx.reqBkId = request.QueryStringParameters["bkid"]
+		sessctx.reqRId = request.QueryStringParameters["rid"]
+		sessctx.reqVersion = request.QueryStringParameters["ver"]
+		//
+		sessctx.pkey = sessctx.reqBkId + "-" + sessctx.reqRId
+		if sessctx.reqVersion != "" {
+			sessctx.pkey += "-" + sessctx.reqVersion
+		}
+		// fetch recipe name and book name
+		r, err = sessctx.recipeRSearch()
+		if err != nil {
+			break
+		}
+		// read base recipe data and generate tasks, container and device usage and save to dynamodb.
 		switch sessctx.request {
-		case "purge":
-			sessctx.reqBkId = request.QueryStringParameters["bkid"]
-			sessctx.reqRId = request.QueryStringParameters["rid"]
+		case "load":
+			pIngrdScale = 1.0
+			err = sessctx.loadBaseRecipe()
+			if err != nil {
+				break
+			}
+		case "print":
+			// set unit format mode
+			writeCtx = uPrint
+			as, err := sessctx.loadActivities()
+			if err != nil {
+				fmt.Printf("error: %s", err.Error())
+			}
+			fmt.Println(as.String(r))
+		}
+		sessctx.noGetRecRequired, sessctx.reset = true, true
+	//
+	case "genSlotValues":
+		err = sessctx.generateSlotEntries()
+		if err != nil {
+			break
+		}
+		sessctx.noGetRecRequired, sessctx.reset = true, true
+	case "book", "recipe", "select", "search", "list", "yesno", "version", "back":
+		sessctx.curReqType = initialiseRequest
+		switch sessctx.request {
+		case "book": // user reponse "open book" "close book"
+			// book id and name  populated in this section
+			if len(pathItem) > 1 && pathItem[1] == "close" {
+				fmt.Println("** closeBook.")
+				sessctx.closeBook = true
+			} else {
+				sessctx.reqBkId = request.QueryStringParameters["bkid"]
+				err = sessctx.bookNameLookup()
+			}
+		// case "yes", "no":
+		// 	sessctx.yesno = pathItem[0]
+		case "version":
 			sessctx.reqVersion = request.QueryStringParameters["ver"]
-			//
-			sessctx.pkey = sessctx.reqBkId + "-" + sessctx.reqRId
-			if sessctx.reqVersion != "" {
-				sessctx.pkey += "-" + sessctx.reqVersion
-			}
-			// fetch recipe name and book name
-			_, err = sessctx.recipeRSearch()
+		case "list":
+			sessctx.showList = true
+		case "search":
+			sq, err := url.QueryUnescape(request.QueryStringParameters["srch"])
 			if err != nil {
-				break
+				panic(err)
 			}
-			// read base recipe data and generate tasks, container and device usage and save to dynamodb.
-			err = sessctx.purgeRecipe()
+			sessctx.reqSearch = strings.ToLower(sq)
+		case "recipe": // must be Recipe Name not Ingredient-cat
+			// Alexa request: query parameter format either BkId-RId or Recipe name as spoken ie. Alexa's slot-type name
+			// decided that BkId-RId is a bad idea as it can conflict with dynamodb so Slot-type can only have full recipe names.
+			var rcp string
+			rcp, err = url.QueryUnescape(request.QueryStringParameters["rcp"])
 			if err != nil {
-				break
+				panic(err)
 			}
-			sessctx.noGetRecRequired, sessctx.reset = true, true
-		//
-		case "load", "print":
-			//
-			//   these requests are used for the standalone executable
-			//   print :ingredients" also accessible in the Alexa interaction via screen interaction
-			//
-			var r *RecipeT
-			sessctx.reqBkId = request.QueryStringParameters["bkid"]
-			sessctx.reqRId = request.QueryStringParameters["rid"]
-			sessctx.reqVersion = request.QueryStringParameters["ver"]
-			//
-			sessctx.pkey = sessctx.reqBkId + "-" + sessctx.reqRId
-			if sessctx.reqVersion != "" {
-				sessctx.pkey += "-" + sessctx.reqVersion
+			sessctx.reqRName = rcp
+		case "yesno":
+			i := request.QueryStringParameters["yn"] // "1" yes, "0" no
+			sessctx.yesno = "no"
+			if i == "1" {
+				sessctx.yesno = "yes"
 			}
-			// fetch recipe name and book name
-			r, err = sessctx.recipeRSearch()
+		case "select":
+			var i int
+			i, err = strconv.Atoi(request.QueryStringParameters["sId"])
 			if err != nil {
-				break
+				err = fmt.Errorf("%s: %s", "Error in converting int of select request \n\n", err.Error())
+			} else {
+				sessctx.selId = i
 			}
-			// read base recipe data and generate tasks, container and device usage and save to dynamodb.
-			switch sessctx.request {
-			case "load":
-				pIngrdScale = 1.0
-				err = sessctx.loadBaseRecipe()
-				if err != nil {
-					break
-				}
-			case "print":
-				// set unit format mode
-				writeCtx = uPrint
-				as, err := sessctx.loadActivities()
-				if err != nil {
-					fmt.Printf("error: %s", err.Error())
-				}
-				fmt.Println(as.String(r))
-			}
-			sessctx.noGetRecRequired, sessctx.reset = true, true
-		//
-		case "genSlotValues":
-			err = sessctx.generateSlotEntries()
+		case "back":
+			// use pressed back button on display device
+			sessctx.back = true
+			//
+			err = sessctx.popState()
+			//
+		}
+	//
+	case container_, task_:
+		//  "object" request is required only for VUI, as all requests are be random by nature.
+		//  GUI requests, on the other hand, are controlled by this app making the following request redundant.
+		sessctx.object = sessctx.request
+		sessctx.curReqType = objectRequest
+		sessctx.request = "next"
+	case "next", "prev", "goto", "repeat", "modify":
+		sessctx.curReqType = instructionRequest
+		switch sessctx.request {
+		case "goto":
+			var i int
+			i, err = strconv.Atoi(request.QueryStringParameters["goId"])
 			if err != nil {
-				break
-			}
-			sessctx.noGetRecRequired, sessctx.reset = true, true
-		case "book", "recipe", "select", "search", "list", "yesno", "version", "back":
-			sessctx.curReqType = initialiseRequest
-			switch sessctx.request {
-			case "book": // user reponse "open book" "close book"
-				// book id and name  populated in this section
-				if len(pathItem) > 1 && pathItem[1] == "close" {
-					fmt.Println("** closeBook.")
-					sessctx.closeBook = true
-				} else {
-					sessctx.reqBkId = request.QueryStringParameters["bkid"]
-					err = sessctx.bookNameLookup()
-				}
-			// case "yes", "no":
-			// 	sessctx.yesno = pathItem[0]
-			case "version":
-				sessctx.reqVersion = request.QueryStringParameters["ver"]
-			case "list":
-				sessctx.showList = true
-			case "search":
-				sq, err := url.QueryUnescape(request.QueryStringParameters["srch"])
-				if err != nil {
-					panic(err)
-				}
-				sessctx.reqSearch = strings.ToLower(sq)
-			case "recipe": // must be Recipe Name not Ingredient-cat
-				// Alexa request: query parameter format either BkId-RId or Recipe name as spoken ie. Alexa's slot-type name
-				// decided that BkId-RId is a bad idea as it can conflict with dynamodb so Slot-type can only have full recipe names.
-				var rcp string
-				rcp, err = url.QueryUnescape(request.QueryStringParameters["rcp"])
-				if err != nil {
-					panic(err)
-				}
-				sessctx.reqRName = rcp
-			case "yesno":
-				i := request.QueryStringParameters["yn"] // "1" yes, "0" no
-				sessctx.yesno = "no"
-				if i == "1" {
-					sessctx.yesno = "yes"
-				}
-			case "select":
-				var i int
-				i, err = strconv.Atoi(request.QueryStringParameters["sId"])
-				if err != nil {
-					err = fmt.Errorf("%s: %s", "Error in converting int of select request \n\n", err.Error())
-				} else {
-					sessctx.selId = i
-				}
-			case "back":
-				// use pressed back button on display device
-				sessctx.backPressed = true
-				//
-				lastState, err := sessctx.popState() // remove last state item, persists and returns last entry
-				if err != nil {
-					return err
-				}
-				request = InputEvent{Path: lastState.Path, Param: lastState.Param}
-				request.init()
-				pathItem = request.PathItem
-				sessctx.request = lastState.Request
-				sessctx.lastState = lastState
-				//
-				requestSwitch()
-			}
-		//
-		case container_, task_:
-			//  "object" request is required only for VUI, as all requests are be random by nature.
-			//  GUI requests, on the other hand, are controlled by this app making the following request redundant.
-			sessctx.object = sessctx.request
-			sessctx.curReqType = objectRequest
-			sessctx.request = "next"
-		case "next", "prev", "goto", "repeat", "modify":
-			sessctx.curReqType = instructionRequest
-			switch sessctx.request {
-			case "goto":
-				var i int
-				i, err = strconv.Atoi(request.QueryStringParameters["goId"])
-				if err != nil {
-					err = fmt.Errorf("%s: %s", "Error in converting int of goto request ", err.Error())
-				} else {
-					sessctx.gotoRecId = i
-				}
+				err = fmt.Errorf("%s: %s", "Error in converting int of goto request ", err.Error())
+			} else {
+				sessctx.gotoRecId = i
 			}
 		}
-		return err
 	}
-
-	requestSwitch()
 	if err != nil {
 		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata, Error: err.Error()}, nil
 	}
 	//
 	// validate the request and populate session context with appropriate metadata associated with request
 	//
-	if !sessctx.backPressed {
-		err = sessctx.validateRequest()
+	if !sessctx.back {
+		err = sessctx.orchestrateRequest()
 		if err != nil {
 			return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata, Error: err.Error()}, nil
 		}

@@ -137,12 +137,6 @@ func (s *sessCtx) saveState(new ...bool) (*stateRec, error) {
 		sr      stateRec
 		updateC expression.UpdateBuilder
 	)
-
-	if s.backPressed {
-		fmt.Println("Entered saveState..but immediately left as part of back key processing", new)
-		// do not want to save as its already been done last time it was executed.
-		return nil, nil
-	}
 	fmt.Println("Entered saveState..", new)
 	sr.Path = s.path
 	sr.Param = s.param
@@ -288,8 +282,12 @@ func (s *sessCtx) updateState() error {
 	return nil
 }
 
-func (s *sessCtx) popState() (*stateRec, error) {
-
+func (s *sessCtx) popState() error {
+	//
+	// removes last entry in state attribute of session item.
+	//  populates s (sessCtx) with state data from the new last entry
+	//  (which was the second last entry before deletion)
+	//
 	type pKey struct {
 		Sid string
 	}
@@ -298,8 +296,12 @@ func (s *sessCtx) popState() (*stateRec, error) {
 	if len(s.state) == 0 {
 		s.getState()
 	}
+	if len(s.state) < 2 {
+		return fmt.Errorf("Error: Cannot proceed back any further.")
+	}
 	// save all but last state entry
 	State := s.state[:len(s.state)-1]
+	s.state = State[:]
 	updateC = expression.Set(expression.Name("state"), expression.Value(State))
 	expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
 	//
@@ -332,9 +334,10 @@ func (s *sessCtx) popState() (*stateRec, error) {
 			// Message from an error.
 			fmt.Println(err.Error())
 		}
-		return nil, err
+		return err
 	}
 	sr := State.pop()
+	// transfer state to session context
 	s.path = sr.Path
 	s.param = sr.Param
 
@@ -376,5 +379,5 @@ func (s *sessCtx) popState() (*stateRec, error) {
 	s.prev = sr.Prev
 	s.peol = sr.PEOL
 	s.pid = sr.PId
-	return sr, nil
+	return nil
 }

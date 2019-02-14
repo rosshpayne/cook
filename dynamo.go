@@ -517,9 +517,6 @@ func (s *sessCtx) recipeRSearch() (*RecipeT, error) {
 		PKey  string
 		SortK float64
 	}
-	if s.backPressed {
-		return nil, nil
-	}
 	rId, err := strconv.Atoi(s.reqRId)
 	if err != nil {
 		return nil, fmt.Errorf("Error: in recipeRSearch converting reqRId  [%s] to int - %s", s.reqRId, err.Error())
@@ -601,20 +598,6 @@ func (s *sessCtx) keywordSearch() error {
 		err      error
 	)
 	// check if search result exists in state, which it will if back button pressed in display
-	if s.backPressed {
-		if s.lastState != nil && len(s.lastState.Search) > 0 && s.lastState.Search == s.reqSearch {
-			if len(s.lastState.MChoice) > 0 {
-				s.mChoice = s.lastState.MChoice
-				fmt.Println("results from last session cache")
-				return nil
-			} else if len(s.lastState.RName) > 0 {
-				l := s.lastState
-				s.reqRId, s.reqRName, s.reqBkId, s.reqBkName, s.serves = l.RId, l.RName, l.BkId, l.BkName, l.Serves
-				fmt.Println("results from last session cache")
-				return nil
-			}
-		}
-	}
 	fmt.Println("not in state cache, about to run dynamo query in keyword search")
 	if len(s.reqBkId) > 0 {
 		// look for recipes in current book only
