@@ -22,14 +22,21 @@ import (
 // Session Context - assigned from request and Session table.
 //  also contains state information relevant to current session and not the next session.
 type sessCtx struct {
-	request     string // request from user e.g. select, next, prev,..
-	sessionId   string // sourced from request. Used as PKey to Sessions table
-	reqRName    string // requested recipe name - query param of recipe request
-	reqBkName   string // requested book name - query param
-	reqRId      string // Recipe Id - 0 means no recipe id has been assigned.  All RId's start at 1.
-	reqBkId     string
-	reqIngrdCat string   // search for recipe. Query ingredients table.
-	reqVersion  string   // version id, starts at 0 which is blank??
+	path      string // InputEvent.Path
+	request   string // pathItem[0]: request from user e.g. select, next, prev,..
+	param     string // InputEvent.Param
+	state     stateStack
+	lastState *stateRec // state attribute from state dynamo item - contains state history
+	//
+	sessionId  string // sourced from request. Used as PKey to Sessions table
+	reqRName   string // requested recipe name - query param of recipe request
+	reqBkName  string // requested book name - query param
+	reqRId     string // Recipe Id - 0 means no recipe id has been assigned.  All RId's start at 1.
+	reqBkId    string
+	reqSearch  string // keyword search value
+	reqVersion string // version id, starts at 0 which is blank??
+	//reqSearch   string   // search value
+	recId       []int    // record id for each object (ingredient, container, utensils, containers). No display will use verbal for all object listings.
 	pkey        string   // primary key
 	recipe      *RecipeT //  record from dynamo recipe query
 	swapBkName  string
@@ -48,7 +55,7 @@ type sessCtx struct {
 	object      string //container,ingredient,instruction,utensil. Sourced from Sessions table or request
 	//updateAdd      int        // dynamodb Update ADD. Operation dependent
 	gotoRecId        int        // sourced from request
-	recId            int        // current record id for object list (ingredient,task,container,utensil) - displayed record id persisted to session after use.
+	objRecId         int        // current record id for object. Object is a ingredient,task,container,utensil.- displayed record id persisted to session after use.
 	recIdNotExists   bool       // determines whether to create []RecId set attribute in Session  table
 	noGetRecRequired bool       // a mutliple record request e.g. ingredients listing
 	eol              int        // sourced from Sessions table
@@ -76,6 +83,8 @@ type sessCtx struct {
 	next  int      // next SortK (recId)
 	prev  int      // previous SortK (recId) when in part mode as opposed to full recipe mode
 	pid   int      // record id within a part 1..peol
+	//
+	backPressed bool // back button pressed on display
 }
 
 const (
@@ -149,57 +158,67 @@ func (s *sessCtx) validateRequest() error {
 	//
 	// merge and validate with last session
 	//
-	fmt.Println("here in validateRequest....about to GetSession")
-	lastSess, err := s.GetSession()
+	lastState, err := s.getState()
 	if err != nil {
-		fmt.Println("Error from GetSession ", err.Error())
 		return err
 	}
-	fmt.Println("Post GetSession..")
 	//
-	if len(s.object) == 0 {
-		s.object = lastSess.Obj
-	}
 	if s.eol == 0 {
-		s.eol = lastSess.EOL
+		s.eol = lastState.EOL
 	}
 	if len(s.reqBkId) == 0 {
-		s.reqBkId = lastSess.BkId
+		s.reqBkId = lastState.BkId
 	}
 	if len(s.reqBkName) == 0 {
-		s.reqBkName = lastSess.BkName
+		s.reqBkName = lastState.BkName
 	}
 	if len(s.reqRName) == 0 {
-		s.reqRName = lastSess.RName
+		s.reqRName = lastState.RName
 	}
 	if len(s.reqRId) == 0 {
-		s.reqRId = lastSess.RId
+		s.reqRId = lastState.RId
 	}
 	fmt.Printf("reqVersion: [%s]\n", s.reqVersion)
 	fmt.Println("len(s.reqVersion) = ", len(s.reqVersion))
 	if len(s.reqVersion) == 0 {
-		s.reqVersion = lastSess.Ver
+		s.reqVersion = lastState.Ver
+	}
+	//
+	// object rec Id
+	//
+	s.recId = lastState.RecId
+	if len(s.object) == 0 {
+		s.object = lastState.Obj
 	}
 	//
 	// Recipe Part related data
 	//
 	if len(s.part) == 0 {
-		s.part = lastSess.Part
+		s.part = lastState.Part
 	}
 	if len(s.parts) == 0 {
-		s.parts = lastSess.Parts
+		s.parts = lastState.Parts
 	}
 	if s.peol == 0 {
-		s.peol = lastSess.PEOL
+		s.peol = lastState.PEOL
 	}
-	if lastSess.PId > 0 {
-		s.pid = lastSess.PId
+	if lastState.PId > 0 {
+		s.pid = lastState.PId
 	}
-	if lastSess.Prev != 0 {
-		s.prev = lastSess.Prev
+	if lastState.Prev != 0 {
+		s.prev = lastState.Prev
 	}
-	if lastSess.Next != 0 {
-		s.next = lastSess.Next
+	if lastState.Next != 0 {
+		s.next = lastState.Next
+	}
+	if s.selId > 0 {
+		if lastState.Request == "search" {
+			fmt.Println("last Request search, last SelCtx ", lastState.SelCtx)
+			s.selCtx = lastState.SelCtx
+		} else if lastState.Request == "select" {
+			fmt.Println("lastState.Request == select,last SelCtx ", lastState.SelCtx)
+			s.selCtx = lastState.SelCtx + 1
+		}
 	}
 	//
 	// assign primary key - used for most dyamo accesses
@@ -217,45 +236,45 @@ func (s *sessCtx) validateRequest() error {
 	fmt.Println("PKEY = ", s.pkey)
 	// determine if recIds need to be reset to 1
 	if len(s.reqVersion) > 0 {
-		if len(lastSess.Ver) == 0 {
+		if len(lastState.Ver) == 0 {
 			s.reset = true
-		} else if len(lastSess.Ver) > 0 && s.reqVersion != lastSess.Ver {
+		} else if len(lastState.Ver) > 0 && s.reqVersion != lastState.Ver {
 			s.reset = true
 		}
 	}
 	//
 	// yes/no response. May assign new book
 	//
-	if len(s.yesno) > 0 && lastSess.Qid > 0 {
+	if len(s.yesno) > 0 && lastState.Qid > 0 {
 		if s.yesno == "yes" {
 			var err error
-			switch lastSess.Qid {
+			switch lastState.Qid {
 			case 20:
 				// close active book
-				//  as req struct fields still have their zero value they will clear session state during updateSession
+				//  as req struct fields still have their zero value they will clear session state during saveState
 				s.reset = true
-				s.vmsg = fmt.Sprintf(`%s is closed. You can now search across all recipe books`, lastSess.BkName)
-				s.dmsg = fmt.Sprintf(`%s is closed. You can now search across all recipe books`, lastSess.BkName)
+				s.vmsg = fmt.Sprintf(`%s is closed. You can now search across all recipe books`, lastState.BkName)
+				s.dmsg = fmt.Sprintf(`%s is closed. You can now search across all recipe books`, lastState.BkName)
 				s.reqBkId, s.reqBkName, s.reqRName, s.reqRId, s.eol, s.reset = "", "", "", "", 0, true
-				err = s.updateSession()
+				_, err = s.saveState()
 			case 21:
 				// swap book
-				s.reqBkId, s.reqBkName, s.reset = lastSess.SwpBkId, lastSess.SwpBkNm, true
-				s.vmsg = fmt.Sprintf(`Book [%s] is now open. You can now search or open a recipe within this book`, lastSess.BkName)
-				s.dmsg = fmt.Sprintf(`Book [%s] is now open. You can now search or open a recipe within this book`, lastSess.BkName)
-				err = s.updateSession()
+				s.reqBkId, s.reqBkName, s.reset = lastState.SwpBkId, lastState.SwpBkNm, true
+				s.vmsg = fmt.Sprintf(`Book [%s] is now open. You can now search or open a recipe within this book`, lastState.BkName)
+				s.dmsg = fmt.Sprintf(`Book [%s] is now open. You can now search or open a recipe within this book`, lastState.BkName)
+				_, err = s.saveState()
 			default:
 				// TODO: log error to error table
 			}
 			if err != nil {
-				return fmt.Errorf("Error: in mergeAndValidateWithLastSession of updateSession() - %s", err.Error())
+				return fmt.Errorf("Error: in mergeAndValidateWithlastStateion of saveState() - %s", err.Error())
 			}
 		}
 		if len(s.dmsg) == 0 {
-			s.dmsg = lastSess.Dmsg
+			s.dmsg = lastState.Dmsg
 		}
 		//s.noGetRecRequired = true
-		err = s.updateSession()
+		_, err = s.saveState()
 		if err != nil {
 			return err
 		}
@@ -264,31 +283,27 @@ func (s *sessCtx) validateRequest() error {
 	//
 	// respond to select from displayed items
 	//
-	fmt.Println("in validateRequest .  Select: ", s.selId, lastSess.SelCtx)
+	fmt.Println("in validateRequest .  Select: ", s.selId, lastState.SelCtx)
 	if s.selId > 0 {
 		// selId is the response from Alexa on the index (ordinal value) of the selected display item
-		fmt.Println("Select: ", s.selId, lastSess.SelCtx)
-		switch lastSess.SelCtx {
+		switch s.selCtx {
 		case ctxRecipe:
 			// select from: multiple recipes
-			p := lastSess.MChoice[s.selId-1]
+			if s.backPressed {
+				return nil
+			}
+			p := lastState.MChoice[s.selId-1]
 			s.reqRId, s.reqRName, s.reqBkId, s.reqBkName = p.RId, p.RName, p.BkId, p.BkName
 			s.dmsg = fmt.Sprintf(`Now that you have selected [%s] recipe would you like to list ingredients, cooking instructions, utensils or containers or cancel`, s.reqRName)
 			s.vmsg = fmt.Sprintf(`Now that you have selected {%s] recipe would you like to list ingredients, cooking instructions, utensils or containers or cancel`, s.reqRName)
-			// chosen recipe, so set select context to object (ingredient, utensil, container, task
-			s.selCtx = ctxObjectList
+			// chosen recipe, so set select context to object (ingredient, utensil, container, tas			s.selCtx = ctxObjectList
 			//
-			r, err := s.recipeRSearch()
+			_, err := s.recipeRSearch()
 			if err != nil {
 				return err
 			}
-			s.displayHdr = s.reqRName
-			s.displaySubHdr = "Book:  " + s.reqBkName
-			if len(r.Serves) > 0 {
-				s.displaySubHdr += "              Serves: " + r.Serves
-			}
 			s.reset = true
-			err = s.updateSession()
+			_, err = s.saveState()
 			if err != nil {
 				return err
 			}
@@ -326,12 +341,10 @@ func (s *sessCtx) validateRequest() error {
 				// generate ingredient listing
 				s.ingrdList = as.String(r)
 				//
-				err = s.updateSession()
+				_, err = s.saveState()
 				if err != nil {
 					return err
 				}
-				s.displayHdr = s.reqRName
-				s.displaySubHdr = "Book:  " + s.reqBkName
 				return nil
 			case container_:
 				return nil
@@ -341,7 +354,7 @@ func (s *sessCtx) validateRequest() error {
 	}
 	//
 	// note:
-	// 1. ALL conditional paths return  and most update Sessions. Any updateSessions do not change RecId as current state is initialiseRequest.
+	// 1. ALL conditional paths return  and most update Sessions. Any saveStates do not change RecId as current state is initialiseRequest.
 	//
 	// 2. BookName will always co-exist with BookId in session table by the end of this section
 	//	  similarly, RecipeName will always co-exist with RecipeId in the session table by the end of this section
@@ -349,33 +362,33 @@ func (s *sessCtx) validateRequest() error {
 	if s.curReqType == initialiseRequest {
 		//
 		if s.request == "search" {
+			if s.backPressed {
+				return nil // have all the results in lastSess
+			}
 			// search only applies to recipes, ie. select context Recipe (ctxRecipe).
 			s.selCtx = ctxRecipe
 			// we have fully populated session context from previous session e.g. BkName etc, now lets see what recipes we find
 			// populates sessCtx.mChoice if search results in a list.
-			err := s.ingredientSearch()
+			fmt.Println("In validateRequest. About to call keywordSearch")
+			err := s.keywordSearch()
 			if err != nil {
 				panic(err)
 			}
 			s.eol, s.reset, s.object = 0, true, ""
-			if len(s.mChoice) == 0 {
+			if len(s.mChoice) == 0 || len(s.reqRId) > 0 {
 				// single recipe found in search. Select context must now reflect object list. Persist value.
 				s.selCtx = ctxObjectList
 			}
-			err = s.updateSession()
+			_, err = s.saveState()
 			if err != nil {
 				return err
-			}
-			if len(s.mChoice) == 0 {
-				// single recipe found in search. change request so  APL data structure is populated
-				s.request = "select"
 			}
 			return nil
 		}
 		//TODO: is showList required?
 		if s.showList {
-			if len(lastSess.MChoice) > 0 {
-				for i, v := range lastSess.MChoice {
+			if len(lastState.MChoice) > 0 {
+				for i, v := range lastState.MChoice {
 					s.dmsg = s.dmsg + fmt.Sprintf("%d. Recipe [%s] in book [%s] by [%s] quantity %s\n", i+1, v.RName, v.BkName, v.Authors, v.Quantity)
 					s.vmsg = s.dmsg + fmt.Sprintf("%d. Recipe [%s] in book [%s] by [%s] quantity %s\n", i+1, v.RName, v.BkName, v.Authors, v.Quantity)
 				}
@@ -387,7 +400,7 @@ func (s *sessCtx) validateRequest() error {
 			//
 			// book requested
 			//
-			switch len(lastSess.BkId) {
+			switch len(lastState.BkId) {
 			case 0:
 				if s.closeBook {
 					s.dmsg = `Book is already closed.`
@@ -402,21 +415,21 @@ func (s *sessCtx) validateRequest() error {
 				}
 				//
 				s.eol = 0
-				err := s.updateSession()
+				_, err := s.saveState()
 				if err != nil {
 					return err
 				}
 				return nil
 			default:
 				// there is already an initialised book for this session
-				if s.closeBook || s.reqBkName != lastSess.BkName {
+				if s.closeBook || s.reqBkName != lastState.BkName {
 					// closing or open a book different from current opened book
-					switch len(lastSess.RName) {
+					switch len(lastState.RName) {
 					case 0:
 						// no active recipe, then open or close book
 						if s.closeBook {
-							s.dmsg = fmt.Sprintf("Book %s is closed", lastSess.BkName)
-							s.vmsg = fmt.Sprintf("Book %s is closed", lastSess.BkName)
+							s.dmsg = fmt.Sprintf("Book %s is closed", lastState.BkName)
+							s.vmsg = fmt.Sprintf("Book %s is closed", lastState.BkName)
 							s.reqBkId, s.reqBkName, s.reqRId, s.reqRName, s.reset = "", "", "", "", true //TODO - should recipe be closed
 						} else {
 							// no active recipe. Open book.
@@ -425,18 +438,18 @@ func (s *sessCtx) validateRequest() error {
 						}
 						// Book initialises. No recipe provided. Persist.
 						s.eol, s.reset = 0, true
-						err := (*s).updateSession()
+						_, err := s.saveState()
 						if err != nil {
 							return err
 						}
 						return nil
 					default:
 						// open different book with an active recipe.
-						//s.reqRName = lastSess.RName
-						if len(lastSess.Obj) > 0 && s.eol != lastSess.RecId[objectMap[lastSess.Obj]] {
+						//s.reqRName = lastState.RName
+						if len(s.object) > 0 && s.eol != s.recId[objectMap[s.object]] {
 							if s.closeBook {
-								s.dmsg = fmt.Sprintf("You currently have recipe %s open. Do you still want to close the book?", lastSess.RName)
-								s.vmsg = fmt.Sprintf("You currently have recipe %s open. Do you still want to close the book?", lastSess.RName)
+								s.dmsg = fmt.Sprintf("You currently have recipe %s open. Do you still want to close the book?", lastState.RName)
+								s.vmsg = fmt.Sprintf("You currently have recipe %s open. Do you still want to close the book?", lastState.RName)
 								s.questionId = 20
 							} else {
 								// currently listing
@@ -448,7 +461,7 @@ func (s *sessCtx) validateRequest() error {
 							}
 							// save book details to swap attributes in Session table
 							//s.eol, s.reset = 0, true - depends on yes/no answer
-							err := s.updateSession()
+							_, err := s.saveState()
 							if err != nil {
 								return err
 							}
@@ -465,7 +478,7 @@ func (s *sessCtx) validateRequest() error {
 							}
 							// new book selected, zero recipe etc
 							s.eol, s.reset, s.reqRId, s.reqRName = 0, true, "", ""
-							err := (*s).updateSession()
+							_, err := s.saveState()
 							if err != nil {
 								return err
 							}
@@ -474,14 +487,14 @@ func (s *sessCtx) validateRequest() error {
 					}
 				} else {
 					// open book. same initialised book requested
-					switch len(lastSess.RName) {
+					switch len(lastState.RName) {
 					case 0:
 						// no active recipe
 						s.dmsg = `Book is currenlty open. Please request a recipe from the book or say "list" and I will print the recipe names to the display.`
 						s.noGetRecRequired = true
 						return nil
 					default:
-						s.dmsg = `Book is already open at recipe ` + lastSess.RName
+						s.dmsg = `Book is already open at recipe ` + lastState.RName
 						s.noGetRecRequired = true
 						return nil
 					}
@@ -497,7 +510,7 @@ func (s *sessCtx) validateRequest() error {
 				return err
 			}
 			s.eol, s.reset = 0, true
-			err = s.updateSession()
+			_, err = s.saveState()
 			if err != nil {
 				return err
 			}
@@ -506,43 +519,43 @@ func (s *sessCtx) validateRequest() error {
 	}
 	//
 	// request must set recipe id before proceeding to list an object
-	if s.curReqType == instructionRequest && len(lastSess.RId) == 0 || s.curReqType == objectRequest && len(lastSess.RId) == 0 {
+	if s.curReqType == instructionRequest && len(lastState.RId) == 0 || s.curReqType == objectRequest && len(lastState.RId) == 0 {
 		s.dmsg = `You have not specified a recipe yet. Please say "recipe" followed by it\'s name`
 		s.vmsg = `You have not specified a recipe yet. Please say "recipe" followed by it\'s name`
 		s.noGetRecRequired = true
 		return nil
 	}
 	//  if listing (next,prev,repeat,goto - curReqType object, listing) without object (container,ingredient,task,utensil) -
-	if s.curReqType == instructionRequest && len(lastSess.Obj) == 0 {
+	if s.curReqType == instructionRequest && len(s.object) == 0 {
 		s.dmsg = `You need to say what you want to list. Please say either "ingredients","start cooking","containers" or "utensils". Not hard really..`
 		s.vmsg = `You need to say what you want to list. Please say either "ingredients","start cooking","containers" or "utensils". Not hard really..`
 		s.noGetRecRequired = true
 		return nil
 	}
 	//  if listing and not finished and object request changes object. Accept and zero or repeat last RecId for requested object.
-	if len(lastSess.Obj) > 0 {
-		//if !s.finishedListing(lastSess.RecId[objectMap[lastSess.Obj]], objectMap[lastSess.Obj]) && (lastSess.Obj != s.object) {
+	if len(s.object) > 0 {
+		//if !s.finishedListing(s.recId[objectMap[s.object]], objectMap[s.object]) && (s.object != s.object) {
 		fmt.Println(s.object)
-		if len(lastSess.RecId) > 0 {
-			if s.eol != lastSess.RecId[objectMap[s.object]] && (lastSess.Obj != s.object) {
+		if len(s.recId) > 0 {
+			if s.eol != s.recId[objectMap[s.object]] && (s.object != s.object) {
 				// show last listed entry otherwise list first entry
-				switch lastSess.RecId[objectMap[s.object]] {
+				switch s.recId[objectMap[s.object]] {
 				case 0: // not listed before or been reset after previously completing list
-					s.recId = 1 // show first entry
+					s.objRecId = 1 // show first entry
 				default: // in the process of listing
-					s.recId = lastSess.RecId[objectMap[s.object]] // repeat last shown entry
+					s.objRecId = s.recId[objectMap[s.object]] // repeat last shown entry
 				}
 			}
 		}
 	}
 	// if object specified and different from last one
-	if len(s.object) > 0 && len(lastSess.RecId) > 0 && (lastSess.Obj != s.object) {
+	if len(s.object) > 0 && len(s.recId) > 0 && (s.object != s.object) {
 		// show last listed entry otherwise list first entry
-		switch lastSess.RecId[objectMap[s.object]] {
+		switch s.recId[objectMap[s.object]] {
 		case 0: // not listed before or been reset after previously completing list
-			s.recId = 1 // show first entry
+			s.objRecId = 1 // show first entry
 		default: // in the process of listing
-			s.recId = lastSess.RecId[objectMap[s.object]] // repeat last shown entry
+			s.objRecId = s.recId[objectMap[s.object]] // repeat last shown entry
 		}
 	}
 	//  If listing and not finished and object request  has changed (task, ingredient, container, utensil) reset RecId
@@ -550,28 +563,28 @@ func (s *sessCtx) validateRequest() error {
 	// copy object from last session
 	if s.curReqType == instructionRequest {
 		// object is same as last call
-		s.object = lastSess.Obj
+		s.object = s.object
 	}
 	switch s.request {
 	case "goto":
-		fmt.Printf("gotoRecId = %d  %d\n", s.gotoRecId, lastSess.EOL)
+		fmt.Printf("gotoRecId = %d  %d\n", s.gotoRecId, lastState.EOL)
 		//TODO goto not implemented - maybe no use case
-		// if s.gotoRecId > lastSess.EOL { //EOL of current object (ingredients,tasks..) data
+		// if s.gotoRecId > lastState.EOL { //EOL of current object (ingredients,tasks..) data
 		// 	// do a repeat operation ie. display current record and define new message
 		// 	s.dmsg = "request goes beyond last item in list. Please say again"
 		// 	s.vmsg = "request goes beyond last item in list. Please say again"
-		// 	s.recId = lastSess.RecId[objectMap[s.object]]
-		// 	fmt.Printf("gotoRecId = %d  %d %d\n", s.gotoRecId, lastSess.EOL, s.recId)
+		// 	s.objRecId= s.recId[objectMap[s.object]]
+		// 	fmt.Printf("gotoRecId = %d  %d %d\n", s.gotoRecId, lastState.EOL, s.recId)
 		// 	s.noGetRecRequired = true
 		// 	return nil
 		// } else {
-		// 	// use updateAdd value to assign new recId during updateSession
-		// 	s.updateAdd = s.gotoRecId - lastSess.RecId[objectMap[s.object]]
+		// 	// use updateAdd value to assign new recId during saveState
+		// 	s.updateAdd = s.gotoRecId - s.recId[objectMap[s.object]]
 		// }
 	case "repeat":
-		// return - no need to updateSession as nothing has changed.  Select current recId.
-		s.recId = lastSess.RecId[objectMap[s.object]]
-		s.dmsg, s.vmsg, s.ddata = lastSess.Dmsg, lastSess.Vmsg, lastSess.DData
+		// return - no need to saveState as nothing has changed.  Select current recId.
+		s.objRecId = s.recId[objectMap[s.object]]
+		s.dmsg, s.vmsg, s.ddata = lastState.Dmsg, lastState.Vmsg, lastState.DData
 		s.noGetRecRequired = true
 		return nil
 	case "prev":
@@ -579,9 +592,9 @@ func (s *sessCtx) validateRequest() error {
 			if len(s.object) == 0 {
 				return fmt.Errorf("Error: no object defined when in validateRequest - next")
 			}
-			if lastSess.EOL > 0 && len(lastSess.RecId) > 0 {
-				if lastSess.RecId[objectMap[s.object]] == 1 {
-					s.recId = lastSess.RecId[objectMap[s.object]]
+			if lastState.EOL > 0 && len(s.recId) > 0 {
+				if s.recId[objectMap[s.object]] == 1 {
+					s.objRecId = s.recId[objectMap[s.object]]
 					// s.dPreMsg = "You have reached the end. "
 					// s.vPreMsg = "You have reached the end. "
 					return nil
@@ -589,11 +602,12 @@ func (s *sessCtx) validateRequest() error {
 				if len(s.object) == 0 {
 					return fmt.Errorf("Error: no object defined when in validateRequest - next")
 				}
-				s.recId = lastSess.RecId[objectMap[s.object]] - 1
+				s.recId[objectMap[s.object]] -= 1
+				s.objRecId = s.recId[objectMap[s.object]]
 			}
 		} else {
-			s.recId = lastSess.Prev
-			if s.recId == -1 {
+			s.objRecId = lastState.Prev
+			if s.objRecId == -1 {
 				s.noGetRecRequired = true
 				return nil
 			}
@@ -604,19 +618,20 @@ func (s *sessCtx) validateRequest() error {
 			if len(s.object) == 0 {
 				return fmt.Errorf("Error: no object defined when in validateRequest - next")
 			}
-			if lastSess.EOL > 0 && len(lastSess.RecId) > 0 {
-				if lastSess.RecId[objectMap[s.object]] == s.eol {
-					s.recId = lastSess.EOL
+			if lastState.EOL > 0 && len(s.recId) > 0 {
+				if s.recId[objectMap[s.object]] == s.eol {
+					s.objRecId = lastState.EOL
 					// s.dPreMsg = "You have reached the end. "
 					// s.vPreMsg = "You have reached the end. "
 					s.noGetRecRequired = true
 					return nil
 				}
 			}
-			s.recId = lastSess.RecId[objectMap[s.object]] + 1
+			s.recId[objectMap[s.object]] += 1
+			s.objRecId = s.recId[objectMap[s.object]]
 		} else {
-			s.recId = lastSess.Next
-			if s.recId == -1 {
+			s.objRecId = lastState.Next
+			if s.objRecId == -1 {
 				// TODO: finished current part. Options go onto next or has recipe been completed - how to determine?
 				// CptPart[k]=true
 				// save ComPlTedPart to session to keep track completed Part for user.
@@ -625,8 +640,8 @@ func (s *sessCtx) validateRequest() error {
 			}
 		}
 	}
-	// check if we have Dynamodb Recid Set defined, this will be useful in updateSession
-	if len(lastSess.RecId) == 0 {
+	// check if we have Dynamodb Recid Set defined, this will be useful in saveState
+	if len(s.recId) == 0 {
 		s.recIdNotExists = true
 	}
 	//
@@ -651,7 +666,7 @@ func (s *sessCtx) getRecById() error {
 	}
 	rec := at.Alexa()
 	//	s.dmsg = expandLiteralTags(rec.Display)
-	if s.recId == rec.EOL {
+	if s.objRecId == rec.EOL {
 		writeCtx = uSay
 		s.vmsg = "and finally, " + expandScalableTags(expandLiteralTags(rec.Verbal))
 		writeCtx = uDisplay
@@ -670,7 +685,7 @@ func (s *sessCtx) getRecById() error {
 	//
 	// save state to dynamo
 	//
-	err = s.updateSession()
+	err = s.updateState()
 	if err != nil {
 		return err
 	}
@@ -682,7 +697,7 @@ func (s *sessCtx) getRecById() error {
 	// also save next, prev to session table if using part mode
 	// if s.eol != rec.EOL {
 	// 	s.eol = rec.EOL
-	// 	s.updateSessionEOL()
+	// 	s.saveStateEOL()
 	// }
 	// if len(s.curPart) > 0 {
 	// 	// update next & prev values
@@ -717,6 +732,7 @@ type Item struct {
 }
 type RespEvent struct {
 	Position string `json:"Position"` // recId|EOL|PEOL|PName
+	BackBtn  bool   `json:"Back"`
 	Type     string `json:"Type"`
 	Header   string `json:"Header"`
 	SubHdr   string `json:"SubHdr"`
@@ -730,8 +746,9 @@ type RespEvent struct {
 func handler(request InputEvent) (RespEvent, error) {
 
 	var (
-		pathItem []string
-		err      error
+		pathItem      []string
+		err           error
+		requestSwitch func() error
 	)
 
 	(&request).init()
@@ -754,6 +771,8 @@ func handler(request InputEvent) (RespEvent, error) {
 		sessionId:   request.QueryStringParameters["sid"],
 		dynamodbSvc: dynamodbService(),
 		request:     pathItem[0],
+		path:        request.Path,
+		param:       request.Param,
 	}
 	//
 	// Three request types:
@@ -763,167 +782,175 @@ func handler(request InputEvent) (RespEvent, error) {
 	//                     unecessary type when user follows displayed interaction
 	//   * instructionRequest - requests associated with displaying an instruction record.
 	//
-	switch sessctx.request {
-	case "purge":
-		sessctx.reqBkId = request.QueryStringParameters["bkid"]
-		sessctx.reqRId = request.QueryStringParameters["rid"]
-		sessctx.reqVersion = request.QueryStringParameters["ver"]
-		//
-		sessctx.pkey = sessctx.reqBkId + "-" + sessctx.reqRId
-		if sessctx.reqVersion != "" {
-			sessctx.pkey += "-" + sessctx.reqVersion
-		}
-		// fetch recipe name and book name
-		_, err = sessctx.recipeRSearch()
-		if err != nil {
-			break
-		}
-		// read base recipe data and generate tasks, container and device usage and save to dynamodb.
-		err = sessctx.purgeRecipe()
-		if err != nil {
-			break
-		}
-		sessctx.noGetRecRequired, sessctx.reset = true, true
-	//
-	case "load", "print":
-		//
-		//   these requests are used for the standalone executable
-		//   print :ingredients" also accessible in the Alexa interaction via screen interaction
-		//
-		var r *RecipeT
-		sessctx.reqBkId = request.QueryStringParameters["bkid"]
-		sessctx.reqRId = request.QueryStringParameters["rid"]
-		sessctx.reqVersion = request.QueryStringParameters["ver"]
-		//
-		sessctx.pkey = sessctx.reqBkId + "-" + sessctx.reqRId
-		if sessctx.reqVersion != "" {
-			sessctx.pkey += "-" + sessctx.reqVersion
-		}
-		// fetch recipe name and book name
-		r, err = sessctx.recipeRSearch()
-		if err != nil {
-			break
-		}
-		// read base recipe data and generate tasks, container and device usage and save to dynamodb.
+	requestSwitch = func() error {
 		switch sessctx.request {
-		case "load":
-			pIngrdScale = 1.0
-			err = sessctx.loadBaseRecipe()
+		case "purge":
+			sessctx.reqBkId = request.QueryStringParameters["bkid"]
+			sessctx.reqRId = request.QueryStringParameters["rid"]
+			sessctx.reqVersion = request.QueryStringParameters["ver"]
+			//
+			sessctx.pkey = sessctx.reqBkId + "-" + sessctx.reqRId
+			if sessctx.reqVersion != "" {
+				sessctx.pkey += "-" + sessctx.reqVersion
+			}
+			// fetch recipe name and book name
+			_, err = sessctx.recipeRSearch()
 			if err != nil {
 				break
 			}
-		case "print":
-			// set unit format mode
-			writeCtx = uPrint
-			as, err := sessctx.loadActivities()
+			// read base recipe data and generate tasks, container and device usage and save to dynamodb.
+			err = sessctx.purgeRecipe()
 			if err != nil {
-				fmt.Printf("error: %s", err.Error())
+				break
 			}
-			fmt.Println(as.String(r))
-		}
-		sessctx.noGetRecRequired, sessctx.reset = true, true
-	//
-	case "genSlotValues":
-		err = sessctx.generateSlotEntries()
-		if err != nil {
-			break
-		}
-		sessctx.noGetRecRequired, sessctx.reset = true, true
-	case "book", "recipe", "select", "search", "list", "yesno", "version":
-		sessctx.curReqType = initialiseRequest
-		switch sessctx.request {
-		case "book": // user reponse "open book" "close book"
-			// book id and name  populated in this section
-			if len(pathItem) > 1 && pathItem[1] == "close" {
-				fmt.Println("** closeBook.")
-				sessctx.closeBook = true
-			} else {
-				sessctx.reqBkId = request.QueryStringParameters["bkid"]
-				err = sessctx.bookNameLookup()
-			}
-		// case "yes", "no":
-		// 	sessctx.yesno = pathItem[0]
-		case "version":
+			sessctx.noGetRecRequired, sessctx.reset = true, true
+		//
+		case "load", "print":
+			//
+			//   these requests are used for the standalone executable
+			//   print :ingredients" also accessible in the Alexa interaction via screen interaction
+			//
+			var r *RecipeT
+			sessctx.reqBkId = request.QueryStringParameters["bkid"]
+			sessctx.reqRId = request.QueryStringParameters["rid"]
 			sessctx.reqVersion = request.QueryStringParameters["ver"]
-		case "list":
-			sessctx.showList = true
-		case "search":
-			sq, err := url.QueryUnescape(request.QueryStringParameters["srch"])
+			//
+			sessctx.pkey = sessctx.reqBkId + "-" + sessctx.reqRId
+			if sessctx.reqVersion != "" {
+				sessctx.pkey += "-" + sessctx.reqVersion
+			}
+			// fetch recipe name and book name
+			r, err = sessctx.recipeRSearch()
 			if err != nil {
-				panic(err)
+				break
 			}
-			sessctx.reqIngrdCat = strings.ToLower(sq)
-		case "recipe": // must be Recipe Name not Ingredient-cat
-			// Alexa request: query parameter format either BkId-RId or Recipe name as spoken ie. Alexa's slot-type name
-			// decided that BkId-RId is a bad idea as it can conflict with dynamodb so Slot-type can only have full recipe names.
-			var rcp string
-			rcp, err = url.QueryUnescape(request.QueryStringParameters["rcp"])
+			// read base recipe data and generate tasks, container and device usage and save to dynamodb.
+			switch sessctx.request {
+			case "load":
+				pIngrdScale = 1.0
+				err = sessctx.loadBaseRecipe()
+				if err != nil {
+					break
+				}
+			case "print":
+				// set unit format mode
+				writeCtx = uPrint
+				as, err := sessctx.loadActivities()
+				if err != nil {
+					fmt.Printf("error: %s", err.Error())
+				}
+				fmt.Println(as.String(r))
+			}
+			sessctx.noGetRecRequired, sessctx.reset = true, true
+		//
+		case "genSlotValues":
+			err = sessctx.generateSlotEntries()
 			if err != nil {
-				panic(err)
+				break
 			}
-			sessctx.reqRName = rcp
-		case "yesno":
-			i := request.QueryStringParameters["yn"] // "1" yes, "0" no
-			sessctx.yesno = "no"
-			if i == "1" {
-				sessctx.yesno = "yes"
+			sessctx.noGetRecRequired, sessctx.reset = true, true
+		case "book", "recipe", "select", "search", "list", "yesno", "version", "back":
+			sessctx.curReqType = initialiseRequest
+			switch sessctx.request {
+			case "book": // user reponse "open book" "close book"
+				// book id and name  populated in this section
+				if len(pathItem) > 1 && pathItem[1] == "close" {
+					fmt.Println("** closeBook.")
+					sessctx.closeBook = true
+				} else {
+					sessctx.reqBkId = request.QueryStringParameters["bkid"]
+					err = sessctx.bookNameLookup()
+				}
+			// case "yes", "no":
+			// 	sessctx.yesno = pathItem[0]
+			case "version":
+				sessctx.reqVersion = request.QueryStringParameters["ver"]
+			case "list":
+				sessctx.showList = true
+			case "search":
+				sq, err := url.QueryUnescape(request.QueryStringParameters["srch"])
+				if err != nil {
+					panic(err)
+				}
+				sessctx.reqSearch = strings.ToLower(sq)
+			case "recipe": // must be Recipe Name not Ingredient-cat
+				// Alexa request: query parameter format either BkId-RId or Recipe name as spoken ie. Alexa's slot-type name
+				// decided that BkId-RId is a bad idea as it can conflict with dynamodb so Slot-type can only have full recipe names.
+				var rcp string
+				rcp, err = url.QueryUnescape(request.QueryStringParameters["rcp"])
+				if err != nil {
+					panic(err)
+				}
+				sessctx.reqRName = rcp
+			case "yesno":
+				i := request.QueryStringParameters["yn"] // "1" yes, "0" no
+				sessctx.yesno = "no"
+				if i == "1" {
+					sessctx.yesno = "yes"
+				}
+			case "select":
+				var i int
+				i, err = strconv.Atoi(request.QueryStringParameters["sId"])
+				if err != nil {
+					err = fmt.Errorf("%s: %s", "Error in converting int of select request \n\n", err.Error())
+				} else {
+					sessctx.selId = i
+				}
+			case "back":
+				// use pressed back button on display device
+				sessctx.backPressed = true
+				//
+				lastState, err := sessctx.popState() // remove last state item, persists and returns last entry
+				if err != nil {
+					return err
+				}
+				request = InputEvent{Path: lastState.Path, Param: lastState.Param}
+				request.init()
+				pathItem = request.PathItem
+				sessctx.request = lastState.Request
+				sessctx.lastState = lastState
+				//
+				requestSwitch()
 			}
-		case "select":
-			var i int
-			i, err = strconv.Atoi(request.QueryStringParameters["sId"])
-			if err != nil {
-				err = fmt.Errorf("%s: %s", "Error in converting int of select request \n\n", err.Error())
-			} else {
-				fmt.Printf("select call: %d\n", i)
-				sessctx.selId = i
-				fmt.Println("sessctx.curReqType :", sessctx.curReqType)
+		//
+		case container_, task_:
+			//  "object" request is required only for VUI, as all requests are be random by nature.
+			//  GUI requests, on the other hand, are controlled by this app making the following request redundant.
+			sessctx.object = sessctx.request
+			sessctx.curReqType = objectRequest
+			sessctx.request = "next"
+		case "next", "prev", "goto", "repeat", "modify":
+			sessctx.curReqType = instructionRequest
+			switch sessctx.request {
+			case "goto":
+				var i int
+				i, err = strconv.Atoi(request.QueryStringParameters["goId"])
+				if err != nil {
+					err = fmt.Errorf("%s: %s", "Error in converting int of goto request ", err.Error())
+				} else {
+					sessctx.gotoRecId = i
+				}
 			}
-			// remainder of sessctx populated in validateRequest
 		}
-	//
-	case container_, task_:
-		//  "object" request is required only for VUI, as all requests are be random by nature.
-		//  GUI requests, on the other hand, are controlled by this app making the following request redundant.
-		sessctx.object = sessctx.request
-		sessctx.curReqType = objectRequest
-		sessctx.request = "next"
-	case "next", "prev", "goto", "repeat", "modify":
-		sessctx.curReqType = instructionRequest
-		switch sessctx.request {
-		case "goto":
-			var i int
-			i, err = strconv.Atoi(request.QueryStringParameters["goId"])
-			if err != nil {
-				err = fmt.Errorf("%s: %s", "Error in converting int of goto request ", err.Error())
-			} else {
-				sessctx.gotoRecId = i
-			}
-		}
-		// case "yes":  check questions asked from last session (session table)
-		// case "no":
+		return err
 	}
 
+	requestSwitch()
 	if err != nil {
-		fmt.Println("err: .", err.Error())
 		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata, Error: err.Error()}, nil
 	}
 	//
 	// validate the request and populate session context with appropriate metadata associated with request
 	//
-	fmt.Println("about to validateRequest..")
-	err = sessctx.validateRequest()
-	fmt.Println("post validateRequest..")
-	if err != nil {
-		fmt.Println("Error: ", err.Error())
-		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata, Error: err.Error()}, nil
+	if !sessctx.backPressed {
+		err = sessctx.validateRequest()
+		if err != nil {
+			return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata, Error: err.Error()}, nil
+		}
 	}
 	//
 	// package the response data into RespEvent (an APL aware "display" structure) and return
 	//
-	fmt.Println("sessctx.curReqType :", sessctx.curReqType)
-	fmt.Println("noGetRecRequired ; ", sessctx.noGetRecRequired)
-	fmt.Println("request ; ", sessctx.request)
-	fmt.Println("object ; ", sessctx.object)
 	if sessctx.curReqType == initialiseRequest || sessctx.noGetRecRequired {
 
 		switch {
@@ -956,23 +983,20 @@ func handler(request InputEvent) (RespEvent, error) {
 				if len(v.Serves) > 0 {
 					item = Item{Id: id, Title: v.RName, SubTitle1: "Book: " + v.BkName, SubTitle2: "Serves:  " + v.Serves, Text: v.Quantity}
 				} else {
-					var (
-						subTitle2 string
-						title     string
-					)
+					var subTitle2 string
 					if a := strings.Split(v.Authors, ","); len(a) > 1 {
 						subTitle2 = "Authors: " + v.Authors
 					} else {
 						subTitle2 = "Author: " + v.Authors
 					}
-					item = Item{Id: id, Title: title, SubTitle1: "Book: " + v.BkName, SubTitle2: subTitle2, Text: v.Quantity}
+					item = Item{Id: id, Title: v.RName, SubTitle1: "Book: " + v.BkName, SubTitle2: subTitle2, Text: v.Quantity}
 				}
 				mchoice = append(mchoice, item)
 			}
 			s := sessctx
-			return RespEvent{Header: "Search results for: " + s.reqIngrdCat, Text: s.vmsg, Verbal: s.dmsg, List: mchoice}, nil
+			return RespEvent{Header: "Search results for: " + s.reqSearch, Text: s.vmsg, Verbal: s.dmsg, List: mchoice}, nil
 
-		case sessctx.request == "select" && sessctx.selCtx == ctxObjectList:
+		case (sessctx.request == "select" || sessctx.request == "search") && len(sessctx.reqRName) > 0:
 
 			s := sessctx
 			mchoice := make([]Item, 4)
@@ -1005,7 +1029,7 @@ func handler(request InputEvent) (RespEvent, error) {
 
 func main() {
 	lambda.Start(handler)
-	// p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
+	//p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
 	//p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&rcp=Rhubarb and strawberry crumble cake"}
 	//var i float64 = 1.0
 	// p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + "&srch=" + os.Args[2]}
