@@ -40,7 +40,9 @@ module.exports = (header, subhdr, data) => { return {
               type: "AlexaHeader",
               headerTitle: header,
               headerSubtitle: subhdr,
-              headerBackgroundColor: "red"
+              headerBackgroundColor: "red",
+              headerBackButton: true,
+              headerNavigationAction: "backButton"
               },
               {
               type: "Sequence",
@@ -56,9 +58,9 @@ module.exports = (header, subhdr, data) => { return {
                   onPress: {
                      type: "SendEvent",
                      arguments : [
-                       'select',
-                       '${ordinal}' ,
-                       '${data.Title}' 
+                       "select",
+                       "${ordinal}" ,
+                       "${data.Title}" 
                      ]
                   },
                   item: {

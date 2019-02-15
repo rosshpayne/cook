@@ -28,60 +28,165 @@ const LaunchRequestHandler = {
                           .withSimpleCard('Recipe World', displayText)
                           .getResponse();
   },
-}
+};
 
 const EventHandler = {
   canHandle: handlerInput =>
     handlerInput.requestEnvelope.request.type === 'Alexa.Presentation.APL.UserEvent',
   
   handle: handlerInput => {
+    const select = require('APL/select.js');
+    const ingredient = require('APL/ingredients.js');
+    const sid='sid='+handlerInput.requestEnvelope.session.sessionId ;
+
     const args = handlerInput.requestEnvelope.request.arguments;
     const event = args[0];
-    const ordinal = args[1];
-    const data = args[2];
-    const sid='sid='+handlerInput.requestEnvelope.session.sessionId   ; 
-
+    //const ordinal = args[1];
+    //const data = args[2];
+    const selid='&sId='+args[1];
 
     switch (event) {
     case 'select':
-        const select = require('APL/select.js');
-        const ingredient = require('APL/ingredients.js');
-        const selid='&sId='+ordinal;
-        invokeParams.Payload = '{ "Path" : "select" ,"Param" : "'+sid+selid+'" }';
+      invokeParams.Payload = '{ "Path" : "select" ,"Param" : "'+sid+selid+'" }';
 
-        promise = new Promise((resolve, reject) => {
-           lambda.invoke(invokeParams, function(err, data) {
-           if (err) {
-             reject(err);
-           } else {
-             resolve(data.Payload);  }
-           });
+      promise = new Promise((resolve, reject) => {
+          lambda.invoke(invokeParams, function(err, data) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(data.Payload);  }
+          });
         });
-        return promise.then((body) => {
+    
+      return promise.then((body) => {
         var  resp = JSON.parse(body);
-        console.log(resp);
         if (resp.Type === "Ingredient") {
           return  handlerInput.responseBuilder
-                            .speak('Got it..Where would you like to explore ' + ordinal + ' ' + data)
+                            .speak(resp.Verbal)
                             .reprompt(resp.Verbal)
                             .addDirective(ingredient(resp.Header,resp.SubHdr, resp.List))
                             .getResponse();
         } else {
           return  handlerInput.responseBuilder
-                            .speak('Got it..Where would you like to explore ' + ordinal + ' ' + data)
+                            .speak(resp.Verbal)
                             .reprompt(resp.Verbal)
                             .addDirective(select(resp.Header,resp.SubHdr, resp.List))
-                            .getResponse();     
+                            .getResponse();   
         }
         }).catch(function (err) { console.log(err, err.stack);  } );
-      
-      case 'ItemSelected':
-        console.log(data)
-        return handlerInput.responseBuilder
-                           .speak('Where would you like to explore ' + ordinal + ' ' + data)
-                           .reprompt('Where would you like to explore?')
-                          .getResponse();
+        
+    case 'backButton':
+       invokeParams.Payload = '{ "Path" : "back" ,"Param" : "'+sid+'" }';
+        
+       promise = new Promise((resolve, reject) => {
+          lambda.invoke(invokeParams, function(err, data) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(data.Payload);  }
+          });
+        });
+    
+      return promise.then((body) => {
+        var  resp = JSON.parse(body);
+        if (resp.Type === "Ingredient") {
+          return  handlerInput.responseBuilder
+                            .speak(resp.Verbal)
+                            .reprompt(resp.Verbal)
+                            .addDirective(ingredient(resp.Header,resp.SubHdr, resp.List))
+                            .getResponse();
+        } else {
+          return  handlerInput.responseBuilder
+                            .speak(resp.Verbal)
+                            .reprompt(resp.Verbal)
+                            .addDirective(select(resp.Header,resp.SubHdr, resp.List))
+                            .getResponse();   
+        }
+        }).catch(function (err) { console.log(err, err.stack);  } );
     } 
+  },
+};
+
+// const EventHandler = {
+//   canHandle: handlerInput =>
+//     handlerInput.requestEnvelope.request.type === 'Alexa.Presentation.APL.UserEvent',
+  
+//   handle: handlerInput => {
+//     const select = require('APL/select.js');
+//     const ingredient = require('APL/ingredients.js');
+//     const sid='sid='+handlerInput.requestEnvelope.session.sessionId   ; 
+//     const args = handlerInput.requestEnvelope.request.arguments;
+//     const event = args[0];
+//     //const data = args[2];
+//     const selid='&sId='+args[1];
+
+//     switch (event) {
+//       case 'select':
+//         invokeParams.Payload = '{ "Path" : "select" ,"Param" : "'+sid+selid+'" }';
+//       case 'backButton':
+//         invokeParams.Payload = '{ "Path" : "back" ,"Param" : "'+sid+'" }';
+//     } 
+    
+//     promise = new Promise((resolve, reject) => {
+//           lambda.invoke(invokeParams, function(err, data) {
+//           if (err) {
+//             reject(err);
+//           } else {
+//             resolve(data.Payload);  }
+//           });
+//         });
+    
+//     return promise.then((body) => {
+//         var  resp = JSON.parse(body);
+//         console.log(resp);
+//         if (resp.Type === "Ingredient") {
+//           return  handlerInput.responseBuilder
+//                             .speak(resp.Verbal)
+//                             .reprompt(resp.Verbal)
+//                             .addDirective(ingredient(resp.Header,resp.SubHdr, resp.List))
+//                             .getResponse();
+//         } else {
+//           return  handlerInput.responseBuilder
+//                             .speak(resp.Verbal)
+//                             .reprompt(resp.Verbal)
+//                             .addDirective(select(resp.Header,resp.SubHdr, resp.List))
+//                             .getResponse();   
+//         }
+//         }).catch(function (err) { console.log(err, err.stack);  } );
+//   },
+// };
+
+
+const SearchIntentHandler = {
+  canHandle(handlerInput) {
+    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+      && handlerInput.requestEnvelope.request.intent.name === 'SearchIntent';
+  },
+  handle(handlerInput) {
+    const search = require('APL/search.js');
+    const querystring = require('querystring');
+    //TODO is querystring necessary here as I believe AWS may escape it.
+    const srch='&srch='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.ingrdcat.resolutions.resolutionsPerAuthority[0].values[0].value.name);
+    const sid="sid="+handlerInput.requestEnvelope.session.sessionId;
+    invokeParams.Payload = '{ "Path" : "search" ,"Param" : "'+sid+srch+'" }';
+
+    promise = new Promise((resolve, reject) => {
+      lambda.invoke(invokeParams, function(err, data) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(data.Payload);  }
+        });
+    });
+    
+    return promise.then((body) => {
+        var resp = JSON.parse(body);
+        return  handlerInput.responseBuilder
+                          .speak(resp.Verbal)
+                          .reprompt(resp.Text)
+                          .addDirective(search(resp.Header, resp.SubHdr, resp.List))
+                          .getResponse();
+      }).catch(function (err) { console.log(err, err.stack);  } );
   },
 };
 
@@ -134,7 +239,6 @@ const GotoIntentHandler = {
   },
 
   handle(handlerInput) {
-    const querystring = require('querystring');
     var speechText;
     var displayText;
     var recipe ;
@@ -307,39 +411,6 @@ const RecipeIntentHandler = {
                           .speak(speechText)
                           .reprompt(speechText)
                           .withSimpleCard('Instructions', displayText)
-                          .getResponse();
-      }).catch(function (err) { console.log(err, err.stack);  } );
-  },
-};
-
-const SearchIntentHandler = {
-  canHandle(handlerInput) {
-    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
-      && handlerInput.requestEnvelope.request.intent.name === 'SearchIntent';
-  },
-  handle(handlerInput) {
-    const search = require('APL/search.js');
-    const querystring = require('querystring');
-    //TODO is querystring necessary here as I believe AWS may escape it.
-    const srch='&srch='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.ingrdcat.resolutions.resolutionsPerAuthority[0].values[0].value.name);
-    const sid="sid="+handlerInput.requestEnvelope.session.sessionId;
-    invokeParams.Payload = '{ "Path" : "search" ,"Param" : "'+sid+srch+'" }';
-
-    promise = new Promise((resolve, reject) => {
-      lambda.invoke(invokeParams, function(err, data) {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(data.Payload);  }
-        });
-    });
-    
-    return promise.then((body) => {
-        var resp = JSON.parse(body);
-        return  handlerInput.responseBuilder
-                          .speak(resp.Verbal)
-                          .reprompt(resp.Text)
-                          .addDirective(search(resp.Header,resp.List))
                           .getResponse();
       }).catch(function (err) { console.log(err, err.stack);  } );
   },

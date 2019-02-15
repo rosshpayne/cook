@@ -40,7 +40,9 @@ module.exports = (header, subhdr, data) => { return {
               type: "AlexaHeader",
               headerTitle: header,
               headerSubtitle: subhdr,
-              headerBackgroundColor: "red"
+              headerBackgroundColor: "red",
+              headerBackButton: true,
+              headerNavigationAction: "backButton"
               },
               {
               type: "Sequence",
@@ -52,19 +54,12 @@ module.exports = (header, subhdr, data) => { return {
               width: "100vw",
               height: "100vh",
               item: {
-                        type: "Container",
-                        direction: "column",
-                        spacing: 0,
-                        height: 40,
-                        alignItems: "left",
-                        item: {
-                                          type: "Text",
-                                          text: "  ${data.Title}",
-                                          grow: 0,
-                                          shrink: 1,
-                                          spacing: 4,
-                                          fontSize: "30dp"
-                        }
+                    type: "Text",
+                    text: "  ${data.Title}",
+                    grow: 0,
+                    shrink: 1,
+                    spacing: 4,
+                    fontSize: "30dp"
                   }
               },
               {

@@ -1,6 +1,6 @@
 
 
-module.exports = (header, data) => { return {
+module.exports = (header, subhdr, data) => { return {
     type: 'Alexa.Presentation.APL.RenderDocument',
     token: 'splash-screen',
     document: {
@@ -39,8 +39,10 @@ module.exports = (header, data) => { return {
               {
               type: "AlexaHeader",
               headerTitle: header,
+              headerSubtitle: subhdr,
               headerBackgroundColor: "red",
-              headerSubtitle: "Header Subtitle"
+              headerBackButton: true,
+              headerNavigationAction: "backButton"
               },
               {
               type: "Sequence",
@@ -56,9 +58,9 @@ module.exports = (header, data) => { return {
                   onPress: {
                      type: "SendEvent",
                      arguments : [
-                       'select',
-                       '${ordinal}' ,
-                       '${data.Title}' 
+                       "select",
+                       "${ordinal}" ,
+                       "${data.Title}" 
                      ]
                   },
                   item: {

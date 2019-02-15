@@ -22,9 +22,9 @@ import (
 // Session Context - assigned from request and Session table.
 //  also contains state information relevant to current session and not the next session.
 type sessCtx struct {
-	path      string // InputEvent.Path
-	request   string // pathItem[0]: request from user e.g. select, next, prev,..
-	param     string // InputEvent.Param
+	//path      string // InputEvent.Path
+	request string // pathItem[0]: request from user e.g. select, next, prev,..
+	//param     string // InputEvent.Param
 	state     stateStack
 	lastState *stateRec // state attribute from state dynamo item - contains state history
 	//
@@ -156,61 +156,15 @@ type dialog struct {
 
 func (s *sessCtx) orchestrateRequest() error {
 	//
-	// merge and validate with last session
+	// merge ssession context with last session where appropiate
 	//
 	lastState, err := s.getState()
 	if err != nil {
 		return err
 	}
 	//
-	if s.eol == 0 {
-		s.eol = lastState.EOL
-	}
-	if len(s.reqBkId) == 0 {
-		s.reqBkId = lastState.BkId
-	}
-	if len(s.reqBkName) == 0 {
-		s.reqBkName = lastState.BkName
-	}
-	if len(s.reqRName) == 0 {
-		s.reqRName = lastState.RName
-	}
-	if len(s.reqRId) == 0 {
-		s.reqRId = lastState.RId
-	}
-	fmt.Printf("reqVersion: [%s]\n", s.reqVersion)
-	fmt.Println("len(s.reqVersion) = ", len(s.reqVersion))
-	if len(s.reqVersion) == 0 {
-		s.reqVersion = lastState.Ver
-	}
+	// determine select context
 	//
-	// object rec Id
-	//
-	s.recId = lastState.RecId
-	if len(s.object) == 0 {
-		s.object = lastState.Obj
-	}
-	//
-	// Recipe Part related data
-	//
-	if len(s.part) == 0 {
-		s.part = lastState.Part
-	}
-	if len(s.parts) == 0 {
-		s.parts = lastState.Parts
-	}
-	if s.peol == 0 {
-		s.peol = lastState.PEOL
-	}
-	if lastState.PId > 0 {
-		s.pid = lastState.PId
-	}
-	if lastState.Prev != 0 {
-		s.prev = lastState.Prev
-	}
-	if lastState.Next != 0 {
-		s.next = lastState.Next
-	}
 	if s.selId > 0 {
 		if lastState.Request == "search" {
 			fmt.Println("last Request search, last SelCtx ", lastState.SelCtx)
@@ -219,9 +173,13 @@ func (s *sessCtx) orchestrateRequest() error {
 			fmt.Println("lastState.Request == select,last SelCtx ", lastState.SelCtx)
 			s.selCtx = lastState.SelCtx + 1
 		}
+		if s.selCtx > ctxObjectList {
+			s.ingrdList = lastState.Ingredients
+			return nil
+		}
 	}
 	//
-	// assign primary key - used for most dyamo accesses
+	// gen primary key - used for most dyamo accesses
 	//
 	s.pkey = s.reqBkId + "-" + s.reqRId
 	fmt.Println("reqVersion = ", s.reqVersion)
@@ -251,30 +209,30 @@ func (s *sessCtx) orchestrateRequest() error {
 			switch lastState.Qid {
 			case 20:
 				// close active book
-				//  as req struct fields still have their zero value they will clear session state during saveState
+				//  as req struct fields still have their zero value they will clear session state during pushState
 				s.reset = true
 				s.vmsg = fmt.Sprintf(`%s is closed. You can now search across all recipe books`, lastState.BkName)
 				s.dmsg = fmt.Sprintf(`%s is closed. You can now search across all recipe books`, lastState.BkName)
 				s.reqBkId, s.reqBkName, s.reqRName, s.reqRId, s.eol, s.reset = "", "", "", "", 0, true
-				_, err = s.saveState()
+				_, err = s.pushState()
 			case 21:
 				// swap book
 				s.reqBkId, s.reqBkName, s.reset = lastState.SwpBkId, lastState.SwpBkNm, true
 				s.vmsg = fmt.Sprintf(`Book [%s] is now open. You can now search or open a recipe within this book`, lastState.BkName)
 				s.dmsg = fmt.Sprintf(`Book [%s] is now open. You can now search or open a recipe within this book`, lastState.BkName)
-				_, err = s.saveState()
+				_, err = s.pushState()
 			default:
 				// TODO: log error to error table
 			}
 			if err != nil {
-				return fmt.Errorf("Error: in mergeAndValidateWithlastStateion of saveState() - %s", err.Error())
+				return fmt.Errorf("Error: in mergeAndValidateWithlastStateion of pushState() - %s", err.Error())
 			}
 		}
 		if len(s.dmsg) == 0 {
 			s.dmsg = lastState.Dmsg
 		}
 		//s.noGetRecRequired = true
-		_, err = s.saveState()
+		_, err = s.pushState()
 		if err != nil {
 			return err
 		}
@@ -292,7 +250,10 @@ func (s *sessCtx) orchestrateRequest() error {
 			if s.back {
 				return nil
 			}
-			p := lastState.MChoice[s.selId-1]
+			if s.selId > len(s.mChoice) || s.selId < 1 {
+				return fmt.Errorf("Selection out of range")
+			}
+			p := s.mChoice[s.selId-1]
 			s.reqRId, s.reqRName, s.reqBkId, s.reqBkName = p.RId, p.RName, p.BkId, p.BkName
 			s.dmsg = fmt.Sprintf(`Now that you have selected [%s] recipe would you like to list ingredients, cooking instructions, utensils or containers or cancel`, s.reqRName)
 			s.vmsg = fmt.Sprintf(`Now that you have selected {%s] recipe would you like to list ingredients, cooking instructions, utensils or containers or cancel`, s.reqRName)
@@ -303,7 +264,7 @@ func (s *sessCtx) orchestrateRequest() error {
 				return err
 			}
 			s.reset = true
-			_, err = s.saveState()
+			_, err = s.pushState()
 			if err != nil {
 				return err
 			}
@@ -341,7 +302,7 @@ func (s *sessCtx) orchestrateRequest() error {
 				// generate ingredient listing
 				s.ingrdList = as.String(r)
 				//
-				_, err = s.saveState()
+				_, err = s.pushState()
 				if err != nil {
 					return err
 				}
@@ -354,7 +315,7 @@ func (s *sessCtx) orchestrateRequest() error {
 	}
 	//
 	// note:
-	// 1. ALL conditional paths return  and most update Sessions. Any saveStates do not change RecId as current state is initialiseRequest.
+	// 1. ALL conditional paths return  and most update Sessions. Any pushStates do not change RecId as current state is initialiseRequest.
 	//
 	// 2. BookName will always co-exist with BookId in session table by the end of this section
 	//	  similarly, RecipeName will always co-exist with RecipeId in the session table by the end of this section
@@ -379,7 +340,7 @@ func (s *sessCtx) orchestrateRequest() error {
 				// single recipe found in search. Select context must now reflect object list. Persist value.
 				s.selCtx = ctxObjectList
 			}
-			_, err = s.saveState()
+			_, err = s.pushState()
 			if err != nil {
 				return err
 			}
@@ -387,8 +348,8 @@ func (s *sessCtx) orchestrateRequest() error {
 		}
 		//TODO: is showList required?
 		if s.showList {
-			if len(lastState.MChoice) > 0 {
-				for i, v := range lastState.MChoice {
+			if len(s.mChoice) > 0 {
+				for i, v := range s.mChoice {
 					s.dmsg = s.dmsg + fmt.Sprintf("%d. Recipe [%s] in book [%s] by [%s] quantity %s\n", i+1, v.RName, v.BkName, v.Authors, v.Quantity)
 					s.vmsg = s.dmsg + fmt.Sprintf("%d. Recipe [%s] in book [%s] by [%s] quantity %s\n", i+1, v.RName, v.BkName, v.Authors, v.Quantity)
 				}
@@ -415,7 +376,7 @@ func (s *sessCtx) orchestrateRequest() error {
 				}
 				//
 				s.eol = 0
-				_, err := s.saveState()
+				_, err := s.pushState()
 				if err != nil {
 					return err
 				}
@@ -438,7 +399,7 @@ func (s *sessCtx) orchestrateRequest() error {
 						}
 						// Book initialises. No recipe provided. Persist.
 						s.eol, s.reset = 0, true
-						_, err := s.saveState()
+						_, err := s.pushState()
 						if err != nil {
 							return err
 						}
@@ -461,7 +422,7 @@ func (s *sessCtx) orchestrateRequest() error {
 							}
 							// save book details to swap attributes in Session table
 							//s.eol, s.reset = 0, true - depends on yes/no answer
-							_, err := s.saveState()
+							_, err := s.pushState()
 							if err != nil {
 								return err
 							}
@@ -478,7 +439,7 @@ func (s *sessCtx) orchestrateRequest() error {
 							}
 							// new book selected, zero recipe etc
 							s.eol, s.reset, s.reqRId, s.reqRName = 0, true, "", ""
-							_, err := s.saveState()
+							_, err := s.pushState()
 							if err != nil {
 								return err
 							}
@@ -510,7 +471,7 @@ func (s *sessCtx) orchestrateRequest() error {
 				return err
 			}
 			s.eol, s.reset = 0, true
-			_, err = s.saveState()
+			_, err = s.pushState()
 			if err != nil {
 				return err
 			}
@@ -578,11 +539,11 @@ func (s *sessCtx) orchestrateRequest() error {
 		// 	s.noGetRecRequired = true
 		// 	return nil
 		// } else {
-		// 	// use updateAdd value to assign new recId during saveState
+		// 	// use updateAdd value to assign new recId during pushState
 		// 	s.updateAdd = s.gotoRecId - s.recId[objectMap[s.object]]
 		// }
 	case "repeat":
-		// return - no need to saveState as nothing has changed.  Select current recId.
+		// return - no need to pushState as nothing has changed.  Select current recId.
 		s.objRecId = s.recId[objectMap[s.object]]
 		s.dmsg, s.vmsg, s.ddata = lastState.Dmsg, lastState.Vmsg, lastState.DData
 		s.noGetRecRequired = true
@@ -640,7 +601,7 @@ func (s *sessCtx) orchestrateRequest() error {
 			}
 		}
 	}
-	// check if we have Dynamodb Recid Set defined, this will be useful in saveState
+	// check if we have Dynamodb Recid Set defined, this will be useful in pushState
 	if len(s.recId) == 0 {
 		s.recIdNotExists = true
 	}
@@ -697,7 +658,7 @@ func (s *sessCtx) getRecById() error {
 	// also save next, prev to session table if using part mode
 	// if s.eol != rec.EOL {
 	// 	s.eol = rec.EOL
-	// 	s.saveStateEOL()
+	// 	s.pushStateEOL()
 	// }
 	// if len(s.curPart) > 0 {
 	// 	// update next & prev values
@@ -723,7 +684,7 @@ func (r *InputEvent) init() {
 	r.PathItem = strings.Split(r.Path, "/")
 }
 
-type Item struct {
+type DisplayItem struct {
 	Id        string
 	Title     string
 	SubTitle1 string
@@ -731,15 +692,15 @@ type Item struct {
 	Text      string
 }
 type RespEvent struct {
-	Position string `json:"Position"` // recId|EOL|PEOL|PName
-	BackBtn  bool   `json:"Back"`
-	Type     string `json:"Type"`
-	Header   string `json:"Header"`
-	SubHdr   string `json:"SubHdr"`
-	Text     string `json:"Text"`
-	Verbal   string `json:"Verbal"`
-	Error    string `json:"Error"`
-	List     []Item `json:"List"` // id|Title1|subTitle1|SubTitle2|Text
+	Position string        `json:"Position"` // recId|EOL|PEOL|PName
+	BackBtn  bool          `json:"Back"`
+	Type     string        `json:"Type"`
+	Header   string        `json:"Header"`
+	SubHdr   string        `json:"SubHdr"`
+	Text     string        `json:"Text"`
+	Verbal   string        `json:"Verbal"`
+	Error    string        `json:"Error"`
+	List     []DisplayItem `json:"List"` // id|Title1|subTitle1|SubTitle2|Text
 }
 
 //
@@ -770,8 +731,8 @@ func handler(request InputEvent) (RespEvent, error) {
 		sessionId:   request.QueryStringParameters["sid"],
 		dynamodbSvc: dynamodbService(),
 		request:     pathItem[0],
-		path:        request.Path,
-		param:       request.Param,
+		//path:        request.Path,
+		//param:       request.Param,
 	}
 	//
 	// Three request types:
@@ -895,7 +856,7 @@ func handler(request InputEvent) (RespEvent, error) {
 				sessctx.selId = i
 			}
 		case "back":
-			// use pressed back button on display device
+			// used back button on display device
 			sessctx.back = true
 			//
 			err = sessctx.popState()
@@ -941,9 +902,9 @@ func handler(request InputEvent) (RespEvent, error) {
 		switch {
 		case sessctx.request == "select" && sessctx.object == ingredient_:
 
-			var ingrdlst []Item
+			var ingrdlst []DisplayItem
 			for _, v := range strings.Split(sessctx.ingrdList, "\n") {
-				item := Item{Title: v}
+				item := DisplayItem{Title: v}
 				ingrdlst = append(ingrdlst, item)
 			}
 			s := sessctx
@@ -951,9 +912,9 @@ func handler(request InputEvent) (RespEvent, error) {
 
 		case sessctx.request == "select" && sessctx.object == container_:
 
-			var mchoice []Item
+			var mchoice []DisplayItem
 			for _, v := range sessctx.getContainers() {
-				item := Item{Title: v.Verbal}
+				item := DisplayItem{Title: v.Verbal}
 				mchoice = append(mchoice, item)
 			}
 			s := sessctx
@@ -961,12 +922,12 @@ func handler(request InputEvent) (RespEvent, error) {
 
 		case sessctx.request == "search" && len(sessctx.mChoice) > 0:
 			// search ingredient/title keywords may return list of recipes
-			var mchoice []Item
+			var mchoice []DisplayItem
 			for _, v := range sessctx.mChoice {
-				var item Item
+				var item DisplayItem
 				id := strconv.Itoa(v.Id)
 				if len(v.Serves) > 0 {
-					item = Item{Id: id, Title: v.RName, SubTitle1: "Book: " + v.BkName, SubTitle2: "Serves:  " + v.Serves, Text: v.Quantity}
+					item = DisplayItem{Id: id, Title: v.RName, SubTitle1: "Book: " + v.BkName, SubTitle2: "Serves:  " + v.Serves, Text: v.Quantity}
 				} else {
 					var subTitle2 string
 					if a := strings.Split(v.Authors, ","); len(a) > 1 {
@@ -974,7 +935,7 @@ func handler(request InputEvent) (RespEvent, error) {
 					} else {
 						subTitle2 = "Author: " + v.Authors
 					}
-					item = Item{Id: id, Title: v.RName, SubTitle1: "Book: " + v.BkName, SubTitle2: subTitle2, Text: v.Quantity}
+					item = DisplayItem{Id: id, Title: v.RName, SubTitle1: "Book: " + v.BkName, SubTitle2: subTitle2, Text: v.Quantity}
 				}
 				mchoice = append(mchoice, item)
 			}
@@ -984,11 +945,11 @@ func handler(request InputEvent) (RespEvent, error) {
 		case (sessctx.request == "select" || sessctx.request == "search") && len(sessctx.reqRName) > 0:
 
 			s := sessctx
-			mchoice := make([]Item, 4)
+			mchoice := make([]DisplayItem, 4)
 			//for i, v := range []string{ingredient_, utensil_, container_, task_} {
 			for i, v := range []string{"List ingredients", "List utensils", "List containers", `Let's start cooking..`} {
 				id := strconv.Itoa(i + 1)
-				mchoice[i] = Item{Id: id, Title: v}
+				mchoice[i] = DisplayItem{Id: id, Title: v}
 			}
 			return RespEvent{Header: s.reqRName, Text: s.vmsg, Verbal: s.dmsg, List: mchoice}, nil
 

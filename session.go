@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	_ "time"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -18,6 +18,7 @@ import (
 // only items from session context that need to be preserved between sessions are persisted.
 type stateRec struct {
 	// InputRequest fields
+	DT      string
 	Path    string // inputEvent.Path
 	Param   string
 	Request string // PathItem[0]:
@@ -37,6 +38,8 @@ type stateRec struct {
 	Dmsg    string
 	Vmsg    string
 	DData   string
+	//
+	Ingredients string
 	//
 	// search
 	//
@@ -109,7 +112,7 @@ func (s *sessCtx) getState() (*stateRec, error) {
 	if len(result.Item) == 0 {
 		//
 		s.recId = []int{0, 0, 0, 0} // initial record ids. This data will be retrieved, updated and saved on each request involing navigation across a object list.
-		sr, err := s.saveState(true)
+		sr, err := s.pushState(true)
 		return sr, err
 	}
 	//
@@ -122,13 +125,65 @@ func (s *sessCtx) getState() (*stateRec, error) {
 	if err != nil {
 		return nil, err
 	}
+	lastState := stateItem.State.pop()
 	//return staterow.state.pop(), nil
+	if s.eol == 0 {
+		s.eol = lastState.EOL
+	}
+	if len(s.reqBkId) == 0 {
+		s.reqBkId = lastState.BkId
+	}
+	if len(s.reqBkName) == 0 {
+		s.reqBkName = lastState.BkName
+	}
+	if len(s.reqRName) == 0 {
+		s.reqRName = lastState.RName
+	}
+	if len(s.reqRId) == 0 {
+		s.reqRId = lastState.RId
+	}
+	fmt.Printf("reqVersion: [%s]\n", s.reqVersion)
+	fmt.Println("len(s.reqVersion) = ", len(s.reqVersion))
+	if len(s.reqVersion) == 0 {
+		s.reqVersion = lastState.Ver
+	}
+	//
+	// object rec Id
+	//
+	s.recId = lastState.RecId
+	if len(s.object) == 0 {
+		s.object = lastState.Obj
+	}
+	//
+	// Recipe Part related data
+	//
+	if len(s.part) == 0 {
+		s.part = lastState.Part
+	}
+	if len(s.parts) == 0 {
+		s.parts = lastState.Parts
+	}
+	if s.peol == 0 {
+		s.peol = lastState.PEOL
+	}
+	if lastState.PId > 0 {
+		s.pid = lastState.PId
+	}
+	if lastState.Prev != 0 {
+		s.prev = lastState.Prev
+	}
+	if lastState.Next != 0 {
+		s.next = lastState.Next
+	}
+	if len(lastState.MChoice) > 0 {
+		s.mChoice = lastState.MChoice
+	}
 	s.state = stateItem.State
-	return stateItem.State.pop(), nil
+	return lastState, nil
 }
 
-func (s *sessCtx) saveState(new ...bool) (*stateRec, error) {
-
+func (s *sessCtx) pushState(new ...bool) (*stateRec, error) {
+	// equivalent to a push operation for a stack (state data in this case)
 	type pKey struct {
 		Sid string
 	}
@@ -137,10 +192,11 @@ func (s *sessCtx) saveState(new ...bool) (*stateRec, error) {
 		sr      stateRec
 		updateC expression.UpdateBuilder
 	)
-	fmt.Println("Entered saveState..", new)
-	sr.Path = s.path
-	sr.Param = s.param
-
+	fmt.Println("Entered pushState..", new)
+	// copy statevfrom session context
+	//sr.Path = s.path
+	//sr.Param = s.param
+	sr.DT = time.Now().Format("Jan 2 15:04:05")
 	sr.RId = s.reqRId       // Recipe Id
 	sr.BkId = s.reqBkId     // Book Id
 	sr.BkName = s.reqBkName // Book name - saves a lookup under some circumstances
@@ -151,7 +207,7 @@ func (s *sessCtx) saveState(new ...bool) (*stateRec, error) {
 	sr.Serves = s.serves
 	sr.Qid = s.questionId // Question id	for k,v:=range objectMap {
 	sr.Obj = s.object     // Object - to which operation (listing) apply
-
+	sr.Ingredients = s.ingrdList
 	if s.reset {
 		sr.RecId = []int{0, 0, 0, 0}
 	} else {
@@ -187,12 +243,16 @@ func (s *sessCtx) saveState(new ...bool) (*stateRec, error) {
 	//
 	State := make(stateStack, 1)
 	State[0] = sr
+	//
+	t := time.Now()
+	t.Add(time.Hour * 24 * 1)
+	updateC = expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
 	if new != nil {
 		if new[0] {
-			updateC = expression.Set(expression.Name("state"), expression.Value(State))
+			updateC = updateC.Set(expression.Name("state"), expression.Value(State))
 		}
 	} else {
-		updateC = expression.Set(expression.Name("state"), expression.ListAppend(expression.Name("state"), expression.Value(State)))
+		updateC = updateC.Set(expression.Name("state"), expression.ListAppend(expression.Name("state"), expression.Value(State)))
 	}
 	expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
 	if err != nil {
@@ -229,7 +289,6 @@ func (s *sessCtx) saveState(new ...bool) (*stateRec, error) {
 		}
 		return nil, err
 	}
-	fmt.Println("Saved. Exiting saveState..", new)
 	return &sr, nil
 }
 
@@ -244,8 +303,14 @@ func (s *sessCtx) updateState() error {
 	//
 	// update RecId attribute of latest state item
 	//
+	t := time.Now()
+	t.Add(time.Hour * 24 * 1)
+	updateC = expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
+	//
 	recid_ := fmt.Sprintf("state[%d].RecId", len(s.state)-1)
-	updateC = expression.Set(expression.Name(recid_), expression.Value(sr.RecId))
+	updateC = updateC.Set(expression.Name(recid_), expression.Value(sr.RecId))
+	recid_ = fmt.Sprintf("state[%d].DT", len(s.state)-1)
+	updateC = updateC.Set(expression.Name(recid_), expression.Value(time.Now().Format("Jan 2 15:04:05")))
 	expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
 
 	pkey := pKey{Sid: s.sessionId}
@@ -285,8 +350,8 @@ func (s *sessCtx) updateState() error {
 func (s *sessCtx) popState() error {
 	//
 	// removes last entry in state attribute of session item.
-	//  populates s (sessCtx) with state data from the new last entry
-	//  (which was the second last entry before deletion)
+	//  populates session context with state data from the new last entry
+	//  (which was the penultimate entry before deletion)
 	//
 	type pKey struct {
 		Sid string
@@ -299,10 +364,13 @@ func (s *sessCtx) popState() error {
 	if len(s.state) < 2 {
 		return fmt.Errorf("Error: Cannot proceed back any further.")
 	}
-	// save all but last state entry
+	t := time.Now()
+	t.Add(time.Hour * 24 * 1)
+	updateC = expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
+	// rewrite all but last state entry - this is how we delete from a list in dynamo. Here the list represents the state stack.
 	State := s.state[:len(s.state)-1]
 	s.state = State[:]
-	updateC = expression.Set(expression.Name("state"), expression.Value(State))
+	updateC = updateC.Set(expression.Name("state"), expression.Value(State))
 	expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
 	//
 	pkey := pKey{Sid: s.sessionId}
@@ -337,9 +405,9 @@ func (s *sessCtx) popState() error {
 		return err
 	}
 	sr := State.pop()
-	// transfer state to session context
-	s.path = sr.Path
-	s.param = sr.Param
+	// transfer state data to session context
+	//s.path = sr.Path
+	//s.param = sr.Param
 
 	s.reqRId = sr.RId       // Recipe Id
 	s.reqBkId = sr.BkId     // Book Id
@@ -357,6 +425,8 @@ func (s *sessCtx) popState() error {
 	s.dmsg = sr.Dmsg
 	s.vmsg = sr.Vmsg
 	s.ddata = sr.DData
+	//
+	s.ingrdList = sr.Ingredients
 	//
 	// Record id across objects
 	//
