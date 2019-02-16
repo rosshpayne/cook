@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -27,6 +28,7 @@ type stateRec struct {
 	BkId    string // Book Id
 	BkName  string // Book name - saves a lookup under some circumstances
 	RName   string // Recipe name - saves a lookup under some circumstances
+	OpenBk  string // requested open book (nill if book closed or no open book requested)
 	Serves  string
 	SwpBkNm string
 	SwpBkId string
@@ -111,9 +113,8 @@ func (s *sessCtx) getState() (*stateRec, error) {
 	}
 	if len(result.Item) == 0 {
 		//
-		s.recId = []int{0, 0, 0, 0} // initial record ids. This data will be retrieved, updated and saved on each request involing navigation across a object list.
-		sr, err := s.pushState(true)
-		return sr, err
+		s.newSession = true
+		return &stateRec{}, err
 	}
 	//
 	type stateItemT struct {
@@ -148,6 +149,15 @@ func (s *sessCtx) getState() (*stateRec, error) {
 		s.reqVersion = lastState.Ver
 	}
 	//
+	// opened book
+	//
+	if len(s.reqOpenBk) == 0 && len(lastState.OpenBk) > 0 {
+		s.reqOpenBk = lastState.OpenBk
+		id := strings.Split(lastState.OpenBk, "|")
+		s.reqBkId, s.reqBkName = id[0], id[1]
+		s.authors = id[2]
+		fmt.Println("set BookId: ", s.reqBkId, " from lastState.OpenBk")
+	}
 	// object rec Id
 	//
 	s.recId = lastState.RecId
@@ -197,7 +207,8 @@ func (s *sessCtx) pushState(new ...bool) (*stateRec, error) {
 	//sr.Path = s.path
 	//sr.Param = s.param
 	sr.DT = time.Now().Format("Jan 2 15:04:05")
-	sr.RId = s.reqRId       // Recipe Id
+	sr.RId = s.reqRId // Recipe Id
+	fmt.Println("BkId = ", s.reqBkId)
 	sr.BkId = s.reqBkId     // Book Id
 	sr.BkName = s.reqBkName // Book name - saves a lookup under some circumstances
 	sr.RName = s.reqRName   // Recipe name - saves a lookup under some circumstances
@@ -218,6 +229,7 @@ func (s *sessCtx) pushState(new ...bool) (*stateRec, error) {
 	sr.Dmsg = s.dmsg
 	sr.Vmsg = s.vmsg
 	sr.DData = s.ddata
+	sr.OpenBk = s.reqOpenBk
 	//
 	// Record id across objects
 	//
@@ -247,10 +259,12 @@ func (s *sessCtx) pushState(new ...bool) (*stateRec, error) {
 	t := time.Now()
 	t.Add(time.Hour * 24 * 1)
 	updateC = expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
-	if new != nil {
-		if new[0] {
-			updateC = updateC.Set(expression.Name("state"), expression.Value(State))
-		}
+	if s.newSession {
+		sr.RecId = []int{0, 0, 0, 0}
+		updateC = updateC.Set(expression.Name("state"), expression.Value(State))
+	} else if len(s.state) > 3 {
+		s.state = append(s.state, sr)
+		updateC = updateC.Set(expression.Name("state"), expression.Value(State[len(s.state)-3:]))
 	} else {
 		updateC = updateC.Set(expression.Name("state"), expression.ListAppend(expression.Name("state"), expression.Value(State)))
 	}
@@ -362,7 +376,8 @@ func (s *sessCtx) popState() error {
 		s.getState()
 	}
 	if len(s.state) < 2 {
-		return fmt.Errorf("Error: Cannot proceed back any further.")
+		//
+		return nil
 	}
 	t := time.Now()
 	t.Add(time.Hour * 24 * 1)
@@ -425,6 +440,12 @@ func (s *sessCtx) popState() error {
 	s.dmsg = sr.Dmsg
 	s.vmsg = sr.Vmsg
 	s.ddata = sr.DData
+	//
+	if len(sr.OpenBk) > 0 {
+		bk := strings.Split(sr.OpenBk, "|")
+		s.reqBkId, s.reqBkName, s.authors = bk[0], bk[1], bk[3]
+		s.authorS = strings.Split(s.authors, ",")
+	}
 	//
 	s.ingrdList = sr.Ingredients
 	//

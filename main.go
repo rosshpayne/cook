@@ -22,6 +22,7 @@ import (
 // Session Context - assigned from request and Session table.
 //  also contains state information relevant to current session and not the next session.
 type sessCtx struct {
+	newSession bool
 	//path      string // InputEvent.Path
 	request string // pathItem[0]: request from user e.g. select, next, prev,..
 	//param     string // InputEvent.Param
@@ -29,6 +30,7 @@ type sessCtx struct {
 	lastState *stateRec // state attribute from state dynamo item - contains state history
 	//
 	sessionId  string // sourced from request. Used as PKey to Sessions table
+	reqOpenBk  string
 	reqRName   string // requested recipe name - query param of recipe request
 	reqBkName  string // requested book name - query param
 	reqRId     string // Recipe Id - 0 means no recipe id has been assigned.  All RId's start at 1.
@@ -51,7 +53,6 @@ type sessCtx struct {
 	curReqType  int            // initialiseRequest, objectRequest(ingredient,task,container,utensil), instructionRequest(next,prev,goto,modify,repeat)
 	questionId  int            // what question is the user responding to with a yes|no.
 	dynamodbSvc *dynamodb.DynamoDB
-	closeBook   bool
 	object      string //container,ingredient,instruction,utensil. Sourced from Sessions table or request
 	//updateAdd      int        // dynamodb Update ADD. Operation dependent
 	gotoRecId        int        // sourced from request
@@ -250,6 +251,7 @@ func (s *sessCtx) orchestrateRequest() error {
 			if s.back {
 				return nil
 			}
+			fmt.Println("le mChoice: ", len(s.mChoice), s.selId)
 			if s.selId > len(s.mChoice) || s.selId < 1 {
 				return fmt.Errorf("Selection out of range")
 			}
@@ -275,6 +277,8 @@ func (s *sessCtx) orchestrateRequest() error {
 			fmt.Println("selId: ", s.selId)
 			s.object = objectS[s.selId-1]
 			fmt.Println("object: ", s.object)
+			// clear mChoice which is not necessary in this state. Held in previous state.
+			s.mChoice = nil
 			// object chosen, nothing more to select for the time being
 			//s.selCtx = 0
 			switch s.object {
@@ -301,15 +305,13 @@ func (s *sessCtx) orchestrateRequest() error {
 				}
 				// generate ingredient listing
 				s.ingrdList = as.String(r)
-				//
-				_, err = s.pushState()
-				if err != nil {
-					return err
-				}
-				return nil
-			case container_:
-				return nil
-				// case utensil_:
+				// case container_:
+				// 	return nil
+				// 	// case utensil_:
+			}
+			_, err = s.pushState()
+			if err != nil {
+				return err
 			}
 		}
 	}
@@ -331,9 +333,10 @@ func (s *sessCtx) orchestrateRequest() error {
 			// we have fully populated session context from previous session e.g. BkName etc, now lets see what recipes we find
 			// populates sessCtx.mChoice if search results in a list.
 			fmt.Println("In validateRequest. About to call keywordSearch")
+			fmt.Println("BookId: ", s.reqBkId)
 			err := s.keywordSearch()
 			if err != nil {
-				panic(err)
+				return err
 			}
 			s.eol, s.reset, s.object = 0, true, ""
 			if len(s.mChoice) == 0 || len(s.reqRId) > 0 {
@@ -357,109 +360,69 @@ func (s *sessCtx) orchestrateRequest() error {
 			s.noGetRecRequired = true
 			return nil
 		}
+		if s.request == "book/close" {
+			if len(s.object) > 0 && s.eol != s.recId[objectMap[s.object]] {
+				s.dmsg = fmt.Sprintf("You currently have recipe %s open. Do you still want to close the book?", lastState.RName)
+				s.vmsg = fmt.Sprintf("You currently have recipe %s open. Do you still want to close the book?", lastState.RName)
+				s.questionId = 20
+			} else {
+				switch len(s.reqBkId) {
+				case 0:
+					s.dmsg = `There is no book open to close.`
+					s.vmsg = `There is no book open to close.`
+				default:
+					//
+					s.dmsg = s.reqBkName + ` is now closed. Any searches will be across all books`
+					s.vmsg = s.reqBkName + ` is now closed. Any searches will be across all books`
+					s.reqBkId, s.reqBkName, s.reqRId, s.reqRName = "", "", "", ""
+					s.reqOpenBk, s.authorS, s.authors = "", nil, ""
+				}
+			}
+			s.eol = 0
+			_, err := s.pushState() //TODO: do I need to do this..
+			if err != nil {
+				return err
+			}
+			return nil
+		}
 		if s.request == "book" {
 			//
-			// book requested
+			// open book requested
 			//
-			switch len(lastState.BkId) {
-			case 0:
-				if s.closeBook {
-					s.dmsg = `Book is already closed.`
-					s.vmsg = `Book is already closed.`
-					s.reqBkId, s.reqBkName, s.reqRId, s.reqRName = "", "", "", ""
-				} else {
-					// no books currently open. Open this one.
-					s.vmsg = "Found " + s.reqBkName + " by " + s.authors + ". "
-					s.vmsg += `You can ask for a recipe in this book by saying "open at" recipe name or search for recipes by saying "search for " ingredient and category for example "search for chocolate cake"`
-					s.dmsg = "Found " + s.reqBkName + " by " + s.authors + ". "
-					s.dmsg += `You can ask for a recipe in this book by saying "open at" recipe name or search for recipes by saying "search for " ingredient and category  for example "search for chocolate cake"`
-				}
-				//
-				s.eol = 0
-				_, err := s.pushState()
-				if err != nil {
-					return err
-				}
-				return nil
-			default:
-				// there is already an initialised book for this session
-				if s.closeBook || s.reqBkName != lastState.BkName {
-					// closing or open a book different from current opened book
-					switch len(lastState.RName) {
-					case 0:
-						// no active recipe, then open or close book
-						if s.closeBook {
-							s.dmsg = fmt.Sprintf("Book %s is closed", lastState.BkName)
-							s.vmsg = fmt.Sprintf("Book %s is closed", lastState.BkName)
-							s.reqBkId, s.reqBkName, s.reqRId, s.reqRName, s.reset = "", "", "", "", true //TODO - should recipe be closed
-						} else {
-							// no active recipe. Open book.
-							s.vmsg = `Please state what recipe you would like from this book or I can list them if you like. Say "list" or recipe name.`
-							s.dmsg = `Please state what recipe you would like from this book or I can list them if you like. Say "list" or recipe name.`
-						}
-						// Book initialises. No recipe provided. Persist.
-						s.eol, s.reset = 0, true
-						_, err := s.pushState()
-						if err != nil {
-							return err
-						}
-						return nil
-					default:
-						// open different book with an active recipe.
-						//s.reqRName = lastState.RName
-						if len(s.object) > 0 && s.eol != s.recId[objectMap[s.object]] {
-							if s.closeBook {
-								s.dmsg = fmt.Sprintf("You currently have recipe %s open. Do you still want to close the book?", lastState.RName)
-								s.vmsg = fmt.Sprintf("You currently have recipe %s open. Do you still want to close the book?", lastState.RName)
-								s.questionId = 20
-							} else {
-								// currently listing
-								s.dmsg = `You have specified a different book while having an active recipe from which you are currently listing. Do you want to swap to this book, "Yes" or "No" or "Cancel" for no?`
-								s.vmsg = `You have specified a different book while having an active recipe from which you are currently listing. Do you want to swap to this book, "Yes" or "No" or "Cancel" for no?`
-								s.questionId = 21
-								s.swapBkName = s.reqBkName
-								s.swapBkId = s.reqBkId
-							}
-							// save book details to swap attributes in Session table
-							//s.eol, s.reset = 0, true - depends on yes/no answer
-							_, err := s.pushState()
-							if err != nil {
-								return err
-							}
-							return nil
-						} else {
-							// finished listing or no object selected, swap to this book
-							if s.closeBook {
-								s.reqBkId, s.reqBkName = "", ""
-								s.dmsg = `Book closed. `
-								s.vmsg = `Book closed. `
-							} else {
-								s.vmsg = `What recipe from this book might you be interested in. Please say a recipe name or I can list them to the display if you like if you "list".`
-								s.dmsg = `What recipe from this book might you be interested in. Please say a recipe name or I can list them to the display if you like if you "list".`
-							}
-							// new book selected, zero recipe etc
-							s.eol, s.reset, s.reqRId, s.reqRName = 0, true, "", ""
-							_, err := s.pushState()
-							if err != nil {
-								return err
-							}
-							return nil
-						}
-					}
-				} else {
-					// open book. same initialised book requested
-					switch len(lastState.RName) {
-					case 0:
+			if len(lastState.BkId) > 0 {
+				// some book was open previously
+				switch {
+				case lastState.BkId == s.reqBkId:
+					// open currenly opened book. reqBkId was sourced using bookNameLookup()
+					if len(lastState.RName) == 0 {
 						// no active recipe
-						s.dmsg = `Book is currenlty open. Please request a recipe from the book or say "list" and I will print the recipe names to the display.`
+						s.dmsg = `Book is already open. Please request a recipe from the book or say "list" and I will print the recipe names to the display.`
+						s.vmsg = `Book is already open. Please request a recipe from the book or say "list" and I will print the recipe names to the display.`
 						s.noGetRecRequired = true
-						return nil
-					default:
-						s.dmsg = `Book is already open at recipe ` + lastState.RName
+					} else if s.eol != s.recId[objectMap[s.object]] {
+						s.dmsg = `You are actively browing recipe ` + lastState.RName + ".Do you still want to open this book?"
+						s.vmsg = `You are actively browsing recipe ` + lastState.RName + ".Do you still want to open this book?"
+					}
+				case lastState.BkId != s.reqBkId:
+					if len(lastState.RName) == 0 {
+						// no active recipe
+						s.dmsg = "Opened " + s.reqBkName + " by " + s.authors + ". "
+						s.vmsg = "Opened " + s.reqBkName + " by " + s.authors + ". "
+						s.eol = 0
 						s.noGetRecRequired = true
-						return nil
+					} else if s.eol != s.recId[objectMap[s.object]] {
+						s.dmsg = `You are actively browsing recipe ` + lastState.RName + " from book, " + lastState.BkName + ". Do you still want to open this book?"
+						s.vmsg = `You are actively browsing recipe ` + lastState.RName + " from book, " + lastState.BkName + ". Do you still want to open this book?"
 					}
 				}
+			} else {
+				s.eol = 0
+				s.dmsg = "Opened " + s.reqBkName + " by " + s.authors + ". "
+				s.vmsg = "Opened " + s.reqBkName + " by " + s.authors + ". "
+			}
+			_, err = s.pushState()
+			if err != nil {
+				return err
 			}
 		}
 		if s.request == "recipe" { // "open recipe" intent
@@ -814,23 +777,19 @@ func handler(request InputEvent) (RespEvent, error) {
 		case "book": // user reponse "open book" "close book"
 			// book id and name  populated in this section
 			if len(pathItem) > 1 && pathItem[1] == "close" {
-				fmt.Println("** closeBook.")
-				sessctx.closeBook = true
-			} else {
+				sessctx.request = "book/close"
+			} else { // open
 				sessctx.reqBkId = request.QueryStringParameters["bkid"]
 				err = sessctx.bookNameLookup()
+				sessctx.reqOpenBk = sessctx.reqBkId + "|" + sessctx.reqBkName + "|" + sessctx.authors
 			}
-		// case "yes", "no":
-		// 	sessctx.yesno = pathItem[0]
 		case "version":
 			sessctx.reqVersion = request.QueryStringParameters["ver"]
 		case "list":
 			sessctx.showList = true
 		case "search":
-			sq, err := url.QueryUnescape(request.QueryStringParameters["srch"])
-			if err != nil {
-				panic(err)
-			}
+			sq, err_ := url.QueryUnescape(request.QueryStringParameters["srch"])
+			err = err_
 			sessctx.reqSearch = strings.ToLower(sq)
 		case "recipe": // must be Recipe Name not Ingredient-cat
 			// Alexa request: query parameter format either BkId-RId or Recipe name as spoken ie. Alexa's slot-type name

@@ -107,54 +107,6 @@ const EventHandler = {
   },
 };
 
-// const EventHandler = {
-//   canHandle: handlerInput =>
-//     handlerInput.requestEnvelope.request.type === 'Alexa.Presentation.APL.UserEvent',
-  
-//   handle: handlerInput => {
-//     const select = require('APL/select.js');
-//     const ingredient = require('APL/ingredients.js');
-//     const sid='sid='+handlerInput.requestEnvelope.session.sessionId   ; 
-//     const args = handlerInput.requestEnvelope.request.arguments;
-//     const event = args[0];
-//     //const data = args[2];
-//     const selid='&sId='+args[1];
-
-//     switch (event) {
-//       case 'select':
-//         invokeParams.Payload = '{ "Path" : "select" ,"Param" : "'+sid+selid+'" }';
-//       case 'backButton':
-//         invokeParams.Payload = '{ "Path" : "back" ,"Param" : "'+sid+'" }';
-//     } 
-    
-//     promise = new Promise((resolve, reject) => {
-//           lambda.invoke(invokeParams, function(err, data) {
-//           if (err) {
-//             reject(err);
-//           } else {
-//             resolve(data.Payload);  }
-//           });
-//         });
-    
-//     return promise.then((body) => {
-//         var  resp = JSON.parse(body);
-//         console.log(resp);
-//         if (resp.Type === "Ingredient") {
-//           return  handlerInput.responseBuilder
-//                             .speak(resp.Verbal)
-//                             .reprompt(resp.Verbal)
-//                             .addDirective(ingredient(resp.Header,resp.SubHdr, resp.List))
-//                             .getResponse();
-//         } else {
-//           return  handlerInput.responseBuilder
-//                             .speak(resp.Verbal)
-//                             .reprompt(resp.Verbal)
-//                             .addDirective(select(resp.Header,resp.SubHdr, resp.List))
-//                             .getResponse();   
-//         }
-//         }).catch(function (err) { console.log(err, err.stack);  } );
-//   },
-// };
 
 
 const SearchIntentHandler = {

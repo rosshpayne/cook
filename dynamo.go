@@ -597,8 +597,9 @@ func (s *sessCtx) keywordSearch() error {
 		allBooks bool
 		err      error
 	)
-	// check if search result exists in state, which it will if back button pressed in display
-	fmt.Println("not in state cache, about to run dynamo query in keyword search")
+	// zero mChoice list
+	s.mChoice = nil
+	//
 	if len(s.reqBkId) > 0 {
 		// look for recipes in current book only
 		kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value(s.reqSearch))
@@ -664,15 +665,13 @@ func (s *sessCtx) keywordSearch() error {
 			s.dmsg = fmt.Sprintf("%s not found in [%s] and all other books. ", s.reqSearch, s.reqBkName)
 			//s.reqRId, s.reqRName, s.reqBkId, s.reqBkName = "", "", "", ""
 		case 1:
-			s.vmsg = fmt.Sprintf("%s not found in [%s], but was found in [%s]. ", s.reqSearch, s.reqBkName, recS[0].BkName)
-			s.dmsg = fmt.Sprintf("%s not found in [%s], but was found in [%s]. ", s.reqSearch, s.reqBkName, recS[0].BkName)
+			s.vmsg = fmt.Sprintf("%s not found in [%s], but was found in [%s]. Do you want to swap to this book?", s.reqSearch, s.reqBkName, recS[0].BkName)
+			s.dmsg = fmt.Sprintf("%s not found in [%s], but was found in [%s]. Do you want to swap to this book?", s.reqSearch, s.reqBkName, recS[0].BkName)
 			sortk := strings.Split(recS[0].SortK, "-")
 			s.reqRId, s.reqRName, s.reqBkId, s.reqBkName, s.serves = sortk[1], recS[0].RName, sortk[0], recS[0].BkName, recS[0].Serves
-			// set session ctx to display object menu (ingredient,containers,utensils) list
-
 		default:
 			//s.makeSelect = true
-			s.vmsg = fmt.Sprintf(`No %s recipes found in [%s] but where found in severalother books. Please see list and select one by saying "select" followed by its number`, s.reqSearch, s.reqBkName)
+			s.vmsg = fmt.Sprintf(`No %s recipes found in [%s] but where found in other books. Please see list and select one by saying "select" followed by its number`, s.reqSearch, s.reqBkName)
 			s.dmsg = fmt.Sprintf(`No %s recipes found in [%s], but were found in the following. Please select one. `, s.reqSearch)
 			for i, v := range recS {
 				sortk := strings.Split(v.SortK, "-")
@@ -680,11 +679,12 @@ func (s *sessCtx) keywordSearch() error {
 				rec := mRecipeT{Id: i + 1, IngrdCat: v.PKey, RName: v.RName, RId: sortk[1], BkName: v.BkName, BkId: sortk[0], Authors: v.Authors, Quantity: v.Quantity, Serves: v.Serves}
 				s.mChoice = append(s.mChoice, rec)
 			}
-			s.reqRId, s.reqRName, s.reqBkId, s.reqBkName = "", "", "", ""
 		}
 		return nil
 	}
-	// result of active book returning 1 record and library search
+	//
+	// result of seach within open book
+	//
 	switch int(*result.Count) {
 	case 0:
 		s.vmsg = fmt.Sprintf("No %s found in any recipe book. ", s.reqSearch)
@@ -705,7 +705,6 @@ func (s *sessCtx) keywordSearch() error {
 			rec := mRecipeT{Id: i + 1, RName: v.RName, RId: sortk[1], BkName: v.BkName, BkId: sortk[0], Authors: v.Authors, Quantity: v.Quantity, Serves: v.Serves}
 			s.mChoice = append(s.mChoice, rec)
 		}
-		s.reqRId, s.reqRName, s.reqBkId, s.reqBkName = "", "", "", ""
 	}
 	return nil
 }
@@ -938,5 +937,6 @@ func (s *sessCtx) bookNameLookup() error {
 	s.authors = flatten(rec[0].Authors)
 	s.authorS = rec[0].Authors
 	s.reqBkName = rec[0].PKey[3:] // trim "BK-" prefix
+	fmt.Println("in bookNameLookup: Opened book ", s.reqBkName)
 	return nil
 }
