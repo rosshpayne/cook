@@ -479,7 +479,7 @@ func (s *sessCtx) getTaskRecById() (alexaDialog, error) {
 	result, err := s.dynamodbSvc.Query(input)
 	if err != nil {
 		//return prepTaskRec{}, fmt.Errorf("Error in Query of Tasks: " + err.Error())
-		panic(err)
+		return prepTaskRec{}, err
 	}
 	if int(*result.Count) == 0 { //TODO - put this code back so it makes sense
 		// this is caused by a goto operation exceeding EOL
@@ -506,6 +506,63 @@ func (s *sessCtx) getTaskRecById() (alexaDialog, error) {
 	}
 	return taskRec, nil
 }
+
+// func (s *sessCtx) getTaskRecById() (alexaDialog, error) {
+
+// 	var (
+// 		taskRec prepTaskRec
+// 	)
+// 	pKey := "T-" + s.pkey
+// 	keyC := expression.KeyEqual(expression.Key("PKey"), expression.Value(pKey)).And(expression.KeyEqual(expression.Key("SortK"), expression.Value(s.objRecId)))
+// 	// startId = s.objRecId - 1
+// 	// endId = s.objRecId + 2
+// 	// keyC := expression.KeyEqual(expression.Key("PKey"), expression.Value(pKey)).And(expression.Between(expression.Name("SortK"), expression.Value(startId), expression.Value(endId)))
+// 	expr, err := expression.NewBuilder().WithKeyCondition(keyC).Build()
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	//
+// 	// Table: Tasks - get current task based on task Id
+// 	//
+// 	input := &dynamodb.QueryInput{
+// 		KeyConditionExpression:    expr.KeyCondition(),
+// 		FilterExpression:          expr.Filter(),
+// 		ExpressionAttributeNames:  expr.Names(),
+// 		ExpressionAttributeValues: expr.Values(),
+// 		//ProjectionExpression:      expr.Projection(),
+// 	}
+// 	input = input.SetTableName("Recipe").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
+// 	//
+// 	// TODO - should be GetItem not Query as we are providing the primary key however a future feature to display 3 records instead of one would user query.
+// 	result, err := s.dynamodbSvc.Query(input)
+// 	if err != nil {
+// 		//return prepTaskRec{}, fmt.Errorf("Error in Query of Tasks: " + err.Error())
+// 		panic(err)
+// 	}
+// 	if int(*result.Count) == 0 { //TODO - put this code back so it makes sense
+// 		// this is caused by a goto operation exceeding EOL
+// 		return prepTaskRec{}, fmt.Errorf("Error: %s [%s] ", "Internal error: no tasks found for recipe ", s.reqRName)
+// 	}
+// 	if int(*result.Count) > 1 {
+// 		return prepTaskRec{}, fmt.Errorf("Error: more than 1 task returned from getNextRecordById")
+// 	}
+// 	err = dynamodbattribute.UnmarshalMap(result.Items, &taskRec)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("Error: %s - %s", "in UnmarshalMap in getTaskRecById ", err.Error())
+// 	}
+// 	//
+// 	// save to Session Context
+// 	//
+// 	s.eol = taskRec.EOL
+// 	if len(taskRec.Part) > 0 {
+// 		s.peol = taskRec.PEOL
+// 		s.part = taskRec.Part
+// 		s.next = taskRec.Next
+// 		s.prev = taskRec.Prev
+// 		s.pid = taskRec.PId
+// 	}
+// 	return taskRec, nil
+// }
 
 var recipeParts []string
 
@@ -671,8 +728,8 @@ func (s *sessCtx) keywordSearch() error {
 			s.reqRId, s.reqRName, s.reqBkId, s.reqBkName, s.serves = sortk[1], recS[0].RName, sortk[0], recS[0].BkName, recS[0].Serves
 		default:
 			//s.makeSelect = true
-			s.vmsg = fmt.Sprintf(`No %s recipes found in [%s] but where found in other books. Please see list and select one by saying "select" followed by its number`, s.reqSearch, s.reqBkName)
-			s.dmsg = fmt.Sprintf(`No %s recipes found in [%s], but were found in the following. Please select one. `, s.reqSearch)
+			s.vmsg = fmt.Sprintf(`No %s recipes found in [%s] but where found in other books. Please see the display`, s.reqSearch, s.reqBkName)
+			s.dmsg = fmt.Sprintf(`No %s recipes found in [%s], but were found in the following. Please select one. `, s.reqSearch, s.reqBkName)
 			for i, v := range recS {
 				sortk := strings.Split(v.SortK, "-")
 				s.ddata += strconv.Itoa(i+1) + ": " + v.BkName + " by " + v.Authors + ". Quantity: " + v.Quantity + "\n "
@@ -687,8 +744,8 @@ func (s *sessCtx) keywordSearch() error {
 	//
 	switch int(*result.Count) {
 	case 0:
-		s.vmsg = fmt.Sprintf("No %s found in any recipe book. ", s.reqSearch)
-		s.dmsg = fmt.Sprintf("No %s found in any recipe book. ", s.reqSearch)
+		s.vmsg = fmt.Sprintf("No %s was found in any book. ", s.reqSearch)
+		s.dmsg = fmt.Sprintf("No %s was found in any book. ", s.reqSearch)
 	case 1:
 		s.vmsg = "The following recipe, " + recS[0].RName + " in book " + recS[0].BkName + ` by authors ` + recS[0].Authors + ` contains the ingredient. You can list other ingredients or containers, utensils used in the recipe or list the prep tasks or you can start cooking`
 		s.dmsg = "The following recipe, " + recS[0].RName + " in book " + recS[0].BkName + ` by authors ` + recS[0].Authors + ` contains the ingredient. You can list other ingredients or containers, utensils used in the recipe or list the prep tasks or you can start cooking`
