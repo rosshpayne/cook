@@ -107,7 +107,67 @@ const EventHandler = {
   },
 };
 
+const BookIntentHandler = {
+  canHandle(handlerInput) {
+    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+      && handlerInput.requestEnvelope.request.intent.name === 'BookIntent';
+  },
+  handle(handlerInput) {
+    const ingredient = require('APL/ingredients.js');
+    const sid="sid="+handlerInput.requestEnvelope.session.sessionId;
+    const bkid='&bkid='+handlerInput.requestEnvelope.request.intent.slots.BookName.resolutions.resolutionsPerAuthority[0].values[0].value.id;
+    invokeParams.Payload = '{ "Path" : "book" ,"Param" : "'+sid+bkid+'" }';
+    
+    promise = new Promise((resolve, reject) => {
+          lambda.invoke(invokeParams, function(err, data) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(data.Payload);  }
+          });
+        });
+    
+    return promise.then((body) => {
+        var  resp = JSON.parse(body);
+        return  handlerInput.responseBuilder
+                            .speak(resp.Verbal)
+                            .reprompt(resp.Verbal)
+                            .addDirective(ingredient(resp.Header,resp.SubHdr, resp.List))
+                            .getResponse();
+        }).catch(function (err) { console.log(err, err.stack);  } );
+  },
+};
 
+
+const CloseBookIntentHandler = {
+  canHandle(handlerInput) {
+    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+      && handlerInput.requestEnvelope.request.intent.name === 'CloseBookIntent';
+  },
+  handle(handlerInput) {
+    const ingredient = require('APL/ingredients.js');
+    var sid="sid="+handlerInput.requestEnvelope.session.sessionId;
+    invokeParams.Payload = '{ "Path" : "book/close" ,"Param" : "'+sid+'" }';
+
+    promise = new Promise((resolve, reject) => {
+          lambda.invoke(invokeParams, function(err, data) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(data.Payload);  }
+          });
+        });
+    
+    return promise.then((body) => {
+        var  resp = JSON.parse(body);
+        return  handlerInput.responseBuilder
+                            .speak(resp.Verbal)
+                            .reprompt(resp.Verbal)
+                            .addDirective(ingredient(resp.Header,resp.SubHdr, resp.List))
+                            .getResponse();
+        }).catch(function (err) { console.log(err, err.stack);  } );
+  },
+};
 
 const SearchIntentHandler = {
   canHandle(handlerInput) {
@@ -142,6 +202,48 @@ const SearchIntentHandler = {
   },
 };
 
+const BackIntentHandler = {
+  canHandle(handlerInput) {
+    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+      && handlerInput.requestEnvelope.request.intent.name === 'BackIntent';
+  },
+  handle(handlerInput) {
+    const select = require('APL/select.js');
+    const ingredient = require('APL/ingredients.js');
+    const sid='sid='+handlerInput.requestEnvelope.session.sessionId   ; 
+    invokeParams.Payload = '{ "Path" : "back" ,"Param" : "'+sid+'" }';
+
+    promise = new Promise((resolve, reject) => {
+      lambda.invoke(invokeParams, function(err, data) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(data.Payload);  }
+        });
+    });
+    
+    return promise.then((body) => {
+        var  resp = JSON.parse(body);
+        console.log(resp);
+        if (resp.Type === "Ingredient") {
+          return  handlerInput.responseBuilder
+                            .speak(resp.Verbal)
+                            .reprompt(resp.Verbal)
+                            .addDirective(ingredient(resp.Header,resp.SubHdr, resp.List))
+                            .getResponse();
+        } else {
+          return  handlerInput.responseBuilder
+                            .speak(resp.Verbal)
+                            .reprompt(resp.Verbal)
+                            .addDirective(select(resp.Header,resp.SubHdr, resp.List))
+                            .getResponse();     
+        }
+      }).catch(function (err) { console.log(err, err.stack);  } );
+  
+  },
+};
+
+
 const SelectIntentHandler = {
   canHandle(handlerInput) {
     return handlerInput.requestEnvelope.request.type === 'IntentRequest'
@@ -153,7 +255,7 @@ const SelectIntentHandler = {
     const sid='sid='+handlerInput.requestEnvelope.session.sessionId   ; 
     const selid='&sId='+handlerInput.requestEnvelope.request.intent.slots.integerValue.resolutions.resolutionsPerAuthority[0].values[0].value.id;
     invokeParams.Payload = '{ "Path" : "select" ,"Param" : "'+sid+selid+'" }';
-
+   console.log(sid+selid);
     promise = new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
         if (err) {
@@ -403,60 +505,8 @@ const VersionIntentHandler = {
   },
 };
 
-const BookIntentHandler = {
-  canHandle(handlerInput) {
-    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
-      && handlerInput.requestEnvelope.request.intent.name === 'BookIntent';
-  },
-  handle(handlerInput) {
-    const sid="sid="+handlerInput.requestEnvelope.session.sessionId;
-    const bkid='&bkid='+handlerInput.requestEnvelope.request.intent.slots.BookName.resolutions.resolutionsPerAuthority[0].values[0].value.id;
-    invokeParams.Payload = '{ "Path" : "book" ,"Param" : "'+sid+bkid+'" }';
-    //const data = '["Ross","Payne","gHij","klm","nopq","rst","uvw","xyz"] '
-    //const data = "["+'"Ross",'+'"Payne"'+"]"
-    
-    return promise.then((body) => {
-          var resp = JSON.parse(body);
-        return  handlerInput.responseBuilder
-                          .speak(resp.Verbal)
-                          .getResponse();
-      }).catch(function (err) { console.log(err, err.stack);  } );
-  },
-};
 
-const CloseBookIntentHandler = {
-  canHandle(handlerInput) {
-    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
-      && handlerInput.requestEnvelope.request.intent.name === 'CloseBookIntent';
-  },
-  handle(handlerInput) {
-    var speechText; 
-    var displayText;
-    var recipe ;
-    var sid="sid="+handlerInput.requestEnvelope.session.sessionId;
-    invokeParams.Payload = '{ "Path" : "book/close" ,"Param" : "'+sid+'" }';
 
-    promise = new Promise((resolve, reject) => {
-      lambda.invoke(invokeParams, function(err, data) {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(data.Payload);  }
-        });
-    });
-    
-    return promise.then((body) => {
-          recipe = JSON.parse(body);
-          speechText=recipe.Text ;
-          displayText = recipe.Verbal;
-        return  handlerInput.responseBuilder
-                          .speak(speechText)
-                          .reprompt(speechText)
-                          .withSimpleCard('Instructions', displayText)
-                          .getResponse();
-      }).catch(function (err) { console.log(err, err.stack);  } );
-  },
-};
 
 const YesNoIntentHandler = {
   canHandle(handlerInput) {
@@ -628,6 +678,7 @@ exports.handler = skillBuilder
   .addRequestHandlers(
     LaunchRequestHandler,
     BookIntentHandler,
+    BackIntentHandler,
     CloseBookIntentHandler,
     RecipeIntentHandler,
     VersionIntentHandler,

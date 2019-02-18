@@ -184,6 +184,16 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 	processed := make(map[atvTask]bool, prepctl.cnt)
 
 	firstInstructon := func(idx string) int {
+		// no-part part
+		if idx == "_" {
+			for n := 0; n < len(ptS); n++ {
+				if len(ptS[n].Part) == 0 {
+					return ptS[n].SortK
+				}
+			}
+
+		}
+		// part
 		for n := 0; n < len(ptS); n++ {
 			if ptS[n].Part == idx {
 				return ptS[n].SortK
@@ -317,12 +327,39 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 		}
 	}
 	//
+	// check there are no unregistered (in recipe) parts
+	//
+	for k, _ := range partM {
+		var found bool
+		if k == "nopart_" {
+			continue
+		}
+		for _, p := range s.parts {
+			if k == p.Index {
+				found = true
+				break
+			}
+		}
+		if !found {
+			panic(fmt.Errorf("Part [%s] in Activity but not incuded in recipe part description", k))
+		}
+	}
+	//
 	// assign recipe.Start of first SortK value for a part.
 	//
 	Parts := s.parts
 	for i := 0; i < len(Parts); i++ {
 		Parts[i].Start = firstInstructon(Parts[i].Index)
 	}
+	// prepend no-part part to Parts
+	if _, ok := partM["nopart_"]; ok {
+		var rpart []PartT
+		rpart = []PartT{PartT{Index: "nopart_", Title: "Main", Start: firstInstructon("_")}}
+		rpart = append(rpart, Parts...)
+		s.parts = rpart
+	}
+	Parts = s.parts
+	r.Part = s.parts
 	//
 	// assign PId, record (instruction) id within a part. For no part this is the SortK value.
 	//
@@ -347,57 +384,57 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 	//
 	// assign first instruction record id (SortK) for each partition or non-partition Recipes in Recipe data
 	//
-	if len(partM) > 1 {
-		// only "nopart_", so no parts really
-		for k, _ := range partM {
-			for _, v := range ptS {
-				// scan thru instructions looking for first instruct for part
-				if len(v.Part) == 0 {
-					if k == "nopart_" && !partM["nopart_"] {
-						partM["nopart_"] = true
-						// make a new nopart entry for Recipe.Part
-						var found bool
-						for _, v2 := range r.Part {
-							if v2.Index == "nopart_" {
-								v2.Start = v.SortK
-								found = true
-							}
-						}
-						if !found {
-							r.Part = append([]*PartT{&PartT{Index: "nopart_", Start: v.SortK}}, r.Part...)
-						}
-						break
-					}
-				} else if v.Part == k {
-					// search recipe data for part entry and update Start
-					for _, rp := range r.Part {
-						if rp.Index == k {
-							//rp.Start = v.SortK
-							partM[k] = true
-							break
-						}
-					}
-					if partM[k] {
-						break
-					} else {
-						panic(fmt.Errorf("Error: no part entry found in recipe part data [%s]", k))
-					}
-				}
-				if partM[k] {
-					break
-				}
-			}
-		}
-		//
-		// Error if part in Activity is not represented in Recipe data
-		//
-		for k, v := range partM {
-			fmt.Printf("Should be all true: %s %v\n", k, v)
-			if !v {
-				panic(fmt.Errorf("Error: no Recipe entry for recipe part [%s]", k))
-			}
-		}
-	}
+	// if len(partM) > 1 {
+	// 	// only "nopart_", so no parts really
+	// 	for k, _ := range partM {
+	// 		for _, v := range ptS {
+	// 			// scan thru instructions looking for first instruct for part
+	// 			if len(v.Part) == 0 {
+	// 				if k == "nopart_" && !partM["nopart_"] {
+	// 					partM["nopart_"] = true
+	// 					// make a new nopart entry for Recipe.Part
+	// 					var found bool
+	// 					for _, v2 := range r.Part {
+	// 						if v2.Index == "nopart_" {
+	// 							v2.Start = v.SortK
+	// 							found = true
+	// 						}
+	// 					}
+	// 					if !found {
+	// 						r.Part = append([]PartT{PartT{Index: "nopart_", Start: v.SortK}}, r.Part...)
+	// 					}
+	// 					break
+	// 				}
+	// 			} else if v.Part == k {
+	// 				// search recipe data for part entry and update Start
+	// 				for _, rp := range r.Part {
+	// 					if rp.Index == k {
+	// 						//rp.Start = v.SortK
+	// 						partM[k] = true
+	// 						break
+	// 					}
+	// 				}
+	// 				if partM[k] {
+	// 					break
+	// 				} else {
+	// 					panic(fmt.Errorf("Error: no part entry found in recipe part data [%s]", k))
+	// 				}
+	// 			}
+	// 			if partM[k] {
+	// 				break
+	// 			}
+	// 		}
+	// 	}
+	//
+	// Error if part in Activity is not represented in Recipe data
+	//
+	// for k, v := range partM {
+	// 	fmt.Printf("Should be all true: %s %v\n", k, v)
+	// 	if !v {
+	// 		panic(fmt.Errorf("Error: no Recipe entry for recipe part [%s]", k))
+	// 	}
+	// }
+	//}
 	//
 	// Add (or update) part data to Recipe record (R-)
 	//

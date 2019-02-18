@@ -47,6 +47,8 @@ type mRecipeT struct {
 	Authors  string
 	Quantity string
 	Serves   string
+	//
+	Part string
 }
 
 type prepTaskRec struct {
@@ -65,7 +67,7 @@ type prepTaskRec struct {
 	Next int    `json:"nxt"`  // next SortK (recId)
 	Prev int    `json:"prv"`  // previous SortK (recId) when in part mode as opposed to full recipe mode
 	// not persisted
-	taskp *PerformT
+	taskp *PerformT // used in GenerateTasks and loadBaseRecipe
 }
 
 func (pt prepTaskRec) Alexa() dialog {
@@ -454,24 +456,30 @@ func (s *sessCtx) updateRecipe(r *RecipeT) error {
 	return nil
 }
 
-func (s *sessCtx) getTaskRecById() (alexaDialog, error) {
+type InstructionT struct {
+	Text   string `json:"Txt"` // all Linked preps combined text into this field
+	Verbal string `json:"Vbl"`
+	Part   string `json: "Pt"`
+	EOL    int    `json:"EOL"` // End-Of-List. Max Id assigned to each record
+	PEOL   int    `json:"PEOL"`
+}
 
-	var taskRec prepTaskRec
+func (s *sessCtx) cacheInstructions(part string) error {
+
 	pKey := "T-" + s.pkey
-	keyC := expression.KeyEqual(expression.Key("PKey"), expression.Value(pKey)).And(expression.KeyEqual(expression.Key("SortK"), expression.Value(s.objRecId)))
+	keyC := expression.KeyEqual(expression.Key("PKey"), expression.Value(pKey))
 	expr, err := expression.NewBuilder().WithKeyCondition(keyC).Build()
 	if err != nil {
 		panic(err)
 	}
 	//
-	// Table: Tasks - get current task based on task Id
+	// Table: Tasks - get all instruction associated with recipe
 	//
 	input := &dynamodb.QueryInput{
 		KeyConditionExpression:    expr.KeyCondition(),
 		FilterExpression:          expr.Filter(),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
-		//ProjectionExpression:      expr.Projection(),
 	}
 	input = input.SetTableName("Recipe").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
 	//
@@ -479,31 +487,74 @@ func (s *sessCtx) getTaskRecById() (alexaDialog, error) {
 	result, err := s.dynamodbSvc.Query(input)
 	if err != nil {
 		//return prepTaskRec{}, fmt.Errorf("Error in Query of Tasks: " + err.Error())
-		return prepTaskRec{}, err
+		return err
 	}
 	if int(*result.Count) == 0 { //TODO - put this code back so it makes sense
 		// this is caused by a goto operation exceeding EOL
-		return prepTaskRec{}, fmt.Errorf("Error: %s [%s] ", "Internal error: no tasks found for recipe ", s.reqRName)
+		return fmt.Errorf("Error: %s [%s] ", "Internal error: no instructions found for recipe ", s.reqRName)
 	}
-	if int(*result.Count) > 1 {
-		return prepTaskRec{}, fmt.Errorf("Error: more than 1 task returned from getNextRecordById")
-	}
-	err = dynamodbattribute.UnmarshalMap(result.Items[0], &taskRec)
+	ptR := make([]prepTaskRec, len(result.Items))
+	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &ptR)
 	if err != nil {
-		return prepTaskRec{}, fmt.Errorf("Error: %s - %s", "in UnmarshalMap in getTaskRecById ", err.Error())
+		return fmt.Errorf("Error: %s - %s", "in UnmarshalMap in cacheInstructions ", err.Error())
 	}
-	fmt.Printf("taskRec in . getTaskRecById [%#v]\n ", taskRec)
+	fmt.Printf(" cacheInstructions len() %d\n ", len(ptR))
+	//
+	// find start instruction. For complete it will be based on SortK
+	//
+	switch part {
+	case CompleteRecipe_:
+		instructs := make([]InstructionT, len(ptR))
+		for i, v := range ptR {
+			instructs[i] = InstructionT{Text: v.Text, Verbal: v.Verbal, Part: v.Part, EOL: v.EOL, PEOL: v.PEOL}
+		}
+		s.instructions = instructs
+		fmt.Printf(" cacheInstructions  instructions len() %d\n ", len(s.instructions))
+	default:
+		// find instructions associated with the part
+		for _, v := range s.parts {
+			if v.Title == part {
+				start := v.Start
+				var instructs []InstructionT
+				for id := start; id != -1; id = ptR[id-1].Next {
+					// ptR.Next points to SortK in table - which starts at 1
+					i := id - 1
+					instruct := InstructionT{Text: ptR[i].Text, Verbal: ptR[i].Verbal, Part: ptR[i].Part, EOL: ptR[i].EOL, PEOL: ptR[i].PEOL}
+					instructs = append(instructs, instruct)
+				}
+				s.instructions = instructs
+				break
+			}
+		}
+	}
+	//
+	return nil
+}
+
+func (s *sessCtx) getTaskRecById() (alexaDialog, error) {
+
+	getLongName := func(index string) string {
+		if index == "" || index == "nopart_" {
+			return ""
+		}
+		for _, v := range s.parts {
+			if v.Index == index {
+				return v.Title
+			}
+		}
+		panic(fmt.Errorf("Error: in getTaskRecById, index [%s] not found in s.part ", index))
+		return ""
+	}
+	rec := &s.instructions[s.objRecId]
+
+	taskRec := prepTaskRec{Text: rec.Text, Verbal: rec.Verbal}
 	//
 	// save to Session Context
 	//
-	s.eol = taskRec.EOL
-	if len(taskRec.Part) > 0 {
-		s.peol = taskRec.PEOL
-		s.part = taskRec.Part
-		s.next = taskRec.Next
-		s.prev = taskRec.Prev
-		s.pid = taskRec.PId
-	}
+	s.eol = rec.EOL
+	s.peol = rec.PEOL
+	s.part = getLongName(rec.Part)
+
 	return taskRec, nil
 }
 

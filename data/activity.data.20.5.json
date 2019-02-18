@@ -67,7 +67,7 @@
                 "PKey" : { "S": "R-20" },
                 "SortK" : { "N": "5"},
                 "RName" : { "S": "Vineyard cake"},
-                "Index" : { "SS" : ["Carte"] },
+                "Index" : { "SS" : ["Carte", "cake"] },
                 "Srv" : { "S" : "12" },
                 "Part" : { "L" : [
                                 { "M" : { 

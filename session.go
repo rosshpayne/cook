@@ -34,14 +34,14 @@ type stateRec struct {
 	SwpBkId string
 	RId     string // Recipe Id
 	Qid     int    // Question id
-	RecId   []int  // current record in object list. (SortK in Recipe table)
+	RecId   [4]int // current record in object list. (SortK in Recipe table)
 	Ver     string
 	EOL     int // last RecId of current list. Used to determine when last record is reached or exceeded in the case of goto operation
 	Dmsg    string
 	Vmsg    string
 	DData   string
 	//
-	Ingredients string
+	Ingredients string // contains complete ingredients listing
 	//
 	// search
 	//
@@ -55,12 +55,13 @@ type stateRec struct {
 	//
 	// Recipe Part related data
 	//
-	Parts []*PartT `json:"Parts"` // PartT.Idx - short name for Recipe Part
-	Part  string   `json:"Part"`
-	Next  int      `json:"Next"`
-	Prev  int      `json:"Prev"`
-	PEOL  int      `json:"PEOL"`
-	PId   int      `json:"PId"`
+	Parts []PartT `json:"Parts"` // PartT.Idx - short name for Recipe Part
+	Part  string  `json:"Part"`
+	// Next  int     `json:"Next"`
+	// Prev  int     `json:"Prev"`
+	// PEOL  int     `json:"PEOL"`
+	// PId   int     `json:"PId"`
+	Instructions []InstructionT `json:"I"`
 	//
 	// Display header for APL - NB: this is probably not required as display will persist last assigned value.
 	//
@@ -173,20 +174,23 @@ func (s *sessCtx) getState() (*stateRec, error) {
 	if len(s.parts) == 0 {
 		s.parts = lastState.Parts
 	}
-	if s.peol == 0 {
-		s.peol = lastState.PEOL
-	}
-	if lastState.PId > 0 {
-		s.pid = lastState.PId
-	}
-	if lastState.Prev != 0 {
-		s.prev = lastState.Prev
-	}
-	if lastState.Next != 0 {
-		s.next = lastState.Next
-	}
+	// if s.peol == 0 {
+	// 	s.peol = lastState.PEOL
+	// }
+	// if lastState.PId > 0 {
+	// 	s.pid = lastState.PId
+	// }
+	// if lastState.Prev != 0 {
+	// 	s.prev = lastState.Prev
+	// }
+	// if lastState.Next != 0 {
+	// 	s.next = lastState.Next
+	// }
 	if len(lastState.MChoice) > 0 {
 		s.mChoice = lastState.MChoice
+	}
+	if len(s.instructions) == 0 {
+		s.instructions = lastState.Instructions
 	}
 	s.state = stateItem.State
 	return lastState, nil
@@ -220,7 +224,7 @@ func (s *sessCtx) pushState(new ...bool) (*stateRec, error) {
 	sr.Obj = s.object     // Object - to which operation (listing) apply
 	sr.Ingredients = s.ingrdList
 	if s.reset {
-		sr.RecId = []int{0, 0, 0, 0}
+		sr.RecId = [4]int{}
 	} else {
 		sr.RecId = s.recId //s.recId     // current record in object list. (SortK in Recipe table)
 	}
@@ -248,23 +252,24 @@ func (s *sessCtx) pushState(new ...bool) (*stateRec, error) {
 	//
 	sr.Parts = s.parts
 	sr.Part = s.part
-	sr.Next = s.next
-	sr.Prev = s.prev
-	sr.PEOL = s.peol
-	sr.PId = s.pid
+	// sr.Next = s.next
+	// sr.Prev = s.prev
+	// sr.PEOL = s.peol
+	// sr.PId = s.pid
+	sr.Instructions = s.instructions
 	//
 	State := make(stateStack, 1)
 	State[0] = sr
+	s.state = append(s.state, sr)
 	//
 	t := time.Now()
 	t.Add(time.Hour * 24 * 1)
 	updateC = expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
 	if s.newSession {
-		sr.RecId = []int{0, 0, 0, 0}
+		sr.RecId = [4]int{}
 		updateC = updateC.Set(expression.Name("state"), expression.Value(State))
-	} else if len(s.state) > 3 {
-		s.state = append(s.state, sr)
-		updateC = updateC.Set(expression.Name("state"), expression.Value(State[len(s.state)-3:]))
+	} else if len(s.state) > 4 {
+		updateC = updateC.Set(expression.Name("state"), expression.Value(s.state[len(s.state)-3:]))
 	} else {
 		updateC = updateC.Set(expression.Name("state"), expression.ListAppend(expression.Name("state"), expression.Value(State)))
 	}
@@ -311,18 +316,19 @@ func (s *sessCtx) updateState() error {
 	type pKey struct {
 		Sid string
 	}
-
-	var sr stateRec
 	var updateC expression.UpdateBuilder
 	//
 	// update RecId attribute of latest state item
 	//
+	fmt.Println("entered updateState..")
 	t := time.Now()
 	t.Add(time.Hour * 24 * 1)
 	updateC = expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
 	//
+	fmt.Printf("updateState: %s\n", fmt.Sprintf("state[%d].RecId", len(s.state)-1))
 	recid_ := fmt.Sprintf("state[%d].RecId", len(s.state)-1)
-	updateC = updateC.Set(expression.Name(recid_), expression.Value(sr.RecId))
+	fmt.Printf("recId %v", s.recId)
+	updateC = updateC.Set(expression.Name(recid_), expression.Value(s.recId))
 	recid_ = fmt.Sprintf("state[%d].DT", len(s.state)-1)
 	updateC = updateC.Set(expression.Name(recid_), expression.Value(time.Now().Format("Jan 2 15:04:05")))
 	expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
@@ -419,6 +425,7 @@ func (s *sessCtx) popState() error {
 		}
 		return err
 	}
+	s.state = s.state[:len(s.state)-1]
 	sr := State.pop()
 	// transfer state data to session context
 	//s.path = sr.Path
@@ -466,9 +473,10 @@ func (s *sessCtx) popState() error {
 	//
 	s.parts = sr.Parts
 	s.part = sr.Part
-	s.next = sr.Next
-	s.prev = sr.Prev
-	s.peol = sr.PEOL
-	s.pid = sr.PId
+	// s.next = sr.Next
+	// s.prev = sr.Prev
+	// s.peol = sr.PEOL
+	// s.pid = sr.PId
+	s.instructions = sr.Instructions
 	return nil
 }

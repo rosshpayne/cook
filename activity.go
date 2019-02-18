@@ -61,7 +61,7 @@ type RecipeT struct {
 	//Title  string   `json:"Title"`
 	Index  []string `json:"Index"`
 	Serves string   `json:"Srv"`
-	Part   []*PartT `json:"Part"` // order list of recipe parts. Load will prepend "nopart_" if parts are detected in Activities and some are not assigned part.
+	Part   []PartT  `json:"Part"` // order list of recipe parts. Load will prepend "nopart_" if parts are detected in Activities and some are not assigned part.
 }
 
 // type Part struct {
@@ -826,7 +826,9 @@ func (as Activities) String(r *RecipeT) string {
 	}
 	// r.Part is an ordered list of recipe parts
 	for _, v := range r.Part {
-		fmt.Fprintf(&b, "\n%s\n\n", strings.ToUpper(v.Title))
+		if len(v.Title) > 0 {
+			fmt.Fprintf(&b, "\n%s\n\n", strings.ToUpper(v.Title))
+		}
 		for _, a := range partM[v.Index] {
 			if s := a.String(); len(s) > 0 {
 				fmt.Fprintf(&b, "%s\n", strings.TrimLeft(s, " "))

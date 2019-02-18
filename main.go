@@ -38,28 +38,28 @@ type sessCtx struct {
 	reqSearch  string // keyword search value
 	reqVersion string // version id, starts at 0 which is blank??
 	//reqSearch   string   // search value
-	recId       []int    // record id for each object (ingredient, container, utensils, containers). No display will use verbal for all object listings.
-	pkey        string   // primary key
-	recipe      *RecipeT //  record from dynamo recipe query
-	swapBkName  string
-	swapBkId    string
-	authorS     []string
-	authors     string         // flattened authorS = comma separted list of authors
-	serves      string         // recipe serves. Source recipe used in Ingredients search.
-	index       []string       // user defined entries under which recipe is indexed. Sourced from recipe not ingredient.
-	indexRecs   []indexRecipeT // processed index entries as saved to dynamo
-	dbatchNum   string         // mulit-records sent to display in fixed batch sizes (6 say).
-	reset       bool           // zeros []RecId in session table during changes to recipe, as []RecId is recipe dependent
-	curReqType  int            // initialiseRequest, objectRequest(ingredient,task,container,utensil), instructionRequest(next,prev,goto,modify,repeat)
-	questionId  int            // what question is the user responding to with a yes|no.
-	dynamodbSvc *dynamodb.DynamoDB
-	object      string //container,ingredient,instruction,utensil. Sourced from Sessions table or request
+	recId        [4]int // record id for each object (ingredient, container, utensils, containers). No display will use verbal for all object listings.
+	dispPartMenu bool
+	pkey         string   // primary key
+	recipe       *RecipeT //  record from dynamo recipe query
+	swapBkName   string
+	swapBkId     string
+	authorS      []string
+	authors      string         // flattened authorS = comma separted list of authors
+	serves       string         // recipe serves. Source recipe used in Ingredients search.
+	index        []string       // user defined entries under which recipe is indexed. Sourced from recipe not ingredient.
+	indexRecs    []indexRecipeT // processed index entries as saved to dynamo
+	dbatchNum    string         // mulit-records sent to display in fixed batch sizes (6 say).
+	reset        bool           // zeros []RecId in session table during changes to recipe, as []RecId is recipe dependent
+	curReqType   int            // initialiseRequest, objectRequest(ingredient,task,container,utensil), instructionRequest(next,prev,goto,modify,repeat)
+	questionId   int            // what question is the user responding to with a yes|no.
+	dynamodbSvc  *dynamodb.DynamoDB
+	object       string //container,ingredient,instruction,utensil. Sourced from Sessions table or request
 	//updateAdd      int        // dynamodb Update ADD. Operation dependent
 	gotoRecId        int        // sourced from request
 	objRecId         int        // current record id for object. Object is a ingredient,task,container,utensil.- displayed record id persisted to session after use.
 	recIdNotExists   bool       // determines whether to create []RecId set attribute in Session  table
 	noGetRecRequired bool       // a mutliple record request e.g. ingredients listing
-	eol              int        // sourced from Sessions table
 	mChoice          []mRecipeT // multi-choice select. Recipe name and ingredient searches can result in mutliple records being returned. Results are saved.
 	//
 	selCtx   selectCtxT // select context either recipe or other (i.e. object)
@@ -73,28 +73,33 @@ type sessCtx struct {
 	displayHdr    string // passed to alexa display
 	displaySubHdr string // passed to alexa display
 	activityS     Activities
-	dmsg          string
-	vmsg          string
+	dmsg          string // display msg
+	vmsg          string // verbal msg
 	ddata         string
 	yesno         string
-	// Recipe Part data
-	peol  int      // End-of-List-for-part
-	part  string   // part index name - if no value then no part is being used eventhough recipe may be have a part defined i.e nopart_ & a part
-	parts []*PartT // sourced from Recipe (R-)
-	next  int      // next SortK (recId)
-	prev  int      // previous SortK (recId) when in part mode as opposed to full recipe mode
-	pid   int      // record id within a part 1..peol
 	//
+	instructions []InstructionT // cached instructions for complete or part based recipe
+	// Recipe Part data
+	eol   int     // sourced from Sessions table
+	peol  int     // End-of-List-for-part
+	part  string  // part index name - if no value then no part is being used eventhough recipe may be have a part defined i.e nopart_ & a part
+	parts []PartT // sourced from Recipe (R-)
+	// cPart string  // current part being display (long name). All part means complete recipe will be listed.
+	// next  int     // next SortK (recId)
+	// prev  int     // previous SortK (recId) when in part mode as opposed to full recipe mode
+	// pid   int     // record id within a part 1..peol
+	// //
 	back bool // back button pressed on display
 }
 
 const (
 	// objects to which future requests apply - s.object values
-	ingredient_ string = "ingredient"
-	task_       string = "task"
-	container_  string = "container"
-	utensil_    string = "utensil"
-	recipe_     string = "recipe" // list recipe in book
+	ingredient_     string = "ingredient"
+	task_           string = "task"
+	container_      string = "container"
+	utensil_        string = "utensil"
+	recipe_         string = "recipe" // list recipe in book
+	CompleteRecipe_ string = "Complete recipe"
 )
 
 type selectCtxT int
@@ -102,6 +107,7 @@ type selectCtxT int
 const (
 	ctxRecipe     selectCtxT = 1
 	ctxObjectList            = 2
+	ctxPartMenu              = 3
 )
 
 // type objectT int
@@ -167,17 +173,20 @@ func (s *sessCtx) orchestrateRequest() error {
 	// determine select context
 	//
 	if s.selId > 0 {
+		s.selCtx = lastState.SelCtx
 		if lastState.Request == "search" {
 			fmt.Println("last Request search, last SelCtx ", lastState.SelCtx)
 			s.selCtx = lastState.SelCtx
 		} else if lastState.Request == "select" {
 			fmt.Println("lastState.Request == select,last SelCtx ", lastState.SelCtx)
-			s.selCtx = lastState.SelCtx + 1
+			if s.selCtx != ctxPartMenu {
+				s.selCtx = lastState.SelCtx + 1
+			}
 		}
-		if s.selCtx > ctxObjectList {
-			s.ingrdList = lastState.Ingredients
-			return nil
-		}
+		// if s.selCtx > ctxObjectList {
+		// 	s.ingrdList = lastState.Ingredients
+		// 	return nil
+		// }
 	}
 	//
 	// gen primary key - used for most dyamo accesses
@@ -245,13 +254,10 @@ func (s *sessCtx) orchestrateRequest() error {
 	fmt.Println("in validateRequest .  Select: ", s.selId, lastState.SelCtx)
 	if s.selId > 0 {
 		// selId is the response from Alexa on the index (ordinal value) of the selected display item
+		fmt.Println("SELCTX is : ", s.selCtx)
 		switch s.selCtx {
 		case ctxRecipe:
 			// select from: multiple recipes
-			if s.back {
-				return nil
-			}
-			fmt.Println("le mChoice: ", len(s.mChoice), s.selId)
 			if s.selId > len(s.mChoice) || s.selId < 1 {
 				return fmt.Errorf("Selection out of range")
 			}
@@ -282,13 +288,30 @@ func (s *sessCtx) orchestrateRequest() error {
 			// object chosen, nothing more to select for the time being
 			//s.selCtx = 0
 			switch s.object {
+
+			//  "lets start cooking" selected
 			case task_:
-				//  "lets start cooking" selected
-				s.request = "next"
 				s.curReqType = instructionRequest
-				s.selClear = true
+				s.selClear = true //TODO: what if they back at this point we have cleared sel.
+				fmt.Printf("s.parts  %#v [%s] \n", s.parts, s.part)
+				if len(s.parts) > 0 && len(s.part) == 0 {
+					s.dispPartMenu = true
+					s.noGetRecRequired = true
+					s.selCtx = ctxPartMenu
+					//
+					menu := make([]mRecipeT, len(s.parts)+1)
+					menu[0] = mRecipeT{Part: CompleteRecipe_}
+					for i, v := range s.parts {
+						menu[i+1] = mRecipeT{Part: v.Title}
+					}
+					s.mChoice = menu
+					fmt.Printf("mChoice is: %#v", s.mChoice)
+				} else {
+					s.request = "next"
+				}
+
+			//  "list ingredients" selected
 			case ingredient_:
-				//  "list ingredients" selected
 				s.pkey = s.reqBkId + "-" + s.reqRId
 				if s.reqVersion != "" {
 					s.pkey += "-" + s.reqVersion
@@ -313,6 +336,25 @@ func (s *sessCtx) orchestrateRequest() error {
 			if err != nil {
 				return err
 			}
+
+		case ctxPartMenu:
+			if s.selId > len(s.mChoice) || s.selId < 1 {
+				return fmt.Errorf("Selection out of range")
+			}
+			fmt.Printf("** . in ctxPartMenu  mchoice %#v", s.mChoice)
+			p := s.mChoice[s.selId-1]
+			fmt.Printf("selId, mChoice %d %#v", s.selId, p)
+			s.cacheInstructions(p.Part)
+			//
+			_, err = s.pushState()
+			if err != nil {
+				return err
+			}
+			//
+			// now complete the request by morphing request to a next operation
+			s.request = "next"
+			s.curReqType = instructionRequest
+			s.object = "task"
 		}
 	}
 	//
@@ -530,43 +572,34 @@ func (s *sessCtx) orchestrateRequest() error {
 				s.objRecId = s.recId[objectMap[s.object]]
 			}
 		} else {
-			s.objRecId = lastState.Prev
+			s.objRecId = lastState.RecId[objectMap[s.object]]
 			if s.objRecId == -1 {
 				s.noGetRecRequired = true
 				return nil
 			}
 		}
-	case "next":
-		if len(s.part) == 0 {
-			// no part mode ie. user has not elected to follow a part if one exists, so follows normal non-part mode.
-			if len(s.object) == 0 {
-				return fmt.Errorf("Error: no object defined when in validateRequest - next")
-			}
-			if lastState.EOL > 0 && len(s.recId) > 0 {
-				if s.recId[objectMap[s.object]] == s.eol {
-					s.objRecId = lastState.EOL
-					// s.dPreMsg = "You have reached the end. "
-					// s.vPreMsg = "You have reached the end. "
-					s.noGetRecRequired = true
-					return nil
-				}
-			}
-			s.recId[objectMap[s.object]] += 1
-			s.objRecId = s.recId[objectMap[s.object]]
-		} else {
-			s.objRecId = lastState.Next
-			if s.objRecId == -1 {
-				// TODO: finished current part. Options go onto next or has recipe been completed - how to determine?
-				// CptPart[k]=true
-				// save ComPlTedPart to session to keep track completed Part for user.
+	case "next", "select-next":
+		if len(s.recId) == 0 {
+			s.recId = [4]int{}
+		}
+		//
+		// for Recipe instructions (need to recode for other..)
+		//
+		if len(s.object) == 0 {
+			return fmt.Errorf("Error: no object defined when in validateRequest - next")
+		}
+		if lastState.EOL > 0 && len(s.recId) > 0 {
+			if s.recId[objectMap[s.object]] == s.eol {
+				s.objRecId = lastState.EOL
+				// s.dPreMsg = "You have reached the end. "
+				// s.vPreMsg = "You have reached the end. "
 				s.noGetRecRequired = true
 				return nil
 			}
 		}
-	}
-	// check if we have Dynamodb Recid Set defined, this will be useful in pushState
-	if len(s.recId) == 0 {
-		s.recIdNotExists = true
+		s.objRecId = s.recId[objectMap[s.object]]
+		// presist incremented value, which represents next row to select in Instructions slice
+		s.recId[objectMap[s.object]] += 1
 	}
 	//
 	return nil
@@ -601,11 +634,11 @@ func (s *sessCtx) getRecById() error {
 		writeCtx = uDisplay
 		s.dmsg = expandScalableTags(expandLiteralTags(rec.Display))
 	}
-	if len(s.part) > 0 {
-		s.dmsg = "[" + strconv.Itoa(s.pid) + "|" + strconv.Itoa(s.peol) + "|" + strconv.Itoa(s.eol) + "]  " + s.dmsg
-	} else {
-		s.dmsg = "[" + strconv.Itoa(s.pid) + "|" + strconv.Itoa(s.eol) + "]  " + s.dmsg
-	}
+	// if len(s.part) > 0 {
+	// 	s.dmsg = "[" + strconv.Itoa(s.pid) + "|" + strconv.Itoa(s.peol) + "|" + strconv.Itoa(s.eol) + "]  " + s.dmsg
+	// } else {
+	// 	s.dmsg = "[" + strconv.Itoa(s.pid) + "|" + strconv.Itoa(s.eol) + "]  " + s.dmsg
+	// }
 	//
 	// save state to dynamo
 	//
@@ -828,6 +861,14 @@ func handler(request InputEvent) (RespEvent, error) {
 		sessctx.object = sessctx.request
 		sessctx.curReqType = objectRequest
 		sessctx.request = "next"
+		fmt.Printf("s.parts  %#v\n", sessctx.parts)
+		if sessctx.request == task_ {
+			if len(sessctx.parts) > 0 && len(sessctx.part) == 0 {
+				sessctx.dispPartMenu = true
+				sessctx.noGetRecRequired = true
+			}
+			//s.getInstructions()
+		}
 	case "next", "prev", "goto", "repeat", "modify":
 		sessctx.curReqType = instructionRequest
 		switch sessctx.request {
@@ -859,6 +900,18 @@ func handler(request InputEvent) (RespEvent, error) {
 	if sessctx.curReqType == initialiseRequest || sessctx.noGetRecRequired {
 
 		switch {
+
+		case sessctx.dispPartMenu == true:
+
+			mchoice := make([]DisplayItem, len(sessctx.mChoice))
+			for i, v := range sessctx.mChoice {
+				id := strconv.Itoa(i + 1)
+				mchoice[i] = DisplayItem{Id: id, Title: v.Part}
+			}
+			s := sessctx
+			Title := s.reqRName + ` is divided into parts.`
+			return RespEvent{Header: Title, SubHdr: `Select first option to cook complete recipe`, Text: s.vmsg, Verbal: s.dmsg, List: mchoice}, nil
+
 		case sessctx.request == "select" && sessctx.object == ingredient_:
 
 			var ingrdlst []DisplayItem
@@ -924,12 +977,30 @@ func handler(request InputEvent) (RespEvent, error) {
 	//
 	err = sessctx.getRecById()
 	if err != nil {
-		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata, Error: err.Error()}, nil
+		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg, Error: err.Error()}, nil
 	}
 	//
 	// respond with next record from task (instruction). May support verbal listing of container, utensils at some stage (current displayed listing only)
 	//
-	return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata}, nil
+	var subh string
+	s := sessctx
+	hrd := " Cooking Instructions          " + s.reqRName
+	if s.peol > 0 {
+		if s.eol != s.peol {
+			subh = s.part + "    " + strconv.Itoa(s.objRecId+1) + " of " + strconv.Itoa(s.peol)
+		} else {
+			subh = s.part + "    " + strconv.Itoa(s.objRecId+1) + " of " + strconv.Itoa(s.eol)
+		}
+	} else {
+		subh = strconv.Itoa(s.objRecId+1) + " of " + strconv.Itoa(s.eol)
+	}
+	var mchoice []DisplayItem
+	for _, v := range sessctx.instructions {
+		var item DisplayItem
+		item = DisplayItem{Title: v.Text}
+		mchoice = append(mchoice, item)
+	}
+	return RespEvent{Type: "Ingredient", Header: hrd, SubHdr: subh, Text: sessctx.vmsg, Verbal: sessctx.dmsg, List: mchoice}, nil
 }
 
 func main() {
