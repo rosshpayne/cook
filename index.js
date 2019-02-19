@@ -35,6 +35,7 @@ const EventHandler = {
     handlerInput.requestEnvelope.request.type === 'Alexa.Presentation.APL.UserEvent',
   
   handle: handlerInput => {
+    const tripple = require('APL/tripple.js');
     const select = require('APL/select.js');
     const ingredient = require('APL/ingredients.js');
     const sid='sid='+handlerInput.requestEnvelope.session.sessionId ;
@@ -66,6 +67,12 @@ const EventHandler = {
                             .reprompt(resp.Verbal)
                             .addDirective(ingredient(resp.Header,resp.SubHdr, resp.List))
                             .getResponse();
+        } else if (resp.Type === "Tripple") { 
+          return  handlerInput.responseBuilder
+                            .speak("here in tripple")
+                            .reprompt(resp.Verbal)
+                            .addDirective(tripple(resp.Header,resp.SubHdr, resp.ListA, resp.ListB, resp.ListC))
+                            .getResponse();  
         } else {
           return  handlerInput.responseBuilder
                             .speak(resp.Verbal)
@@ -274,6 +281,13 @@ const SelectIntentHandler = {
                             .reprompt(resp.Verbal)
                             .addDirective(ingredient(resp.Header,resp.SubHdr, resp.List))
                             .getResponse();
+       } else if (resp.Type === "Tripple") { 
+          const tripple = require('APL/tripple.js');
+          return  handlerInput.responseBuilder
+                            .speak("here in tripple")
+                            .reprompt(resp.Verbal)
+                            .addDirective(tripple(resp.Header,resp.SubHdr, resp.ListA, resp.ListB, resp.ListC))
+                            .getResponse();     
         } else {
           return  handlerInput.responseBuilder
                             .speak(resp.Verbal)
@@ -330,9 +344,7 @@ const NextIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'NextIntent';
   },
   handle(handlerInput) {
-    var speechText;
-    var displayText;
-    var recipe ;
+    const tripple = require('APL/tripple.js');
     const sid='sid='+handlerInput.requestEnvelope.session.sessionId;
     invokeParams.Payload = '{ "Path" : "next" ,"Param" : "'+sid+'" }';
 
@@ -346,16 +358,21 @@ const NextIntentHandler = {
     });
     
     return promise.then((body) => {
-          recipe = JSON.parse(body);
-          speechText=recipe.Text ;
-          displayText = recipe.Verbal;
-        return  handlerInput.responseBuilder
-                          .speak(speechText)
-                          .reprompt(speechText)
-                          .withSimpleCard('Instructions', displayText)
+        const  resp = JSON.parse(body);
+        if (resp.Type === "Tripple") { 
+          return  handlerInput.responseBuilder
+                            .speak("here in tripple")
+                            .reprompt(resp.Verbal)
+                            .addDirective(tripple(resp.Header,resp.SubHdr, resp.ListA, resp.ListB, resp.ListC))
+                            .getResponse();  
+        } else {
+          return  handlerInput.responseBuilder
+                          .speak(resp.Text)
+                          .reprompt(resp.text)
+                          .withSimpleCard('Instructions', resp.Verbal)
                           .getResponse();
-      }).catch(function (err) { console.log(err, err.stack);  } );
-  
+        }
+    }).catch(function (err) { console.log(err, err.stack);  } );
   },
 };
 

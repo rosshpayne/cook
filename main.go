@@ -696,7 +696,10 @@ type RespEvent struct {
 	Text     string        `json:"Text"`
 	Verbal   string        `json:"Verbal"`
 	Error    string        `json:"Error"`
-	List     []DisplayItem `json:"List"` // id|Title1|subTitle1|SubTitle2|Text
+	List     []DisplayItem `json:"List"` // recipe data: id|Title1|subTitle1|SubTitle2|Text
+	ListA    []DisplayItem `json:"ListA"`
+	ListB    []DisplayItem `json:"ListB"`
+	ListC    []DisplayItem `json:"ListC"`
 }
 
 //
@@ -984,7 +987,7 @@ func handler(request InputEvent) (RespEvent, error) {
 	//
 	var subh string
 	s := sessctx
-	hrd := " Cooking Instructions          " + s.reqRName
+	hrd := " Cooking Instructions  -  " + s.reqRName
 	if s.peol > 0 {
 		if s.eol != s.peol {
 			subh = s.part + "    " + strconv.Itoa(s.objRecId+1) + " of " + strconv.Itoa(s.peol)
@@ -994,13 +997,28 @@ func handler(request InputEvent) (RespEvent, error) {
 	} else {
 		subh = strconv.Itoa(s.objRecId+1) + " of " + strconv.Itoa(s.eol)
 	}
-	var mchoice []DisplayItem
-	for _, v := range sessctx.instructions {
-		var item DisplayItem
-		item = DisplayItem{Title: v.Text}
-		mchoice = append(mchoice, item)
+	//split instructions across three lists
+	//
+	var listA []DisplayItem
+	for k, i, ir := 0, s.objRecId-3, s.instructions; k < 3; k++ {
+		if i >= 0 {
+			item := DisplayItem{Title: ir[i].Text}
+			listA = append(listA, item)
+		}
+		i++
 	}
-	return RespEvent{Type: "Ingredient", Header: hrd, SubHdr: subh, Text: sessctx.vmsg, Verbal: sessctx.dmsg, List: mchoice}, nil
+	if len(listA) == 0 {
+		listA = []DisplayItem{DisplayItem{Title: " "}}
+	}
+	listB := make([]DisplayItem, 1)
+	listB[0] = DisplayItem{Title: s.instructions[s.objRecId].Text}
+	listC := make([]DisplayItem, len(s.instructions)-s.objRecId)
+	for k, i, ir := 0, s.objRecId+1, s.instructions; i < len(ir); i++ {
+		listC[k] = DisplayItem{Title: ir[i].Text}
+		k++
+	}
+
+	return RespEvent{Type: "Tripple", Header: hrd, SubHdr: subh, Text: sessctx.vmsg, Verbal: sessctx.dmsg, ListA: listA, ListB: listB, ListC: listC}, nil
 }
 
 func main() {

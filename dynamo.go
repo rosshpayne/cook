@@ -555,6 +555,9 @@ func (s *sessCtx) getTaskRecById() (alexaDialog, error) {
 	s.peol = rec.PEOL
 	s.part = getLongName(rec.Part)
 
+	fmt.Println("eol = ", s.eol)
+	fmt.Println("peol = ", s.peol)
+	fmt.Println("part = ", s.part)
 	return taskRec, nil
 }
 
