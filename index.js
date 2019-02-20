@@ -417,9 +417,7 @@ const PrevIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'PrevIntent';
   },
   handle(handlerInput) {
-    var speechText;
-    var displayText;
-    var recipe ;
+    const tripple = require('APL/tripple.js');
     const sid='sid='+handlerInput.requestEnvelope.session.sessionId;
     invokeParams.Payload = '{ "Path" : "prev" ,"Param" : "'+sid+'" }';
 
@@ -433,15 +431,21 @@ const PrevIntentHandler = {
     });
     
     return promise.then((body) => {
-          recipe = JSON.parse(body);
-          speechText=recipe.Text ;
-          displayText = recipe.Verbal;
-        return  handlerInput.responseBuilder
-                          .speak(speechText)
-                          .reprompt(speechText)
-                          .withSimpleCard('Instructions', displayText)
+        const  resp = JSON.parse(body);
+        if (resp.Type === "Tripple") { 
+          return  handlerInput.responseBuilder
+                            .speak("here in tripple")
+                            .reprompt(resp.Verbal)
+                            .addDirective(tripple(resp.Header,resp.SubHdr, resp.ListA, resp.ListB, resp.ListC))
+                            .getResponse();  
+        } else {
+          return  handlerInput.responseBuilder
+                          .speak(resp.Text)
+                          .reprompt(resp.text)
+                          .withSimpleCard('Instructions', resp.Verbal)
                           .getResponse();
-      }).catch(function (err) { console.log(err, err.stack);  } );
+        }
+    }).catch(function (err) { console.log(err, err.stack);  } );
   
   },
 };

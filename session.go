@@ -59,8 +59,9 @@ type stateRec struct {
 	Part  string  `json:"Part"`
 	// Next  int     `json:"Next"`
 	// Prev  int     `json:"Prev"`
-	// PEOL  int     `json:"PEOL"`
-	// PId   int     `json:"PId"`
+	// PEOL         int            `json:"PEOL"`	** this data stored in Instruction slice
+	// PId          int            `json:"PId"`		** this data stored in Instruction slice
+	// EOL          int            `json:"EOL"`		** this data stored in Instruction slice
 	Instructions []InstructionT `json:"I"`
 	//
 	// Display header for APL - NB: this is probably not required as display will persist last assigned value.
@@ -174,12 +175,15 @@ func (s *sessCtx) getState() (*stateRec, error) {
 	if len(s.parts) == 0 {
 		s.parts = lastState.Parts
 	}
-	// if s.peol == 0 {
-	// 	s.peol = lastState.PEOL
-	// }
-	// if lastState.PId > 0 {
-	// 	s.pid = lastState.PId
-	// }
+	if s.peol == 0 && len(lastState.Instructions) > 0 {
+		s.peol = lastState.Instructions[lastState.RecId[objectMap[lastState.Obj]]].PEOL
+	}
+	if s.pid > 0 && len(lastState.Instructions) > 0 {
+		s.pid = lastState.Instructions[lastState.RecId[objectMap[lastState.Obj]]].PID
+	}
+	if lastState.EOL > 0 && len(lastState.Instructions) > 0 {
+		s.eol = lastState.Instructions[lastState.RecId[objectMap[lastState.Obj]]].EOL
+	}
 	// if lastState.Prev != 0 {
 	// 	s.prev = lastState.Prev
 	// }
@@ -256,6 +260,7 @@ func (s *sessCtx) pushState(new ...bool) (*stateRec, error) {
 	// sr.Prev = s.prev
 	// sr.PEOL = s.peol
 	// sr.PId = s.pid
+	// sr.EOL = s.eol
 	sr.Instructions = s.instructions
 	//
 	State := make(stateStack, 1)
@@ -325,14 +330,28 @@ func (s *sessCtx) updateState() error {
 	t.Add(time.Hour * 24 * 1)
 	updateC = expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
 	//
-	fmt.Printf("updateState: %s\n", fmt.Sprintf("state[%d].RecId", len(s.state)-1))
-	recid_ := fmt.Sprintf("state[%d].RecId", len(s.state)-1)
-	fmt.Printf("recId %v", s.recId)
-	updateC = updateC.Set(expression.Name(recid_), expression.Value(s.recId))
-	recid_ = fmt.Sprintf("state[%d].DT", len(s.state)-1)
-	updateC = updateC.Set(expression.Name(recid_), expression.Value(time.Now().Format("Jan 2 15:04:05")))
+	// for current state
+	//
+	atribute := fmt.Sprintf("state[%d].RecId", len(s.state)-1)
+	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
+	atribute = fmt.Sprintf("state[%d].DT", len(s.state)-1)
+	updateC = updateC.Set(expression.Name(atribute), expression.Value(time.Now().Format("Jan 2 15:04:05")))
+	atribute = fmt.Sprintf("state[%d].Request", len(s.state)-1)
+	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.request))
+	//
+	// for previous states - upto object menu
+	//
+	if len(s.state)-2 > 0 {
+		atribute := fmt.Sprintf("state[%d].RecId", len(s.state)-2)
+		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
+	}
+	//back to object choice menu - if recipe part's involved
+	if len(s.state)-3 > 0 && (s.request == "select" || s.request == "search") && len(s.reqRName) > 0 {
+		atribute := fmt.Sprintf("state[%d].RecId", len(s.state)-3)
+		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
+	}
+	//
 	expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
-
 	pkey := pKey{Sid: s.sessionId}
 	av, err := dynamodbattribute.MarshalMap(&pkey)
 
@@ -364,6 +383,7 @@ func (s *sessCtx) updateState() error {
 		}
 		return err
 	}
+	fmt.Println("updateState in sessions.go")
 	return nil
 }
 

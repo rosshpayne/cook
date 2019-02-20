@@ -51,7 +51,7 @@ type mRecipeT struct {
 	Part string
 }
 
-type prepTaskRec struct {
+type taskRecT struct {
 	PKey   string  `json:"PKey"`  // R-[BkId]
 	SortK  int     `json:"SortK"` // monotonically increasing - task at which user is upto in recipe
 	AId    int     `json:"AId"`   // Activity Id
@@ -70,11 +70,11 @@ type prepTaskRec struct {
 	taskp *PerformT // used in GenerateTasks and loadBaseRecipe
 }
 
-func (pt prepTaskRec) Alexa() dialog {
+func (pt taskRecT) Alexa() dialog {
 	return dialog{Verbal: pt.Verbal, Display: pt.Text, EOL: pt.EOL, PEOL: pt.PEOL, PID: pt.PId, PART: pt.Part}
 }
 
-type prepTaskS []*prepTaskRec
+type prepTaskS []*taskRecT
 
 func (od prepTaskS) Len() int           { return len(od) }
 func (od prepTaskS) Less(i, j int) bool { return od[i].time > od[j].time }
@@ -421,7 +421,7 @@ func (s *sessCtx) updateRecipe(r *RecipeT) error {
 	updateC := expression.Set(expression.Name("Part"), expression.Value(r.Part))
 	expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
 	if err != nil {
-		//return prepTaskRec{}, fmt.Errorf("Error in Query of Tasks: " + err.Error())
+		//return taskRecT{}, fmt.Errorf("Error in Query of Tasks: " + err.Error())
 		panic(err)
 	}
 	input := &dynamodb.UpdateItemInput{
@@ -456,13 +456,17 @@ func (s *sessCtx) updateRecipe(r *RecipeT) error {
 	return nil
 }
 
+// part of session data that is persisted.
 type InstructionT struct {
 	Text   string `json:"Txt"` // all Linked preps combined text into this field
 	Verbal string `json:"Vbl"`
-	Part   string `json: "Pt"`
+	Part   string `json: "Pt"` // part index name
 	EOL    int    `json:"EOL"` // End-Of-List. Max Id assigned to each record
 	PEOL   int    `json:"PEOL"`
+	PID    int    `json:"PID"` // id within a part
 }
+
+// cacheInstructions copies data from T- items in recipe table to session data (instructions) that is preserved
 
 func (s *sessCtx) cacheInstructions(part string) error {
 
@@ -486,14 +490,14 @@ func (s *sessCtx) cacheInstructions(part string) error {
 	// TODO - should be GetItem not Query as we are providing the primary key however a future feature to display 3 records instead of one would user query.
 	result, err := s.dynamodbSvc.Query(input)
 	if err != nil {
-		//return prepTaskRec{}, fmt.Errorf("Error in Query of Tasks: " + err.Error())
+		//return taskRecT{}, fmt.Errorf("Error in Query of Tasks: " + err.Error())
 		return err
 	}
 	if int(*result.Count) == 0 { //TODO - put this code back so it makes sense
 		// this is caused by a goto operation exceeding EOL
 		return fmt.Errorf("Error: %s [%s] ", "Internal error: no instructions found for recipe ", s.reqRName)
 	}
-	ptR := make([]prepTaskRec, len(result.Items))
+	ptR := make([]taskRecT, len(result.Items))
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &ptR)
 	if err != nil {
 		return fmt.Errorf("Error: %s - %s", "in UnmarshalMap in cacheInstructions ", err.Error())
@@ -502,11 +506,16 @@ func (s *sessCtx) cacheInstructions(part string) error {
 	//
 	// find start instruction. For complete it will be based on SortK
 	//
+	fmt.Printf("in cacheINstruction:  part [%s] \n", part)
 	switch part {
 	case CompleteRecipe_:
-		instructs := make([]InstructionT, len(ptR))
+		instructs := make([]InstructionT, len(ptR)+1) // Instructions start at index 1.
 		for i, v := range ptR {
-			instructs[i] = InstructionT{Text: v.Text, Verbal: v.Verbal, Part: v.Part, EOL: v.EOL, PEOL: v.PEOL}
+			writeCtx = uSay
+			vmsg := expandScalableTags(expandLiteralTags(v.Verbal))
+			writeCtx = uDisplay
+			dmsg := expandScalableTags(expandLiteralTags(v.Text))
+			instructs[i+1] = InstructionT{Text: dmsg, Verbal: vmsg, Part: v.Part, EOL: v.EOL, PEOL: v.PEOL, PID: v.PId}
 		}
 		s.instructions = instructs
 		fmt.Printf(" cacheInstructions  instructions len() %d\n ", len(s.instructions))
@@ -515,11 +524,16 @@ func (s *sessCtx) cacheInstructions(part string) error {
 		for _, v := range s.parts {
 			if v.Title == part {
 				start := v.Start
-				var instructs []InstructionT
+				instructs := make([]InstructionT, 1)
+				instructs[0] = InstructionT{} // blank instruction at index 0, so Instructions start at index 1.
 				for id := start; id != -1; id = ptR[id-1].Next {
 					// ptR.Next points to SortK in table - which starts at 1
 					i := id - 1
-					instruct := InstructionT{Text: ptR[i].Text, Verbal: ptR[i].Verbal, Part: ptR[i].Part, EOL: ptR[i].EOL, PEOL: ptR[i].PEOL}
+					writeCtx = uSay
+					vmsg := expandScalableTags(expandLiteralTags(ptR[i].Verbal))
+					writeCtx = uDisplay
+					dmsg := expandScalableTags(expandLiteralTags(ptR[i].Text))
+					instruct := InstructionT{Text: dmsg, Verbal: vmsg, Part: ptR[i].Part, EOL: ptR[i].EOL, PEOL: ptR[i].PEOL, PID: ptR[i].PId}
 					instructs = append(instructs, instruct)
 				}
 				s.instructions = instructs
@@ -532,7 +546,7 @@ func (s *sessCtx) cacheInstructions(part string) error {
 }
 
 func (s *sessCtx) getTaskRecById() (alexaDialog, error) {
-
+	var err error
 	getLongName := func(index string) string {
 		if index == "" || index == "nopart_" {
 			return ""
@@ -542,29 +556,44 @@ func (s *sessCtx) getTaskRecById() (alexaDialog, error) {
 				return v.Title
 			}
 		}
-		panic(fmt.Errorf("Error: in getTaskRecById, index [%s] not found in s.part ", index))
+		panic(fmt.Errorf("Error: in getTaskRecById, recipe part index [%s] not found in s.parts ", index))
 		return ""
+	}
+	if len(s.instructions) == 0 {
+		panic(fmt.Errorf("Error: internal, instructions has not been cached"))
+	}
+	//
+	// check objRecId within limits
+	//
+	if s.objRecId < 1 {
+		err = fmt.Errorf("Reached first instruction")
+		s.objRecId = 1
+	}
+	if s.objRecId > len(s.instructions)+1 {
+		err = fmt.Errorf("Reached last instruction")
+		s.objRecId = len(s.instructions) + 1
 	}
 	rec := &s.instructions[s.objRecId]
 
-	taskRec := prepTaskRec{Text: rec.Text, Verbal: rec.Verbal}
+	taskRec := taskRecT{Text: rec.Text, Verbal: rec.Verbal}
 	//
 	// save to Session Context
 	//
 	s.eol = rec.EOL
 	s.peol = rec.PEOL
 	s.part = getLongName(rec.Part)
+	s.pid = rec.PID
 
 	fmt.Println("eol = ", s.eol)
 	fmt.Println("peol = ", s.peol)
 	fmt.Println("part = ", s.part)
-	return taskRec, nil
+	return taskRec, err
 }
 
 // func (s *sessCtx) getTaskRecById() (alexaDialog, error) {
 
 // 	var (
-// 		taskRec prepTaskRec
+// 		taskRec taskRecT
 // 	)
 // 	pKey := "T-" + s.pkey
 // 	keyC := expression.KeyEqual(expression.Key("PKey"), expression.Value(pKey)).And(expression.KeyEqual(expression.Key("SortK"), expression.Value(s.objRecId)))
@@ -590,15 +619,15 @@ func (s *sessCtx) getTaskRecById() (alexaDialog, error) {
 // 	// TODO - should be GetItem not Query as we are providing the primary key however a future feature to display 3 records instead of one would user query.
 // 	result, err := s.dynamodbSvc.Query(input)
 // 	if err != nil {
-// 		//return prepTaskRec{}, fmt.Errorf("Error in Query of Tasks: " + err.Error())
+// 		//return taskRecT{}, fmt.Errorf("Error in Query of Tasks: " + err.Error())
 // 		panic(err)
 // 	}
 // 	if int(*result.Count) == 0 { //TODO - put this code back so it makes sense
 // 		// this is caused by a goto operation exceeding EOL
-// 		return prepTaskRec{}, fmt.Errorf("Error: %s [%s] ", "Internal error: no tasks found for recipe ", s.reqRName)
+// 		return taskRecT{}, fmt.Errorf("Error: %s [%s] ", "Internal error: no tasks found for recipe ", s.reqRName)
 // 	}
 // 	if int(*result.Count) > 1 {
-// 		return prepTaskRec{}, fmt.Errorf("Error: more than 1 task returned from getNextRecordById")
+// 		return taskRecT{}, fmt.Errorf("Error: more than 1 task returned from getNextRecordById")
 // 	}
 // 	err = dynamodbattribute.UnmarshalMap(result.Items, &taskRec)
 // 	if err != nil {

@@ -233,7 +233,7 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 			if pp.Parallel && pp.WaitOn == 0 || add {
 				add = false
 				processed[atvTask{pa.AId, ia}] = true
-				pt := prepTaskRec{PKey: pKey, AId: pa.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Part: pa.Part, taskp: pp}
+				pt := taskRecT{PKey: pKey, AId: pa.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Part: pa.Part, taskp: pp}
 				ptS = append(ptS, &pt)
 			}
 		}
@@ -259,7 +259,7 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 				continue
 			}
 			processed[atvTask{pa.AId, ia}] = true
-			pt := prepTaskRec{PKey: pKey, SortK: i, AId: pa.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Part: pa.Part, taskp: pp}
+			pt := taskRecT{PKey: pKey, SortK: i, AId: pa.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Part: pa.Part, taskp: pp}
 			ptS = append(ptS, &pt)
 			i++
 		}
@@ -270,7 +270,7 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 			if _, ok := processed[atvTask{pa.AId, ia}]; ok {
 				continue
 			}
-			pt := prepTaskRec{PKey: pKey, SortK: i, AId: pa.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Part: pa.Part, taskp: pp}
+			pt := taskRecT{PKey: pKey, SortK: i, AId: pa.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Part: pa.Part, taskp: pp}
 			ptS = append(ptS, &pt)
 			i++
 		}
@@ -280,7 +280,7 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 	//
 	for pa := taskctl.start; pa != nil; pa = pa.nextTask {
 		for _, pp := range pa.Task {
-			pt := prepTaskRec{PKey: pKey, SortK: i, AId: pa.AId, Type: 'T', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Part: pa.Part, taskp: pp}
+			pt := taskRecT{PKey: pKey, SortK: i, AId: pa.AId, Type: 'T', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Part: pa.Part, taskp: pp}
 			ptS = append(ptS, &pt)
 			i++
 		}

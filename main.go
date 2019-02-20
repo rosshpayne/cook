@@ -87,7 +87,7 @@ type sessCtx struct {
 	// cPart string  // current part being display (long name). All part means complete recipe will be listed.
 	// next  int     // next SortK (recId)
 	// prev  int     // previous SortK (recId) when in part mode as opposed to full recipe mode
-	// pid   int     // record id within a part 1..peol
+	pid int // record id within a part 1..peol
 	// //
 	back bool // back button pressed on display
 }
@@ -251,7 +251,6 @@ func (s *sessCtx) orchestrateRequest() error {
 	//
 	// respond to select from displayed items
 	//
-	fmt.Println("in validateRequest .  Select: ", s.selId, lastState.SelCtx)
 	if s.selId > 0 {
 		// selId is the response from Alexa on the index (ordinal value) of the selected display item
 		fmt.Println("SELCTX is : ", s.selCtx)
@@ -341,9 +340,9 @@ func (s *sessCtx) orchestrateRequest() error {
 			if s.selId > len(s.mChoice) || s.selId < 1 {
 				return fmt.Errorf("Selection out of range")
 			}
-			fmt.Printf("** . in ctxPartMenu  mchoice %#v", s.mChoice)
+			fmt.Printf("** . in ctxPartMenu  mchoice %#v\n", s.mChoice)
 			p := s.mChoice[s.selId-1]
-			fmt.Printf("selId, mChoice %d %#v", s.selId, p)
+			fmt.Printf("selId  %d   mChoice   %#v\n", s.selId, p)
 			s.cacheInstructions(p.Part)
 			//
 			_, err = s.pushState()
@@ -554,30 +553,11 @@ func (s *sessCtx) orchestrateRequest() error {
 		s.noGetRecRequired = true
 		return nil
 	case "prev":
-		if len(s.part) == 0 {
-			if len(s.object) == 0 {
-				return fmt.Errorf("Error: no object defined when in validateRequest - next")
-			}
-			if lastState.EOL > 0 && len(s.recId) > 0 {
-				if s.recId[objectMap[s.object]] == 1 {
-					s.objRecId = s.recId[objectMap[s.object]]
-					// s.dPreMsg = "You have reached the end. "
-					// s.vPreMsg = "You have reached the end. "
-					return nil
-				}
-				if len(s.object) == 0 {
-					return fmt.Errorf("Error: no object defined when in validateRequest - next")
-				}
-				s.recId[objectMap[s.object]] -= 1
-				s.objRecId = s.recId[objectMap[s.object]]
-			}
-		} else {
-			s.objRecId = lastState.RecId[objectMap[s.object]]
-			if s.objRecId == -1 {
-				s.noGetRecRequired = true
-				return nil
-			}
+		if len(s.object) == 0 {
+			return fmt.Errorf("Error: no object defined for previous in orchestrateRequest")
 		}
+		s.objRecId = s.recId[objectMap[s.object]] - 1
+		s.recId[objectMap[s.object]] -= 1
 	case "next", "select-next":
 		if len(s.recId) == 0 {
 			s.recId = [4]int{}
@@ -586,19 +566,11 @@ func (s *sessCtx) orchestrateRequest() error {
 		// for Recipe instructions (need to recode for other..)
 		//
 		if len(s.object) == 0 {
-			return fmt.Errorf("Error: no object defined when in validateRequest - next")
+			return fmt.Errorf("Error: no object defined for next in orchestrateRequest")
 		}
-		if lastState.EOL > 0 && len(s.recId) > 0 {
-			if s.recId[objectMap[s.object]] == s.eol {
-				s.objRecId = lastState.EOL
-				// s.dPreMsg = "You have reached the end. "
-				// s.vPreMsg = "You have reached the end. "
-				s.noGetRecRequired = true
-				return nil
-			}
-		}
-		s.objRecId = s.recId[objectMap[s.object]]
-		// presist incremented value, which represents next row to select in Instructions slice
+		// }
+		// recId contains last processed instruction. So must add one to get current instruction.
+		s.objRecId = s.recId[objectMap[s.object]] + 1
 		s.recId[objectMap[s.object]] += 1
 	}
 	//
@@ -622,23 +594,11 @@ func (s *sessCtx) getRecById() error {
 		return err
 	}
 	rec := at.Alexa()
-	//	s.dmsg = expandLiteralTags(rec.Display)
-	if s.objRecId == rec.EOL {
-		writeCtx = uSay
-		s.vmsg = "and finally, " + expandScalableTags(expandLiteralTags(rec.Verbal))
-		writeCtx = uDisplay
-		s.dmsg = "and finally, " + expandScalableTags(expandLiteralTags(rec.Display))
-	} else {
-		writeCtx = uSay
-		s.vmsg = expandScalableTags(expandLiteralTags(rec.Verbal))
-		writeCtx = uDisplay
-		s.dmsg = expandScalableTags(expandLiteralTags(rec.Display))
-	}
-	// if len(s.part) > 0 {
-	// 	s.dmsg = "[" + strconv.Itoa(s.pid) + "|" + strconv.Itoa(s.peol) + "|" + strconv.Itoa(s.eol) + "]  " + s.dmsg
-	// } else {
-	// 	s.dmsg = "[" + strconv.Itoa(s.pid) + "|" + strconv.Itoa(s.eol) + "]  " + s.dmsg
-	// }
+	//
+	writeCtx = uSay
+	s.vmsg = expandScalableTags(expandLiteralTags(rec.Verbal))
+	writeCtx = uDisplay
+	s.dmsg = expandScalableTags(expandLiteralTags(rec.Display))
 	//
 	// save state to dynamo
 	//
@@ -647,20 +607,6 @@ func (s *sessCtx) getRecById() error {
 		return err
 	}
 	return nil
-	//
-	// if EOL has changed because of object change then update session context with new EOL
-	//	use EOL on next session to determine if RecId is at EOL and print end-of-list message
-	// fmt.Println("getRecById rec.EOL, s.eol", rec.EOL, s.eol)
-	// also save next, prev to session table if using part mode
-	// if s.eol != rec.EOL {
-	// 	s.eol = rec.EOL
-	// 	s.pushStateEOL()
-	// }
-	// if len(s.curPart) > 0 {
-	// 	// update next & prev values
-
-	// }
-
 }
 
 type InputEvent struct {
@@ -912,8 +858,8 @@ func handler(request InputEvent) (RespEvent, error) {
 				mchoice[i] = DisplayItem{Id: id, Title: v.Part}
 			}
 			s := sessctx
-			Title := s.reqRName + ` is divided into parts.`
-			return RespEvent{Header: Title, SubHdr: `Select first option to cook complete recipe`, Text: s.vmsg, Verbal: s.dmsg, List: mchoice}, nil
+			Title := s.reqRName + ` recipe is divided into parts.`
+			return RespEvent{Header: Title, SubHdr: `Select first option to follow complete recipe`, Text: s.vmsg, Verbal: s.dmsg, List: mchoice}, nil
 
 		case sessctx.request == "select" && sessctx.object == ingredient_:
 
@@ -985,17 +931,15 @@ func handler(request InputEvent) (RespEvent, error) {
 	//
 	// respond with next record from task (instruction). May support verbal listing of container, utensils at some stage (current displayed listing only)
 	//
-	var subh string
+	var (
+		subh string
+	)
 	s := sessctx
 	hrd := " Cooking Instructions  -  " + s.reqRName
-	if s.peol > 0 {
-		if s.eol != s.peol {
-			subh = s.part + "    " + strconv.Itoa(s.objRecId+1) + " of " + strconv.Itoa(s.peol)
-		} else {
-			subh = s.part + "    " + strconv.Itoa(s.objRecId+1) + " of " + strconv.Itoa(s.eol)
-		}
-	} else {
-		subh = strconv.Itoa(s.objRecId+1) + " of " + strconv.Itoa(s.eol)
+
+	subh = strconv.Itoa(s.objRecId) + " of " + strconv.Itoa(s.eol)
+	if len(s.part) > 0 {
+		subh += "    Part: " + s.part + "  -  " + strconv.Itoa(s.pid) + " of " + strconv.Itoa(s.peol)
 	}
 	//split instructions across three lists
 	//
@@ -1017,14 +961,17 @@ func handler(request InputEvent) (RespEvent, error) {
 		listC[k] = DisplayItem{Title: ir[i].Text}
 		k++
 	}
-
-	return RespEvent{Type: "Tripple", Header: hrd, SubHdr: subh, Text: sessctx.vmsg, Verbal: sessctx.dmsg, ListA: listA, ListB: listB, ListC: listC}, nil
+	type_ := "Tripple"
+	if len(s.instructions[s.objRecId].Text) > 120 {
+		type_ = "Tripple2" // larger text bounding box
+	}
+	return RespEvent{Type: type_, Header: hrd, SubHdr: subh, Text: sessctx.vmsg, Verbal: sessctx.dmsg, ListA: listA, ListB: listB, ListC: listC}, nil
 }
 
 func main() {
 	lambda.Start(handler)
 	//p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
-	//p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&rcp=Rhubarb and strawberry crumble cake"}
+	//p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&rcp=Take-home Chocolate Cake"}
 	//var i float64 = 1.0
 	// p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + "&srch=" + os.Args[2]}
 	// //
