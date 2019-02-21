@@ -46,7 +46,7 @@ type stateRec struct {
 	// search
 	//
 	Search  string
-	MChoice []mRecipeT
+	MChoice []mRecipeT // recipes menu, recipe-part menu,
 	//
 	// select
 	//
@@ -68,6 +68,10 @@ type stateRec struct {
 	//
 	//dispHdr  string `json:"DHdr"`  // Display header
 	//dispSHdr string `json:"DsHdr"` // Display subheader
+	DispObjectMenu  bool
+	DispIngredients bool
+	DispContainers  bool
+	DispPartMenu    bool
 }
 
 type stateStack []stateRec
@@ -129,75 +133,122 @@ func (s *sessCtx) getState() (*stateRec, error) {
 		return nil, err
 	}
 	lastState := stateItem.State.pop()
+	s.state = stateItem.State
+	return lastState, nil
+}
+
+func (s *sessCtx) setState(ls *stateRec) {
 	//return staterow.state.pop(), nil
 	if s.eol == 0 {
-		s.eol = lastState.EOL
+		s.eol = ls.EOL
 	}
 	if len(s.reqBkId) == 0 {
-		s.reqBkId = lastState.BkId
+		s.reqBkId = ls.BkId
 	}
 	if len(s.reqBkName) == 0 {
-		s.reqBkName = lastState.BkName
+		s.reqBkName = ls.BkName
 	}
 	if len(s.reqRName) == 0 {
-		s.reqRName = lastState.RName
+		s.reqRName = ls.RName
 	}
 	if len(s.reqRId) == 0 {
-		s.reqRId = lastState.RId
+		s.reqRId = ls.RId
 	}
 	fmt.Printf("reqVersion: [%s]\n", s.reqVersion)
 	fmt.Println("len(s.reqVersion) = ", len(s.reqVersion))
 	if len(s.reqVersion) == 0 {
-		s.reqVersion = lastState.Ver
+		s.reqVersion = ls.Ver
 	}
 	//
 	// opened book
 	//
-	if len(s.reqOpenBk) == 0 && len(lastState.OpenBk) > 0 {
-		s.reqOpenBk = lastState.OpenBk
-		id := strings.Split(lastState.OpenBk, "|")
+	if len(s.reqOpenBk) == 0 && len(ls.OpenBk) > 0 {
+		s.reqOpenBk = ls.OpenBk
+		id := strings.Split(ls.OpenBk, "|")
 		s.reqBkId, s.reqBkName = id[0], id[1]
 		s.authors = id[2]
-		fmt.Println("set BookId: ", s.reqBkId, " from lastState.OpenBk")
+		fmt.Println("set BookId: ", s.reqBkId, " from ls.OpenBk")
 	}
 	// object rec Id
 	//
-	s.recId = lastState.RecId
+	s.recId = ls.RecId
 	if len(s.object) == 0 {
-		s.object = lastState.Obj
+		s.object = ls.Obj
 	}
 	//
 	// Recipe Part related data
 	//
 	if len(s.part) == 0 {
-		s.part = lastState.Part
+		s.part = ls.Part
 	}
 	if len(s.parts) == 0 {
-		s.parts = lastState.Parts
+		s.parts = ls.Parts
 	}
-	if s.peol == 0 && len(lastState.Instructions) > 0 {
-		s.peol = lastState.Instructions[lastState.RecId[objectMap[lastState.Obj]]].PEOL
+	if s.peol == 0 && len(ls.Instructions) > 0 {
+		s.peol = ls.Instructions[ls.RecId[objectMap[ls.Obj]]].PEOL
 	}
-	if s.pid > 0 && len(lastState.Instructions) > 0 {
-		s.pid = lastState.Instructions[lastState.RecId[objectMap[lastState.Obj]]].PID
+	if s.pid > 0 && len(ls.Instructions) > 0 {
+		s.pid = ls.Instructions[ls.RecId[objectMap[ls.Obj]]].PID
 	}
-	if lastState.EOL > 0 && len(lastState.Instructions) > 0 {
-		s.eol = lastState.Instructions[lastState.RecId[objectMap[lastState.Obj]]].EOL
+	if ls.EOL > 0 && len(ls.Instructions) > 0 {
+		s.eol = ls.Instructions[ls.RecId[objectMap[ls.Obj]]].EOL
 	}
-	// if lastState.Prev != 0 {
-	// 	s.prev = lastState.Prev
+	// if ls.Prev != 0 {
+	// 	s.prev = ls.Prev
 	// }
-	// if lastState.Next != 0 {
-	// 	s.next = lastState.Next
+	// if ls.Next != 0 {
+	// 	s.next = ls.Next
 	// }
-	if len(lastState.MChoice) > 0 {
-		s.mChoice = lastState.MChoice
+	if len(ls.MChoice) > 0 {
+		s.mChoice = ls.MChoice
 	}
 	if len(s.instructions) == 0 {
-		s.instructions = lastState.Instructions
+		s.instructions = ls.Instructions
 	}
-	s.state = stateItem.State
-	return lastState, nil
+	//
+	// Display Menu choices
+	//
+	s.dispObjectMenu = ls.DispObjectMenu
+	s.dispIngredients = ls.DispIngredients
+	s.dispContainers = ls.DispContainers
+	s.dispPartMenu = ls.DispPartMenu
+	//
+	// determine select context
+	//
+	if s.selId > 0 {
+		switch {
+		case ls.SelCtx == 0 && len(s.reqRName) == 0 && (ls.Request == "search" || ls.Request == "recipe"):
+			s.selCtx = ctxRecipeMenu
+			s.dispObjectMenu = true
+		case ls.SelCtx == 0 || (ls.SelCtx == ctxRecipeMenu && len(s.reqRName) > 0):
+			s.selCtx = ctxObjectMenu
+		case s.request == "select" && len(ls.Parts) > 0 && len(ls.Part) == 0:
+			s.selCtx = ctxPartMenu
+		}
+	}
+	//
+	// gen primary key - used for most dyamo accesses
+	//
+	s.pkey = s.reqBkId + "-" + s.reqRId
+	fmt.Println("reqVersion = ", s.reqVersion)
+	if len(s.reqVersion) > 0 {
+		if s.reqVersion != "0" {
+			fmt.Println("..including version id")
+			s.pkey += "-" + s.reqVersion
+		} else {
+			s.reqVersion = ""
+		}
+	}
+	fmt.Println("PKEY = ", s.pkey)
+	// determine if recIds need to be reset to 1
+	if len(s.reqVersion) > 0 {
+		if len(ls.Ver) == 0 {
+			s.reset = true
+		} else if len(ls.Ver) > 0 && s.reqVersion != ls.Ver {
+			s.reset = true
+		}
+	}
+	return
 }
 
 func (s *sessCtx) pushState(new ...bool) (*stateRec, error) {
@@ -261,6 +312,11 @@ func (s *sessCtx) pushState(new ...bool) (*stateRec, error) {
 	// sr.PEOL = s.peol
 	// sr.PId = s.pid
 	// sr.EOL = s.eol
+	sr.DispObjectMenu = s.dispObjectMenu
+	sr.DispIngredients = s.dispIngredients
+	sr.DispContainers = s.dispContainers
+	sr.DispPartMenu = s.dispPartMenu
+
 	sr.Instructions = s.instructions
 	//
 	State := make(stateStack, 1)
@@ -341,11 +397,13 @@ func (s *sessCtx) updateState() error {
 	//
 	// for previous states - upto object menu
 	//
+	fmt.Println("len(s.state)  ", len(s.state))
 	if len(s.state)-2 > 0 {
 		atribute := fmt.Sprintf("state[%d].RecId", len(s.state)-2)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
 	}
 	//back to object choice menu - if recipe part's involved
+	fmt.Println(" back to object menu")
 	if len(s.state)-3 > 0 && (s.request == "select" || s.request == "search") && len(s.reqRName) > 0 {
 		atribute := fmt.Sprintf("state[%d].RecId", len(s.state)-3)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
@@ -497,6 +555,14 @@ func (s *sessCtx) popState() error {
 	// s.prev = sr.Prev
 	// s.peol = sr.PEOL
 	// s.pid = sr.PId
+	//
+	// Display Menu choices
+	//
+	s.dispObjectMenu = sr.DispObjectMenu
+	s.dispIngredients = sr.DispIngredients
+	s.dispContainers = sr.DispContainers
+	s.dispPartMenu = sr.DispPartMenu
+	//
 	s.instructions = sr.Instructions
 	return nil
 }

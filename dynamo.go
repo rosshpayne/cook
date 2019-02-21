@@ -566,7 +566,7 @@ func (s *sessCtx) getTaskRecById() (alexaDialog, error) {
 	// check objRecId within limits
 	//
 	if s.objRecId < 1 {
-		err = fmt.Errorf("Reached first instruction")
+		//err = fmt.Errorf("Reached first instruction")
 		s.objRecId = 1
 	}
 	if s.objRecId > len(s.instructions)+1 {
