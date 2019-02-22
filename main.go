@@ -28,6 +28,7 @@ type sessCtx struct {
 	//param     string // InputEvent.Param
 	state     stateStack
 	lastState *stateRec // state attribute from state dynamo item - contains state history
+	passErr   string
 	//
 	sessionId  string // sourced from request. Used as PKey to Sessions table
 	reqOpenBk  string
@@ -61,9 +62,9 @@ type sessCtx struct {
 	noGetRecRequired bool       // a mutliple record request e.g. ingredients listing
 	mChoice          []mRecipeT // multi-choice select. Recipe name and ingredient searches can result in mutliple records being returned. Results are saved.
 	//
-	selCtx   selectCtxT // select context either recipe or other (i.e. object)
-	selId    int        // value selected by user of index in itemList
-	selClear bool
+	selCtx selectCtxT // select context either recipe or other (i.e. object)
+	selId  int        // value selected by user of index in itemList
+	//selClear bool
 	//
 	showList  bool   // show what ever is in the current list (books, recipes)
 	ingrdList string // output of activity.String() - ingredient listing
@@ -226,7 +227,8 @@ func (s *sessCtx) orchestrateRequest() error {
 		case ctxRecipeMenu:
 			// select from: multiple recipes
 			if s.selId > len(s.mChoice) || s.selId < 1 {
-				return fmt.Errorf("Selection out of range")
+				s.passErr = "selection is not within range"
+				return nil
 			}
 			p := s.mChoice[s.selId-1]
 			s.reqRId, s.reqRName, s.reqBkId, s.reqBkName = p.RId, p.RName, p.BkId, p.BkName
@@ -248,6 +250,11 @@ func (s *sessCtx) orchestrateRequest() error {
 		case ctxObjectMenu:
 			//	select from: list ingredient, list utensils, list containers, start cooking
 			fmt.Println("selId: ", s.selId)
+			if s.selId > len(objectS) {
+				s.setDisplay(lastState)
+				s.passErr = "selection is not within range"
+				return nil
+			}
 			s.object = objectS[s.selId-1]
 			fmt.Println("object: ", s.object)
 			// clear mChoice which is not necessary in this state. Held in previous state.
@@ -258,12 +265,12 @@ func (s *sessCtx) orchestrateRequest() error {
 
 			//  "lets start cooking" selected
 			case task_:
-				s.selClear = true //TODO: what if they back at this point we have cleared sel.
+				//s.selClear = true //TODO: what if they back at this point we have cleared sel.
 				fmt.Printf("s.parts  %#v [%s] \n", s.parts, s.part)
 				if len(s.parts) > 0 && len(s.part) == 0 {
 					s.dispPartMenu = true
-					//s.noGetRecRequired = true
-					//s.selCtx = ctxPartMenu // this is state of next session not this one so don't assign
+					//
+					// create recipe part menu
 					//
 					menu := make([]mRecipeT, len(s.parts)+1)
 					menu[0] = mRecipeT{Part: CompleteRecipe_}
@@ -271,19 +278,24 @@ func (s *sessCtx) orchestrateRequest() error {
 						menu[i+1] = mRecipeT{Part: v.Title}
 					}
 					s.mChoice = menu
-					fmt.Printf("mChoice is: %#v", s.mChoice)
 					_, err = s.pushState()
 					if err != nil {
 						return err
 					}
 					return nil
 				} else {
-					s.curReqType = instructionRequest
-					s.request = "select-next"
+					// go straight to instructions
+					s.cacheInstructions(CompleteRecipe_)
+					//
 					_, err = s.pushState()
 					if err != nil {
 						return err
 					}
+					// now complete the request by morphing request to a "next" operation
+					s.reset = true
+					s.request = "select-next"
+					s.curReqType = instructionRequest
+					s.object = "task"
 				}
 
 			//  "list ingredients" selected
@@ -306,23 +318,31 @@ func (s *sessCtx) orchestrateRequest() error {
 				s.ingrdList = as.String(r)
 				s.dispIngredients = true
 				//
+				s.reset = true
 				_, err = s.pushState()
 				if err != nil {
 					return err
 				}
-				// case container_:
-				// 	return nil
-				// case utensil_:
+
+			case container_:
+				s.dispContainers = true
+				_, err = s.pushState()
+				if err != nil {
+					return err
+				}
+				return nil
 			}
 
 		// recipe part menu
 		case ctxPartMenu:
 			if s.selId > len(s.mChoice) || s.selId < 1 {
-				return fmt.Errorf("Selection out of range")
+				s.setDisplay(lastState)
+				s.passErr = "selection is not within range"
+				return nil
 			}
-			fmt.Printf("** . in ctxPartMenu  mchoice %#v\n", s.mChoice)
 			p := s.mChoice[s.selId-1]
 			fmt.Printf("selId  %d   mChoice   %#v\n", s.selId, p)
+			s.reset = true
 			s.cacheInstructions(p.Part)
 			//
 			_, err = s.pushState()
@@ -330,7 +350,7 @@ func (s *sessCtx) orchestrateRequest() error {
 				return err
 			}
 			// now complete the request by morphing request to a next operation
-			s.request = "next-select"
+			s.request = "select-next"
 			s.curReqType = instructionRequest
 			s.object = "task"
 		}
@@ -779,8 +799,7 @@ func handler(request InputEvent) (RespEvent, error) {
 		case "back":
 			// used back button on display device
 			sessctx.back = true
-			//
-			err = sessctx.popState() // TODO: under what senarios should we popState - not all I expect as is done now
+			err = sessctx.popState()
 			//
 		}
 	//
@@ -826,20 +845,28 @@ func handler(request InputEvent) (RespEvent, error) {
 	//
 	// package the response data into RespEvent (an APL aware "display" structure) and return
 	//
+	var (
+		subh string
+		hdr  string
+	)
 	if sessctx.curReqType == initialiseRequest || sessctx.noGetRecRequired {
 
 		switch {
 
 		case sessctx.dispPartMenu == true:
-
+			if len(sessctx.passErr) > 0 {
+				hdr = sessctx.passErr
+			} else {
+				hdr = sessctx.reqRName + ` recipe is divided into parts.`
+				//subh = `Select first option to follow complete recipe`
+			}
 			mchoice := make([]DisplayItem, len(sessctx.mChoice))
 			for i, v := range sessctx.mChoice {
 				id := strconv.Itoa(i + 1)
 				mchoice[i] = DisplayItem{Id: id, Title: v.Part}
 			}
 			s := sessctx
-			Title := s.reqRName + ` recipe is divided into parts.`
-			return RespEvent{Header: Title, SubHdr: `Select first option to follow complete recipe`, Text: s.vmsg, Verbal: s.dmsg, List: mchoice}, nil
+			return RespEvent{Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: mchoice}, nil
 
 		case sessctx.dispIngredients == true:
 			//case sessctx.request == "select" && sessctx.object == ingredient_:
@@ -888,6 +915,11 @@ func handler(request InputEvent) (RespEvent, error) {
 		case sessctx.dispObjectMenu:
 			//case (sessctx.request == "select" || sessctx.request == "search") && len(sessctx.reqRName) > 0:
 
+			if len(sessctx.passErr) > 0 {
+				hdr = sessctx.passErr
+			} else {
+				hdr = sessctx.reqRName
+			}
 			s := sessctx
 			mchoice := make([]DisplayItem, 4)
 			//for i, v := range []string{ingredient_, utensil_, container_, task_} {
@@ -895,7 +927,7 @@ func handler(request InputEvent) (RespEvent, error) {
 				id := strconv.Itoa(i + 1)
 				mchoice[i] = DisplayItem{Id: id, Title: v}
 			}
-			return RespEvent{Header: s.reqRName, Text: s.vmsg, Verbal: s.dmsg, List: mchoice}, nil
+			return RespEvent{Header: hdr, Text: s.vmsg, Verbal: s.dmsg, List: mchoice}, nil
 
 		default:
 			//
@@ -914,15 +946,15 @@ func handler(request InputEvent) (RespEvent, error) {
 	//
 	// respond with next record from task (instruction). May support verbal listing of container, utensils at some stage (current displayed listing only)
 	//
-	var (
-		subh string
-	)
 	s := sessctx
-	hrd := " Cooking Instructions  -  " + s.reqRName
-
-	subh = strconv.Itoa(s.objRecId) + " of " + strconv.Itoa(s.eol)
-	if len(s.part) > 0 {
-		subh += "    Part: " + s.part + "  -  " + strconv.Itoa(s.pid) + " of " + strconv.Itoa(s.peol)
+	if len(s.passErr) > 0 {
+		hdr = s.passErr
+	} else {
+		hdr = " Cooking Instructions  -  " + s.reqRName
+		subh = strconv.Itoa(s.objRecId) + " of " + strconv.Itoa(s.eol)
+		if len(s.part) > 0 {
+			subh += "    Part: " + s.part + "  -  " + strconv.Itoa(s.pid) + " of " + strconv.Itoa(s.peol)
+		}
 	}
 	//split instructions across three lists
 	//
@@ -948,7 +980,7 @@ func handler(request InputEvent) (RespEvent, error) {
 	if len(s.instructions[s.objRecId].Text) > 120 {
 		type_ = "Tripple2" // larger text bounding box
 	}
-	return RespEvent{Type: type_, Header: hrd, SubHdr: subh, Text: sessctx.vmsg, Verbal: sessctx.dmsg, ListA: listA, ListB: listB, ListC: listC}, nil
+	return RespEvent{Type: type_, Header: hdr, SubHdr: subh, Text: sessctx.vmsg, Verbal: sessctx.dmsg, ListA: listA, ListB: listB, ListC: listC}, nil
 }
 
 func main() {

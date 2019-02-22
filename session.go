@@ -81,6 +81,13 @@ func (s stateStack) pop() *stateRec {
 	return &st
 }
 
+func (s *sessCtx) setDisplay(ls *stateRec) {
+	s.dispObjectMenu = ls.DispObjectMenu
+	s.dispIngredients = ls.DispIngredients
+	s.dispContainers = ls.DispContainers
+	s.dispPartMenu = ls.DispPartMenu
+}
+
 func (s *sessCtx) getState() (*stateRec, error) {
 	//
 	// Table:  Sessions
@@ -206,13 +213,6 @@ func (s *sessCtx) setState(ls *stateRec) {
 		s.instructions = ls.Instructions
 	}
 	//
-	// Display Menu choices
-	//
-	s.dispObjectMenu = ls.DispObjectMenu
-	s.dispIngredients = ls.DispIngredients
-	s.dispContainers = ls.DispContainers
-	s.dispPartMenu = ls.DispPartMenu
-	//
 	// determine select context
 	//
 	if s.selId > 0 {
@@ -251,7 +251,7 @@ func (s *sessCtx) setState(ls *stateRec) {
 	return
 }
 
-func (s *sessCtx) pushState(new ...bool) (*stateRec, error) {
+func (s *sessCtx) pushState() (*stateRec, error) {
 	// equivalent to a push operation for a stack (state data in this case)
 	type pKey struct {
 		Sid string
@@ -261,7 +261,7 @@ func (s *sessCtx) pushState(new ...bool) (*stateRec, error) {
 		sr      stateRec
 		updateC expression.UpdateBuilder
 	)
-	fmt.Println("Entered pushState..", new)
+	fmt.Println("Entered pushState..")
 	// copy statevfrom session context
 	//sr.Path = s.path
 	//sr.Param = s.param
@@ -278,11 +278,6 @@ func (s *sessCtx) pushState(new ...bool) (*stateRec, error) {
 	sr.Qid = s.questionId // Question id	for k,v:=range objectMap {
 	sr.Obj = s.object     // Object - to which operation (listing) apply
 	sr.Ingredients = s.ingrdList
-	if s.reset {
-		sr.RecId = [4]int{}
-	} else {
-		sr.RecId = s.recId //s.recId     // current record in object list. (SortK in Recipe table)
-	}
 	sr.Ver = s.reqVersion
 	sr.EOL = s.eol // last RecId of current list. Used to determine when last record is reached or exceeded in the case of goto operation
 	sr.Dmsg = s.dmsg
@@ -292,7 +287,11 @@ func (s *sessCtx) pushState(new ...bool) (*stateRec, error) {
 	//
 	// Record id across objects
 	//
-	sr.RecId = s.recId
+	if s.reset {
+		sr.RecId = [4]int{0, 0, 0, 0}
+	} else {
+		sr.RecId = s.recId
+	}
 	// search
 	//
 	sr.Search = s.reqSearch
@@ -338,10 +337,8 @@ func (s *sessCtx) pushState(new ...bool) (*stateRec, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	pkey := pKey{Sid: s.sessionId}
 	av, err := dynamodbattribute.MarshalMap(&pkey)
-
 	input := &dynamodb.UpdateItemInput{
 		TableName:                 aws.String("Sessions"),
 		Key:                       av, // accets []map[]*attributeValues so must use marshal not expression
@@ -397,17 +394,17 @@ func (s *sessCtx) updateState() error {
 	//
 	// for previous states - upto object menu
 	//
-	fmt.Println("len(s.state)  ", len(s.state))
-	if len(s.state)-2 > 0 {
-		atribute := fmt.Sprintf("state[%d].RecId", len(s.state)-2)
-		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
-	}
-	//back to object choice menu - if recipe part's involved
-	fmt.Println(" back to object menu")
-	if len(s.state)-3 > 0 && (s.request == "select" || s.request == "search") && len(s.reqRName) > 0 {
-		atribute := fmt.Sprintf("state[%d].RecId", len(s.state)-3)
-		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
-	}
+	// fmt.Println("len(s.state)  ", len(s.state))
+	// if len(s.state)-2 > 0 {
+	// 	atribute := fmt.Sprintf("state[%d].RecId", len(s.state)-2)
+	// 	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
+	// }
+	// //back to object choice menu - if recipe part's involved
+	// fmt.Println(" back to object menu")
+	// if len(s.state)-3 > 0 && (s.request == "select" || s.request == "search") && len(s.reqRName) > 0 {
+	// 	atribute := fmt.Sprintf("state[%d].RecId", len(s.state)-3)
+	// 	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
+	// }
 	//
 	expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
 	pkey := pKey{Sid: s.sessionId}
@@ -454,57 +451,70 @@ func (s *sessCtx) popState() error {
 	type pKey struct {
 		Sid string
 	}
+	var (
+		sr    *stateRec
+		State stateStack
+	)
+
+	fmt.Println("Entered popState()")
 	var updateC expression.UpdateBuilder
 	// get current state if not already sourced
 	if len(s.state) == 0 {
 		s.getState()
 	}
-	if len(s.state) < 2 {
+	if len(s.state) > 1 {
 		//
-		return nil
-	}
-	t := time.Now()
-	t.Add(time.Hour * 24 * 1)
-	updateC = expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
-	// rewrite all but last state entry - this is how we delete from a list in dynamo. Here the list represents the state stack.
-	State := s.state[:len(s.state)-1]
-	s.state = State[:]
-	updateC = updateC.Set(expression.Name("state"), expression.Value(State))
-	expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
-	//
-	pkey := pKey{Sid: s.sessionId}
-	av, err := dynamodbattribute.MarshalMap(&pkey)
+		// pop state and persist to dynamo
+		//
+		State = s.state[:len(s.state)-1]
+		s.state = State[:]
 
-	input := &dynamodb.UpdateItemInput{
-		TableName:                 aws.String("Sessions"),
-		Key:                       av, // accets []map[]*attributeValues so must use marshal not expression
-		UpdateExpression:          expr.Update(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-		ReturnValues:              aws.String("UPDATED_NEW"),
-	}
-	_, err = s.dynamodbSvc.UpdateItem(input)
-	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			case dynamodb.ErrCodeProvisionedThroughputExceededException:
-				fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
-			case dynamodb.ErrCodeResourceNotFoundException:
-				fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
-			case dynamodb.ErrCodeInternalServerError:
-				fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
-			default:
-				fmt.Println(aerr.Error())
-			}
-		} else {
-			// Print the error, cast err to awserr.Error to get the Code and
-			// Message from an error.
-			fmt.Println(err.Error())
+		t := time.Now()
+		t.Add(time.Hour * 24 * 1)
+		updateC = expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
+		// rewrite all but last state entry - this is how we delete from a list in dynamo. Here the list represents the state stack.
+		updateC = updateC.Set(expression.Name("state"), expression.Value(State))
+		expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
+		//
+		pkey := pKey{Sid: s.sessionId}
+		av, err := dynamodbattribute.MarshalMap(&pkey)
+
+		input := &dynamodb.UpdateItemInput{
+			TableName:                 aws.String("Sessions"),
+			Key:                       av, // accets []map[]*attributeValues so must use marshal not expression
+			UpdateExpression:          expr.Update(),
+			ExpressionAttributeNames:  expr.Names(),
+			ExpressionAttributeValues: expr.Values(),
+			ReturnValues:              aws.String("UPDATED_NEW"),
 		}
-		return err
+		_, err = s.dynamodbSvc.UpdateItem(input)
+		if err != nil {
+			if aerr, ok := err.(awserr.Error); ok {
+				switch aerr.Code() {
+				case dynamodb.ErrCodeProvisionedThroughputExceededException:
+					fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
+				case dynamodb.ErrCodeResourceNotFoundException:
+					fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
+				case dynamodb.ErrCodeInternalServerError:
+					fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
+				default:
+					fmt.Println(aerr.Error())
+				}
+			} else {
+				// Print the error, cast err to awserr.Error to get the Code and
+				// Message from an error.
+				fmt.Println(err.Error())
+			}
+			return err
+		}
+		// pop last entry from session context state
+		//s.state = s.state[:len(s.state)-1]
+		sr = State.pop()
+	} else {
+		sr = s.state.pop() //[len(s.state)-1]
 	}
-	s.state = s.state[:len(s.state)-1]
-	sr := State.pop()
+	//
+
 	// transfer state data to session context
 	//s.path = sr.Path
 	//s.param = sr.Param
@@ -551,10 +561,8 @@ func (s *sessCtx) popState() error {
 	//
 	s.parts = sr.Parts
 	s.part = sr.Part
-	// s.next = sr.Next
-	// s.prev = sr.Prev
-	// s.peol = sr.PEOL
-	// s.pid = sr.PId
+	//s.peol = sr.PEOL
+	//s.pid = sr.PId
 	//
 	// Display Menu choices
 	//

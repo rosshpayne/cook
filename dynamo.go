@@ -320,7 +320,9 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 	//	 3		"a b"
 	//	 4		"a c"
 	//	 5		"b c"
-	for _, entry := range s.index {
+	// combine recipe name and keywords
+	index := append(s.recipe.Index, s.recipe.RName)
+	for _, entry := range index {
 		AddEntry(entry)
 		e := strings.Split(entry, " ")
 		switch len(e) {
@@ -506,7 +508,7 @@ func (s *sessCtx) cacheInstructions(part string) error {
 	//
 	// find start instruction. For complete it will be based on SortK
 	//
-	fmt.Printf("in cacheINstruction:  part [%s] \n", part)
+	fmt.Printf("in cacheInstruction:  part [%s] \n", part)
 	switch part {
 	case CompleteRecipe_:
 		instructs := make([]InstructionT, len(ptR)+1) // Instructions start at index 1.
@@ -556,7 +558,7 @@ func (s *sessCtx) getTaskRecById() (alexaDialog, error) {
 				return v.Title
 			}
 		}
-		panic(fmt.Errorf("Error: in getTaskRecById, recipe part index [%s] not found in s.parts ", index))
+		//panic(fmt.Errorf("Error: in getTaskRecById, recipe part index [%s] not found in s.parts ", index))
 		return ""
 	}
 	if len(s.instructions) == 0 {
@@ -657,6 +659,7 @@ func (s *sessCtx) recipeRSearch() (*RecipeT, error) {
 		PKey  string
 		SortK float64
 	}
+	fmt.Println("***** ENTERED recipeRSearch *********")
 	rId, err := strconv.Atoi(s.reqRId)
 	if err != nil {
 		return nil, fmt.Errorf("Error: in recipeRSearch converting reqRId  [%s] to int - %s", s.reqRId, err.Error())
@@ -704,16 +707,20 @@ func (s *sessCtx) recipeRSearch() (*RecipeT, error) {
 	}
 	// populate session context fields
 	s.reqRName = rec.RName
-	s.index = rec.Index //TODO: is this required?
-	err = s.bookNameLookup()
-	if err != nil {
-		s.reqBkName = ""
-		return nil, err
+	//s.index = rec.Index //TODO: is this required?
+	if len(s.reqBkId) == 0 {
+		fmt.Println()
+		err = s.bookNameLookup()
+		if err != nil {
+			s.reqBkName = ""
+			return nil, err
+		}
 	}
 	s.dmsg = s.reqRName + " in " + s.reqBkName + " by " + s.authors
 	s.vmsg = "sFound " + s.reqRName + " in " + s.reqBkName + " by " + s.authors
 	s.vmsg += `What would you like to list?. Say "list containers" or "List Ingredients" or "start Cooking" or "cancel"`
 	s.recipe = rec
+	fmt.Println("assign Recipe Parts: ", len(rec.Part))
 	s.parts = rec.Part
 	return rec, nil
 }
@@ -740,6 +747,7 @@ func (s *sessCtx) keywordSearch() error {
 	// zero mChoice list
 	s.mChoice = nil
 	//
+	fmt.Println("^^^^^^^^^^ entered keywordSearch ^^^^^^^^^^^^")
 	if len(s.reqBkId) > 0 {
 		// look for recipes in current book only
 		kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value(s.reqSearch))
@@ -809,6 +817,7 @@ func (s *sessCtx) keywordSearch() error {
 			s.dmsg = fmt.Sprintf("%s not found in [%s], but was found in [%s]. Do you want to swap to this book?", s.reqSearch, s.reqBkName, recS[0].BkName)
 			sortk := strings.Split(recS[0].SortK, "-")
 			s.reqRId, s.reqRName, s.reqBkId, s.reqBkName, s.serves = sortk[1], recS[0].RName, sortk[0], recS[0].BkName, recS[0].Serves
+			s.recipeRSearch()
 		default:
 			//s.makeSelect = true
 			s.vmsg = fmt.Sprintf(`No %s recipes found in [%s] but where found in other books. Please see the display`, s.reqSearch, s.reqBkName)
@@ -834,6 +843,7 @@ func (s *sessCtx) keywordSearch() error {
 		s.dmsg = "The following recipe, " + recS[0].RName + " in book " + recS[0].BkName + ` by authors ` + recS[0].Authors + ` contains the ingredient. You can list other ingredients or containers, utensils used in the recipe or list the prep tasks or you can start cooking`
 		sortk := strings.Split(recS[0].SortK, "-")
 		s.reqRId, s.reqRName, s.reqBkId, s.reqBkName, s.serves = sortk[1], recS[0].RName, sortk[0], recS[0].BkName, recS[0].Serves
+		s.recipeRSearch() //TODO - think about add part data to search record
 		// set session ctx to display object menu (ingredient,containers,utensils) list
 	default:
 		//s.makeSelect = true
@@ -1024,7 +1034,7 @@ func (s *sessCtx) bookNameLookup() error {
 		PKey    string
 		Authors []string `json:"Authors"`
 	}
-
+	fmt.Println(" &&&&& entered bookNameLookup &&&&&&")
 	flatten := func(w []string) string {
 		var a string
 		for i, v := range w {
