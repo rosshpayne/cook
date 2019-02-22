@@ -866,7 +866,7 @@ func handler(request InputEvent) (RespEvent, error) {
 				mchoice[i] = DisplayItem{Id: id, Title: v.Part}
 			}
 			s := sessctx
-			return RespEvent{Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: mchoice}, nil
+			return RespEvent{Type: "Select", Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: mchoice}, nil
 
 		case sessctx.dispIngredients == true:
 			//case sessctx.request == "select" && sessctx.object == ingredient_:
@@ -910,7 +910,7 @@ func handler(request InputEvent) (RespEvent, error) {
 				mchoice = append(mchoice, item)
 			}
 			s := sessctx
-			return RespEvent{Header: "Search results for: " + s.reqSearch, Text: s.vmsg, Verbal: s.dmsg, List: mchoice}, nil
+			return RespEvent{Type: "Search", Header: "Search results for: " + s.reqSearch, Text: s.vmsg, Verbal: s.dmsg, List: mchoice}, nil
 
 		case sessctx.dispObjectMenu:
 			//case (sessctx.request == "select" || sessctx.request == "search") && len(sessctx.reqRName) > 0:
@@ -927,7 +927,7 @@ func handler(request InputEvent) (RespEvent, error) {
 				id := strconv.Itoa(i + 1)
 				mchoice[i] = DisplayItem{Id: id, Title: v}
 			}
-			return RespEvent{Header: hdr, Text: s.vmsg, Verbal: s.dmsg, List: mchoice}, nil
+			return RespEvent{Type: "Select", Header: hdr, Text: s.vmsg, Verbal: s.dmsg, List: mchoice}, nil
 
 		default:
 			//
