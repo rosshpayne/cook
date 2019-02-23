@@ -36,8 +36,7 @@
             "Item": { 
                 "PKey" : { "S": "R-20" },
                 "SortK" : { "N": "1"},
-                "RName" : { "S": "Take-home Chocolate Cake"},
-                "index" : { "SS" : ["cake", "chocolate cake", "chocolate"] }
+                "RName" : { "S": "Take-home Chocolate Cake"}
             }
         }
         },

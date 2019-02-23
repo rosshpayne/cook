@@ -22,7 +22,6 @@
                 "PKey" : { "S": "R-21" },
                 "SortK" : { "N": "10"},
                 "RName" : { "S": "Pork braised with Vinegar"},
-                "Index" : { "SS" : ["Pork Vinegar"] },
                 "Srv" : { "S" : "6-8" } }
         }
         },

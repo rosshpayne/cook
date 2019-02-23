@@ -21,7 +21,7 @@
                 "PKey" : { "S": "R-20" },
                 "SortK" : { "N": "7"},
                 "RName" : { "S": "Chocolate tart with hazelnut, rosemary and orange"},
-                "Index" : { "SS" : ["chocolate hazelnut tart"]},
+                "Index" : { "SS" : ["hazelnut chocolate tart", "pastry"]},
                 "Srv" : { "S" : "8-10" },
                 "Part" : { "L" : [
                                 { "M" : { 

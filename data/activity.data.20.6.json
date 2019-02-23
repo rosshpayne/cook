@@ -40,9 +40,15 @@
                 "PKey" : { "S": "R-20" },
                 "SortK" : { "N": "6"},
                 "RName" : { "S": "Belinda's flourless coconut and chocolate cake"},
-                "Index" : { "SS" : ["flourless coconut cake", "belinda", "chocolate cake"]},
-                "Srv" : { "S" : "8" }
-        }
+                "Srv" : { "S" : "8" },
+                "Part" : { "L" : [
+                                { "M" : { 
+                                  "Idx" : { "S" : "WG"},
+                                  "Title" : { "S" : "Water Ganache" }}
+                                }
+                               ]
+                }
+            }
         }
         },
         {
@@ -296,7 +302,7 @@
             "Item": { 
                 "PKey" : { "S": "A-20-6" },
                 "SortK" : { "N": "80"},
-                "part" : { "S" : "Water Ganache"},
+                "part" : { "S" : "WG"},
                 "ingrd" : { "S" : "chocolate" },
                 "quali" : { "S" : "cooking" }, 
                 "iQual" : { "S" : "(70% cocoa solids) chopped into {m:1|cm||} pieces" }, 
@@ -340,7 +346,7 @@
             "Item": { 
                 "PKey" : { "S": "A-20-6" },
                 "SortK" : { "N": "90"},
-                "part" : { "S" : "Water Ganache"},
+                "part" : { "S" : "WG"},
                 "ingrd" : { "S" : "caster sugar" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
@@ -381,7 +387,7 @@
             "Item": { 
                 "PKey" : { "S": "A-20-6" },
                 "SortK" : { "N": "100"},
-                "part" : { "S" : "Water Ganache"},
+                "part" : { "S" : "WG"},
                 "ingrd" : { "S" : "liquid glucose" }, 
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
@@ -418,7 +424,7 @@
             "Item": { 
                 "PKey" : { "S": "A-20-6" },
                 "SortK" : { "N": "110"},
-                "part" : { "S" : "Water Ganache"},
+                "part" : { "S" : "WG"},
                 "ingrd" : { "S" : "water" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
@@ -456,7 +462,7 @@
                 "PKey" : { "S": "A-20-6" },
                 "SortK" : { "N": "120"},
                 "ingrd" : { "S" : "vanilla pod" },
-                "part" : { "S" : "Water Ganache"},
+                "part" : { "S" : "WG"},
                 "qualm" : { "S" : "scapped seeds of " }, 
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
@@ -497,7 +503,7 @@
                 "PKey" : { "S": "A-20-6" },
                 "SortK" : { "N": "130"},
                 "ingrd" : { "S" : "unsalted butter" },
-                "part" : { "S" : "Water Ganache"},
+                "part" : { "S" : "WG"},
                 "iQual" : { "S" : ", at room temperature, cut into {m:2|cm||} pieces" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 

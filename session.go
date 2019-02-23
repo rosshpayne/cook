@@ -328,8 +328,9 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 	if s.newSession {
 		sr.RecId = [4]int{}
 		updateC = updateC.Set(expression.Name("state"), expression.Value(State))
-	} else if len(s.state) > 4 {
-		updateC = updateC.Set(expression.Name("state"), expression.Value(s.state[len(s.state)-3:]))
+		s.newSession = false
+	} else if len(s.state) > 12 {
+		updateC = updateC.Set(expression.Name("state"), expression.Value(s.state[len(s.state)-8:]))
 	} else {
 		updateC = updateC.Set(expression.Name("state"), expression.ListAppend(expression.Name("state"), expression.Value(State)))
 	}

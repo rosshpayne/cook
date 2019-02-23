@@ -274,7 +274,8 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 
 	AddEntry := func(entry string) {
 		// entry with hyphon is treated as one word
-		entry = strings.Replace(entry, "-", " ", 1)
+		entry = strings.Replace(entry, "-", " ", -1)
+		entry = strings.Replace(entry, "  ", " ", -1)
 		// remove hyphon when saving as index entry though
 		entry = strings.TrimRight(strings.TrimLeft(strings.ToLower(entry), " "), " ")
 		// for each word in index entry find associated activity via its label or ingredient
@@ -309,6 +310,25 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 			indexBasicEntry(entry)
 		}
 	}
+	removePunc := []string{",", ";", "!", "@", "&", "(", ")", "{", "}"}
+	removeWords := []string{"the", "and", "of", "with", "fresh", "a", "to", "from", "by"} //TODO: source from dynamo
+
+	RemovePuncs := func(entry string) string {
+		a := strings.TrimRight(strings.TrimLeft(strings.ToLower(entry), " "), " ")
+		for _, v := range removePunc {
+			a = strings.Replace(a, v, " ", -1)
+		}
+		a = strings.Replace(a, "  ", " ", -1) // so strings.Split works properly
+		return a
+	}
+
+	RemoveCommonWords := func(entry string) string {
+		a := strings.TrimRight(strings.TrimLeft(strings.ToLower(entry), " "), " ")
+		for _, v := range removeWords {
+			a = strings.Replace(a, " "+v+" ", " ", -1)
+		}
+		return a
+	}
 	//
 	// source index entries from recipe index attribute (saved to sessctx)
 	//  check each word in entry against label and ingredient to add quantity data
@@ -323,19 +343,26 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 	// combine recipe name and keywords
 	index := append(s.recipe.Index, s.recipe.RName)
 	for _, entry := range index {
+		entry := RemovePuncs(entry)
+		AddEntry(entry)
+		entry = RemoveCommonWords(entry)
 		AddEntry(entry)
 		e := strings.Split(entry, " ")
+		for _, v := range e {
+			AddEntry(v)
+		}
 		switch len(e) {
-		case 2:
-			AddEntry(e[0])
-			AddEntry(e[1])
+		case 1, 2:
 		case 3:
-			AddEntry(e[0])
-			AddEntry(e[1])
-			AddEntry(e[2])
 			AddEntry(e[0] + " " + e[1])
 			AddEntry(e[0] + " " + e[2])
 			AddEntry(e[1] + " " + e[2])
+		default:
+			AddEntry(e[0] + " " + e[len(e)-1])
+			AddEntry(e[1] + " " + e[len(e)-1])
+			AddEntry(e[0] + " " + e[len(e)-2] + " " + e[len(e)-1])
+			AddEntry(e[1] + " " + e[len(e)-2] + " " + e[len(e)-1])
+			AddEntry(e[0] + " " + e[1] + " " + e[len(e)-2] + " " + e[len(e)-1])
 		}
 	}
 	s.indexRecs = indexRecS
@@ -414,7 +441,6 @@ func (s *sessCtx) updateRecipe(r *RecipeT) error {
 		return fmt.Errorf("Error: in updateRecipe converting reqRId  [%s] to int - %s", s.reqRId, err.Error())
 	}
 	pkey := pKey{PKey: "R-" + s.reqBkId, SortK: float64(rId)}
-	fmt.Printf("updateREcipe PKEY %#v\n", pkey)
 	av, err := dynamodbattribute.MarshalMap(&pkey)
 	if err != nil {
 		return fmt.Errorf("%s: %s", "Error in MarshalMap of recipeIdLookup", err.Error())
@@ -708,7 +734,7 @@ func (s *sessCtx) recipeRSearch() (*RecipeT, error) {
 	// populate session context fields
 	s.reqRName = rec.RName
 	//s.index = rec.Index //TODO: is this required?
-	if len(s.reqBkId) == 0 {
+	if len(s.reqBkName) == 0 {
 		fmt.Println()
 		err = s.bookNameLookup()
 		if err != nil {
@@ -865,7 +891,6 @@ func (s *sessCtx) generateSlotEntries() error {
 		PKey string `json:"PKey"`
 	}
 	type SrchKeyS Index
-	var str string
 	proj := expression.NamesList(expression.Name("PKey"))
 	expr, err := expression.NewBuilder().WithProjection(proj).Build()
 	if err != nil {
@@ -896,10 +921,19 @@ func (s *sessCtx) generateSlotEntries() error {
 	//
 	write := func(PKey string) error {
 		if !srchKeys[PKey] {
+			var str string
 			srchKeys[PKey] = true
-			if PKey[len(PKey)-1] != 's' {
-				str = PKey + ",," + PKey + "s" + "\n"
-			} else {
+			w := strings.Split(PKey, " ")
+			switch len(w) {
+			case 1:
+				if PKey[len(PKey)-1] != 's' {
+					str = PKey + ",," + PKey + "s" + "\n"
+				}
+			case 2:
+				str = PKey + ",," + w[1] + " " + w[0] + "\n"
+			case 3:
+				str = PKey + ",," + w[2] + " " + w[1] + " " + w[0] + "\n"
+			default:
 				str = PKey + ",," + "\n"
 			}
 			_, err := f.Write([]byte(str))
@@ -919,12 +953,16 @@ func (s *sessCtx) generateSlotEntries() error {
 	//
 	//  merge s.indexRecs.PKey entries to skey and printout new slot entries to file slot.entries
 	//
-	fmt.Println()
 	for _, v := range s.indexRecs {
-		err = write(v.PKey)
-		if err != nil {
-			return err
+		if len(v.PKey) > 0 {
+			err = write(v.PKey)
+			if err != nil {
+				return err
+			}
+		} else {
+			fmt.Println("indexRecs contains zero entry [", v.PKey, "]")
 		}
+
 	}
 	if err := f.Close(); err != nil {
 		panic(err)

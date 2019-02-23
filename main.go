@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"log"
 	"net/url"
-	_ "os"
+	"os"
 	"strconv"
 	"strings"
 
-	"github.com/aws/aws-lambda-go/lambda"
+	_ "github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -95,6 +95,28 @@ type sessCtx struct {
 	dispIngredients bool
 	dispContainers  bool
 	dispPartMenu    bool
+}
+
+func (s *sessCtx) clearForSearch(lastState *stateRec) {
+	s.reqBkId, s.reqBkName, s.reqRId, s.reqRName, s.reqVersion = "", "", "", "", ""
+	s.recId = [4]int{0, 0, 0, 0}
+	s.authors, s.authorS = "", nil
+	s.serves = ""
+	s.indexRecs = nil
+	s.object = ""
+	s.objRecId = 0
+	s.mChoice = nil
+	s.selCtx, s.selId = 0, 0
+	s.ingrdList = ""
+	s.eol, s.peol, s.part, s.parts, s.pid = 0, 0, "", nil, 0
+	s.back = false
+	s.dispObjectMenu, s.dispIngredients, s.dispContainers, s.dispPartMenu = false, false, false, false
+	if len(lastState.OpenBk) > 0 {
+		s.reqOpenBk = lastState.OpenBk
+		id := strings.Split(lastState.OpenBk, "|")
+		s.reqBkId, s.reqBkName = id[0], id[1]
+		s.authors = id[2]
+	}
 }
 
 const (
@@ -365,15 +387,20 @@ func (s *sessCtx) orchestrateRequest() error {
 	if s.curReqType == initialiseRequest {
 		//
 		if s.request == "search" {
-			if s.back {
-				return nil // have all the results in lastSess
-			}
 			// search only applies to recipes, ie. select context Recipe (ctxRecipeMenu).
 			//s.selCtx = ctxRecipeMenu
 			// we have fully populated session context from previous session e.g. BkName etc, now lets see what recipes we find
 			// populates sessCtx.mChoice if search results in a list.
-			fmt.Println("In validateRequest. About to call keywordSearch")
+			fmt.Println("Search.....")
 			fmt.Println("BookId: ", s.reqBkId)
+			s.clearForSearch(lastState)
+			fmt.Println("**** just cleared state . ***** now pushState")
+			_, err = s.pushState()
+			if err != nil {
+				return err
+			}
+			//
+			fmt.Println("..about to call keywordSearch")
 			err := s.keywordSearch()
 			if err != nil {
 				return err
@@ -984,19 +1011,19 @@ func handler(request InputEvent) (RespEvent, error) {
 }
 
 func main() {
-	lambda.Start(handler)
-	//p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
+	//lambda.Start(handler)
+	p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
 	//p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&rcp=Take-home Chocolate Cake"}
 	//var i float64 = 1.0
 	// p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + "&srch=" + os.Args[2]}
 	// //
-	// pIngrdScale = 1.0
-	// writeCtx = uDisplay
-	// p, _ := handler(p1)
-	// if len(p.Error) > 0 {
-	// 	fmt.Printf("%#v\n", p.Error)
-	// } else {
-	// 	fmt.Printf("output:   %s\n", p.Text)
-	// 	fmt.Printf("output:   %s\n", p.Verbal)
-	// }
+	pIngrdScale = 1.0
+	writeCtx = uDisplay
+	p, _ := handler(p1)
+	if len(p.Error) > 0 {
+		fmt.Printf("%#v\n", p.Error)
+	} else {
+		fmt.Printf("output:   %s\n", p.Text)
+		fmt.Printf("output:   %s\n", p.Verbal)
+	}
 }

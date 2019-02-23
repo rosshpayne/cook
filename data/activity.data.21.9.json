@@ -78,7 +78,7 @@
                 "PKey" : { "S": "R-21" },
                 "SortK" : { "N": "9"},
                 "RName" : { "S": "Ravioli with Ricotta, Raw Tomato and Basil"},
-                "Index" : { "SS" : ["Ravioli Pasta", "Ricotta", "Vegetarian"] },
+                "Index" : { "SS" : ["Vegetarian","ravioli ricotta"] },
                 "Srv" : { "S" : "4" } }
         }
         },
