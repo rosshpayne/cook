@@ -93,22 +93,44 @@ const EventHandler = {
           });
         });
     
-      return promise.then((body) => {
+    return promise.then((body) => {
         var  resp = JSON.parse(body);
+        console.log(resp);
         if (resp.Type === "Ingredient") {
+          const ingredient = require('APL/ingredients.js');
           return  handlerInput.responseBuilder
                             .speak(resp.Verbal)
                             .reprompt(resp.Verbal)
                             .addDirective(ingredient(resp.Header,resp.SubHdr, resp.List))
                             .getResponse();
-        } else {
+       } else if (resp.Type === "Tripple") { 
+          const tripple = require('APL/tripple.js');
+          return  handlerInput.responseBuilder
+                            .speak("here in tripple")
+                            .reprompt(resp.Verbal)
+                            .addDirective(tripple(resp.Header,resp.SubHdr, resp.ListA, resp.ListB, resp.ListC))
+                            .getResponse();     
+        } else if (resp.Type === "Select"){
+          const select = require('APL/select.js');
           return  handlerInput.responseBuilder
                             .speak(resp.Verbal)
                             .reprompt(resp.Verbal)
                             .addDirective(select(resp.Header,resp.SubHdr, resp.List))
-                            .getResponse();   
+                            .getResponse();     
+        } else if (resp.Type === "Search") {
+          return  handlerInput.responseBuilder
+                          .speak(resp.Verbal)
+                          .reprompt(resp.Text)
+                          .addDirective(search(resp.Header, resp.SubHdr, resp.List))
+                          .getResponse();
+        } else {
+           return  handlerInput.responseBuilder
+                          .speak(resp.Verbal)
+                          .reprompt(resp.Text)
+                          .addDirective(search(resp.Header, resp.SubHdr, resp.List))
+                          .getResponse(); 
         }
-        }).catch(function (err) { console.log(err, err.stack);  } );
+      }).catch(function (err) { console.log(err, err.stack);  } );
     } 
   },
 };
@@ -287,7 +309,6 @@ const SelectIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'SelectIntent';
   },
   handle(handlerInput) {
-    const select = require('APL/select.js');
     const sid='sid='+handlerInput.requestEnvelope.session.sessionId   ; 
     const selid='&sId='+handlerInput.requestEnvelope.request.intent.slots.integerValue.resolutions.resolutionsPerAuthority[0].values[0].value.id;
     invokeParams.Payload = '{ "Path" : "select" ,"Param" : "'+sid+selid+'" }';
@@ -303,7 +324,7 @@ const SelectIntentHandler = {
     
     return promise.then((body) => {
         var  resp = JSON.parse(body);
-            
+        console.log(resp);
         if (resp.Type === "Ingredient") {
           const ingredient = require('APL/ingredients.js');
           return  handlerInput.responseBuilder
@@ -318,12 +339,27 @@ const SelectIntentHandler = {
                             .reprompt(resp.Verbal)
                             .addDirective(tripple(resp.Header,resp.SubHdr, resp.ListA, resp.ListB, resp.ListC))
                             .getResponse();     
-        } else {
+        } else if (resp.Type === "Select"){
+          const select = require('APL/select.js');
           return  handlerInput.responseBuilder
                             .speak(resp.Verbal)
                             .reprompt(resp.Verbal)
                             .addDirective(select(resp.Header,resp.SubHdr, resp.List))
                             .getResponse();     
+        } else if (resp.Type === "Search") {
+          const select = require('APL/search.js');
+          return  handlerInput.responseBuilder
+                          .speak(resp.Verbal)
+                          .reprompt(resp.Text)
+                          .addDirective(search(resp.Header, resp.SubHdr, resp.List))
+                          .getResponse();
+        } else {
+           const select = require('APL/search.js');
+           return  handlerInput.responseBuilder
+                          .speak(resp.Verbal)
+                          .reprompt(resp.Text)
+                          .addDirective(search(resp.Header, resp.SubHdr, resp.List))
+                          .getResponse(); 
         }
       }).catch(function (err) { console.log(err, err.stack);  } );
   
@@ -374,7 +410,6 @@ const NextIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'NextIntent';
   },
   handle(handlerInput) {
-    const tripple = require('APL/tripple.js');
     const sid='sid='+handlerInput.requestEnvelope.session.sessionId;
     invokeParams.Payload = '{ "Path" : "next" ,"Param" : "'+sid+'" }';
 
@@ -388,21 +423,43 @@ const NextIntentHandler = {
     });
     
     return promise.then((body) => {
-        const  resp = JSON.parse(body);
-        if (resp.Type === "Tripple") { 
+        var  resp = JSON.parse(body);
+        console.log(resp);
+        if (resp.Type === "Ingredient") {
+          const ingredient = require('APL/ingredients.js');
+          return  handlerInput.responseBuilder
+                            .speak(resp.Verbal)
+                            .reprompt(resp.Verbal)
+                            .addDirective(ingredient(resp.Header,resp.SubHdr, resp.List))
+                            .getResponse();
+       } else if (resp.Type === "Tripple") { 
+          const tripple = require('APL/tripple.js');
           return  handlerInput.responseBuilder
                             .speak("here in tripple")
                             .reprompt(resp.Verbal)
                             .addDirective(tripple(resp.Header,resp.SubHdr, resp.ListA, resp.ListB, resp.ListC))
-                            .getResponse();  
-        } else {
+                            .getResponse();     
+        } else if (resp.Type === "Select"){
+          const select = require('APL/select.js');
           return  handlerInput.responseBuilder
-                          .speak(resp.Text)
-                          .reprompt(resp.text)
-                          .withSimpleCard('Instructions', resp.Verbal)
+                            .speak(resp.Verbal)
+                            .reprompt(resp.Verbal)
+                            .addDirective(select(resp.Header,resp.SubHdr, resp.List))
+                            .getResponse();     
+        } else if (resp.Type === "Search") {
+          return  handlerInput.responseBuilder
+                          .speak(resp.Verbal)
+                          .reprompt(resp.Text)
+                          .addDirective(search(resp.Header, resp.SubHdr, resp.List))
                           .getResponse();
+        } else {
+           return  handlerInput.responseBuilder
+                          .speak(resp.Verbal)
+                          .reprompt(resp.Text)
+                          .addDirective(search(resp.Header, resp.SubHdr, resp.List))
+                          .getResponse(); 
         }
-    }).catch(function (err) { console.log(err, err.stack);  } );
+      }).catch(function (err) { console.log(err, err.stack);  } );
   },
 };
 
@@ -428,14 +485,42 @@ const RepeatIntentHandler = {
     });
     
     return promise.then((body) => {
-          recipe = JSON.parse(body);
-          speechText=recipe.Text ;
-          displayText = recipe.Verbal;
-        return  handlerInput.responseBuilder
-                          .speak(speechText)
-                          .reprompt(speechText)
-                          .withSimpleCard('Instructions', displayText)
+        var  resp = JSON.parse(body);
+        console.log(resp);
+        if (resp.Type === "Ingredient") {
+          const ingredient = require('APL/ingredients.js');
+          return  handlerInput.responseBuilder
+                            .speak(resp.Verbal)
+                            .reprompt(resp.Verbal)
+                            .addDirective(ingredient(resp.Header,resp.SubHdr, resp.List))
+                            .getResponse();
+       } else if (resp.Type === "Tripple") { 
+          const tripple = require('APL/tripple.js');
+          return  handlerInput.responseBuilder
+                            .speak("here in tripple")
+                            .reprompt(resp.Verbal)
+                            .addDirective(tripple(resp.Header,resp.SubHdr, resp.ListA, resp.ListB, resp.ListC))
+                            .getResponse();     
+        } else if (resp.Type === "Select"){
+          const select = require('APL/select.js');
+          return  handlerInput.responseBuilder
+                            .speak(resp.Verbal)
+                            .reprompt(resp.Verbal)
+                            .addDirective(select(resp.Header,resp.SubHdr, resp.List))
+                            .getResponse();     
+        } else if (resp.Type === "Search") {
+          return  handlerInput.responseBuilder
+                          .speak(resp.Verbal)
+                          .reprompt(resp.Text)
+                          .addDirective(search(resp.Header, resp.SubHdr, resp.List))
                           .getResponse();
+        } else {
+           return  handlerInput.responseBuilder
+                          .speak(resp.Verbal)
+                          .reprompt(resp.Text)
+                          .addDirective(search(resp.Header, resp.SubHdr, resp.List))
+                          .getResponse(); 
+        }
       }).catch(function (err) { console.log(err, err.stack);  } );
   
   },
@@ -447,7 +532,6 @@ const PrevIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'PrevIntent';
   },
   handle(handlerInput) {
-    const tripple = require('APL/tripple.js');
     const sid='sid='+handlerInput.requestEnvelope.session.sessionId;
     invokeParams.Payload = '{ "Path" : "prev" ,"Param" : "'+sid+'" }';
 
@@ -461,21 +545,43 @@ const PrevIntentHandler = {
     });
     
     return promise.then((body) => {
-        const  resp = JSON.parse(body);
-        if (resp.Type === "Tripple") { 
+        var  resp = JSON.parse(body);
+        console.log(resp);
+        if (resp.Type === "Ingredient") {
+          const ingredient = require('APL/ingredients.js');
+          return  handlerInput.responseBuilder
+                            .speak(resp.Verbal)
+                            .reprompt(resp.Verbal)
+                            .addDirective(ingredient(resp.Header,resp.SubHdr, resp.List))
+                            .getResponse();
+       } else if (resp.Type === "Tripple") { 
+          const tripple = require('APL/tripple.js');
           return  handlerInput.responseBuilder
                             .speak("here in tripple")
                             .reprompt(resp.Verbal)
                             .addDirective(tripple(resp.Header,resp.SubHdr, resp.ListA, resp.ListB, resp.ListC))
-                            .getResponse();  
-        } else {
+                            .getResponse();     
+        } else if (resp.Type === "Select"){
+          const select = require('APL/select.js');
           return  handlerInput.responseBuilder
-                          .speak(resp.Text)
-                          .reprompt(resp.text)
-                          .withSimpleCard('Instructions', resp.Verbal)
+                            .speak(resp.Verbal)
+                            .reprompt(resp.Verbal)
+                            .addDirective(select(resp.Header,resp.SubHdr, resp.List))
+                            .getResponse();     
+        } else if (resp.Type === "Search") {
+          return  handlerInput.responseBuilder
+                          .speak(resp.Verbal)
+                          .reprompt(resp.Text)
+                          .addDirective(search(resp.Header, resp.SubHdr, resp.List))
                           .getResponse();
+        } else {
+           return  handlerInput.responseBuilder
+                          .speak(resp.Verbal)
+                          .reprompt(resp.Text)
+                          .addDirective(search(resp.Header, resp.SubHdr, resp.List))
+                          .getResponse(); 
         }
-    }).catch(function (err) { console.log(err, err.stack);  } );
+      }).catch(function (err) { console.log(err, err.stack);  } );
   
   },
 };

@@ -23,6 +23,7 @@ type stateRec struct {
 	Path    string // inputEvent.Path
 	Param   string
 	Request string // PathItem[0]:
+	ReqType int    // curReqType in session context - used to drive output format
 	//
 	Obj     string // Object - to which operation (listing) apply
 	BkId    string // Book Id
@@ -40,6 +41,7 @@ type stateRec struct {
 	Dmsg    string
 	Vmsg    string
 	DData   string
+	Authors string // comma separated string of authors
 	//
 	Ingredients string // contains complete ingredients listing
 	//
@@ -161,6 +163,9 @@ func (s *sessCtx) setState(ls *stateRec) {
 	if len(s.reqRId) == 0 {
 		s.reqRId = ls.RId
 	}
+	if len(ls.Authors) > 0 {
+		s.authors = ls.Authors
+	}
 	fmt.Printf("reqVersion: [%s]\n", s.reqVersion)
 	fmt.Println("len(s.reqVersion) = ", len(s.reqVersion))
 	if len(s.reqVersion) == 0 {
@@ -274,6 +279,7 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 	sr.SwpBkNm = s.swapBkName
 	sr.SwpBkId = s.swapBkId
 	sr.Request = s.request // Request e.g.next, prev, repeat, modify)
+	sr.ReqType = s.curReqType
 	sr.Serves = s.serves
 	sr.Qid = s.questionId // Question id	for k,v:=range objectMap {
 	sr.Obj = s.object     // Object - to which operation (listing) apply
@@ -284,6 +290,7 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 	sr.Vmsg = s.vmsg
 	sr.DData = s.ddata
 	sr.OpenBk = s.reqOpenBk
+	sr.Authors = s.authors
 	//
 	// Record id across objects
 	//
@@ -527,6 +534,7 @@ func (s *sessCtx) popState() error {
 	s.swapBkName = sr.SwpBkNm
 	s.swapBkId = sr.SwpBkId
 	s.request = sr.Request // Request e.g.next, prev, repeat, modify)
+	s.curReqType = sr.ReqType
 	s.serves = sr.Serves
 	s.questionId = sr.Qid // Question id	for k,v:=range objectMap {
 	s.object = sr.Obj     // Object - to which operation (listing) apply
@@ -536,6 +544,7 @@ func (s *sessCtx) popState() error {
 	s.dmsg = sr.Dmsg
 	s.vmsg = sr.Vmsg
 	s.ddata = sr.DData
+	s.authors = sr.Authors
 	//
 	if len(sr.OpenBk) > 0 {
 		bk := strings.Split(sr.OpenBk, "|")

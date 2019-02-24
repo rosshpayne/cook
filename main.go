@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"log"
 	"net/url"
-	"os"
+	_ "os"
 	"strconv"
 	"strings"
 
-	_ "github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -31,7 +31,7 @@ type sessCtx struct {
 	passErr   string
 	//
 	sessionId  string // sourced from request. Used as PKey to Sessions table
-	reqOpenBk  string
+	reqOpenBk  string // BkId|BkName|authors
 	reqRName   string // requested recipe name - query param of recipe request
 	reqBkName  string // requested book name - query param
 	reqRId     string // Recipe Id - 0 means no recipe id has been assigned.  All RId's start at 1.
@@ -82,7 +82,7 @@ type sessCtx struct {
 	// Recipe Part data
 	eol   int     // sourced from Sessions table
 	peol  int     // End-of-List-for-part
-	part  string  // part index name - if no value then no part is being used eventhough recipe may be have a part defined i.e nopart_ & a part
+	part  string  // part index/long name depending on context - if no value then no part is being used eventhough recipe may be have a part defined i.e nopart_ & a part
 	parts []PartT // sourced from Recipe (R-)
 	// cPart string  // current part being display (long name). All part means complete recipe will be listed.
 	// next  int     // next SortK (recId)
@@ -95,6 +95,18 @@ type sessCtx struct {
 	dispIngredients bool
 	dispContainers  bool
 	dispPartMenu    bool
+}
+
+func (s *sessCtx) closeBook() {
+	s.reqOpenBk = ""
+	s.reqBkId, s.reqBkName, s.reqRId, s.reqRName = "", "", "", ""
+	s.reqOpenBk, s.authorS, s.authors = "", nil, ""
+	s.eol, s.peol = 0, 0
+}
+
+func (s *sessCtx) openBook() {
+	s.reqOpenBk = s.reqBkId + "|" + s.reqBkName + "|" + s.authors
+	s.eol, s.peol = 0, 0
 }
 
 func (s *sessCtx) clearForSearch(lastState *stateRec) {
@@ -307,7 +319,8 @@ func (s *sessCtx) orchestrateRequest() error {
 					return nil
 				} else {
 					// go straight to instructions
-					s.cacheInstructions(CompleteRecipe_)
+					s.part = CompleteRecipe_
+					s.cacheInstructions(s.part)
 					//
 					_, err = s.pushState()
 					if err != nil {
@@ -362,10 +375,12 @@ func (s *sessCtx) orchestrateRequest() error {
 				s.passErr = "selection is not within range"
 				return nil
 			}
+			s.part = ""
 			p := s.mChoice[s.selId-1]
 			fmt.Printf("selId  %d   mChoice   %#v\n", s.selId, p)
 			s.reset = true
 			s.cacheInstructions(p.Part)
+			s.part = p.Part
 			//
 			_, err = s.pushState()
 			if err != nil {
@@ -395,10 +410,10 @@ func (s *sessCtx) orchestrateRequest() error {
 			fmt.Println("BookId: ", s.reqBkId)
 			s.clearForSearch(lastState)
 			fmt.Println("**** just cleared state . ***** now pushState")
-			_, err = s.pushState()
-			if err != nil {
-				return err
-			}
+			// _, err = s.pushState()
+			// if err != nil {
+			// 	return err
+			// }
 			//
 			fmt.Println("..about to call keywordSearch")
 			err := s.keywordSearch()
@@ -440,10 +455,9 @@ func (s *sessCtx) orchestrateRequest() error {
 					s.vmsg = `There is no book open to close.`
 				default:
 					//
+					s.closeBook()
 					s.dmsg = s.reqBkName + ` is now closed. Any searches will be across all books`
 					s.vmsg = s.reqBkName + ` is now closed. Any searches will be across all books`
-					s.reqBkId, s.reqBkName, s.reqRId, s.reqRName = "", "", "", ""
-					s.reqOpenBk, s.authorS, s.authors = "", nil, ""
 				}
 			}
 			s.eol = 0
@@ -468,7 +482,7 @@ func (s *sessCtx) orchestrateRequest() error {
 						s.vmsg = `Book is already open. Please request a recipe from the book or say "list" and I will print the recipe names to the display.`
 						s.noGetRecRequired = true
 					} else if s.eol != s.recId[objectMap[s.object]] {
-						s.dmsg = `You are actively browing recipe ` + lastState.RName + ".Do you still want to open this book?"
+						s.dmsg = `You are actively browsing recipe ` + lastState.RName + ".Do you still want to open this book?"
 						s.vmsg = `You are actively browsing recipe ` + lastState.RName + ".Do you still want to open this book?"
 					}
 				case lastState.BkId != s.reqBkId:
@@ -476,7 +490,7 @@ func (s *sessCtx) orchestrateRequest() error {
 						// no active recipe
 						s.dmsg = "Opened " + s.reqBkName + " by " + s.authors + ". "
 						s.vmsg = "Opened " + s.reqBkName + " by " + s.authors + ". "
-						s.eol = 0
+						s.openBook()
 						s.noGetRecRequired = true
 					} else if s.eol != s.recId[objectMap[s.object]] {
 						s.dmsg = `You are actively browsing recipe ` + lastState.RName + " from book, " + lastState.BkName + ". Do you still want to open this book?"
@@ -484,7 +498,7 @@ func (s *sessCtx) orchestrateRequest() error {
 					}
 				}
 			} else {
-				s.eol = 0
+				s.openBook()
 				s.dmsg = "Opened " + s.reqBkName + " by " + s.authors + ". "
 				s.vmsg = "Opened " + s.reqBkName + " by " + s.authors + ". "
 			}
@@ -790,7 +804,6 @@ func handler(request InputEvent) (RespEvent, error) {
 			} else { // open
 				sessctx.reqBkId = request.QueryStringParameters["bkid"]
 				err = sessctx.bookNameLookup()
-				sessctx.reqOpenBk = sessctx.reqBkId + "|" + sessctx.reqBkName + "|" + sessctx.authors
 			}
 		case "version":
 			sessctx.reqVersion = request.QueryStringParameters["ver"]
@@ -884,8 +897,8 @@ func handler(request InputEvent) (RespEvent, error) {
 			if len(sessctx.passErr) > 0 {
 				hdr = sessctx.passErr
 			} else {
-				hdr = sessctx.reqRName + ` recipe is divided into parts.`
-				//subh = `Select first option to follow complete recipe`
+				hdr = sessctx.reqRName
+				subh = `Recipe is divided into parts. Select first option to follow complete recipe`
 			}
 			mchoice := make([]DisplayItem, len(sessctx.mChoice))
 			for i, v := range sessctx.mChoice {
@@ -946,6 +959,7 @@ func handler(request InputEvent) (RespEvent, error) {
 				hdr = sessctx.passErr
 			} else {
 				hdr = sessctx.reqRName
+				subh = "Book:  " + sessctx.reqBkName + "  Authors: " + sessctx.authors
 			}
 			s := sessctx
 			mchoice := make([]DisplayItem, 4)
@@ -954,7 +968,7 @@ func handler(request InputEvent) (RespEvent, error) {
 				id := strconv.Itoa(i + 1)
 				mchoice[i] = DisplayItem{Id: id, Title: v}
 			}
-			return RespEvent{Type: "Select", Header: hdr, Text: s.vmsg, Verbal: s.dmsg, List: mchoice}, nil
+			return RespEvent{Type: "Select", Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: mchoice}, nil
 
 		default:
 			//
@@ -975,13 +989,18 @@ func handler(request InputEvent) (RespEvent, error) {
 	//
 	s := sessctx
 	if len(s.passErr) > 0 {
-		hdr = s.passErr
+		hdr = "** Alert **   " + s.passErr
 	} else {
-		hdr = " Cooking Instructions  -  " + s.reqRName
-		subh = strconv.Itoa(s.objRecId) + " of " + strconv.Itoa(s.eol)
-		if len(s.part) > 0 {
-			subh += "    Part: " + s.part + "  -  " + strconv.Itoa(s.pid) + " of " + strconv.Itoa(s.peol)
+		hdr = s.reqRName
+	}
+	if len(s.part) > 0 {
+		if s.part == CompleteRecipe_ {
+			subh = "Cooking Instructions (Complete) : " + s.part + "  -  " + strconv.Itoa(s.objRecId) + " of " + strconv.Itoa(s.eol)
+		} else {
+			subh = "Cooking Instructions for Part: " + s.part + "  -  " + strconv.Itoa(s.pid) + " of " + strconv.Itoa(s.peol)
 		}
+	} else {
+		subh = "Cooking Instructions  -  " + strconv.Itoa(s.objRecId) + " of " + strconv.Itoa(s.eol)
 	}
 	//split instructions across three lists
 	//
@@ -1011,19 +1030,19 @@ func handler(request InputEvent) (RespEvent, error) {
 }
 
 func main() {
-	//lambda.Start(handler)
-	p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
+	lambda.Start(handler)
+	//p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
 	//p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&rcp=Take-home Chocolate Cake"}
 	//var i float64 = 1.0
 	// p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + "&srch=" + os.Args[2]}
 	// //
-	pIngrdScale = 1.0
-	writeCtx = uDisplay
-	p, _ := handler(p1)
-	if len(p.Error) > 0 {
-		fmt.Printf("%#v\n", p.Error)
-	} else {
-		fmt.Printf("output:   %s\n", p.Text)
-		fmt.Printf("output:   %s\n", p.Verbal)
-	}
+	// pIngrdScale = 1.0
+	// writeCtx = uDisplay
+	// p, _ := handler(p1)
+	// if len(p.Error) > 0 {
+	// 	fmt.Printf("%#v\n", p.Error)
+	// } else {
+	// 	fmt.Printf("output:   %s\n", p.Text)
+	// 	fmt.Printf("output:   %s\n", p.Verbal)
+	// }
 }

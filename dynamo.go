@@ -251,25 +251,27 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 
 	indexBasicEntry := func(entry string) {
 		//
+		if indexRow[entry] {
+			return
+		}
 		irec := indexRecipeT{SortK: s.reqBkId + "-" + s.reqRId, BkName: s.reqBkName, RName: s.reqRName, Authors: s.authors, Srv: s.recipe.Serves}
 		irec.PKey = strings.TrimRight(strings.TrimLeft(strings.ToLower(entry), " "), " ")
-		if !indexRow[entry] {
-			// only append unique values..
-			indexRow[entry] = true
-			indexRecS = append(indexRecS, irec)
-		}
+		// only append unique values..
+		indexRow[entry] = true
+		indexRecS = append(indexRecS, irec)
 	}
 
 	makeIndexRecs := func(entry string, ap *Activity) {
 		// for each index property value, add to index
+		if indexRow[entry] {
+			return
+		}
 		irec := indexRecipeT{SortK: s.reqBkId + "-" + s.reqRId, BkName: s.reqBkName, RName: s.reqRName, Authors: s.authors, Srv: s.recipe.Serves}
 		irec.PKey = entry
 		irec.Quantity = ap.String()
-		if !indexRow[entry] {
-			// only append unique values..
-			indexRow[entry] = true
-			indexRecS = append(indexRecS, irec)
-		}
+		// only append unique values..
+		indexRow[entry] = true
+		indexRecS = append(indexRecS, irec)
 	}
 
 	AddEntry := func(entry string) {
@@ -546,7 +548,7 @@ func (s *sessCtx) cacheInstructions(part string) error {
 			instructs[i+1] = InstructionT{Text: dmsg, Verbal: vmsg, Part: v.Part, EOL: v.EOL, PEOL: v.PEOL, PID: v.PId}
 		}
 		s.instructions = instructs
-		fmt.Printf(" cacheInstructions  instructions len() %d\n ", len(s.instructions))
+		fmt.Printf(" cacheInstructions COMPLETE instructions len() %d\n ", len(s.instructions))
 	default:
 		// find instructions associated with the part
 		for _, v := range s.parts {
@@ -594,12 +596,14 @@ func (s *sessCtx) getTaskRecById() (alexaDialog, error) {
 	// check objRecId within limits
 	//
 	if s.objRecId < 1 {
-		//err = fmt.Errorf("Reached first instruction")
+		s.passErr = "Reached first instruction"
 		s.objRecId = 1
+		s.recId[objectMap[s.object]] = 1
 	}
-	if s.objRecId > len(s.instructions)+1 {
-		err = fmt.Errorf("Reached last instruction")
-		s.objRecId = len(s.instructions) + 1
+	if s.objRecId > len(s.instructions)-1 {
+		s.passErr = "Reached last instruction"
+		s.objRecId = len(s.instructions) - 1
+		s.recId[objectMap[s.object]] = s.objRecId
 	}
 	rec := &s.instructions[s.objRecId]
 
@@ -608,72 +612,17 @@ func (s *sessCtx) getTaskRecById() (alexaDialog, error) {
 	// save to Session Context
 	//
 	s.eol = rec.EOL
-	s.peol = rec.PEOL
-	s.part = getLongName(rec.Part)
-	s.pid = rec.PID
+	if s.part != CompleteRecipe_ {
+		s.peol = rec.PEOL
+		s.part = getLongName(rec.Part)
+		s.pid = rec.PID
+	}
 
 	fmt.Println("eol = ", s.eol)
 	fmt.Println("peol = ", s.peol)
 	fmt.Println("part = ", s.part)
 	return taskRec, err
 }
-
-// func (s *sessCtx) getTaskRecById() (alexaDialog, error) {
-
-// 	var (
-// 		taskRec taskRecT
-// 	)
-// 	pKey := "T-" + s.pkey
-// 	keyC := expression.KeyEqual(expression.Key("PKey"), expression.Value(pKey)).And(expression.KeyEqual(expression.Key("SortK"), expression.Value(s.objRecId)))
-// 	// startId = s.objRecId - 1
-// 	// endId = s.objRecId + 2
-// 	// keyC := expression.KeyEqual(expression.Key("PKey"), expression.Value(pKey)).And(expression.Between(expression.Name("SortK"), expression.Value(startId), expression.Value(endId)))
-// 	expr, err := expression.NewBuilder().WithKeyCondition(keyC).Build()
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	//
-// 	// Table: Tasks - get current task based on task Id
-// 	//
-// 	input := &dynamodb.QueryInput{
-// 		KeyConditionExpression:    expr.KeyCondition(),
-// 		FilterExpression:          expr.Filter(),
-// 		ExpressionAttributeNames:  expr.Names(),
-// 		ExpressionAttributeValues: expr.Values(),
-// 		//ProjectionExpression:      expr.Projection(),
-// 	}
-// 	input = input.SetTableName("Recipe").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
-// 	//
-// 	// TODO - should be GetItem not Query as we are providing the primary key however a future feature to display 3 records instead of one would user query.
-// 	result, err := s.dynamodbSvc.Query(input)
-// 	if err != nil {
-// 		//return taskRecT{}, fmt.Errorf("Error in Query of Tasks: " + err.Error())
-// 		panic(err)
-// 	}
-// 	if int(*result.Count) == 0 { //TODO - put this code back so it makes sense
-// 		// this is caused by a goto operation exceeding EOL
-// 		return taskRecT{}, fmt.Errorf("Error: %s [%s] ", "Internal error: no tasks found for recipe ", s.reqRName)
-// 	}
-// 	if int(*result.Count) > 1 {
-// 		return taskRecT{}, fmt.Errorf("Error: more than 1 task returned from getNextRecordById")
-// 	}
-// 	err = dynamodbattribute.UnmarshalMap(result.Items, &taskRec)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("Error: %s - %s", "in UnmarshalMap in getTaskRecById ", err.Error())
-// 	}
-// 	//
-// 	// save to Session Context
-// 	//
-// 	s.eol = taskRec.EOL
-// 	if len(taskRec.Part) > 0 {
-// 		s.peol = taskRec.PEOL
-// 		s.part = taskRec.Part
-// 		s.next = taskRec.Next
-// 		s.prev = taskRec.Prev
-// 		s.pid = taskRec.PId
-// 	}
-// 	return taskRec, nil
-// }
 
 var recipeParts []string
 
@@ -734,7 +683,7 @@ func (s *sessCtx) recipeRSearch() (*RecipeT, error) {
 	// populate session context fields
 	s.reqRName = rec.RName
 	//s.index = rec.Index //TODO: is this required?
-	if len(s.reqBkName) == 0 {
+	if len(s.authors) == 0 {
 		fmt.Println()
 		err = s.bookNameLookup()
 		if err != nil {
@@ -1109,7 +1058,8 @@ func (s *sessCtx) bookNameLookup() error {
 		return fmt.Errorf("Error: %s [%s] %s", "in Query in bookNameLookup of ", s.reqBkId, err.Error())
 	}
 	if int(*result.Count) == 0 {
-		return fmt.Errorf("No data found in bookNameLookup, for bookId [%s]", s.reqBkId)
+		// Alexa respository means all requests should be for its registered book so we shouldn't get 0 found.
+		return fmt.Errorf("Internal error: Book Id [%s] not found", s.reqBkId)
 	}
 	if int(*result.Count) > 1 {
 		return fmt.Errorf("Internal error in bookNameLookup. %s [%s]", "More than one book found for bookId ", s.reqBkId)
