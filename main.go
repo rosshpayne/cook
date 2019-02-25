@@ -78,7 +78,8 @@ type sessCtx struct {
 	ddata         string
 	yesno         string
 	//
-	instructions []InstructionT // cached instructions for complete or part based recipe
+	displayData DisplayI
+	//instructions []InstructionT // cached instructions for complete or part based recipe
 	// Recipe Part data
 	eol   int     // sourced from Sessions table
 	peol  int     // End-of-List-for-part
@@ -130,6 +131,39 @@ func (s *sessCtx) clearForSearch(lastState *stateRec) {
 		s.authors = id[2]
 	}
 }
+
+// // part of session data that is persisted.
+// type InstructionT struct {
+// 	Text   string `json:"Txt"` // all Linked preps combined text into this field
+// 	Verbal string `json:"Vbl"`
+// 	Part   string `json: "Pt"` // part index name
+// 	EOL    int    `json:"EOL"` // End-Of-List. Max Id assigned to each record
+// 	PEOL   int    `json:"PEOL"`
+// 	PID    int    `json:"PID"` // id within a part
+// }
+
+// type InstructionS []InstructionT
+
+// func (i InstructionS) getItem(id int) (*AlexaDialog, string, error) {
+// 	id, alert := i.isValidId(id)
+// 	if len(alert) > 0 {
+// 		return nil, alert, nil
+// 	}
+// 	return i[id], nil
+// }
+
+// func (i InstructionS) isValidId(id int) (id, string) {
+// 	var passErr string
+// 	if id < 1 {
+// 		passErr = "Reached first instruction"
+// 		id = 1
+// 	}
+// 	if id > len(i)-1 {
+// 		passErr = "Reached last instruction"
+// 		id = len(i) - 1
+// 	}
+// 	return id, passErr
+// }
 
 const (
 	// objects to which future requests apply - s.object values
@@ -574,19 +608,8 @@ func (s *sessCtx) orchestrateRequest() error {
 	switch s.request {
 	case "goto":
 		fmt.Printf("gotoRecId = %d  %d\n", s.gotoRecId, lastState.EOL)
-		//TODO goto not implemented - maybe no use case
-		// if s.gotoRecId > lastState.EOL { //EOL of current object (ingredients,tasks..) data
-		// 	// do a repeat operation ie. display current record and define new message
-		// 	s.dmsg = "request goes beyond last item in list. Please say again"
-		// 	s.vmsg = "request goes beyond last item in list. Please say again"
-		// 	s.objRecId= s.recId[objectMap[s.object]]
-		// 	fmt.Printf("gotoRecId = %d  %d %d\n", s.gotoRecId, lastState.EOL, s.recId)
-		// 	s.noGetRecRequired = true
-		// 	return nil
-		// } else {
-		// 	// use updateAdd value to assign new recId during pushState
-		// 	s.updateAdd = s.gotoRecId - s.recId[objectMap[s.object]]
-		// }
+		s.objRecId = s.gotoRecId
+		s.recId[objectMap[s.object]] = s.gotoRecId
 	case "repeat":
 		// return - no need to pushState as nothing has changed.  Select current recId.
 		s.objRecId = s.recId[objectMap[s.object]]
@@ -618,37 +641,37 @@ func (s *sessCtx) orchestrateRequest() error {
 	return nil
 }
 
-func (s *sessCtx) getRecById() error {
-	var (
-		at  alexaDialog
-		err error
-	)
-	switch s.object {
-	case task_:
-		at, err = s.getTaskRecById()
-	case container_:
-		at, err = s.getContainerRecById()
-		//case utensils: at, err := s.getNextUtensilRecById()
-		//case ingredients: at, err := s.getNextIngrdRecById()
-	}
-	if err != nil {
-		return err
-	}
-	rec := at.Alexa()
-	//
-	writeCtx = uSay
-	s.vmsg = expandScalableTags(expandLiteralTags(rec.Verbal))
-	writeCtx = uDisplay
-	s.dmsg = expandScalableTags(expandLiteralTags(rec.Display))
-	//
-	// save state to dynamo
-	//
-	err = s.updateState()
-	if err != nil {
-		return err
-	}
-	return nil
-}
+// func (s *sessCtx) getRecById() error {
+// 	var (
+// 		at  alexaDialog
+// 		err error
+// 	)
+// 	switch s.object {
+// 	case task_:
+// 		at, err = s.getTaskRecById()
+// 	case container_:
+// 		at, err = s.getContainerRecById()
+// 		//case utensils: at, err := s.getNextUtensilRecById()
+// 		//case ingredients: at, err := s.getNextIngrdRecById()
+// 	}
+// 	if err != nil {
+// 		return err
+// 	}
+// 	rec := at.Alexa()
+// 	//
+// 	writeCtx = uSay
+// 	s.vmsg = expandScalableTags(expandLiteralTags(rec.Verbal))
+// 	writeCtx = uDisplay
+// 	s.dmsg = expandScalableTags(expandLiteralTags(rec.Display))
+// 	//
+// 	// save state to dynamo
+// 	//
+// 	err = s.updateState()
+// 	if err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }
 
 type InputEvent struct {
 	Path                  string            `json:"Path"`
@@ -888,6 +911,7 @@ func handler(request InputEvent) (RespEvent, error) {
 	var (
 		subh string
 		hdr  string
+		resp RespEvent
 	)
 	if sessctx.curReqType == initialiseRequest || sessctx.noGetRecRequired {
 
@@ -964,7 +988,7 @@ func handler(request InputEvent) (RespEvent, error) {
 			s := sessctx
 			mchoice := make([]DisplayItem, 4)
 			//for i, v := range []string{ingredient_, utensil_, container_, task_} {
-			for i, v := range []string{"List ingredients", "List utensils", "List containers", `Let's start cooking..`} {
+			for i, v := range []string{"List ingredients", "List required containers & untensils", "What are the prep tasks that take more than 5 minutes?", `Let's start cooking...`} {
 				id := strconv.Itoa(i + 1)
 				mchoice[i] = DisplayItem{Id: id, Title: v}
 			}
@@ -978,55 +1002,17 @@ func handler(request InputEvent) (RespEvent, error) {
 		}
 	}
 	//
-	//  Fetch next instruction record. Currently only recipe instructions are supported.
-	//
-	err = sessctx.getRecById()
+	s := sessctx
+	resp = s.displayData.GenDisplay(s.objRecId, s)
 	if err != nil {
 		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg, Error: err.Error()}, nil
 	}
 	//
-	// respond with next record from task (instruction). May support verbal listing of container, utensils at some stage (current displayed listing only)
-	//
-	s := sessctx
-	if len(s.passErr) > 0 {
-		hdr = "** Alert **   " + s.passErr
-	} else {
-		hdr = s.reqRName
+	err = s.updateState()
+	if err != nil {
+		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg, Error: err.Error()}, nil
 	}
-	if len(s.part) > 0 {
-		if s.part == CompleteRecipe_ {
-			subh = "Cooking Instructions (Complete) : " + s.part + "  -  " + strconv.Itoa(s.objRecId) + " of " + strconv.Itoa(s.eol)
-		} else {
-			subh = "Cooking Instructions for Part: " + s.part + "  -  " + strconv.Itoa(s.pid) + " of " + strconv.Itoa(s.peol)
-		}
-	} else {
-		subh = "Cooking Instructions  -  " + strconv.Itoa(s.objRecId) + " of " + strconv.Itoa(s.eol)
-	}
-	//split instructions across three lists
-	//
-	var listA []DisplayItem
-	for k, i, ir := 0, s.objRecId-3, s.instructions; k < 3; k++ {
-		if i >= 0 {
-			item := DisplayItem{Title: ir[i].Text}
-			listA = append(listA, item)
-		}
-		i++
-	}
-	if len(listA) == 0 {
-		listA = []DisplayItem{DisplayItem{Title: " "}}
-	}
-	listB := make([]DisplayItem, 1)
-	listB[0] = DisplayItem{Title: s.instructions[s.objRecId].Text}
-	listC := make([]DisplayItem, len(s.instructions)-s.objRecId)
-	for k, i, ir := 0, s.objRecId+1, s.instructions; i < len(ir); i++ {
-		listC[k] = DisplayItem{Title: ir[i].Text}
-		k++
-	}
-	type_ := "Tripple"
-	if len(s.instructions[s.objRecId].Text) > 120 {
-		type_ = "Tripple2" // larger text bounding box
-	}
-	return RespEvent{Type: type_, Header: hdr, SubHdr: subh, Text: sessctx.vmsg, Verbal: sessctx.dmsg, ListA: listA, ListB: listB, ListC: listC}, nil
+	return resp, nil
 }
 
 func main() {

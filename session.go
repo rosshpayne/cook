@@ -59,17 +59,10 @@ type stateRec struct {
 	//
 	Parts []PartT `json:"Parts"` // PartT.Idx - short name for Recipe Part
 	Part  string  `json:"Part"`
-	// Next  int     `json:"Next"`
-	// Prev  int     `json:"Prev"`
-	// PEOL         int            `json:"PEOL"`	** this data stored in Instruction slice
-	// PId          int            `json:"PId"`		** this data stored in Instruction slice
-	// EOL          int            `json:"EOL"`		** this data stored in Instruction slice
-	Instructions []InstructionT `json:"I"`
 	//
-	// Display header for APL - NB: this is probably not required as display will persist last assigned value.
+	InstructionData InstructionS `json:"I"`
+	ContainerData   ContainerS   `json:"C"`
 	//
-	//dispHdr  string `json:"DHdr"`  // Display header
-	//dispSHdr string `json:"DsHdr"` // Display subheader
 	DispObjectMenu  bool
 	DispIngredients bool
 	DispContainers  bool
@@ -136,6 +129,7 @@ func (s *sessCtx) getState() (*stateRec, error) {
 		Sid   string     `json:"Sid"`
 		State stateStack `json:"state"`
 	}
+
 	stateItem := stateItemT{}
 	err = dynamodbattribute.UnmarshalMap(result.Item, &stateItem)
 	if err != nil {
@@ -196,27 +190,31 @@ func (s *sessCtx) setState(ls *stateRec) {
 	if len(s.parts) == 0 {
 		s.parts = ls.Parts
 	}
-	if s.peol == 0 && len(ls.Instructions) > 0 {
-		s.peol = ls.Instructions[ls.RecId[objectMap[ls.Obj]]].PEOL
+	if len(ls.InstructionData) > 0 {
+		dd := ls.InstructionData
+		if s.peol == 0 && len(dd) > 0 {
+			s.peol = dd[ls.RecId[objectMap[ls.Obj]]].PEOL
+		}
+		if s.pid > 0 && len(dd) > 0 {
+			s.pid = dd[ls.RecId[objectMap[ls.Obj]]].PID
+		}
+		if ls.EOL > 0 && len(dd) > 0 {
+			s.eol = dd[ls.RecId[objectMap[ls.Obj]]].EOL
+		}
+		s.displayData = dd
 	}
-	if s.pid > 0 && len(ls.Instructions) > 0 {
-		s.pid = ls.Instructions[ls.RecId[objectMap[ls.Obj]]].PID
-	}
-	if ls.EOL > 0 && len(ls.Instructions) > 0 {
-		s.eol = ls.Instructions[ls.RecId[objectMap[ls.Obj]]].EOL
-	}
-	// if ls.Prev != 0 {
-	// 	s.prev = ls.Prev
-	// }
-	// if ls.Next != 0 {
-	// 	s.next = ls.Next
+	// if len(ls.ContainerData) > 0 {
+	// 	s.displayData = ls.ContainerData
 	// }
 	if len(ls.MChoice) > 0 {
 		s.mChoice = ls.MChoice
 	}
-	if len(s.instructions) == 0 {
-		s.instructions = ls.Instructions
-	}
+	// if dd, ok := s.displayData.(InstructionS); ok {
+	// 	lsd := ls.DisplayData.(InstructionS)
+	// 	if len(dd) == 0 {
+	// 		dd = lsd
+	// 	}
+	// }
 	//
 	// determine select context
 	//
@@ -322,8 +320,12 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 	sr.DispIngredients = s.dispIngredients
 	sr.DispContainers = s.dispContainers
 	sr.DispPartMenu = s.dispPartMenu
-
-	sr.Instructions = s.instructions
+	if d, ok := s.displayData.(InstructionS); ok {
+		sr.InstructionData = d
+	}
+	// if d, ok := s.displayData.(ContainerS); ok {
+	// 	sr.InstructionData = d
+	// }
 	//
 	State := make(stateStack, 1)
 	State[0] = sr
@@ -581,6 +583,12 @@ func (s *sessCtx) popState() error {
 	s.dispContainers = sr.DispContainers
 	s.dispPartMenu = sr.DispPartMenu
 	//
-	s.instructions = sr.Instructions
+	// if len(sr.ContainerData) > 0 {
+	// 	s.displayData = sr.ContainerData
+	// }
+	if len(sr.InstructionData) > 0 {
+		s.displayData = sr.InstructionData
+	}
+
 	return nil
 }

@@ -112,6 +112,82 @@ func (a ContainerMap) saveContainerUsage(s *sessCtx) error {
 	return nil
 }
 
+func (s *sessCtx) cacheInstructions(part string) error {
+
+	pKey := "T-" + s.pkey
+	keyC := expression.KeyEqual(expression.Key("PKey"), expression.Value(pKey))
+	expr, err := expression.NewBuilder().WithKeyCondition(keyC).Build()
+	if err != nil {
+		panic(err)
+	}
+	//
+	// Table: Tasks - get all instruction associated with recipe
+	//
+	input := &dynamodb.QueryInput{
+		KeyConditionExpression:    expr.KeyCondition(),
+		FilterExpression:          expr.Filter(),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+	}
+	input = input.SetTableName("Recipe").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
+	//
+	// TODO - should be GetItem not Query as we are providing the primary key however a future feature to display 3 records instead of one would user query.
+	result, err := s.dynamodbSvc.Query(input)
+	if err != nil {
+		//return taskRecT{}, fmt.Errorf("Error in Query of Tasks: " + err.Error())
+		return err
+	}
+	if int(*result.Count) == 0 { //TODO - put this code back so it makes sense
+		// this is caused by a goto operation exceeding EOL
+		return fmt.Errorf("Error: %s [%s] ", "Internal error: no instructions found for recipe ", s.reqRName)
+	}
+	ptR := make([]taskRecT, len(result.Items))
+	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &ptR)
+	if err != nil {
+		return fmt.Errorf("Error: %s - %s", "in UnmarshalMap in cacheInstructions ", err.Error())
+	}
+	fmt.Printf(" cacheInstructions len() %d\n ", len(ptR))
+	//
+	// find start instruction. For complete it will be based on SortK
+	//
+	fmt.Printf("in cacheInstruction:  part [%s] \n", part)
+	switch part {
+	case CompleteRecipe_:
+		instructs := make(InstructionS, len(ptR)+1) // Instructions start at index 1.
+		for i, v := range ptR {
+			writeCtx = uSay
+			vmsg := expandScalableTags(expandLiteralTags(v.Verbal))
+			writeCtx = uDisplay
+			dmsg := expandScalableTags(expandLiteralTags(v.Text))
+			instructs[i+1] = InstructionT{Text: dmsg, Verbal: vmsg, Part: v.Part, EOL: v.EOL, PEOL: v.PEOL, PID: v.PId}
+		}
+		s.displayData = instructs
+	default:
+		// find instructions associated with the part
+		for _, v := range s.parts {
+			if v.Title == part {
+				start := v.Start
+				instructs := make(InstructionS, 1)
+				instructs[0] = InstructionT{} // blank instruction at index 0, so Instructions start at index 1.
+				for id := start; id != -1; id = ptR[id-1].Next {
+					// ptR.Next points to SortK in table - which starts at 1
+					i := id - 1
+					writeCtx = uSay
+					vmsg := expandScalableTags(expandLiteralTags(ptR[i].Verbal))
+					writeCtx = uDisplay
+					dmsg := expandScalableTags(expandLiteralTags(ptR[i].Text))
+					instruct := InstructionT{Text: dmsg, Verbal: vmsg, Part: ptR[i].Part, EOL: ptR[i].EOL, PEOL: ptR[i].PEOL, PID: ptR[i].PId}
+					instructs = append(instructs, instruct)
+				}
+				s.displayData = instructs
+				break
+			}
+		}
+	}
+	//
+	return nil
+}
+
 type containerT struct {
 	Verbal string `json:"vbl"`
 	Text   string `json:"txt"`
@@ -484,144 +560,6 @@ func (s *sessCtx) updateRecipe(r *RecipeT) error {
 	}
 
 	return nil
-}
-
-// part of session data that is persisted.
-type InstructionT struct {
-	Text   string `json:"Txt"` // all Linked preps combined text into this field
-	Verbal string `json:"Vbl"`
-	Part   string `json: "Pt"` // part index name
-	EOL    int    `json:"EOL"` // End-Of-List. Max Id assigned to each record
-	PEOL   int    `json:"PEOL"`
-	PID    int    `json:"PID"` // id within a part
-}
-
-// cacheInstructions copies data from T- items in recipe table to session data (instructions) that is preserved
-
-func (s *sessCtx) cacheInstructions(part string) error {
-
-	pKey := "T-" + s.pkey
-	keyC := expression.KeyEqual(expression.Key("PKey"), expression.Value(pKey))
-	expr, err := expression.NewBuilder().WithKeyCondition(keyC).Build()
-	if err != nil {
-		panic(err)
-	}
-	//
-	// Table: Tasks - get all instruction associated with recipe
-	//
-	input := &dynamodb.QueryInput{
-		KeyConditionExpression:    expr.KeyCondition(),
-		FilterExpression:          expr.Filter(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-	}
-	input = input.SetTableName("Recipe").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
-	//
-	// TODO - should be GetItem not Query as we are providing the primary key however a future feature to display 3 records instead of one would user query.
-	result, err := s.dynamodbSvc.Query(input)
-	if err != nil {
-		//return taskRecT{}, fmt.Errorf("Error in Query of Tasks: " + err.Error())
-		return err
-	}
-	if int(*result.Count) == 0 { //TODO - put this code back so it makes sense
-		// this is caused by a goto operation exceeding EOL
-		return fmt.Errorf("Error: %s [%s] ", "Internal error: no instructions found for recipe ", s.reqRName)
-	}
-	ptR := make([]taskRecT, len(result.Items))
-	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &ptR)
-	if err != nil {
-		return fmt.Errorf("Error: %s - %s", "in UnmarshalMap in cacheInstructions ", err.Error())
-	}
-	fmt.Printf(" cacheInstructions len() %d\n ", len(ptR))
-	//
-	// find start instruction. For complete it will be based on SortK
-	//
-	fmt.Printf("in cacheInstruction:  part [%s] \n", part)
-	switch part {
-	case CompleteRecipe_:
-		instructs := make([]InstructionT, len(ptR)+1) // Instructions start at index 1.
-		for i, v := range ptR {
-			writeCtx = uSay
-			vmsg := expandScalableTags(expandLiteralTags(v.Verbal))
-			writeCtx = uDisplay
-			dmsg := expandScalableTags(expandLiteralTags(v.Text))
-			instructs[i+1] = InstructionT{Text: dmsg, Verbal: vmsg, Part: v.Part, EOL: v.EOL, PEOL: v.PEOL, PID: v.PId}
-		}
-		s.instructions = instructs
-		fmt.Printf(" cacheInstructions COMPLETE instructions len() %d\n ", len(s.instructions))
-	default:
-		// find instructions associated with the part
-		for _, v := range s.parts {
-			if v.Title == part {
-				start := v.Start
-				instructs := make([]InstructionT, 1)
-				instructs[0] = InstructionT{} // blank instruction at index 0, so Instructions start at index 1.
-				for id := start; id != -1; id = ptR[id-1].Next {
-					// ptR.Next points to SortK in table - which starts at 1
-					i := id - 1
-					writeCtx = uSay
-					vmsg := expandScalableTags(expandLiteralTags(ptR[i].Verbal))
-					writeCtx = uDisplay
-					dmsg := expandScalableTags(expandLiteralTags(ptR[i].Text))
-					instruct := InstructionT{Text: dmsg, Verbal: vmsg, Part: ptR[i].Part, EOL: ptR[i].EOL, PEOL: ptR[i].PEOL, PID: ptR[i].PId}
-					instructs = append(instructs, instruct)
-				}
-				s.instructions = instructs
-				break
-			}
-		}
-	}
-	//
-	return nil
-}
-
-func (s *sessCtx) getTaskRecById() (alexaDialog, error) {
-	var err error
-	getLongName := func(index string) string {
-		if index == "" || index == "nopart_" {
-			return ""
-		}
-		for _, v := range s.parts {
-			if v.Index == index {
-				return v.Title
-			}
-		}
-		//panic(fmt.Errorf("Error: in getTaskRecById, recipe part index [%s] not found in s.parts ", index))
-		return ""
-	}
-	if len(s.instructions) == 0 {
-		panic(fmt.Errorf("Error: internal, instructions has not been cached"))
-	}
-	//
-	// check objRecId within limits
-	//
-	if s.objRecId < 1 {
-		s.passErr = "Reached first instruction"
-		s.objRecId = 1
-		s.recId[objectMap[s.object]] = 1
-	}
-	if s.objRecId > len(s.instructions)-1 {
-		s.passErr = "Reached last instruction"
-		s.objRecId = len(s.instructions) - 1
-		s.recId[objectMap[s.object]] = s.objRecId
-	}
-	rec := &s.instructions[s.objRecId]
-
-	taskRec := taskRecT{Text: rec.Text, Verbal: rec.Verbal}
-	//
-	// save to Session Context
-	//
-	s.eol = rec.EOL
-	if s.part != CompleteRecipe_ {
-		s.peol = rec.PEOL
-		s.part = getLongName(rec.Part)
-		s.pid = rec.PID
-	}
-
-	fmt.Println("eol = ", s.eol)
-	fmt.Println("peol = ", s.peol)
-	fmt.Println("part = ", s.part)
-	return taskRec, err
 }
 
 var recipeParts []string
