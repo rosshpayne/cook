@@ -43,12 +43,12 @@ type stateRec struct {
 	DData   string
 	Authors string // comma separated string of authors
 	//
-	Ingredients string // contains complete ingredients listing
+	Ingredients IngredientT // contains complete ingredients listing
 	//
 	// search
 	//
-	Search  string
-	MChoice []mRecipeT // recipes menu, recipe-part menu,
+	Search     string
+	RecipeList RecipeListT // recipes menu, recipe-part menu,
 	//
 	// select
 	//
@@ -57,16 +57,17 @@ type stateRec struct {
 	//
 	// Recipe Part related data
 	//
-	Parts []PartT `json:"Parts"` // PartT.Idx - short name for Recipe Part
-	Part  string  `json:"Part"`
+	Parts PartS  `json:"Parts"` // PartT.Idx - short name for Recipe Part
+	Part  string `json:"Part"`
 	//
 	InstructionData InstructionS `json:"I"`
-	ContainerData   ContainerS   `json:"C"`
+	ShowObjMenu     bool
+	//ContainerData   ContainerS   `json:"C"` // no need to save this data. It is never sourced from state data.
 	//
-	DispObjectMenu  bool
-	DispIngredients bool
-	DispContainers  bool
-	DispPartMenu    bool
+	// DispObjectMenu  bool
+	// DispIngredients bool
+	// DispContainers  bool
+	// DispPartMenu    bool
 }
 
 type stateStack []stateRec
@@ -76,12 +77,12 @@ func (s stateStack) pop() *stateRec {
 	return &st
 }
 
-func (s *sessCtx) setDisplay(ls *stateRec) {
-	s.dispObjectMenu = ls.DispObjectMenu
-	s.dispIngredients = ls.DispIngredients
-	s.dispContainers = ls.DispContainers
-	s.dispPartMenu = ls.DispPartMenu
-}
+// func (s *sessCtx) setDisplay(ls *stateRec) {
+// 	s.dispObjectMenu = ls.DispObjectMenu
+// 	s.dispIngredients = ls.DispIngredients
+// 	s.dispContainers = ls.DispContainers
+// 	s.dispPartMenu = ls.DispPartMenu
+// }
 
 func (s *sessCtx) getState() (*stateRec, error) {
 	//
@@ -189,6 +190,7 @@ func (s *sessCtx) setState(ls *stateRec) {
 	}
 	if len(s.parts) == 0 {
 		s.parts = ls.Parts
+		s.displayData = ls.Parts
 	}
 	if len(ls.InstructionData) > 0 {
 		dd := ls.InstructionData
@@ -203,11 +205,15 @@ func (s *sessCtx) setState(ls *stateRec) {
 		}
 		s.displayData = dd
 	}
+	if len(ls.Ingredients) > 0 {
+		s.displayData = ls.Ingredients
+	}
 	// if len(ls.ContainerData) > 0 {
 	// 	s.displayData = ls.ContainerData
 	// }
-	if len(ls.MChoice) > 0 {
-		s.mChoice = ls.MChoice
+	if len(ls.RecipeList) > 0 {
+		s.recipeList = ls.RecipeList
+		s.displayData = s.recipeList
 	}
 	// if dd, ok := s.displayData.(InstructionS); ok {
 	// 	lsd := ls.DisplayData.(InstructionS)
@@ -222,7 +228,8 @@ func (s *sessCtx) setState(ls *stateRec) {
 		switch {
 		case ls.SelCtx == 0 && len(s.reqRName) == 0 && (ls.Request == "search" || ls.Request == "recipe"):
 			s.selCtx = ctxRecipeMenu
-			s.dispObjectMenu = true
+			s.displayData = objMenu
+			//s.dispObjectMenu = true
 		case ls.SelCtx == 0 || (ls.SelCtx == ctxRecipeMenu && len(s.reqRName) > 0):
 			s.selCtx = ctxObjectMenu
 		case s.request == "select" && len(ls.Parts) > 0 && len(ls.Part) == 0:
@@ -250,6 +257,11 @@ func (s *sessCtx) setState(ls *stateRec) {
 		} else if len(ls.Ver) > 0 && s.reqVersion != ls.Ver {
 			s.reset = true
 		}
+	}
+	s.showObjMenu = ls.ShowObjMenu
+	if s.showObjMenu && len(ls.Ingredients) == 0 {
+		fmt.Println("in setSession: displaying object menu is set")
+		s.displayData = objMenu
 	}
 	return
 }
@@ -300,7 +312,7 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 	// search
 	//
 	sr.Search = s.reqSearch
-	sr.MChoice = s.mChoice
+	sr.RecipeList = s.recipeList
 	//
 	// select
 	//
@@ -316,13 +328,14 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 	// sr.PEOL = s.peol
 	// sr.PId = s.pid
 	// sr.EOL = s.eol
-	sr.DispObjectMenu = s.dispObjectMenu
-	sr.DispIngredients = s.dispIngredients
-	sr.DispContainers = s.dispContainers
-	sr.DispPartMenu = s.dispPartMenu
+	// sr.DispObjectMenu = s.dispObjectMenu
+	// sr.DispIngredients = s.dispIngredients
+	// sr.DispContainers = s.dispContainers
+	// sr.DispPartMenu = s.dispPartMenu
 	if d, ok := s.displayData.(InstructionS); ok {
 		sr.InstructionData = d
 	}
+	sr.ShowObjMenu = s.showObjMenu
 	// if d, ok := s.displayData.(ContainerS); ok {
 	// 	sr.InstructionData = d
 	// }
@@ -562,7 +575,7 @@ func (s *sessCtx) popState() error {
 	// search
 	//
 	s.reqSearch = sr.Search
-	s.mChoice = sr.MChoice
+	s.recipeList = sr.RecipeList
 	//
 	// select
 	//
@@ -578,17 +591,24 @@ func (s *sessCtx) popState() error {
 	//
 	// Display Menu choices
 	//
-	s.dispObjectMenu = sr.DispObjectMenu
-	s.dispIngredients = sr.DispIngredients
-	s.dispContainers = sr.DispContainers
-	s.dispPartMenu = sr.DispPartMenu
+	// s.dispObjectMenu = sr.DispObjectMenu
+	// s.dispIngredients = sr.DispIngredients
+	// s.dispContainers = sr.DispContainers
+	// s.dispPartMenu = sr.DispPartMenu
 	//
-	// if len(sr.ContainerData) > 0 {
-	// 	s.displayData = sr.ContainerData
-	// }
+	s.displayData = s.parts
 	if len(sr.InstructionData) > 0 {
 		s.displayData = sr.InstructionData
 	}
-
+	if len(sr.Ingredients) > 0 {
+		s.displayData = sr.Ingredients
+	}
+	if len(sr.RecipeList) > 0 {
+		s.displayData = sr.RecipeList
+	}
+	if sr.ShowObjMenu {
+		s.displayData = objMenu
+		//		s.showObjMenu = sr.ShowObjMenu
+	}
 	return nil
 }

@@ -2,7 +2,12 @@ package main
 
 import (
 	"fmt"
+	"github.com/cook/global"
 )
+
+type UnitPI interface {
+	UPlural() bool
+}
 
 type Unit struct {
 	Slabel  string `json:"SortK"`   // short label
@@ -13,7 +18,7 @@ type Unit struct {
 	Plural  string // determines whether unit can be plural i.e have s appended. Applies to Llabel only.
 }
 
-var unitMap map[string]*Unit // populated in getActivity()
+var UnitMap map[string]*Unit // populated in getActivity()
 
 var unitS []*Unit = []*Unit{
 	&Unit{Slabel: "g", Llabel: "gram", Print: "s", Say: "l", Display: "s"},
@@ -36,28 +41,25 @@ var unitS []*Unit = []*Unit{
 	&Unit{Slabel: "sachet", Llabel: "sachet", Print: "l", Say: "l", Display: "s", Plural: "s"},
 	&Unit{Slabel: "bunch", Llabel: "bunch", Print: "l", Say: "l", Display: "s", Plural: "es"},
 	&Unit{Slabel: "sprig", Llabel: "sprig", Print: "l", Say: "l", Display: "s", Plural: "s"},
-	&Unit{Slabel: "stick", Llabel: "sprig", Print: "l", Say: "l", Display: "s", Plural: "s"},
+	&Unit{Slabel: "stick", Llabel: "stick", Print: "l", Say: "l", Display: "s", Plural: "s"},
 }
 
 // String output unit text based on mode represented by package variable writeCtx [package_variable-Unit-mode]
-func (u *Unit) String(i ...unitPI) string {
+func (u *Unit) String(i ...UnitPI) string {
 	// mode: Print ingredients
 	var format string
 	if u == nil {
 		panic(fmt.Errorf("%s", "Unit is nil in method (*Unit).String()"))
 	}
-	switch writeCtx {
-	case uPrint, uSay, uDisplay:
+	switch global.WriteCtx() {
+	case global.UPrint:
+		format = u.Print
+	case global.USay:
+		format = u.Say
+	case global.UDisplay:
+		format = u.Display
 	default:
 		panic(fmt.Errorf("%s", "write context not set"))
-	}
-	switch writeCtx {
-	case uPrint:
-		format = u.Print
-	case uSay:
-		format = u.Say
-	case uDisplay:
-		format = u.Display
 	}
 	switch format {
 	case "s":
@@ -74,7 +76,7 @@ func (u *Unit) String(i ...unitPI) string {
 		case "C", "F":
 			return "\u00B0" + u.Llabel
 		default:
-			if len(i) > 0 && len(u.Plural) > 0 && i[0].uPlural() {
+			if len(i) > 0 && len(u.Plural) > 0 && i[0].UPlural() {
 				return " " + u.Llabel + u.Plural
 			} else {
 				return " " + u.Llabel
@@ -87,8 +89,8 @@ func (u *Unit) String(i ...unitPI) string {
 }
 
 func init() {
-	unitMap = make(map[string]*Unit, len(unitS))
+	UnitMap = make(map[string]*Unit, len(unitS))
 	for _, v := range unitS {
-		unitMap[v.Slabel] = v
+		UnitMap[v.Slabel] = v
 	}
 }

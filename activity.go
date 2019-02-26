@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cook/global"
+
 	_ "github.com/aws/aws-sdk-go/aws"
 	_ "github.com/aws/aws-sdk-go/aws/credentials"
 
@@ -49,11 +51,11 @@ type respT struct {
 //TODO: activate Recipe type here. Also incorporate AltIngrd into output.
 // Recipe Record
 //
-type PartT struct {
-	Index string `json:"Idx"`   // short name which is attached to each activity JSON.
-	Title string `json:"Title"` // long name which is printed out in the ingredients listing
-	Start int    `json:"Start"` // SortK value in T-?-? that has first instruction for the partition
-}
+// type PartT struct {
+// 	Index string `json:"Idx"`   // short name which is attached to each activity JSON.
+// 	Title string `json:"Title"` // long name which is printed out in the ingredients listing
+// 	Start int    `json:"Start"` // SortK value in T-?-? that has first instruction for the partition
+// }
 type RecipeT struct {
 	PKey  string `json:"PKey"`
 	SortK int    `json:"PKey"`
@@ -88,37 +90,9 @@ type taskT struct {
 	Activityp *Activity
 }
 
-type Container struct {
-	Cid      string     `json:"SortK"`
-	Type     string     `json:"type"`
-	Purpose  string     `json:"purpose"`
-	Coord    [2]float32 `json:"coord"`
-	Contains string     `json:"contents"`
-	Message  string     `json:"message"`
-	// two instances of this container
-	Label      string     `json:"label"`
-	Measure    *MeasureCT `json:"measure"`
-	AltLabel   string     `json:"altLabel"`
-	AltMeasure *MeasureCT `json:"altMeasure"`
-	// non-dynamo
-	start    int     // first id in recipe tasks where container is used
-	last     int     // last id in recipe tasks where container is sourced from or recipe is complete.
-	reused   int     // links containers that can be the same physical container.
-	Activity []taskT // slice of tasks (Prep and Task activites) associated with container
-}
-
-type DeviceT struct {
-	Type      string `json:"type"`
-	Set       string `json:"set"`
-	Purpose   string `json:"purpose"`
-	Alternate string `json:"alternate"`
-	Temp      string `json:"temp"`
-	Unit      string `json:"unit"`
-}
-
-type unitPI interface {
-	uPlural() bool
-}
+// type unit.UnitPI interface {
+// 	UPlural() bool
+// }
 
 type MeasureT struct {
 	Unit     string `json:"unit"` // unit of measure, g, kg, cm, ml, litre, pinch, clove, etc.
@@ -174,19 +148,12 @@ type Activity struct {
 	Coord         [2]float32  // X,Y
 	Task          []*PerformT `json:"task"`
 	Prep          []*PerformT `json:"prep"`
-	//	unitMap       map[string]*Unit
+	//	UnitMap       map[string]*Unit
 	next     *Activity
 	prev     *Activity
 	nextTask *Activity
 	nextPrep *Activity
 }
-
-type ContainerMap map[string]*Container
-
-var ContainerM ContainerMap
-
-type DevicesMap map[string]string
-type DeviceMap map[string]DeviceT
 
 var activityStart *Activity
 
@@ -208,18 +175,8 @@ type prepCtl struct {
 
 var prepctl prepCtl = prepCtl{}
 
-type WriteContextT int
-
-var writeCtx WriteContextT // package variable that determines formating of unit
-
-const (
-	uPrint WriteContextT = iota + 1
-	uSay
-	uDisplay
-)
-
-func (m *MeasureT) uPlural() bool {
-	fmt.Println("in uPlural for Measure ", m.Quantity)
+func (m *MeasureT) UPlural() bool {
+	fmt.Println("in UPlural for Measure ", m.Quantity)
 	if len(m.Quantity) > 0 {
 		f, err := strconv.ParseFloat(m.Quantity, 32)
 		if err != nil {
@@ -242,7 +199,7 @@ func (m *MeasureT) uPlural() bool {
 	return false
 }
 
-func (t *PerformT) uPlural() bool {
+func (t *PerformT) UPlural() bool {
 	if t.Time > 1 {
 		return true
 	} else {
@@ -259,18 +216,18 @@ func (d *DeviceT) String() string {
 		t := strings.Split(d.Temp, "/")
 		if len(t) > 1 {
 			// for an oven device, a/b means <a><unit> fan/ <b><unit> nofan / setting
-			if writeCtx == uSay {
-				s = t[0] + unitMap[d.Unit].String() + " or " + t[1] + unitMap[d.Unit].String() + " fan forced"
+			if global.WriteCtx() == global.USay {
+				s = t[0] + UnitMap[d.Unit].String() + " or " + t[1] + UnitMap[d.Unit].String() + " fan forced"
 			} else {
-				s = t[0] + unitMap[d.Unit].String() + "/" + t[1] + unitMap[d.Unit].String() + " Fan"
+				s = t[0] + UnitMap[d.Unit].String() + "/" + t[1] + UnitMap[d.Unit].String() + " Fan"
 			}
 		} else {
-			s = d.Temp + unitMap[d.Unit].String()
+			s = d.Temp + UnitMap[d.Unit].String()
 		}
 	}
 	if len(d.Set) > 0 {
 		if len(s) > 0 {
-			if writeCtx == uSay {
+			if global.WriteCtx() == global.USay {
 				s += " or " + d.Set
 			} else {
 				s += "/" + d.Set
@@ -623,16 +580,16 @@ func (m *MeasureT) FormatString() string {
 	// is it  short or long units
 	var format string
 	if len(m.Unit) > 0 {
-		u := unitMap[m.Unit]
+		u := UnitMap[m.Unit]
 		if u == nil {
-			panic(fmt.Errorf("Error: Unit [%s] not registered in unitMap", m.Unit))
+			panic(fmt.Errorf("Error: Unit [%s] not registered in UnitMap", m.Unit))
 		}
-		switch writeCtx {
-		case uPrint:
+		switch global.WriteCtx() {
+		case global.UPrint:
 			format = u.Print
-		case uSay:
+		case global.USay:
 			format = u.Say
-		case uDisplay:
+		case global.UDisplay:
 			format = u.Display
 		}
 	}
@@ -647,30 +604,31 @@ func (m *MeasureT) FormatString() string {
 	if len(m.Quantity) > 0 && len(m.Unit) > 0 {
 		if m.Unit == "tsp" || m.Unit == "tbsp" || m.Unit == "g" || m.Unit == "kg" {
 			if (strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0) && format != "l" {
-				return m.Quantity + unitMap[m.Unit].String(m)
+				return m.Quantity + UnitMap[m.Unit].String(m)
 			} else {
-				return m.Quantity + unitMap[m.Unit].String(m)
+				return m.Quantity + UnitMap[m.Unit].String(m)
 			}
 		}
 		if strings.Index(strings.ToLower(m.Unit), "clove") >= 0 {
-			return m.Quantity + unitMap[m.Unit].String(m) + " of"
+			return m.Quantity + UnitMap[m.Unit].String(m) + " of"
 		}
 		if strings.Index(strings.ToLower(m.Unit), "bunch") >= 0 {
-			return m.Quantity + unitMap[m.Unit].String(m) + " of"
+			return m.Quantity + UnitMap[m.Unit].String(m) + " of"
 		}
 		if strings.Index(strings.ToLower(m.Unit), "sachet") >= 0 {
-			return m.Quantity + unitMap[m.Unit].String(m) + " of"
+			return m.Quantity + UnitMap[m.Unit].String(m) + " of"
 		}
 		if strings.Index(strings.ToLower(m.Unit), "sprig") >= 0 {
-			return m.Quantity + unitMap[m.Unit].String(m) + " of"
+			return m.Quantity + UnitMap[m.Unit].String(m) + " of"
 		}
 		if strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0 || m.Quantity == "1" {
-			return m.Quantity + unitMap[m.Unit].String(m)
+			return m.Quantity + UnitMap[m.Unit].String(m)
 		} else {
-			if writeCtx == uSay {
-				return m.Quantity + unitMap[m.Unit].String(m)
+			//if writeCtx == uSay {
+			if global.WriteCtx() == global.USay {
+				return m.Quantity + UnitMap[m.Unit].String(m)
 			} else {
-				return m.Quantity + unitMap[m.Unit].String(m)
+				return m.Quantity + UnitMap[m.Unit].String(m)
 			}
 		}
 	}
@@ -683,7 +641,7 @@ func (m *MeasureT) FormatString() string {
 	if len(m.Num) > 0 {
 		// Num has been written separately earlier
 		if len(m.Unit) > 0 {
-			return unitMap[m.Unit].String(m)
+			return UnitMap[m.Unit].String(m)
 		} else {
 			return m.Num
 		}

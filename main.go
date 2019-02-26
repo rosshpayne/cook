@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cook/global"
+
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -21,6 +23,7 @@ import (
 
 // Session Context - assigned from request and Session table.
 //  also contains state information relevant to current session and not the next session.
+
 type sessCtx struct {
 	newSession bool
 	//path      string // InputEvent.Path
@@ -56,18 +59,18 @@ type sessCtx struct {
 	dynamodbSvc *dynamodb.DynamoDB
 	object      string //container,ingredient,instruction,utensil. Sourced from Sessions table or request
 	//updateAdd      int        // dynamodb Update ADD. Operation dependent
-	gotoRecId        int        // sourced from request
-	objRecId         int        // current record id for object. Object is a ingredient,task,container,utensil.- displayed record id persisted to session after use.
-	recIdNotExists   bool       // determines whether to create []RecId set attribute in Session  table
-	noGetRecRequired bool       // a mutliple record request e.g. ingredients listing
-	mChoice          []mRecipeT // multi-choice select. Recipe name and ingredient searches can result in mutliple records being returned. Results are saved.
+	gotoRecId        int         // sourced from request
+	objRecId         int         // current record id for object. Object is a ingredient,task,container,utensil.- displayed record id persisted to session after use.
+	recIdNotExists   bool        // determines whether to create []RecId set attribute in Session  table
+	noGetRecRequired bool        // a mutliple record request e.g. ingredients listing
+	recipeList       RecipeListT // multi-choice select. Recipe name and ingredient searches can result in mutliple records being returned. Results are saved.
 	//
 	selCtx selectCtxT // select context either recipe or other (i.e. object)
 	selId  int        // value selected by user of index in itemList
 	//selClear bool
 	//
-	showList  bool   // show what ever is in the current list (books, recipes)
-	ingrdList string // output of activity.String() - ingredient listing
+	showList  bool        // show what ever is in the current list (books, recipes)
+	ingrdList IngredientT // output of activity.String() - ingredient listing
 	// vPreMsg        string
 	// dPreMsg        string
 	displayHdr    string // passed to alexa display
@@ -81,10 +84,10 @@ type sessCtx struct {
 	displayData DisplayI
 	//instructions []InstructionT // cached instructions for complete or part based recipe
 	// Recipe Part data
-	eol   int     // sourced from Sessions table
-	peol  int     // End-of-List-for-part
-	part  string  // part index/long name depending on context - if no value then no part is being used eventhough recipe may be have a part defined i.e nopart_ & a part
-	parts []PartT // sourced from Recipe (R-)
+	eol   int    // sourced from Sessions table
+	peol  int    // End-of-List-for-part
+	part  string // part index/long name depending on context - if no value then no part is being used eventhough recipe may be have a part defined i.e nopart_ & a part
+	parts PartS  // sourced from Recipe (R-)
 	// cPart string  // current part being display (long name). All part means complete recipe will be listed.
 	// next  int     // next SortK (recId)
 	// prev  int     // previous SortK (recId) when in part mode as opposed to full recipe mode
@@ -92,10 +95,18 @@ type sessCtx struct {
 	// //
 	back bool // back button pressed on display
 	//
-	dispObjectMenu  bool
-	dispIngredients bool
-	dispContainers  bool
-	dispPartMenu    bool
+	// dispObjectMenu  bool
+	// dispIngredients bool
+	// dispContainers  bool
+	// dispPartMenu    bool
+	showObjMenu bool
+}
+
+func (s *sessCtx) resetDisplay() {
+	s.showObjMenu = false
+	s.parts = nil
+	s.recipeList = nil
+	s.ingrdList = ""
 }
 
 func (s *sessCtx) closeBook() {
@@ -118,12 +129,12 @@ func (s *sessCtx) clearForSearch(lastState *stateRec) {
 	s.indexRecs = nil
 	s.object = ""
 	s.objRecId = 0
-	s.mChoice = nil
+	s.recipeList = nil
 	s.selCtx, s.selId = 0, 0
 	s.ingrdList = ""
 	s.eol, s.peol, s.part, s.parts, s.pid = 0, 0, "", nil, 0
 	s.back = false
-	s.dispObjectMenu, s.dispIngredients, s.dispContainers, s.dispPartMenu = false, false, false, false
+	//s.dispObjectMenu, s.dispIngredients, s.dispContainers, s.dispPartMenu = false, false, false, false
 	if len(lastState.OpenBk) > 0 {
 		s.reqOpenBk = lastState.OpenBk
 		id := strings.Split(lastState.OpenBk, "|")
@@ -131,39 +142,6 @@ func (s *sessCtx) clearForSearch(lastState *stateRec) {
 		s.authors = id[2]
 	}
 }
-
-// // part of session data that is persisted.
-// type InstructionT struct {
-// 	Text   string `json:"Txt"` // all Linked preps combined text into this field
-// 	Verbal string `json:"Vbl"`
-// 	Part   string `json: "Pt"` // part index name
-// 	EOL    int    `json:"EOL"` // End-Of-List. Max Id assigned to each record
-// 	PEOL   int    `json:"PEOL"`
-// 	PID    int    `json:"PID"` // id within a part
-// }
-
-// type InstructionS []InstructionT
-
-// func (i InstructionS) getItem(id int) (*AlexaDialog, string, error) {
-// 	id, alert := i.isValidId(id)
-// 	if len(alert) > 0 {
-// 		return nil, alert, nil
-// 	}
-// 	return i[id], nil
-// }
-
-// func (i InstructionS) isValidId(id int) (id, string) {
-// 	var passErr string
-// 	if id < 1 {
-// 		passErr = "Reached first instruction"
-// 		id = 1
-// 	}
-// 	if id > len(i)-1 {
-// 		passErr = "Reached last instruction"
-// 		id = len(i) - 1
-// 	}
-// 	return id, passErr
-// }
 
 const (
 	// objects to which future requests apply - s.object values
@@ -178,32 +156,16 @@ const (
 type selectCtxT int
 
 const (
-	ctxRecipeMenu selectCtxT = 1
-	ctxObjectMenu            = 2
-	ctxPartMenu              = 3
+	ctxRecipeMenu selectCtxT = iota + 1
+	ctxObjectMenu
+	ctxPartMenu
 )
-
-// type objectT int
-
-// const (
-// 	// objects to which future requests will apply
-// 	objIngredient objectT = iota
-// 	objTask
-// 	objContainer
-// 	objUtensil
-// 	objRecipe // list recipe in book
-// )
 
 const (
 	// user request grouped into three types
-	xx = iota // TODO check this
-	initialiseRequest
+	initialiseRequest = iota + 1
 	objectRequest
 	instructionRequest
-)
-
-const (
-	displayBatchSize_C int = 6
 )
 
 type objectMapT map[string]int
@@ -291,14 +253,15 @@ func (s *sessCtx) orchestrateRequest() error {
 	if s.selId > 0 {
 		// selId is the response from Alexa on the index (ordinal value) of the selected display item
 		fmt.Println("SELCTX is : ", s.selCtx)
+		//s.resetDisplay()
 		switch s.selCtx {
 		case ctxRecipeMenu:
 			// select from: multiple recipes
-			if s.selId > len(s.mChoice) || s.selId < 1 {
+			if s.selId > len(s.recipeList) || s.selId < 1 {
 				s.passErr = "selection is not within range"
 				return nil
 			}
-			p := s.mChoice[s.selId-1]
+			p := s.recipeList[s.selId-1]
 			s.reqRId, s.reqRName, s.reqBkId, s.reqBkName = p.RId, p.RName, p.BkId, p.BkName
 			s.dmsg = fmt.Sprintf(`Now that you have selected [%s] recipe would you like to list ingredients, cooking instructions, utensils or containers or cancel`, s.reqRName)
 			s.vmsg = fmt.Sprintf(`Now that you have selected {%s] recipe would you like to list ingredients, cooking instructions, utensils or containers or cancel`, s.reqRName)
@@ -308,25 +271,31 @@ func (s *sessCtx) orchestrateRequest() error {
 			if err != nil {
 				return err
 			}
+			s.displayData = objMenu
+			s.showObjMenu = true
+			s.recipeList = nil
+
 			s.reset = true
+			fmt.Println("ctxRecipeMenu: about to pushState")
 			_, err = s.pushState()
 			if err != nil {
 				return err
 			}
+
 			return nil
 
 		case ctxObjectMenu:
 			//	select from: list ingredient, list utensils, list containers, start cooking
 			fmt.Println("selId: ", s.selId)
 			if s.selId > len(objectS) {
-				s.setDisplay(lastState)
+				//s.setDisplay(lastState)
 				s.passErr = "selection is not within range"
 				return nil
 			}
 			s.object = objectS[s.selId-1]
 			fmt.Println("object: ", s.object)
-			// clear mChoice which is not necessary in this state. Held in previous state.
-			s.mChoice = nil
+			// clear recipeList which is not necessary in this state. Held in previous state.
+			s.recipeList = nil
 			// object chosen, nothing more to select for the time being
 			//s.selCtx = 0
 			switch s.object {
@@ -335,17 +304,12 @@ func (s *sessCtx) orchestrateRequest() error {
 			case task_:
 				//s.selClear = true //TODO: what if they back at this point we have cleared sel.
 				fmt.Printf("s.parts  %#v [%s] \n", s.parts, s.part)
+				s.showObjMenu = false
 				if len(s.parts) > 0 && len(s.part) == 0 {
-					s.dispPartMenu = true
+					//s.dispPartMenu = true
+					s.displayData = s.parts
+					s.curReqType = 0
 					//
-					// create recipe part menu
-					//
-					menu := make([]mRecipeT, len(s.parts)+1)
-					menu[0] = mRecipeT{Part: CompleteRecipe_}
-					for i, v := range s.parts {
-						menu[i+1] = mRecipeT{Part: v.Title}
-					}
-					s.mChoice = menu
 					_, err = s.pushState()
 					if err != nil {
 						return err
@@ -353,8 +317,11 @@ func (s *sessCtx) orchestrateRequest() error {
 					return nil
 				} else {
 					// go straight to instructions
-					s.part = CompleteRecipe_
-					s.cacheInstructions(s.part)
+					s.displayData, err = s.cacheInstructions()
+
+					if err != nil {
+						return err
+					}
 					//
 					_, err = s.pushState()
 					if err != nil {
@@ -378,23 +345,30 @@ func (s *sessCtx) orchestrateRequest() error {
 					return err
 				}
 				// set unit formating mode
-				writeCtx = uPrint
+				global.Set_WriteCtx(global.UPrint)
 				as, err := s.loadActivities()
 				if err != nil {
 					return err
 				}
 				// generate ingredient listing
-				s.ingrdList = as.String(r)
-				s.dispIngredients = true
+				s.ingrdList = IngredientT(as.String(r))
+				s.displayData = s.ingrdList
 				//
 				s.reset = true
 				_, err = s.pushState()
 				if err != nil {
 					return err
 				}
+				s.curReqType = 0
+				return nil
 
-			case container_:
-				s.dispContainers = true
+			case container_, utensil_:
+				//s.dispContainers = true
+				s.displayData, err = s.loadBaseContainers()
+				if err != nil {
+					return err
+				}
+				s.curReqType = 0
 				_, err = s.pushState()
 				if err != nil {
 					return err
@@ -404,17 +378,24 @@ func (s *sessCtx) orchestrateRequest() error {
 
 		// recipe part menu
 		case ctxPartMenu:
-			if s.selId > len(s.mChoice) || s.selId < 1 {
-				s.setDisplay(lastState)
+			if s.selId > len(s.parts)+1 || s.selId < 1 {
+				//s.setDisplay(lastState)
 				s.passErr = "selection is not within range"
 				return nil
 			}
 			s.part = ""
-			p := s.mChoice[s.selId-1]
-			fmt.Printf("selId  %d   mChoice   %#v\n", s.selId, p)
+			if s.selId == 1 {
+				s.part = CompleteRecipe_
+			} else {
+				s.part = s.parts[s.selId-2].Title
+			}
+			fmt.Printf("selId  %d   recipeList   %#v\n", s.selId, s.part)
 			s.reset = true
-			s.cacheInstructions(p.Part)
-			s.part = p.Part
+			s.displayData, err = s.cacheInstructions(s.part)
+			if err != nil {
+				return err
+			}
+			s.showObjMenu = false
 			//
 			_, err = s.pushState()
 			if err != nil {
@@ -439,7 +420,7 @@ func (s *sessCtx) orchestrateRequest() error {
 			// search only applies to recipes, ie. select context Recipe (ctxRecipeMenu).
 			//s.selCtx = ctxRecipeMenu
 			// we have fully populated session context from previous session e.g. BkName etc, now lets see what recipes we find
-			// populates sessCtx.mChoice if search results in a list.
+			// populates sessCtx.recipeList if search results in a list.
 			fmt.Println("Search.....")
 			fmt.Println("BookId: ", s.reqBkId)
 			s.clearForSearch(lastState)
@@ -455,11 +436,15 @@ func (s *sessCtx) orchestrateRequest() error {
 				return err
 			}
 			s.eol, s.reset, s.object = 0, true, ""
-			if len(s.mChoice) == 0 || len(s.reqRId) > 0 {
+			if len(s.recipeList) == 0 || len(s.reqRId) > 0 {
 				// single recipe found in search. Select context must now reflect object list. Persist value.
 				//s.selCtx = ctxObjectMenu
-				s.dispObjectMenu = true
+				s.displayData = objMenu
+			} else {
+				s.curReqType = 0
+				s.displayData = s.recipeList
 			}
+
 			_, err = s.pushState()
 			if err != nil {
 				return err
@@ -468,8 +453,8 @@ func (s *sessCtx) orchestrateRequest() error {
 		}
 		//TODO: is showList required?
 		if s.showList {
-			if len(s.mChoice) > 0 {
-				for i, v := range s.mChoice {
+			if len(s.recipeList) > 0 {
+				for i, v := range s.recipeList {
 					s.dmsg = s.dmsg + fmt.Sprintf("%d. Recipe [%s] in book [%s] by [%s] quantity %s\n", i+1, v.RName, v.BkName, v.Authors, v.Quantity)
 					s.vmsg = s.dmsg + fmt.Sprintf("%d. Recipe [%s] in book [%s] by [%s] quantity %s\n", i+1, v.RName, v.BkName, v.Authors, v.Quantity)
 				}
@@ -641,38 +626,6 @@ func (s *sessCtx) orchestrateRequest() error {
 	return nil
 }
 
-// func (s *sessCtx) getRecById() error {
-// 	var (
-// 		at  alexaDialog
-// 		err error
-// 	)
-// 	switch s.object {
-// 	case task_:
-// 		at, err = s.getTaskRecById()
-// 	case container_:
-// 		at, err = s.getContainerRecById()
-// 		//case utensils: at, err := s.getNextUtensilRecById()
-// 		//case ingredients: at, err := s.getNextIngrdRecById()
-// 	}
-// 	if err != nil {
-// 		return err
-// 	}
-// 	rec := at.Alexa()
-// 	//
-// 	writeCtx = uSay
-// 	s.vmsg = expandScalableTags(expandLiteralTags(rec.Verbal))
-// 	writeCtx = uDisplay
-// 	s.dmsg = expandScalableTags(expandLiteralTags(rec.Display))
-// 	//
-// 	// save state to dynamo
-// 	//
-// 	err = s.updateState()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
-
 type InputEvent struct {
 	Path                  string            `json:"Path"`
 	Param                 string            `json:"Param"`
@@ -773,7 +726,7 @@ func handler(request InputEvent) (RespEvent, error) {
 		}
 		sessctx.noGetRecRequired, sessctx.reset = true, true
 	//
-	case "load", "print":
+	case "load", "print", "listcontainer":
 		//
 		//   these requests are used for the standalone executable
 		//   print :ingredients" also accessible in the Alexa interaction via screen interaction
@@ -801,8 +754,8 @@ func handler(request InputEvent) (RespEvent, error) {
 				break
 			}
 		case "print":
-			// set unit format mode
-			writeCtx = uPrint
+			//set unit format mode
+			global.Set_WriteCtx(global.UPrint)
 			as, err := sessctx.loadActivities()
 			if err != nil {
 				fmt.Printf("error: %s", err.Error())
@@ -873,13 +826,13 @@ func handler(request InputEvent) (RespEvent, error) {
 		sessctx.curReqType = objectRequest
 		sessctx.request = "next"
 		fmt.Printf("s.parts  %#v\n", sessctx.parts)
-		if sessctx.request == task_ {
-			if len(sessctx.parts) > 0 && len(sessctx.part) == 0 {
-				sessctx.dispPartMenu = true
-				sessctx.noGetRecRequired = true
-			}
-			//s.getInstructions()
-		}
+		// if sessctx.request == task_ {
+		// 	if len(sessctx.parts) > 0 && len(sessctx.part) == 0 {
+		// 		sessctx.dispPartMenu = true
+		// 		sessctx.noGetRecRequired = true
+		// 	}
+		// 	//s.getInstructions()
+		// }
 	case "next", "prev", "goto", "repeat", "modify":
 		sessctx.curReqType = instructionRequest
 		switch sessctx.request {
@@ -906,111 +859,20 @@ func handler(request InputEvent) (RespEvent, error) {
 		}
 	}
 	//
-	// package the response data into RespEvent (an APL aware "display" structure) and return
+	// package the response data RespEvent (an APL aware "display" structure) and return
 	//
-	var (
-		subh string
-		hdr  string
-		resp RespEvent
-	)
-	if sessctx.curReqType == initialiseRequest || sessctx.noGetRecRequired {
-
-		switch {
-
-		case sessctx.dispPartMenu == true:
-			if len(sessctx.passErr) > 0 {
-				hdr = sessctx.passErr
-			} else {
-				hdr = sessctx.reqRName
-				subh = `Recipe is divided into parts. Select first option to follow complete recipe`
-			}
-			mchoice := make([]DisplayItem, len(sessctx.mChoice))
-			for i, v := range sessctx.mChoice {
-				id := strconv.Itoa(i + 1)
-				mchoice[i] = DisplayItem{Id: id, Title: v.Part}
-			}
-			s := sessctx
-			return RespEvent{Type: "Select", Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: mchoice}, nil
-
-		case sessctx.dispIngredients == true:
-			//case sessctx.request == "select" && sessctx.object == ingredient_:
-
-			var ingrdlst []DisplayItem
-			for _, v := range strings.Split(sessctx.ingrdList, "\n") {
-				item := DisplayItem{Title: v}
-				ingrdlst = append(ingrdlst, item)
-			}
-			s := sessctx
-			return RespEvent{Type: "Ingredient", Header: s.reqRName, SubHdr: "Ingredients", List: ingrdlst}, nil
-
-		case sessctx.dispContainers == true:
-			//case sessctx.request == "select" && sessctx.object == container_:
-
-			var mchoice []DisplayItem
-			for _, v := range sessctx.getContainers() {
-				item := DisplayItem{Title: v.Verbal}
-				mchoice = append(mchoice, item)
-			}
-			s := sessctx
-			return RespEvent{Type: "Ingredient", Header: s.reqRName, SubHdr: "Containers", List: mchoice}, nil
-
-		case sessctx.request == "search" && len(sessctx.mChoice) > 0:
-			// display recipes
-			var mchoice []DisplayItem
-			for _, v := range sessctx.mChoice {
-				var item DisplayItem
-				id := strconv.Itoa(v.Id)
-				if len(v.Serves) > 0 {
-					item = DisplayItem{Id: id, Title: v.RName, SubTitle1: "Book: " + v.BkName, SubTitle2: "Serves:  " + v.Serves, Text: v.Quantity}
-				} else {
-					var subTitle2 string
-					if a := strings.Split(v.Authors, ","); len(a) > 1 {
-						subTitle2 = "Authors: " + v.Authors
-					} else {
-						subTitle2 = "Author: " + v.Authors
-					}
-					item = DisplayItem{Id: id, Title: v.RName, SubTitle1: "Book: " + v.BkName, SubTitle2: subTitle2, Text: v.Quantity}
-				}
-				mchoice = append(mchoice, item)
-			}
-			s := sessctx
-			return RespEvent{Type: "Search", Header: "Search results for: " + s.reqSearch, Text: s.vmsg, Verbal: s.dmsg, List: mchoice}, nil
-
-		case sessctx.dispObjectMenu:
-			//case (sessctx.request == "select" || sessctx.request == "search") && len(sessctx.reqRName) > 0:
-
-			if len(sessctx.passErr) > 0 {
-				hdr = sessctx.passErr
-			} else {
-				hdr = sessctx.reqRName
-				subh = "Book:  " + sessctx.reqBkName + "  Authors: " + sessctx.authors
-			}
-			s := sessctx
-			mchoice := make([]DisplayItem, 4)
-			//for i, v := range []string{ingredient_, utensil_, container_, task_} {
-			for i, v := range []string{"List ingredients", "List required containers & untensils", "What are the prep tasks that take more than 5 minutes?", `Let's start cooking...`} {
-				id := strconv.Itoa(i + 1)
-				mchoice[i] = DisplayItem{Id: id, Title: v}
-			}
-			return RespEvent{Type: "Select", Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: mchoice}, nil
-
-		default:
-			//
-			// all other requests simply return data from last session - no display requirements.
-			//
-			return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata}, nil
-		}
-	}
+	var resp RespEvent
 	//
 	s := sessctx
 	resp = s.displayData.GenDisplay(s.objRecId, s)
-	if err != nil {
-		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg, Error: err.Error()}, nil
-	}
 	//
-	err = s.updateState()
-	if err != nil {
-		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg, Error: err.Error()}, nil
+	// update state - to record objRecId value if available.
+	//
+	if _, ok := s.displayData.(InstructionS); ok {
+		err = s.updateState()
+		if err != nil {
+			return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg, Error: err.Error()}, nil
+		}
 	}
 	return resp, nil
 }
@@ -1023,7 +885,7 @@ func main() {
 	// p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + "&srch=" + os.Args[2]}
 	// //
 	// pIngrdScale = 1.0
-	// writeCtx = uDisplay
+	// global.Set_WriteCtx(global.UDisplay)
 	// p, _ := handler(p1)
 	// if len(p.Error) > 0 {
 	// 	fmt.Printf("%#v\n", p.Error)

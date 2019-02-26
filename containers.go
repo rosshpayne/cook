@@ -6,8 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cook/global"
-
 	_ "github.com/aws/aws-sdk-go/aws"
 	_ "github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -17,48 +15,44 @@ import (
 	_ "github.com/aws/aws-lambda-go/lambdacontext"
 )
 
-func (s *sessCtx) loadActivities() (Activities, error) {
-	//
-	// Table:  Activity
-	//
-	kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value("A-"+s.pkey))
-	expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
-	if err != nil {
-		return nil, fmt.Errorf("Error: in getIngredientData Query - %s", err.Error())
-	}
-	input := &dynamodb.QueryInput{
-		KeyConditionExpression:    expr.KeyCondition(),
-		FilterExpression:          expr.Filter(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-	}
-	input = input.SetTableName("Recipe").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
-	//*dynamodb.DynamoDB,
-	result, err := s.dynamodbSvc.Query(input)
-	if err != nil {
-		return nil, fmt.Errorf("Error: in getIngredientData Query - %s", err.Error())
-	}
-	if int(*result.Count) == 0 {
-		return nil, fmt.Errorf("No data found for reqRId %s in getIngredientData for Activity - ", s.pkey)
-	}
-	//ActivityS := make([]Activity, int(*result.Count))
-	ActivityS := make(Activities, int(*result.Count))
-	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &ActivityS)
-	if err != nil {
-		return nil, fmt.Errorf("** Error during UnmarshalListOfMaps in getIngredientData - %s", err.Error())
-	}
-	// link up activities via next,prev pointers
-	for i := 0; i < len(ActivityS)-1; i++ {
-		ActivityS[i].next = &ActivityS[i+1]
-		if i > 0 {
-			ActivityS[i].prev = &ActivityS[i-1]
-		}
-	}
-
-	return ActivityS, nil
+// instance data from dynamo "activity" table
+type Container struct {
+	Cid      string     `json:"SortK"`
+	Type     string     `json:"type"`
+	Purpose  string     `json:"purpose"`
+	Coord    [2]float32 `json:"coord"`
+	Contains string     `json:"contents"`
+	Message  string     `json:"message"`
+	// two instances of this container
+	Label      string     `json:"label"`
+	Measure    *MeasureCT `json:"measure"`
+	AltLabel   string     `json:"altLabel"`
+	AltMeasure *MeasureCT `json:"altMeasure"`
+	// non-dynamo
+	start    int     // first id in recipe tasks where container is used
+	last     int     // last id in recipe tasks where container is sourced from or recipe is complete.
+	reused   int     // links containers that can be the same physical container.
+	Activity []taskT // slice of tasks (Prep and Task activites) associated with container
 }
 
-func (s *sessCtx) loadBaseRecipe() error {
+type ContainerMap map[string]*Container
+
+var ContainerM ContainerMap
+
+type DeviceT struct {
+	Type      string `json:"type"`
+	Set       string `json:"set"`
+	Purpose   string `json:"purpose"`
+	Alternate string `json:"alternate"`
+	Temp      string `json:"temp"`
+	Unit      string `json:"unit"`
+}
+
+type DevicesMap map[string]string
+
+type DeviceMap map[string]DeviceT
+
+func (s *sessCtx) loadBaseContainers() (ContainerS, error) {
 	//
 	// Table:  Activity
 	//
@@ -77,16 +71,16 @@ func (s *sessCtx) loadBaseRecipe() error {
 	//*dynamodb.DynamoDB,
 	result, err := s.dynamodbSvc.Query(input)
 	if err != nil {
-		return fmt.Errorf("Error: in readBaseRecipeForContainers Query - %s", err.Error())
+		return nil, fmt.Errorf("Error: in readBaseRecipeForContainers Query - %s", err.Error())
 	}
 	if int(*result.Count) == 0 {
-		return fmt.Errorf("No data found for reqRId %s in processBaseRecipe for Activity - ", s.pkey)
+		return nil, fmt.Errorf("No data found for reqRId %s in processBaseRecipe for Activity - ", s.pkey)
 	}
 	//ActivityS := make([]Activity, int(*result.Count))
 	ActivityS := make(Activities, int(*result.Count))
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &ActivityS)
 	if err != nil {
-		return fmt.Errorf("** Error during UnmarshalListOfMaps in processBaseRecipe - %s", err.Error())
+		return nil, fmt.Errorf("** Error during UnmarshalListOfMaps in processBaseRecipe - %s", err.Error())
 	}
 	//
 	// link activities together via next, prev, nextTask, nextPrep pointers. Order in ActivityS is sorted from dynamodb sort key.
@@ -256,7 +250,7 @@ func (s *sessCtx) loadBaseRecipe() error {
 	//
 	result, err = s.dynamodbSvc.Query(input)
 	if err != nil {
-		return fmt.Errorf("%s", "Error in Query of container table: "+err.Error())
+		return nil, fmt.Errorf("%s", "Error in Query of container table: "+err.Error())
 	}
 	if int(*result.Count) == 0 {
 		fmt.Println("No container data..")
@@ -266,7 +260,7 @@ func (s *sessCtx) loadBaseRecipe() error {
 	itemc := make([]*Container, int(*result.Count))
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &itemc)
 	if err != nil {
-		return fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
+		return nil, fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
 	}
 	for _, v := range itemc {
 		ContainerM[v.Cid] = v
@@ -291,7 +285,7 @@ func (s *sessCtx) loadBaseRecipe() error {
 	//
 	result, err = s.dynamodbSvc.Query(input)
 	if err != nil {
-		return fmt.Errorf("%s", "Error in Query of container table: "+err.Error())
+		return nil, fmt.Errorf("%s", "Error in Query of container table: "+err.Error())
 	}
 	if int(*result.Count) == 0 {
 		fmt.Println("No container data..")
@@ -301,7 +295,7 @@ func (s *sessCtx) loadBaseRecipe() error {
 	itemc = make([]*Container, int(*result.Count))
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &itemc)
 	if err != nil {
-		return fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
+		return nil, fmt.Errorf("%s", "Error in UnmarshalMap of container table: "+err.Error())
 	}
 	for _, v := range itemc {
 		ContainerSAM[v.Cid] = v
@@ -654,317 +648,15 @@ func (s *sessCtx) loadBaseRecipe() error {
 			}
 		}
 	}
+	//
+	ptS := ActivityS.GenerateTasks("T-"+s.pkey, s.recipe, s)
+	//
+	// populate device map using device type as key. Maintains latest attribute values for DeviceT which
+	// . can be referenced at any point in txt using {device.<deviceType>.<attribute>}
+	//
 	// for k, v := range DeviceM {
 	// 	fmt.Printf("DeviceM  %s %v\n", k, v)
 	// }
-	//
-	doubleSpace := strings.NewReplacer("  ", " ")
-	//
-	const (
-		time int = iota
-		measure
-		device
-		text
-		voice
-	)
-	var (
-		b       strings.Builder // supports io.Write write expanded text/verbal text to this buffer before saving to Task or Verbal fields
-		context int
-		str     string
-		tclose  int
-		topen   int
-		ok      bool
-	)
-	//
-	//  replace all {tag} in text and verbal for each activity. Ignore Link'd activites - they are only relevant at print time
-	//
-	// for _, v := range ActivityS {
-	// 	fmt.Printf("Activity [%d] \n", v.AId)
-	// 	for _, v := range v.Task {
-	// 		fmt.Printf("text: [%s]\n", v.Text)
-	// 	}
-	// }
-	var pt []*PerformT
-	for _, taskType := range []PrepTask{prep, task} {
-		for _, interactionType := range []int{text, voice} {
-			for p := activityStart; p != nil; p = p.next {
-				switch taskType {
-				case prep:
-					pt = p.Prep
-				case task:
-					pt = p.Task
-				}
-				for _, pt := range pt {
-					//fmt.Printf("\nText:   [%s]\n", pt.Text)
-					// perform over slice of preps, tasks
-					switch interactionType {
-					case text:
-						global.Set_WriteCtx(global.UDisplay) // package variable to deterine String() formating
-						str = strings.TrimLeft(pt.Text, " ")
-						s := str[0]
-						str = strings.ToUpper(string(s)) + str[1:]
-					case voice:
-						global.Set_WriteCtx(global.USay) // package variable to deterine String() formating
-						str = pt.Verbal
-						//TODO: why use expandTags here..
-					}
-					// if no {} then print and return to top of the loop
-					t1 := strings.IndexByte(str, '{')
-					if t1 < 0 {
-						b.WriteString(str + " ")
-						switch interactionType {
-						case text:
-							pt.text = doubleSpace.Replace(b.String())
-						case voice:
-							pt.verbal = doubleSpace.Replace(b.String())
-						}
-						b.Reset()
-						continue
-					}
-					for tclose, topen = 0, strings.IndexByte(str, '{'); topen != -1; {
-						var (
-							el  string
-							el2 string
-						)
-						p := p
-						b.WriteString(str[tclose:topen])
-						nextclose := strings.IndexByte(str[topen:], '}')
-						if nextclose == -1 {
-							return fmt.Errorf("Error: closing } not found in Activity [%d] string [%s] ", p.AId, str)
-						}
-						nextopen := strings.IndexByte(str[topen+1:], '{')
-						if nextopen != -1 {
-							if nextclose > nextopen {
-								return fmt.Errorf("Error: closing } not found in Activity [%d] string [%s] ", p.AId, str)
-							}
-						}
-						tclose += strings.IndexByte(str[tclose:], '}')
-						tclose_ := tclose
-						// examine tag to see if it references entities outside of current activity
-						//   currenlty only device oven and noncurrent activity is supported
-						if tdot := strings.IndexByte(str[topen+1:tclose], '.'); tdot > 0 {
-							// dot notation used. Breakdown object being referenced.
-							s := strings.SplitN(strings.ToLower(str[topen+1:tclose]), ".", 2)
-							el, el2 = s[0], s[1]
-							// reference to attribute in noncurrent activity e.g. {ingrd.30}
-							p_ := p
-							if el == "ingrd" {
-								if p, ok = ActivityM[str[topen+1+tdot+1:tclose]]; !ok {
-									return fmt.Errorf("Error: in processBaseRecipe. Reference to non-existent activity in [%d]\n", p_.AId)
-								}
-								tclose_ -= len(str[topen+1+tdot+1:tclose]) + 1
-							}
-						} else {
-							el, el2 = strings.ToLower(str[topen+1:tclose_]), ""
-						}
-						switch el {
-						case "device":
-							s := strings.Split(el2, ".")
-							if ov, ok := DeviceM[strconv.Itoa(pt.id)+"-"+s[0]]; ok {
-								switch s[1] {
-								case "temp":
-									if len(ov.Unit) == 0 {
-										return fmt.Errorf("in processBaseRecipe. No Unit defined for oven temperature for activity [%d, %d]\n", p.AId, pt.id)
-									}
-									fmt.Fprintf(&b, "%s", ov.String())
-								case "set":
-									fmt.Fprintf(&b, "%s", ov.Set)
-								case "alternate":
-									fmt.Fprintf(&b, "%s", ov.Alternate)
-								case "purpose":
-									fmt.Fprintf(&b, "%s", ov.Purpose)
-								}
-							} else {
-								return fmt.Errorf("in processBaseRecipe. No device [%s] found for activity [%d, %d]\n", s[0], p.AId, pt.id)
-							}
-						case "iqual":
-							fmt.Fprintf(&b, "%s", p.IngrdQualifer)
-						case "quali":
-							fmt.Fprintf(&b, "%s", p.QualiferIngrd)
-						case "usec", "addtoc":
-							var c *Container
-
-							if el == "usec" {
-								if len(pt.UseCp) == 0 {
-									panic(fmt.Errorf(`Error: useC not suitable in AId [%d] [%s]`, p.AId, str))
-								}
-								c = pt.UseCp[0]
-							} else {
-								if len(pt.AddToCp) == 0 {
-									panic(fmt.Errorf(`Error: useC not suitable in AId [%d] [%s]`, p.AId, str))
-								}
-								c = pt.AddToCp[0]
-							}
-							// useC.form
-							if len(el2) > 0 {
-								switch el2 {
-								case "form": // depreciated - only alt used now. Still here to support existing
-									b.WriteString(c.String())
-								default:
-									panic(fmt.Errorf(`Error: useC or addtoC tag not followed by "form" or "type" type in AId [%d] [%s]`, p.AId, str))
-								}
-							} else {
-								b.WriteString(c.Label)
-							}
-						case "measure":
-							context = measure
-							// is it the task measure
-							if pt.Measure != nil {
-								//fmt.Fprintf(&b, "%s", pt.Measure.String())
-								m := pt.Measure
-								fmt.Fprintf(&b, "%s", "{"+m.Quantity+"|"+m.Unit+"|"+m.Size+"|"+m.Num+"}")
-								break
-							}
-							// is it the activity measure
-							if p.Measure == nil {
-								return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
-							}
-							m := p.Measure
-							fmt.Fprintf(&b, "%s", "{"+m.Quantity+"|"+m.Unit+"|"+m.Size+"|"+m.Num+"}")
-							//
-							//fmt.Fprintf(&b, "%s", p.Measure.String(formatonly))
-						case "actmeasure", "ameasure":
-							context = measure
-							// is it the task measure
-							if p.Measure != nil {
-								m := p.Measure
-								fmt.Fprintf(&b, "%s", "{"+m.Quantity+"|"+m.Unit+"|"+m.Size+"|"+m.Num+"}")
-								//fmt.Fprintf(&b, "%s", p.Measure.String())
-							}
-						case "qty":
-							context = measure
-							if p.Measure == nil {
-								return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
-							}
-							m := p.Measure
-							fmt.Fprintf(&b, "%s", "{"+m.Quantity+"|||}")
-							//fmt.Fprintf(&b, "%s", p.Measure.String())
-						case "size":
-							if p.Measure == nil {
-								return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
-							}
-							fmt.Fprintf(&b, "%s", p.Measure.Size)
-						case "used":
-							if pt.UseDevice == nil {
-								return fmt.Errorf("in processBaseRecipe. UseDevice attribute not defined for Activity [%d]\n", p.AId)
-							}
-							fmt.Fprintf(&b, "%s", strings.ToLower(pt.UseDevice.Type))
-							context = device
-						case "alternate", "devicealt":
-							if pt.UseDevice == nil {
-								return fmt.Errorf("in processBaseRecipe. UseDevice attribute not defined for Activity [%d]\n", p.AId)
-							}
-							fmt.Fprintf(&b, "%s", strings.ToLower(pt.UseDevice.Alternate))
-							context = device
-						case "qualm":
-							fmt.Fprintf(&b, "%s", strings.ToLower(p.QualMeasure))
-						case "temp":
-							if pt.UseDevice == nil {
-								return fmt.Errorf("in processBaseRecipe. UseDevice attribute not defined for Activity [%d]\n", p.AId)
-							}
-							context = device
-							fmt.Fprintf(&b, "%s", pt.UseDevice.String())
-						case "label", "alabel":
-							fmt.Fprintf(&b, "%s", p.Label)
-						case "tlabel":
-							fmt.Fprintf(&b, "%s", pt.Label)
-						case "unit":
-							var (
-								u      *Unit
-								plural bool
-							)
-							switch context {
-							case measure:
-								if p.Measure == nil {
-									return fmt.Errorf("in processBaseRecipe. Measure not defined for Activity [%d]\n", p.AId)
-								}
-								m := p.Measure
-								if !(strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0 || m.Quantity == "1") {
-									plural = true
-								}
-								if len(p.Measure.Unit) == 0 {
-									return fmt.Errorf("in processBaseRecipe. Unit for time, [%s], not defined for Measure in Activity [%d]\n", pt.Unit, p.AId)
-								}
-								if u, ok = UnitMap[p.Measure.Unit]; !ok {
-									return fmt.Errorf("in processBaseRecipe. Unit for measure, [%s], not defined in unitM for Activity [%d]\n", p.Measure.Unit, p.AId)
-								}
-							case time:
-								if pt.Time > 0 {
-									plural = true
-								}
-								if len(pt.Unit) > 0 && len(pt.Unit) == 1 {
-									return fmt.Errorf("in processBaseRecipe. Unit for time, [%s], not defined for Activity [%d]\n", pt.Unit, p.AId)
-								}
-								if len(pt.Unit) > 0 {
-									if u, ok = UnitMap[pt.Unit]; !ok {
-										return fmt.Errorf("in processBaseRecipe. Unit for time, [%s], not defined in unitM for Activity [%d]\n", pt.Unit, p.AId)
-									}
-								}
-							}
-							if context == device {
-								// ignore device as unit now printed with temp tag.
-								break
-							}
-							if plural && interactionType == voice && u.Say == "l" {
-								fmt.Fprintf(&b, "%s", u.String()+"s")
-							} else {
-								fmt.Fprintf(&b, "%s", u.String())
-							}
-						case "ingrd":
-							fmt.Fprintf(&b, "%s", strings.ToLower(p.Ingredient))
-						case "altingrd":
-							fmt.Fprintf(&b, "%s", strings.ToLower(p.AltIngrd))
-						case "ingrd_": // make singular if plural
-							if strings.ToLower(p.Ingredient[:len(p.Ingredient)-1]) == "s" {
-								fmt.Fprintf(&b, "%s", strings.ToLower(p.Ingredient[:len(p.Ingredient)-1]))
-							} else {
-								fmt.Fprintf(&b, "%s", strings.ToLower(p.Ingredient))
-							}
-						case "timeu":
-							fmt.Fprintf(&b, "%2.0f%s", pt.Time, UnitMap[pt.Unit].String(pt))
-						case "time":
-							context = time
-							fmt.Fprintf(&b, "%2.0f", pt.Time)
-						case "tplus":
-							{
-								context = time
-								fmt.Fprintf(&b, "%2.0f", pt.Tplus+pt.Time)
-							}
-						}
-						tclose += 1
-						topen = strings.IndexByte(str[tclose:], '{')
-						if topen == -1 {
-							b.WriteString(str[tclose:])
-						} else {
-							topen += tclose
-						}
-					}
-					if topen == -1 && strings.IndexByte(str[tclose:], '}') != -1 {
-						return fmt.Errorf("Error: closing } found with no open { in Activity [%d] string [%s] ", p.AId, str)
-					}
-					switch interactionType {
-					case text:
-						pt.text = doubleSpace.Replace(b.String())
-						b.Reset()
-					case voice:
-						pt.verbal = doubleSpace.Replace(b.String())
-						b.Reset()
-					}
-				}
-			}
-		}
-	}
-	//
-	//  Generate and save metadata from base Activities to Dyanmodb
-	//
-	ptS, err := ActivityS.generateAndSaveTasks(s)
-	if err != nil {
-		return fmt.Errorf("Error in generateAndSaveTasks in processBaseRecipe - %s", err.Error())
-	}
-	err = s.generateAndSaveIndex(LabelM, IngredientM)
-	if err != nil {
-		return fmt.Errorf("Error in generateAndSaveIndex in processBaseRecipe  - %s", err.Error())
-	}
 	//
 	// Post processing of Containers
 	//
@@ -1008,10 +700,8 @@ func (s *sessCtx) loadBaseRecipe() error {
 		}
 	}
 	//
-	err = ContainerM.saveContainerUsage(s)
-	if err != nil {
-		return fmt.Errorf("Error in readBaseRecipe after saveContainerUsage - %s", err.Error())
-	}
+	ctS := ContainerM.generateContainerUsage(s.dynamodbSvc)
+	//
 	DevicesM := make(DevicesMap)
 	for p := activityStart; p != nil; p = p.next {
 		for _, pp := range p.Prep {
@@ -1021,7 +711,7 @@ func (s *sessCtx) loadBaseRecipe() error {
 					var str string
 
 					pp := pp.UseDevice
-					str = pp.String()
+					//str = pp.String()
 					if len(pp.Purpose) > 0 {
 						str += pp.Purpose
 					}
@@ -1032,13 +722,14 @@ func (s *sessCtx) loadBaseRecipe() error {
 				}
 			}
 		}
+		fmt.Printf("XXX %#v\n", DevicesM)
 		for _, pp := range p.Task {
 			if pp.UseDevice != nil {
 				typ := strings.ToLower(pp.UseDevice.Type)
 				if _, ok := DevicesM[typ]; !ok {
 					var str string
 					pp := pp.UseDevice
-					str = pp.String()
+					//	str = pp.String()
 					if len(pp.Purpose) > 0 {
 						str += pp.Purpose
 					}
@@ -1050,11 +741,18 @@ func (s *sessCtx) loadBaseRecipe() error {
 			}
 		}
 	}
-	err = DevicesM.saveDevices(s)
-	if err != nil {
-		return fmt.Errorf("Error in readBaseRecipe after saveDevice - %s", err.Error())
+	fmt.Println("objRecId: ", s.objRecId)
+	ctS = append(ctS, "\n")
+	ctS = append(ctS, "Utensils:")
+	ctS = append(ctS, "\n")
+	//
+	for k, _ := range DevicesM {
+		//r := &Pkey{PKey: "D-" + s.pkey, SortK: row, Device: k, Comment: v}
+		ctS = append(ctS, " "+k)
 	}
-
-	return nil
+	for _, v := range ctS {
+		fmt.Printf("%s\n", v)
+	}
+	return ctS, nil
 
 } //
