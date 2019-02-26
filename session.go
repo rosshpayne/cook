@@ -259,7 +259,7 @@ func (s *sessCtx) setState(ls *stateRec) {
 		}
 	}
 	s.showObjMenu = ls.ShowObjMenu
-	if s.showObjMenu && len(ls.Ingredients) == 0 {
+	if s.showObjMenu && len(ls.Ingredients) == 0 && len(ls.RecipeList) == 0 {
 		fmt.Println("in setSession: displaying object menu is set")
 		s.displayData = objMenu
 	}
@@ -342,6 +342,7 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 	//
 	State := make(stateStack, 1)
 	State[0] = sr
+	// add to session context state
 	s.state = append(s.state, sr)
 	//
 	t := time.Now()

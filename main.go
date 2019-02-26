@@ -355,11 +355,13 @@ func (s *sessCtx) orchestrateRequest() error {
 				s.displayData = s.ingrdList
 				//
 				s.reset = true
+				s.showObjMenu = false
+				s.curReqType = 0
+
 				_, err = s.pushState()
 				if err != nil {
 					return err
 				}
-				s.curReqType = 0
 				return nil
 
 			case container_, utensil_:
@@ -368,7 +370,9 @@ func (s *sessCtx) orchestrateRequest() error {
 				if err != nil {
 					return err
 				}
+				s.showObjMenu = false
 				s.curReqType = 0
+
 				_, err = s.pushState()
 				if err != nil {
 					return err
@@ -436,10 +440,12 @@ func (s *sessCtx) orchestrateRequest() error {
 				return err
 			}
 			s.eol, s.reset, s.object = 0, true, ""
+			s.showObjMenu = false
 			if len(s.recipeList) == 0 || len(s.reqRId) > 0 {
 				// single recipe found in search. Select context must now reflect object list. Persist value.
 				//s.selCtx = ctxObjectMenu
 				s.displayData = objMenu
+				s.showObjMenu = true
 			} else {
 				s.curReqType = 0
 				s.displayData = s.recipeList

@@ -8,6 +8,8 @@ import (
 	"strings"
 	_ "time"
 
+	"github.com/cook/global"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	_ "github.com/aws/aws-sdk-go/aws/credentials"
@@ -112,7 +114,7 @@ func (a ContainerMap) saveContainerUsage(s *sessCtx) error {
 	return nil
 }
 
-func (s *sessCtx) cacheInstructions(part string) error {
+func (s *sessCtx) cacheInstructions(part_ ...string) (InstructionS, error) {
 
 	pKey := "T-" + s.pkey
 	keyC := expression.KeyEqual(expression.Key("PKey"), expression.Value(pKey))
@@ -135,57 +137,62 @@ func (s *sessCtx) cacheInstructions(part string) error {
 	result, err := s.dynamodbSvc.Query(input)
 	if err != nil {
 		//return taskRecT{}, fmt.Errorf("Error in Query of Tasks: " + err.Error())
-		return err
+		return nil, err
 	}
 	if int(*result.Count) == 0 { //TODO - put this code back so it makes sense
 		// this is caused by a goto operation exceeding EOL
-		return fmt.Errorf("Error: %s [%s] ", "Internal error: no instructions found for recipe ", s.reqRName)
+		return nil, fmt.Errorf("Error: %s [%s] ", "Internal error: no instructions found for recipe ", s.reqRName)
 	}
 	ptR := make([]taskRecT, len(result.Items))
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &ptR)
 	if err != nil {
-		return fmt.Errorf("Error: %s - %s", "in UnmarshalMap in cacheInstructions ", err.Error())
+		return nil, fmt.Errorf("Error: %s - %s", "in UnmarshalMap in cacheInstructions ", err.Error())
 	}
 	fmt.Printf(" cacheInstructions len() %d\n ", len(ptR))
 	//
 	// find start instruction. For complete it will be based on SortK
 	//
+	var part string
+	if len(part_) == 0 {
+		part = CompleteRecipe_
+	} else {
+		part = part_[0]
+	}
 	fmt.Printf("in cacheInstruction:  part [%s] \n", part)
+	var instructs InstructionS
 	switch part {
 	case CompleteRecipe_:
-		instructs := make(InstructionS, len(ptR)+1) // Instructions start at index 1.
+		instructs = make(InstructionS, len(ptR)+1) // Instructions start at index 1.
 		for i, v := range ptR {
-			writeCtx = uSay
+			global.Set_WriteCtx(global.USay)
 			vmsg := expandScalableTags(expandLiteralTags(v.Verbal))
-			writeCtx = uDisplay
+			global.Set_WriteCtx(global.UDisplay)
 			dmsg := expandScalableTags(expandLiteralTags(v.Text))
 			instructs[i+1] = InstructionT{Text: dmsg, Verbal: vmsg, Part: v.Part, EOL: v.EOL, PEOL: v.PEOL, PID: v.PId}
 		}
-		s.displayData = instructs
 	default:
 		// find instructions associated with the part
 		for _, v := range s.parts {
 			if v.Title == part {
 				start := v.Start
-				instructs := make(InstructionS, 1)
+				instructs = make(InstructionS, 1)
 				instructs[0] = InstructionT{} // blank instruction at index 0, so Instructions start at index 1.
 				for id := start; id != -1; id = ptR[id-1].Next {
 					// ptR.Next points to SortK in table - which starts at 1
 					i := id - 1
-					writeCtx = uSay
+					global.Set_WriteCtx(global.USay)
 					vmsg := expandScalableTags(expandLiteralTags(ptR[i].Verbal))
-					writeCtx = uDisplay
+					global.Set_WriteCtx(global.UDisplay)
 					dmsg := expandScalableTags(expandLiteralTags(ptR[i].Text))
 					instruct := InstructionT{Text: dmsg, Verbal: vmsg, Part: ptR[i].Part, EOL: ptR[i].EOL, PEOL: ptR[i].PEOL, PID: ptR[i].PId}
 					instructs = append(instructs, instruct)
 				}
-				s.displayData = instructs
 				break
 			}
 		}
 	}
 	//
-	return nil
+	return instructs, nil
 }
 
 type containerT struct {
@@ -305,7 +312,7 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 	var indexRecS []indexRecipeT
 	indexRow := make(map[string]bool)
 	// any string() methods will be writing for the display
-	writeCtx = uDisplay
+	global.Set_WriteCtx(global.UDisplay)
 
 	saveIngdIndex := func() error {
 		for _, v := range indexRecS {
@@ -657,8 +664,8 @@ func (s *sessCtx) keywordSearch() error {
 		allBooks bool
 		err      error
 	)
-	// zero mChoice list
-	s.mChoice = nil
+	// zero recipeList list
+	s.recipeList = nil
 	//
 	fmt.Println("^^^^^^^^^^ entered keywordSearch ^^^^^^^^^^^^")
 	if len(s.reqBkId) > 0 {
@@ -739,7 +746,7 @@ func (s *sessCtx) keywordSearch() error {
 				sortk := strings.Split(v.SortK, "-")
 				s.ddata += strconv.Itoa(i+1) + ": " + v.BkName + " by " + v.Authors + ". Quantity: " + v.Quantity + "\n "
 				rec := mRecipeT{Id: i + 1, IngrdCat: v.PKey, RName: v.RName, RId: sortk[1], BkName: v.BkName, BkId: sortk[0], Authors: v.Authors, Quantity: v.Quantity, Serves: v.Serves}
-				s.mChoice = append(s.mChoice, rec)
+				s.recipeList = append(s.recipeList, rec)
 			}
 		}
 		return nil
@@ -766,7 +773,7 @@ func (s *sessCtx) keywordSearch() error {
 			sortk := strings.Split(v.SortK, "-")
 			s.ddata += strconv.Itoa(i+1) + ": " + v.BkName + " by " + v.Authors + ". Quantity: " + v.Quantity + "\n"
 			rec := mRecipeT{Id: i + 1, RName: v.RName, RId: sortk[1], BkName: v.BkName, BkId: sortk[0], Authors: v.Authors, Quantity: v.Quantity, Serves: v.Serves}
-			s.mChoice = append(s.mChoice, rec)
+			s.recipeList = append(s.recipeList, rec)
 		}
 	}
 	return nil
@@ -942,7 +949,7 @@ func (s *sessCtx) recipeNameSearch() error {
 			err = s.bookNameLookup()
 			s.ddata += strconv.Itoa(i+1) + ". " + s.reqRName + " in " + s.reqBkName + " by " + s.authors + "\n"
 			rec := mRecipeT{Id: i + 1, RName: s.reqRName, RId: s.reqRId, BkName: s.reqBkName, BkId: s.reqBkId, Authors: s.authors, Serves: s.serves}
-			s.mChoice = append(s.mChoice, rec)
+			s.recipeList = append(s.recipeList, rec)
 		}
 		// clear session context because mutli records means no-one record is active until user selects one.
 		s.reqBkId, s.reqRName, s.reqBkName, s.reqRId, s.authors, s.serves = "", "", "", "", "", ""
