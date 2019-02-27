@@ -33,15 +33,15 @@ type sessCtx struct {
 	lastState *stateRec // state attribute from state dynamo item - contains state history
 	passErr   string
 	//
-	sessionId  string // sourced from request. Used as PKey to Sessions table
-	reqOpenBk  string // BkId|BkName|authors
-	reqRName   string // requested recipe name - query param of recipe request
-	reqBkName  string // requested book name - query param
-	reqRId     string // Recipe Id - 0 means no recipe id has been assigned.  All RId's start at 1.
-	reqBkId    string
-	reqSearch  string // keyword search value
-	reqVersion string // version id, starts at 0 which is blank??
-	//reqSearch   string   // search value
+	sessionId   string // sourced from request. Used as PKey to Sessions table
+	reqOpenBk   BookT  // BkId|BkName|authors
+	reqRName    string // requested recipe name - query param of recipe request
+	reqBkName   string // requested book name - query param
+	CloseBkName string
+	reqRId      string // Recipe Id - 0 means no recipe id has been assigned.  All RId's start at 1.
+	reqBkId     string
+	reqVersion  string   // version id, starts at 0 which is blank??
+	reqSearch   string   // search value
 	recId       [4]int   // record id for each object (ingredient, container, utensils, containers). No display will use verbal for all object listings.
 	pkey        string   // primary key
 	recipe      *RecipeT //  record from dynamo recipe query
@@ -111,14 +111,17 @@ func (s *sessCtx) resetDisplay() {
 
 func (s *sessCtx) closeBook() {
 	s.reqOpenBk = ""
+	s.CloseBkName = s.reqBkName
 	s.reqBkId, s.reqBkName, s.reqRId, s.reqRName = "", "", "", ""
 	s.reqOpenBk, s.authorS, s.authors = "", nil, ""
 	s.eol, s.peol = 0, 0
+	s.displayData = s.reqOpenBk
 }
 
 func (s *sessCtx) openBook() {
-	s.reqOpenBk = s.reqBkId + "|" + s.reqBkName + "|" + s.authors
+	s.reqOpenBk = BookT(s.reqBkId + "|" + s.reqBkName + "|" + s.authors)
 	s.eol, s.peol = 0, 0
+	s.displayData = s.reqOpenBk
 }
 
 func (s *sessCtx) clearForSearch(lastState *stateRec) {
@@ -137,7 +140,7 @@ func (s *sessCtx) clearForSearch(lastState *stateRec) {
 	//s.dispObjectMenu, s.dispIngredients, s.dispContainers, s.dispPartMenu = false, false, false, false
 	if len(lastState.OpenBk) > 0 {
 		s.reqOpenBk = lastState.OpenBk
-		id := strings.Split(lastState.OpenBk, "|")
+		id := strings.Split(string(lastState.OpenBk), "|")
 		s.reqBkId, s.reqBkName = id[0], id[1]
 		s.authors = id[2]
 	}
@@ -240,7 +243,7 @@ func (s *sessCtx) orchestrateRequest() error {
 		if len(s.dmsg) == 0 {
 			s.dmsg = lastState.Dmsg
 		}
-		//s.noGetRecRequired = true
+		//
 		_, err = s.pushState()
 		if err != nil {
 			return err
@@ -428,13 +431,10 @@ func (s *sessCtx) orchestrateRequest() error {
 			fmt.Println("Search.....")
 			fmt.Println("BookId: ", s.reqBkId)
 			s.clearForSearch(lastState)
+			// null recipeList for cases where search is conducted from recipe list display
+			s.recipeList = nil
 			fmt.Println("**** just cleared state . ***** now pushState")
-			// _, err = s.pushState()
-			// if err != nil {
-			// 	return err
-			// }
-			//
-			fmt.Println("..about to call keywordSearch")
+			fmt.Printf("..about to call keywordSearch with [%s]\n", s.reqSearch)
 			err := s.keywordSearch()
 			if err != nil {
 				return err
@@ -446,11 +446,13 @@ func (s *sessCtx) orchestrateRequest() error {
 				//s.selCtx = ctxObjectMenu
 				s.displayData = objMenu
 				s.showObjMenu = true
+				fmt.Printf("recipe found [%s]\n", s.reqRName)
 			} else {
 				s.curReqType = 0
 				s.displayData = s.recipeList
+				fmt.Printf("recipe List found [%#v]\n", s.recipeList)
 			}
-
+			fmt.Println("Now pushState")
 			_, err = s.pushState()
 			if err != nil {
 				return err
@@ -465,7 +467,7 @@ func (s *sessCtx) orchestrateRequest() error {
 					s.vmsg = s.dmsg + fmt.Sprintf("%d. Recipe [%s] in book [%s] by [%s] quantity %s\n", i+1, v.RName, v.BkName, v.Authors, v.Quantity)
 				}
 			}
-			s.noGetRecRequired = true
+
 			return nil
 		}
 		if s.request == "book/close" {
@@ -480,9 +482,9 @@ func (s *sessCtx) orchestrateRequest() error {
 					s.vmsg = `There is no book open to close.`
 				default:
 					//
-					s.closeBook()
 					s.dmsg = s.reqBkName + ` is now closed. Any searches will be across all books`
 					s.vmsg = s.reqBkName + ` is now closed. Any searches will be across all books`
+					s.closeBook()
 				}
 			}
 			s.eol = 0
@@ -505,7 +507,7 @@ func (s *sessCtx) orchestrateRequest() error {
 						// no active recipe
 						s.dmsg = `Book is already open. Please request a recipe from the book or say "list" and I will print the recipe names to the display.`
 						s.vmsg = `Book is already open. Please request a recipe from the book or say "list" and I will print the recipe names to the display.`
-						s.noGetRecRequired = true
+
 					} else if s.eol != s.recId[objectMap[s.object]] {
 						s.dmsg = `You are actively browsing recipe ` + lastState.RName + ".Do you still want to open this book?"
 						s.vmsg = `You are actively browsing recipe ` + lastState.RName + ".Do you still want to open this book?"
@@ -516,7 +518,7 @@ func (s *sessCtx) orchestrateRequest() error {
 						s.dmsg = "Opened " + s.reqBkName + " by " + s.authors + ". "
 						s.vmsg = "Opened " + s.reqBkName + " by " + s.authors + ". "
 						s.openBook()
-						s.noGetRecRequired = true
+
 					} else if s.eol != s.recId[objectMap[s.object]] {
 						s.dmsg = `You are actively browsing recipe ` + lastState.RName + " from book, " + lastState.BkName + ". Do you still want to open this book?"
 						s.vmsg = `You are actively browsing recipe ` + lastState.RName + " from book, " + lastState.BkName + ". Do you still want to open this book?"
@@ -553,14 +555,14 @@ func (s *sessCtx) orchestrateRequest() error {
 	if s.curReqType == instructionRequest && len(lastState.RId) == 0 || s.curReqType == objectRequest && len(lastState.RId) == 0 {
 		s.dmsg = `You have not specified a recipe yet. Please say "recipe" followed by it\'s name`
 		s.vmsg = `You have not specified a recipe yet. Please say "recipe" followed by it\'s name`
-		s.noGetRecRequired = true
+
 		return nil
 	}
 	//  if listing (next,prev,repeat,goto - curReqType object, listing) without object (container,ingredient,task,utensil) -
 	if s.curReqType == instructionRequest && len(s.object) == 0 {
 		s.dmsg = `You need to say what you want to list. Please say either "ingredients","start cooking","containers" or "utensils". Not hard really..`
 		s.vmsg = `You need to say what you want to list. Please say either "ingredients","start cooking","containers" or "utensils". Not hard really..`
-		s.noGetRecRequired = true
+
 		return nil
 	}
 	//  if listing and not finished and object request changes object. Accept and zero or repeat last RecId for requested object.
@@ -605,7 +607,7 @@ func (s *sessCtx) orchestrateRequest() error {
 		// return - no need to pushState as nothing has changed.  Select current recId.
 		s.objRecId = s.recId[objectMap[s.object]]
 		s.dmsg, s.vmsg, s.ddata = lastState.Dmsg, lastState.Vmsg, lastState.DData
-		s.noGetRecRequired = true
+
 		return nil
 	case "prev":
 		if len(s.object) == 0 {
@@ -871,8 +873,6 @@ func handler(request InputEvent) (RespEvent, error) {
 	//
 	s := sessctx
 	resp = s.displayData.GenDisplay(s.objRecId, s)
-	//
-	// update state - to record objRecId value if available.
 	//
 	if _, ok := s.displayData.(InstructionS); ok {
 		err = s.updateState()

@@ -29,7 +29,7 @@ type stateRec struct {
 	BkId    string // Book Id
 	BkName  string // Book name - saves a lookup under some circumstances
 	RName   string // Recipe name - saves a lookup under some circumstances
-	OpenBk  string // requested open book (nill if book closed or no open book requested)
+	OpenBk  BookT  // requested open book (nill if book closed or no open book requested) <bkname>|<author,author..>
 	Serves  string
 	SwpBkNm string
 	SwpBkId string
@@ -171,7 +171,7 @@ func (s *sessCtx) setState(ls *stateRec) {
 	//
 	if len(s.reqOpenBk) == 0 && len(ls.OpenBk) > 0 {
 		s.reqOpenBk = ls.OpenBk
-		id := strings.Split(ls.OpenBk, "|")
+		id := strings.Split(string(ls.OpenBk), "|")
 		s.reqBkId, s.reqBkName = id[0], id[1]
 		s.authors = id[2]
 		fmt.Println("set BookId: ", s.reqBkId, " from ls.OpenBk")
@@ -228,12 +228,15 @@ func (s *sessCtx) setState(ls *stateRec) {
 		switch {
 		case ls.SelCtx == 0 && len(s.reqRName) == 0 && (ls.Request == "search" || ls.Request == "recipe"):
 			s.selCtx = ctxRecipeMenu
-			s.displayData = objMenu
+			fmt.Println("in SetState: selCtx = ctxRecipeMenu")
+			//s.displayData = objMenu
 			//s.dispObjectMenu = true
 		case ls.SelCtx == 0 || (ls.SelCtx == ctxRecipeMenu && len(s.reqRName) > 0):
 			s.selCtx = ctxObjectMenu
+			fmt.Println("in SetState: selCtx = ctxRecipeMenu")
 		case s.request == "select" && len(ls.Parts) > 0 && len(ls.Part) == 0:
 			s.selCtx = ctxPartMenu
+			fmt.Println("in SetState: selCtx = ctxPartMenu")
 		}
 	}
 	//
@@ -563,7 +566,7 @@ func (s *sessCtx) popState() error {
 	s.authors = sr.Authors
 	//
 	if len(sr.OpenBk) > 0 {
-		bk := strings.Split(sr.OpenBk, "|")
+		bk := strings.Split(string(sr.OpenBk), "|")
 		s.reqBkId, s.reqBkName, s.authors = bk[0], bk[1], bk[3]
 		s.authorS = strings.Split(s.authors, ",")
 	}
@@ -597,6 +600,9 @@ func (s *sessCtx) popState() error {
 	// s.dispContainers = sr.DispContainers
 	// s.dispPartMenu = sr.DispPartMenu
 	//
+	fmt.Printf("Popstate: parts %#v\n", s.parts)
+	fmt.Printf("Popstate: sr.showOBjMenu %#v\n", sr.ShowObjMenu)
+	fmt.Printf("Popstate: sr.RecipeList %#v\n", sr.RecipeList)
 	s.displayData = s.parts
 	if len(sr.InstructionData) > 0 {
 		s.displayData = sr.InstructionData
@@ -608,6 +614,7 @@ func (s *sessCtx) popState() error {
 		s.displayData = sr.RecipeList
 	}
 	if sr.ShowObjMenu {
+		fmt.Println("In popState: showObjMenu true")
 		s.displayData = objMenu
 		//		s.showObjMenu = sr.ShowObjMenu
 	}

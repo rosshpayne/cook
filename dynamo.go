@@ -665,7 +665,6 @@ func (s *sessCtx) keywordSearch() error {
 		err      error
 	)
 	// zero recipeList list
-	s.recipeList = nil
 	//
 	fmt.Println("^^^^^^^^^^ entered keywordSearch ^^^^^^^^^^^^")
 	if len(s.reqBkId) > 0 {
@@ -942,6 +941,7 @@ func (s *sessCtx) recipeNameSearch() error {
 		//s.makeSelect = true
 		s.dmsg = `Recipe appears in more than one book. Please make a selection from the list below. Say "select number\n" `
 		s.vmsg = `the recipe appears in more than one book. I will recite the first 6. Please say "next" to hear each one and "select" to choose or "cancel" to exit\n" `
+		s.recipeList = nil
 		for i := 0; i < len(recS); i++ {
 			s.reqBkId = recS[i].PKey[2:] // trim prefix "R-"
 			s.reqRId = strconv.Itoa(recS[i].SortK)

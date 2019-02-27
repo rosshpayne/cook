@@ -23,6 +23,8 @@ type PartT struct {
 }
 type PartS []PartT
 
+type BookT string
+
 // part of session data that is persisted.
 type InstructionT struct {
 	Text   string `json:"Txt"` // all Linked preps combined text into this field
@@ -232,4 +234,24 @@ func (o ObjMenuT) GenDisplay(id int, s *sessCtx) RespEvent {
 		list[i] = DisplayItem{Id: id, Title: v}
 	}
 	return RespEvent{Type: "Select", Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: list}
+}
+
+func (b BookT) GenDisplay(x int, s *sessCtx) RespEvent {
+	var (
+		hdr  string
+		subh string
+	)
+
+	if len(b) > 0 {
+		id := strings.Split(string(b), "|")
+		_, BkName := id[0], id[1]
+		authors := id[2]
+		hdr = "Opened book " + BkName + "  by " + authors
+		subh = "All searches will be restricted to this book until it is closed"
+	} else {
+		hdr = s.CloseBkName + " closed."
+		subh = "Future searches will be across all books"
+	}
+
+	return RespEvent{Type: "header", Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: nil}
 }
