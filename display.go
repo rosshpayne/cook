@@ -195,12 +195,19 @@ func (i IngredientT) GenDisplay(id int, s *sessCtx) RespEvent {
 
 func (r RecipeListT) GenDisplay(id int, s *sessCtx) RespEvent {
 	// display recipes
-	var list []DisplayItem
+	var (
+		list []DisplayItem
+		op   string
+	)
+	if len(s.reqOpenBk) > 0 {
+		op = "Opened "
+	}
 	for _, v := range r {
 		var item DisplayItem
 		id := strconv.Itoa(v.Id)
+
 		if len(v.Serves) > 0 {
-			item = DisplayItem{Id: id, Title: v.RName, SubTitle1: "Book: " + v.BkName, SubTitle2: "Serves:  " + v.Serves, Text: v.Quantity}
+			item = DisplayItem{Id: id, Title: v.RName, SubTitle1: op + "Book: " + v.BkName, SubTitle2: "Serves:  " + v.Serves, Text: v.Quantity}
 		} else {
 			var subTitle2 string
 			if a := strings.Split(v.Authors, ","); len(a) > 1 {
@@ -208,7 +215,7 @@ func (r RecipeListT) GenDisplay(id int, s *sessCtx) RespEvent {
 			} else {
 				subTitle2 = "Author: " + v.Authors
 			}
-			item = DisplayItem{Id: id, Title: v.RName, SubTitle1: "Book: " + v.BkName, SubTitle2: subTitle2, Text: v.Quantity}
+			item = DisplayItem{Id: id, Title: v.RName, SubTitle1: op + "Book: " + v.BkName, SubTitle2: subTitle2, Text: v.Quantity}
 		}
 		list = append(list, item)
 	}
@@ -220,12 +227,16 @@ func (o ObjMenuT) GenDisplay(id int, s *sessCtx) RespEvent {
 	var (
 		hdr  string
 		subh string
+		op   string
 	)
 	if len(s.passErr) > 0 {
 		hdr = s.passErr
 	} else {
+		if len(s.reqOpenBk) > 0 {
+			op = "Opened "
+		}
 		hdr = s.reqRName
-		subh = "Book:  " + s.reqBkName + "  Authors: " + s.authors
+		subh = op + "Book:  " + s.reqBkName + "  Authors: " + s.authors
 	}
 	list := make([]DisplayItem, 4)
 	//for i, v := range []string{ingredient_, utensil_, container_, task_} {

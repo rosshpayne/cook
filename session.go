@@ -167,7 +167,7 @@ func (s *sessCtx) setState(ls *stateRec) {
 		s.reqVersion = ls.Ver
 	}
 	//
-	// opened book
+	// open book
 	//
 	if len(s.reqOpenBk) == 0 && len(ls.OpenBk) > 0 {
 		s.reqOpenBk = ls.OpenBk
@@ -567,8 +567,10 @@ func (s *sessCtx) popState() error {
 	//
 	if len(sr.OpenBk) > 0 {
 		bk := strings.Split(string(sr.OpenBk), "|")
-		s.reqBkId, s.reqBkName, s.authors = bk[0], bk[1], bk[3]
+		fmt.Printf("open bk %#v\n", bk)
+		s.reqBkId, s.reqBkName, s.authors = bk[0], bk[1], bk[2]
 		s.authorS = strings.Split(s.authors, ",")
+		s.reqOpenBk = sr.OpenBk
 	}
 	//
 	s.ingrdList = sr.Ingredients
@@ -617,6 +619,13 @@ func (s *sessCtx) popState() error {
 		fmt.Println("In popState: showObjMenu true")
 		s.displayData = objMenu
 		//		s.showObjMenu = sr.ShowObjMenu
+	}
+	if sr.Request == "book" && len(sr.OpenBk) > 0 {
+		s.displayData = s.reqOpenBk
+	}
+	return nil
+	if sr.Request == "book/close" && len(sr.OpenBk) > 0 {
+		s.displayData = s.reqOpenBk
 	}
 	return nil
 }

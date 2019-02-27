@@ -102,13 +102,6 @@ type sessCtx struct {
 	showObjMenu bool
 }
 
-func (s *sessCtx) resetDisplay() {
-	s.showObjMenu = false
-	s.parts = nil
-	s.recipeList = nil
-	s.ingrdList = ""
-}
-
 func (s *sessCtx) closeBook() {
 	s.reqOpenBk = ""
 	s.CloseBkName = s.reqBkName
@@ -125,7 +118,8 @@ func (s *sessCtx) openBook() {
 }
 
 func (s *sessCtx) clearForSearch(lastState *stateRec) {
-	s.reqBkId, s.reqBkName, s.reqRId, s.reqRName, s.reqVersion = "", "", "", "", ""
+	s.recipeList = nil
+	s.reqRName, s.reqRId, s.reqVersion = "", "", ""
 	s.recId = [4]int{0, 0, 0, 0}
 	s.authors, s.authorS = "", nil
 	s.serves = ""
@@ -137,12 +131,9 @@ func (s *sessCtx) clearForSearch(lastState *stateRec) {
 	s.ingrdList = ""
 	s.eol, s.peol, s.part, s.parts, s.pid = 0, 0, "", nil, 0
 	s.back = false
-	//s.dispObjectMenu, s.dispIngredients, s.dispContainers, s.dispPartMenu = false, false, false, false
-	if len(lastState.OpenBk) > 0 {
-		s.reqOpenBk = lastState.OpenBk
-		id := strings.Split(string(lastState.OpenBk), "|")
-		s.reqBkId, s.reqBkName = id[0], id[1]
-		s.authors = id[2]
+	// if no open book unset Book details. For open book case, these are populated during setState()
+	if len(lastState.OpenBk) == 0 {
+		s.reqBkId, s.reqBkName = "", ""
 	}
 }
 
@@ -256,7 +247,7 @@ func (s *sessCtx) orchestrateRequest() error {
 	if s.selId > 0 {
 		// selId is the response from Alexa on the index (ordinal value) of the selected display item
 		fmt.Println("SELCTX is : ", s.selCtx)
-		//s.resetDisplay()
+
 		switch s.selCtx {
 		case ctxRecipeMenu:
 			// select from: multiple recipes
@@ -424,23 +415,20 @@ func (s *sessCtx) orchestrateRequest() error {
 	if s.curReqType == initialiseRequest {
 		//
 		if s.request == "search" {
-			// search only applies to recipes, ie. select context Recipe (ctxRecipeMenu).
-			//s.selCtx = ctxRecipeMenu
-			// we have fully populated session context from previous session e.g. BkName etc, now lets see what recipes we find
-			// populates sessCtx.recipeList if search results in a list.
+
+			s.clearForSearch(lastState)
+
 			fmt.Println("Search.....")
 			fmt.Println("BookId: ", s.reqBkId)
-			s.clearForSearch(lastState)
-			// null recipeList for cases where search is conducted from recipe list display
-			s.recipeList = nil
-			fmt.Println("**** just cleared state . ***** now pushState")
 			fmt.Printf("..about to call keywordSearch with [%s]\n", s.reqSearch)
+
 			err := s.keywordSearch()
 			if err != nil {
 				return err
 			}
 			s.eol, s.reset, s.object = 0, true, ""
 			s.showObjMenu = false
+
 			if len(s.recipeList) == 0 || len(s.reqRId) > 0 {
 				// single recipe found in search. Select context must now reflect object list. Persist value.
 				//s.selCtx = ctxObjectMenu
@@ -452,7 +440,7 @@ func (s *sessCtx) orchestrateRequest() error {
 				s.displayData = s.recipeList
 				fmt.Printf("recipe List found [%#v]\n", s.recipeList)
 			}
-			fmt.Println("Now pushState")
+
 			_, err = s.pushState()
 			if err != nil {
 				return err
