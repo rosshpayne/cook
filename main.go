@@ -95,26 +95,28 @@ type sessCtx struct {
 	// //
 	back bool // back button pressed on display
 	//
-	// dispObjectMenu  bool
-	// dispIngredients bool
-	// dispContainers  bool
-	// dispPartMenu    bool
 	showObjMenu bool
 }
 
 func (s *sessCtx) closeBook() {
+	fmt.Println("closeBook()")
 	s.reqOpenBk = ""
 	s.CloseBkName = s.reqBkName
 	s.reqBkId, s.reqBkName, s.reqRId, s.reqRName = "", "", "", ""
 	s.reqOpenBk, s.authorS, s.authors = "", nil, ""
 	s.eol, s.peol = 0, 0
 	s.displayData = s.reqOpenBk
+	s.newSession = true
 }
 
 func (s *sessCtx) openBook() {
+
 	s.reqOpenBk = BookT(s.reqBkId + "|" + s.reqBkName + "|" + s.authors)
 	s.eol, s.peol = 0, 0
+	s.reqRName, s.reqRId = "", ""
 	s.displayData = s.reqOpenBk
+	s.newSession = true
+	fmt.Println("openBook() - ", s.reqOpenBk)
 }
 
 func (s *sessCtx) clearForSearch(lastState *stateRec) {
@@ -178,17 +180,17 @@ func init() {
 	}
 }
 
-type alexaDialog interface {
-	Alexa() dialog
-}
-type dialog struct {
-	Verbal  string
-	Display string
-	EOL     int
-	PID     int // instruction ID within part
-	PEOL    int
-	PART    string
-}
+// type alexaDialog interface {
+// 	Alexa() dialog
+// }
+// type dialog struct {
+// 	Verbal  string
+// 	Display string
+// 	EOL     int
+// 	PID     int // instruction ID within part
+// 	PEOL    int
+// 	PART    string
+// }
 
 func (s *sessCtx) orchestrateRequest() error {
 	//
@@ -206,35 +208,55 @@ func (s *sessCtx) orchestrateRequest() error {
 	//
 	// yes/no response. May assign new book
 	//
-	if len(s.yesno) > 0 && lastState.Qid > 0 {
-		if s.yesno == "yes" {
-			var err error
-			switch lastState.Qid {
-			case 20:
-				// close active book
-				//  as req struct fields still have their zero value they will clear session state during pushState
+	fmt.Println("yesno: ", s.yesno)
+	fmt.Println("selId: ", s.selId)
+	fmt.Println("Qid: ", lastState.Qid)
+	if lastState.Qid > 0 && (len(s.yesno) > 0 || (s.selId == 1 || s.selId == 2)) {
+
+		var err error
+		switch lastState.Qid {
+		case 20:
+			// close active book
+			//  as req struct fields still have their zero value they will clear session state during pushState
+			if s.selId == 1 {
 				s.reset = true
 				s.vmsg = fmt.Sprintf(`%s is closed. You can now search across all recipe books`, lastState.BkName)
 				s.dmsg = fmt.Sprintf(`%s is closed. You can now search across all recipe books`, lastState.BkName)
 				s.reqBkId, s.reqBkName, s.reqRName, s.reqRId, s.eol, s.reset = "", "", "", "", 0, true
-				_, err = s.pushState()
-			case 21:
-				// swap book
+			} else {
+				s.popState()
+			}
+		case 21:
+			if s.selId == 1 {
+				// open book
+				fmt.Println(">> Yes to Open Book")
+				s.vmsg = fmt.Sprintf(`[%s] is now open. You can now search or open a recipe within this book`, lastState.BkName)
+				s.dmsg = fmt.Sprintf(`[%s] is now open. You can now search or open a recipe within this book`, lastState.BkName)
+				s.openBook()
+			} else {
+				s.popState()
+			}
+		case 22:
+			// swap to this book
+			if s.selId == 1 {
 				s.reqBkId, s.reqBkName, s.reset = lastState.SwpBkId, lastState.SwpBkNm, true
 				s.vmsg = fmt.Sprintf(`Book [%s] is now open. You can now search or open a recipe within this book`, lastState.BkName)
 				s.dmsg = fmt.Sprintf(`Book [%s] is now open. You can now search or open a recipe within this book`, lastState.BkName)
-				_, err = s.pushState()
-			default:
-				// TODO: log error to error table
+				s.openBook()
+			} else {
+				s.popState()
 			}
-			if err != nil {
-				return fmt.Errorf("Error: in mergeAndValidateWithlastStateion of pushState() - %s", err.Error())
-			}
+		default:
+			// TODO: log error to error table
+		}
+		if s.selId == 2 || s.yesno == "no" {
+
 		}
 		if len(s.dmsg) == 0 {
 			s.dmsg = lastState.Dmsg
 		}
 		//
+		s.ingrdList, s.object, s.selCtx, s.showObjMenu = "", "", 0, false
 		_, err = s.pushState()
 		if err != nil {
 			return err
@@ -312,7 +334,6 @@ func (s *sessCtx) orchestrateRequest() error {
 				} else {
 					// go straight to instructions
 					s.displayData, err = s.cacheInstructions()
-
 					if err != nil {
 						return err
 					}
@@ -429,22 +450,32 @@ func (s *sessCtx) orchestrateRequest() error {
 			s.eol, s.reset, s.object = 0, true, ""
 			s.showObjMenu = false
 
-			if len(s.recipeList) == 0 || len(s.reqRId) > 0 {
-				// single recipe found in search. Select context must now reflect object list. Persist value.
-				//s.selCtx = ctxObjectMenu
+			if len(s.recipeList) == 0 && len(s.reqRId) > 0 {
+				// found single recipe.
 				s.displayData = objMenu
 				s.showObjMenu = true
 				fmt.Printf("recipe found [%s]\n", s.reqRName)
-			} else {
+
+				_, err = s.pushState()
+				if err != nil {
+					return err
+				}
+			} else if len(s.recipeList) > 0 {
+				// found multiple recipes
 				s.curReqType = 0
 				s.displayData = s.recipeList
 				fmt.Printf("recipe List found [%#v]\n", s.recipeList)
+
+				_, err = s.pushState()
+				if err != nil {
+					return err
+				}
+			} else {
+				// no recipe found
+				s.displayData = s.recipeList
+				fmt.Printf("No recipe found for search keywords \n", s.reqSearch)
 			}
 
-			_, err = s.pushState()
-			if err != nil {
-				return err
-			}
 			return nil
 		}
 		//TODO: is showList required?
@@ -466,8 +497,8 @@ func (s *sessCtx) orchestrateRequest() error {
 			} else {
 				switch len(s.reqBkId) {
 				case 0:
-					s.dmsg = `There is no book open to close.`
-					s.vmsg = `There is no book open to close.`
+					s.dmsg = `There is no books open to close.`
+					s.vmsg = `There is no books open to close.`
 				default:
 					//
 					s.dmsg = s.reqBkName + ` is now closed. Any searches will be across all books`
@@ -475,7 +506,6 @@ func (s *sessCtx) orchestrateRequest() error {
 					s.closeBook()
 				}
 			}
-			s.eol = 0
 			_, err := s.pushState() //TODO: do I need to do this..
 			if err != nil {
 				return err
@@ -486,19 +516,20 @@ func (s *sessCtx) orchestrateRequest() error {
 			//
 			// open book requested
 			//
+			s.displayData = s.reqOpenBk
 			if len(lastState.BkId) > 0 {
 				// some book was open previously
 				switch {
 				case lastState.BkId == s.reqBkId:
 					// open currenly opened book. reqBkId was sourced using bookNameLookup()
-					if len(lastState.RName) == 0 {
-						// no active recipe
-						s.dmsg = `Book is already open. Please request a recipe from the book or say "list" and I will print the recipe names to the display.`
-						s.vmsg = `Book is already open. Please request a recipe from the book or say "list" and I will print the recipe names to the display.`
-
-					} else if s.eol != s.recId[objectMap[s.object]] {
-						s.dmsg = `You are actively browsing recipe ` + lastState.RName + ".Do you still want to open this book?"
-						s.vmsg = `You are actively browsing recipe ` + lastState.RName + ".Do you still want to open this book?"
+					if lastState.activeRecipe() && len(lastState.OpenBk) == 0 {
+						s.dmsg = "You are actively browsing a recipe from this book. Do you still want to open " + s.reqBkName + "?"
+						s.vmsg = "You are actively browsing a recipe from this book. Do you still want to open " + s.reqBkName + "?"
+						s.questionId = 21
+					}
+					if len(lastState.OpenBk) > 0 {
+						s.dmsg = s.reqBkName + " is already open"
+						s.vmsg = s.reqBkName + " is already open"
 					}
 				case lastState.BkId != s.reqBkId:
 					if len(lastState.RName) == 0 {
@@ -507,9 +538,10 @@ func (s *sessCtx) orchestrateRequest() error {
 						s.vmsg = "Opened " + s.reqBkName + " by " + s.authors + ". "
 						s.openBook()
 
-					} else if s.eol != s.recId[objectMap[s.object]] {
-						s.dmsg = `You are actively browsing recipe ` + lastState.RName + " from book, " + lastState.BkName + ". Do you still want to open this book?"
-						s.vmsg = `You are actively browsing recipe ` + lastState.RName + " from book, " + lastState.BkName + ". Do you still want to open this book?"
+					} else if lastState.activeRecipe() {
+						s.dmsg = "You are actively browsing a recipe from book, " + lastState.BkName + ". Do you still want to open " + s.reqBkName + "?"
+						s.vmsg = "You are actively browsing a recipe from book, " + lastState.BkName + ". Do you still want to open " + s.reqBkName + "?"
+						s.questionId = 21
 					}
 				}
 			} else {
@@ -517,6 +549,8 @@ func (s *sessCtx) orchestrateRequest() error {
 				s.dmsg = "Opened " + s.reqBkName + " by " + s.authors + ". "
 				s.vmsg = "Opened " + s.reqBkName + " by " + s.authors + ". "
 			}
+
+			s.ingrdList, s.recipeList, s.object, s.showObjMenu = "", nil, "", false
 			_, err = s.pushState()
 			if err != nil {
 				return err
@@ -700,6 +734,7 @@ func handler(request InputEvent) (RespEvent, error) {
 	//                     unecessary type when user follows displayed interaction
 	//   * instructionRequest - requests associated with displaying an instruction record.
 	//
+	fmt.Println("REQUEST: ", sessctx.request)
 	switch sessctx.request {
 	case "purge":
 		sessctx.reqBkId = request.QueryStringParameters["bkid"]
@@ -800,6 +835,7 @@ func handler(request InputEvent) (RespEvent, error) {
 			if i == "1" {
 				sessctx.yesno = "yes"
 			}
+			fmt.Println("YesNO: ", sessctx.yesno)
 		case "select":
 			var i int
 			i, err = strconv.Atoi(request.QueryStringParameters["sId"])

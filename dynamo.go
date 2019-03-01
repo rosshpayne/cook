@@ -35,9 +35,9 @@ type ctRec struct {
 	EOL    int
 }
 
-func (ct ctRec) Alexa() dialog {
-	return dialog{Verbal: ct.Verbal, Display: ct.Text, EOL: ct.EOL}
-}
+// func (ct ctRec) Alexa() dialog {
+// 	return dialog{Verbal: ct.Verbal, Display: ct.Text, EOL: ct.EOL}
+// }
 
 type mRecipeT struct {
 	Id       int
@@ -72,9 +72,9 @@ type taskRecT struct {
 	taskp *PerformT // used in GenerateTasks and loadBaseRecipe
 }
 
-func (pt taskRecT) Alexa() dialog {
-	return dialog{Verbal: pt.Verbal, Display: pt.Text, EOL: pt.EOL, PEOL: pt.PEOL, PID: pt.PId, PART: pt.Part}
-}
+// func (pt taskRecT) Alexa() dialog {
+// 	return dialog{Verbal: pt.Verbal, Display: pt.Text, EOL: pt.EOL, PEOL: pt.PEOL, PID: pt.PId, PART: pt.Part}
+// }
 
 type prepTaskS []*taskRecT
 
@@ -250,52 +250,52 @@ func (s *sessCtx) getContainers() []containerT {
 	return recS
 }
 
-func (s *sessCtx) getContainerRecById() (alexaDialog, error) {
-	type pKey struct {
-		PKey  string
-		SortK float64
-	}
-	ctrec := ctRec{}
-	pkey := pKey{PKey: "C-" + s.pkey, SortK: float64(s.objRecId)}
-	av, err := dynamodbattribute.MarshalMap(&pkey)
-	if err != nil {
-		return ctrec, fmt.Errorf("%s: %s", "Error in MarshalMap of getContainerRecById", err.Error())
-	}
-	input := &dynamodb.GetItemInput{
-		Key:       av,
-		TableName: aws.String("Recipe"),
-	}
-	result, err := s.dynamodbSvc.GetItem(input)
-	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			case dynamodb.ErrCodeProvisionedThroughputExceededException:
-				fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
-			case dynamodb.ErrCodeResourceNotFoundException:
-				fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
-			//case dynamodb.ErrCodeRequestLimitExceeded:
-			//	fmt.Println(dynamodb.ErrCodeRequestLimitExceeded, aerr.Error())
-			case dynamodb.ErrCodeInternalServerError:
-				fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
-			default:
-				fmt.Println(aerr.Error())
-			}
-		} else {
-			// Print the error, cast err to awserr.Error to get the Code and
-			// Message from an error.
-			fmt.Println(err.Error())
-		}
-		return ctrec, fmt.Errorf("%s: %s", "Error in GetItem of getContainerRecById", err.Error())
-	}
-	if len(result.Item) == 0 {
-		return ctrec, fmt.Errorf("%s", "No data Found in GetItem in getContainerRecById")
-	}
-	err = dynamodbattribute.UnmarshalMap(result.Item, &ctrec)
-	if err != nil {
-		return ctrec, fmt.Errorf("%s: %s", "Error in UnmarshalMap of getContainerRecById", err.Error())
-	}
-	return ctrec, nil
-}
+// func (s *sessCtx) getContainerRecById() (alexaDialog, error) {
+// 	type pKey struct {
+// 		PKey  string
+// 		SortK float64
+// 	}
+// 	ctrec := ctRec{}
+// 	pkey := pKey{PKey: "C-" + s.pkey, SortK: float64(s.objRecId)}
+// 	av, err := dynamodbattribute.MarshalMap(&pkey)
+// 	if err != nil {
+// 		return ctrec, fmt.Errorf("%s: %s", "Error in MarshalMap of getContainerRecById", err.Error())
+// 	}
+// 	input := &dynamodb.GetItemInput{
+// 		Key:       av,
+// 		TableName: aws.String("Recipe"),
+// 	}
+// 	result, err := s.dynamodbSvc.GetItem(input)
+// 	if err != nil {
+// 		if aerr, ok := err.(awserr.Error); ok {
+// 			switch aerr.Code() {
+// 			case dynamodb.ErrCodeProvisionedThroughputExceededException:
+// 				fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
+// 			case dynamodb.ErrCodeResourceNotFoundException:
+// 				fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
+// 			//case dynamodb.ErrCodeRequestLimitExceeded:
+// 			//	fmt.Println(dynamodb.ErrCodeRequestLimitExceeded, aerr.Error())
+// 			case dynamodb.ErrCodeInternalServerError:
+// 				fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
+// 			default:
+// 				fmt.Println(aerr.Error())
+// 			}
+// 		} else {
+// 			// Print the error, cast err to awserr.Error to get the Code and
+// 			// Message from an error.
+// 			fmt.Println(err.Error())
+// 		}
+// 		return ctrec, fmt.Errorf("%s: %s", "Error in GetItem of getContainerRecById", err.Error())
+// 	}
+// 	if len(result.Item) == 0 {
+// 		return ctrec, fmt.Errorf("%s", "No data Found in GetItem in getContainerRecById")
+// 	}
+// 	err = dynamodbattribute.UnmarshalMap(result.Item, &ctrec)
+// 	if err != nil {
+// 		return ctrec, fmt.Errorf("%s: %s", "Error in UnmarshalMap of getContainerRecById", err.Error())
+// 	}
+// 	return ctrec, nil
+// }
 
 type indexRecipeT struct {
 	PKey     string
@@ -660,14 +660,15 @@ func (s *sessCtx) keywordSearch() error {
 		Serves   string `json:"Srv"`
 	}
 	var (
-		result   *dynamodb.QueryOutput
-		allBooks bool
-		err      error
+		result *dynamodb.QueryOutput
+		//allBooks bool
+		err error
 	)
 	// zero recipeList list
 	//
 	fmt.Println("^^^^^^^^^^ entered keywordSearch ^^^^^^^^^^^^")
-	if len(s.reqBkId) > 0 {
+	if len(s.reqOpenBk) > 0 {
+
 		// look for recipes in current book only
 		kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value(s.reqSearch))
 		kcond = kcond.And(expression.KeyBeginsWith(expression.Key("SortK"), s.reqBkId+"-"))
@@ -687,11 +688,11 @@ func (s *sessCtx) keywordSearch() error {
 		if err != nil {
 			return fmt.Errorf("Error: %s [%s] %s", "in Query in keywordSearch of ", s.reqSearch, err.Error())
 		}
-		if int(*result.Count) == 0 {
-			allBooks = true
-		}
+		// if int(*result.Count) == 0 {
+		// 	allBooks = true
+		// }
 	}
-	if len(s.reqBkId) == 0 || allBooks {
+	if len(s.reqOpenBk) == 0 { //|| allBooks {
 		// no active book or active book does not contain recipe type
 		kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value(s.reqSearch))
 		expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
@@ -710,56 +711,66 @@ func (s *sessCtx) keywordSearch() error {
 		if err != nil {
 			return fmt.Errorf("Error: %s [%s] %s", "in Query in keywordSearch of ", s.reqBkId, err.Error())
 		}
-		if int(*result.Count) == 0 {
-			switch allBooks {
-			case true:
-				return fmt.Errorf(`Recipe [%s] not found in [%s] or library. Please notify support`, s.reqRName, s.reqBkName)
-			case false:
-				return fmt.Errorf(`Recipe [%s] not found in library. Please notify support`, s.reqRName)
-			}
-		}
+		// if int(*result.Count) == 0 {
+		// 	switch allBooks {
+		// 	case true:
+		// 		return fmt.Errorf(`Recipe [%s] not found in [%s] or library. Please notify support`, s.reqRName, s.reqBkName)
+		// 	case false:
+		// 		return fmt.Errorf(`Recipe [%s] not found in library. Please notify support`, s.reqRName)
+		// 	}
+		// }
 	}
 	recS := make([]searchRecT, int(*result.Count))
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &recS)
 	if err != nil {
 		return fmt.Errorf("Error: %s [%s] err", "in UnmarshalListMaps of keywordSearch ", s.reqRName, err.Error())
 	}
-	if allBooks {
-		// case where active book did not contain recipe type so library searched.
-		switch int(*result.Count) {
-		case 0:
-			s.vmsg = fmt.Sprintf("%s not found in [%s] and all other books. ", s.reqSearch, s.reqBkName)
-			s.dmsg = fmt.Sprintf("%s not found in [%s] and all other books. ", s.reqSearch, s.reqBkName)
-			//s.reqRId, s.reqRName, s.reqBkId, s.reqBkName = "", "", "", ""
-		case 1:
-			s.vmsg = fmt.Sprintf("%s not found in [%s], but was found in [%s]. Do you want to swap to this book?", s.reqSearch, s.reqBkName, recS[0].BkName)
-			s.dmsg = fmt.Sprintf("%s not found in [%s], but was found in [%s]. Do you want to swap to this book?", s.reqSearch, s.reqBkName, recS[0].BkName)
-			sortk := strings.Split(recS[0].SortK, "-")
-			s.reqRId, s.reqRName, s.reqBkId, s.reqBkName, s.serves = sortk[1], recS[0].RName, sortk[0], recS[0].BkName, recS[0].Serves
-			s.recipeRSearch()
-		default:
-			//s.makeSelect = true
-			s.vmsg = fmt.Sprintf(`No %s recipes found in [%s] but where found in other books. Please see the display`, s.reqSearch, s.reqBkName)
-			s.dmsg = fmt.Sprintf(`No %s recipes found in [%s], but were found in the following. Please select one. `, s.reqSearch, s.reqBkName)
-			for i, v := range recS {
-				sortk := strings.Split(v.SortK, "-")
-				s.ddata += strconv.Itoa(i+1) + ": " + v.BkName + " by " + v.Authors + ". Quantity: " + v.Quantity + "\n "
-				rec := mRecipeT{Id: i + 1, IngrdCat: v.PKey, RName: v.RName, RId: sortk[1], BkName: v.BkName, BkId: sortk[0], Authors: v.Authors, Quantity: v.Quantity, Serves: v.Serves}
-				s.recipeList = append(s.recipeList, rec)
-			}
-		}
-		return nil
-	}
+	// if allBooks {
+	// 	// case where active book did not contain recipe type so library searched.
+	// 	switch int(*result.Count) {
+	// 	case 0:
+	// 		s.vmsg = fmt.Sprintf("%s not found in [%s] and all other books. ", s.reqSearch, s.reqBkName)
+	// 		s.dmsg = fmt.Sprintf("%s not found in [%s] and all other books. ", s.reqSearch, s.reqBkName)
+	// 		//s.reqRId, s.reqRName, s.reqBkId, s.reqBkName = "", "", "", ""
+	// 	case 1:
+	// 		s.vmsg = fmt.Sprintf("%s not found in [%s], but was found in [%s]. Do you want to swap to this book?", s.reqSearch, s.reqBkName, recS[0].BkName)
+	// 		s.dmsg = fmt.Sprintf("%s not found in [%s], but was found in [%s]. Do you want to swap to this book?", s.reqSearch, s.reqBkName, recS[0].BkName)
+	// 		sortk := strings.Split(recS[0].SortK, "-")
+	// 		s.reqRId, s.reqRName, s.reqBkId, s.reqBkName, s.serves = sortk[1], recS[0].RName, sortk[0], recS[0].BkName, recS[0].Serves
+	// 		s.recipeRSearch()
+	// 	default:
+	// 		//s.makeSelect = true
+	// 		s.vmsg = fmt.Sprintf(`No %s recipes found in [%s] but where found in other books. Please see the display`, s.reqSearch, s.reqBkName)
+	// 		s.dmsg = fmt.Sprintf(`No %s recipes found in [%s], but were found in the following. Please select one. `, s.reqSearch, s.reqBkName)
+	// 		for i, v := range recS {
+	// 			sortk := strings.Split(v.SortK, "-")
+	// 			s.ddata += strconv.Itoa(i+1) + ": " + v.BkName + " by " + v.Authors + ". Quantity: " + v.Quantity + "\n "
+	// 			rec := mRecipeT{Id: i + 1, IngrdCat: v.PKey, RName: v.RName, RId: sortk[1], BkName: v.BkName, BkId: sortk[0], Authors: v.Authors, Quantity: v.Quantity, Serves: v.Serves}
+	// 			s.recipeList = append(s.recipeList, rec)
+	// 		}
+	// 	}
+	// 	return nil
+	// }
 	//
 	// result of seach within open book
 	//
 	switch int(*result.Count) {
 	case 0:
-		s.vmsg = fmt.Sprintf("No %s was found in any book. ", s.reqSearch)
-		s.dmsg = fmt.Sprintf("No %s was found in any book. ", s.reqSearch)
+		if len(s.reqOpenBk) > 0 {
+			s.vmsg = fmt.Sprintf(`No recipes for "%s" were found in the currently opened book, %s. `, s.reqSearch, s.reqBkName)
+			s.dmsg = fmt.Sprintf(`No recipes for "%s" were found in the currently opened book, %s. `, s.reqSearch, s.reqBkName)
+		} else {
+			s.vmsg = fmt.Sprintf(`No recipes for "%s" were found `, s.reqSearch)
+			s.dmsg = fmt.Sprintf(`No recipes for "%s" were found `, s.reqSearch)
+		}
 	case 1:
-		s.vmsg = "The following recipe, " + recS[0].RName + " in book " + recS[0].BkName + ` by authors ` + recS[0].Authors + ` contains the ingredient. You can list other ingredients or containers, utensils used in the recipe or list the prep tasks or you can start cooking`
-		s.dmsg = "The following recipe, " + recS[0].RName + " in book " + recS[0].BkName + ` by authors ` + recS[0].Authors + ` contains the ingredient. You can list other ingredients or containers, utensils used in the recipe or list the prep tasks or you can start cooking`
+		if len(s.reqOpenBk) > 0 {
+			s.vmsg = "Found recipe, " + recS[0].RName
+			s.dmsg = "Found recipe, " + recS[0].RName
+		} else {
+			s.vmsg = "Found recipe, " + recS[0].RName + " in book " + recS[0].BkName + ` by authors ` + recS[0].Authors + ` contains the ingredient. You can list other ingredients or containers, utensils used in the recipe or list the prep tasks or you can start cooking`
+			s.dmsg = "Found recipe, " + recS[0].RName + " in book " + recS[0].BkName + ` by authors ` + recS[0].Authors + ` contains the ingredient. You can list other ingredients or containers, utensils used in the recipe or list the prep tasks or you can start cooking`
+		}
 		sortk := strings.Split(recS[0].SortK, "-")
 		s.reqRId, s.reqRName, s.reqBkId, s.reqBkName, s.serves = sortk[1], recS[0].RName, sortk[0], recS[0].BkName, recS[0].Serves
 		s.recipeRSearch() //TODO - think about add part data to search record

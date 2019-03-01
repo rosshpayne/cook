@@ -41,10 +41,10 @@ type ContainerS []string
 type ObjMenuT []string
 
 var objMenu = ObjMenuT{
-	"List ingredients",
-	"What containers and utensils do I need?",
-	"What prep tasks do I need to do before I can start cooking?",
-	`Let's start cooking...`}
+	"Ingredients",
+	"Containers and utensils",
+	"Prep tasks",
+	`Start cooking...`}
 
 // cacheInstructions copies data from T- items in recipe table to session data (instructions) that is preserved
 
@@ -196,12 +196,48 @@ func (i IngredientT) GenDisplay(id int, s *sessCtx) RespEvent {
 func (r RecipeListT) GenDisplay(id int, s *sessCtx) RespEvent {
 	// display recipes
 	var (
-		list []DisplayItem
-		op   string
+		list  []DisplayItem
+		op    string
+		hdr   string
+		subh  string
+		type_ string
 	)
 	if len(s.reqOpenBk) > 0 {
 		op = "Opened "
 	}
+	//
+	// No recipes found
+	//
+	if len(r) == 0 {
+		// empty list as a result of no-data-found in search
+		words := strings.Split(s.reqSearch, " ")
+		if len(s.reqOpenBk) > 0 {
+			if len(words) == 1 {
+				hdr = fmt.Sprintf(`No recipes found in opened book "%s" for keyword: %s`, s.reqBkName, s.reqSearch)
+				subh = "Either close the book or try multiple keywords e.g search orange chocolate tart"
+			} else {
+				hdr = fmt.Sprintf(`No recipes found in opened book "%s" for keywords: %s`, s.reqBkName, s.reqSearch)
+				subh = "Either close the book to search the entire libary or try altenative keywords"
+			}
+		} else {
+			words := strings.Split(s.reqSearch, " ")
+			if len(words) == 1 {
+				hdr = fmt.Sprintf(`No recipes found for keyword: %s`, s.reqSearch)
+				subh = "Try multiple keywords e.g search orange chocolate tart"
+			} else {
+				hdr = fmt.Sprintf(`No recipes found for keywords: %s`, s.reqSearch)
+				subh = "Change the order of the keywords or try alternative keywords"
+			}
+		}
+		type_ = "header"
+		if len(s.state) < 2 {
+			type_ = "headerNoBackButton"
+		}
+		return RespEvent{Type: type_, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: nil}
+	}
+	//
+	// mutli-choice recipes
+	//
 	for _, v := range r {
 		var item DisplayItem
 		id := strconv.Itoa(v.Id)
@@ -219,8 +255,12 @@ func (r RecipeListT) GenDisplay(id int, s *sessCtx) RespEvent {
 		}
 		list = append(list, item)
 	}
+	type_ = "Search"
+	if len(s.state) < 2 {
+		type_ = "SearchNoBackButton"
+	}
 
-	return RespEvent{Type: "Search", Header: "Search results: " + s.reqSearch, Text: s.vmsg, Verbal: s.dmsg, List: list}
+	return RespEvent{Type: type_, Header: "Search results: " + s.reqSearch, Text: s.vmsg, Verbal: s.dmsg, List: list}
 }
 
 func (o ObjMenuT) GenDisplay(id int, s *sessCtx) RespEvent {
@@ -249,20 +289,34 @@ func (o ObjMenuT) GenDisplay(id int, s *sessCtx) RespEvent {
 
 func (b BookT) GenDisplay(x int, s *sessCtx) RespEvent {
 	var (
-		hdr  string
-		subh string
+		hdr   string
+		subh  string
+		type_ string
 	)
+	id := strings.Split(string(b), "|")
 
-	if len(b) > 0 {
-		id := strings.Split(string(b), "|")
+	switch len(id) {
+	case 1:
+		if s.request == "book/close" {
+			type_ = "header"
+			hdr = s.CloseBkName + " closed."
+			subh = "Future searches will be across all books"
+		} else {
+			type_ = "Select"
+			hdr = "Issue with opening book " + s.reqBkName
+			subh = s.dmsg
+			list := make([]DisplayItem, 2)
+			list[0] = DisplayItem{Id: "1", Title: "Yes"}
+			list[1] = DisplayItem{Id: "2", Title: "No"}
+			return RespEvent{Type: type_, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: list}
+		}
+	default:
+		// book successfully opened. No errors can occur during book close so b will always be empty.
 		_, BkName := id[0], id[1]
 		authors := id[2]
 		hdr = "Opened book " + BkName + "  by " + authors
 		subh = "All searches will be restricted to this book until it is closed"
-	} else {
-		hdr = s.CloseBkName + " closed."
-		subh = "Future searches will be across all books"
+		type_ = "headerNoBackButton"
 	}
-
-	return RespEvent{Type: "header", Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: nil}
+	return RespEvent{Type: type_, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: nil}
 }

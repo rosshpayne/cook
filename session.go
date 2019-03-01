@@ -77,6 +77,13 @@ func (s stateStack) pop() *stateRec {
 	return &st
 }
 
+func (ls *stateRec) activeRecipe() bool {
+	if len(ls.InstructionData) > 0 || len(ls.RecipeList) > 0 || ls.ShowObjMenu || len(ls.Ingredients) > 0 {
+		return true
+	}
+	return false
+}
+
 // func (s *sessCtx) setDisplay(ls *stateRec) {
 // 	s.dispObjectMenu = ls.DispObjectMenu
 // 	s.dispIngredients = ls.DispIngredients
@@ -161,6 +168,9 @@ func (s *sessCtx) setState(ls *stateRec) {
 	if len(ls.Authors) > 0 {
 		s.authors = ls.Authors
 	}
+	if ls.Qid > 0 {
+		s.questionId = ls.Qid
+	}
 	fmt.Printf("reqVersion: [%s]\n", s.reqVersion)
 	fmt.Println("len(s.reqVersion) = ", len(s.reqVersion))
 	if len(s.reqVersion) == 0 {
@@ -179,7 +189,7 @@ func (s *sessCtx) setState(ls *stateRec) {
 	// object rec Id
 	//
 	s.recId = ls.RecId
-	if len(s.object) == 0 {
+	if len(s.object) == 0 && s.questionId == 0 {
 		s.object = ls.Obj
 	}
 	//
@@ -326,22 +336,10 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 	//
 	sr.Parts = s.parts
 	sr.Part = s.part
-	// sr.Next = s.next
-	// sr.Prev = s.prev
-	// sr.PEOL = s.peol
-	// sr.PId = s.pid
-	// sr.EOL = s.eol
-	// sr.DispObjectMenu = s.dispObjectMenu
-	// sr.DispIngredients = s.dispIngredients
-	// sr.DispContainers = s.dispContainers
-	// sr.DispPartMenu = s.dispPartMenu
 	if d, ok := s.displayData.(InstructionS); ok {
 		sr.InstructionData = d
 	}
 	sr.ShowObjMenu = s.showObjMenu
-	// if d, ok := s.displayData.(ContainerS); ok {
-	// 	sr.InstructionData = d
-	// }
 	//
 	State := make(stateStack, 1)
 	State[0] = sr
@@ -353,6 +351,7 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 	updateC = expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
 	if s.newSession {
 		sr.RecId = [4]int{}
+		s.state = State[:]
 		updateC = updateC.Set(expression.Name("state"), expression.Value(State))
 		s.newSession = false
 	} else if len(s.state) > 12 {
@@ -475,6 +474,8 @@ func (s *sessCtx) popState() error {
 	//  populates session context with state data from the new last entry
 	//  (which was the penultimate entry before deletion)
 	//
+	// NB: must exit with s.displayData assigned - as this will route to GenDisplay to produce response.
+	//
 	type pKey struct {
 		Sid string
 	}
@@ -555,9 +556,9 @@ func (s *sessCtx) popState() error {
 	s.request = sr.Request // Request e.g.next, prev, repeat, modify)
 	s.curReqType = sr.ReqType
 	s.serves = sr.Serves
-	s.questionId = sr.Qid // Question id	for k,v:=range objectMap {
-	s.object = sr.Obj     // Object - to which operation (listing) apply
-	s.recId = sr.RecId    //s.recId     // current record in object list. (SortK in Recipe table)
+	//	s.questionId = sr.Qid // Question id	for k,v:=range objectMap {
+	s.object = sr.Obj  // Object - to which operation (listing) apply
+	s.recId = sr.RecId //s.recId     // current record in object list. (SortK in Recipe table)
 	s.reqVersion = sr.Ver
 	s.eol = sr.EOL // last RecId of current list. Used to determine when last record is reached or exceeded in the case of goto operation
 	s.dmsg = sr.Dmsg
@@ -567,7 +568,7 @@ func (s *sessCtx) popState() error {
 	//
 	if len(sr.OpenBk) > 0 {
 		bk := strings.Split(string(sr.OpenBk), "|")
-		fmt.Printf("open bk %#v\n", bk)
+		fmt.Printf("popstate: open bk %#v\n", bk)
 		s.reqBkId, s.reqBkName, s.authors = bk[0], bk[1], bk[2]
 		s.authorS = strings.Split(s.authors, ",")
 		s.reqOpenBk = sr.OpenBk
