@@ -141,7 +141,7 @@ func (i InstructionS) GenDisplay(id int, s *sessCtx) RespEvent {
 	if len(i[id].Text) > 120 {
 		type_ = "Tripple2" // larger text bounding box
 	}
-	return RespEvent{Type: type_, Header: hdr, SubHdr: subh, Text: rec.Text, Verbal: rec.Verbal, ListA: listA, ListB: listB, ListC: listC}
+	return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Text: rec.Text, Verbal: rec.Verbal, ListA: listA, ListB: listB, ListC: listC}
 }
 
 func (c ContainerS) GenDisplay(id int, s *sessCtx) RespEvent {
@@ -156,7 +156,7 @@ func (c ContainerS) GenDisplay(id int, s *sessCtx) RespEvent {
 		list = append(list, di)
 	}
 	type_ := "Ingredient"
-	return RespEvent{Type: type_, Header: hdr, SubHdr: subh, List: list}
+	return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, List: list}
 }
 
 func (p PartS) GenDisplay(id int, s *sessCtx) RespEvent {
@@ -177,7 +177,7 @@ func (p PartS) GenDisplay(id int, s *sessCtx) RespEvent {
 		id := strconv.Itoa(i + 2)
 		list[i+1] = DisplayItem{Id: id, Title: v.Title}
 	}
-	return RespEvent{Type: "Select", Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: list}
+	return RespEvent{Type: "Select", BackBtn: true, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: list}
 
 }
 
@@ -189,18 +189,19 @@ func (i IngredientT) GenDisplay(id int, s *sessCtx) RespEvent {
 		list = append(list, item)
 	}
 
-	return RespEvent{Type: "Ingredient", Header: s.reqRName, SubHdr: "Ingredients", List: list}
+	return RespEvent{Type: "Ingredient", BackBtn: true, Header: s.reqRName, SubHdr: "Ingredients", List: list}
 
 }
 
 func (r RecipeListT) GenDisplay(id int, s *sessCtx) RespEvent {
 	// display recipes
 	var (
-		list  []DisplayItem
-		op    string
-		hdr   string
-		subh  string
-		type_ string
+		list    []DisplayItem
+		op      string
+		hdr     string
+		subh    string
+		type_   string
+		backBtn bool
 	)
 	if len(s.reqOpenBk) > 0 {
 		op = "Opened "
@@ -230,10 +231,11 @@ func (r RecipeListT) GenDisplay(id int, s *sessCtx) RespEvent {
 			}
 		}
 		type_ = "header"
+		backBtn = true
 		if len(s.state) < 2 {
-			type_ = "headerNoBackButton"
+			backBtn = false
 		}
-		return RespEvent{Type: type_, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: nil}
+		return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: nil}
 	}
 	//
 	// mutli-choice recipes
@@ -256,18 +258,20 @@ func (r RecipeListT) GenDisplay(id int, s *sessCtx) RespEvent {
 		list = append(list, item)
 	}
 	type_ = "Search"
+	backBtn = true
 	if len(s.state) < 2 {
-		type_ = "SearchNoBackButton"
+		backBtn = false
 	}
 
-	return RespEvent{Type: type_, Header: "Search results: " + s.reqSearch, Text: s.vmsg, Verbal: s.dmsg, List: list}
+	return RespEvent{Type: type_, BackBtn: backBtn, Header: "Search results: " + s.reqSearch, Text: s.vmsg, Verbal: s.dmsg, List: list}
 }
 
 func (o ObjMenuT) GenDisplay(id int, s *sessCtx) RespEvent {
 	var (
-		hdr  string
-		subh string
-		op   string
+		hdr     string
+		subh    string
+		op      string
+		backBtn bool
 	)
 	if len(s.passErr) > 0 {
 		hdr = s.passErr
@@ -284,21 +288,30 @@ func (o ObjMenuT) GenDisplay(id int, s *sessCtx) RespEvent {
 		id := strconv.Itoa(i + 1)
 		list[i] = DisplayItem{Id: id, Title: v}
 	}
-	return RespEvent{Type: "Select", Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: list}
+	backBtn = true
+	if len(s.state) < 2 {
+		backBtn = false
+	}
+	return RespEvent{Type: "Select", BackBtn: backBtn, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: list}
 }
 
 func (b BookT) GenDisplay(x int, s *sessCtx) RespEvent {
 	var (
-		hdr   string
-		subh  string
-		type_ string
+		hdr     string
+		subh    string
+		type_   string
+		backBtn bool
 	)
-	id := strings.Split(string(b), "|")
 
+	type_ = "header"
+	backBtn = true
+	if len(s.state) < 2 {
+		backBtn = false
+	}
+	id := strings.Split(string(b), "|")
 	switch len(id) {
 	case 1:
 		if s.request == "book/close" {
-			type_ = "header"
 			hdr = s.CloseBkName + " closed."
 			subh = "Future searches will be across all books"
 		} else {
@@ -308,7 +321,7 @@ func (b BookT) GenDisplay(x int, s *sessCtx) RespEvent {
 			list := make([]DisplayItem, 2)
 			list[0] = DisplayItem{Id: "1", Title: "Yes"}
 			list[1] = DisplayItem{Id: "2", Title: "No"}
-			return RespEvent{Type: type_, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: list}
+			return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: list}
 		}
 	default:
 		// book successfully opened. No errors can occur during book close so b will always be empty.
@@ -316,7 +329,7 @@ func (b BookT) GenDisplay(x int, s *sessCtx) RespEvent {
 		authors := id[2]
 		hdr = "Opened book " + BkName + "  by " + authors
 		subh = "All searches will be restricted to this book until it is closed"
-		type_ = "headerNoBackButton"
 	}
-	return RespEvent{Type: type_, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: nil}
+
+	return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: nil}
 }

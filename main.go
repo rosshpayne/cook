@@ -682,7 +682,7 @@ type DisplayItem struct {
 }
 type RespEvent struct {
 	Position string        `json:"Position"` // recId|EOL|PEOL|PName
-	BackBtn  bool          `json:"Back"`
+	BackBtn  bool          `json:"BackBtn"`
 	Type     string        `json:"Type"`
 	Header   string        `json:"Header"`
 	SubHdr   string        `json:"SubHdr"`

@@ -69,19 +69,12 @@ const EventHandler = {
                             .reprompt(resp.Verbal)
                             .addDirective(ingredient(resp.Header,resp.SubHdr, resp.List))
                             .getResponse();       
-        } else if (resp.Type === "headerNoBackButton") {
-          const display = require('APL/headerNoBackButton.js');
-          return  handlerInput.responseBuilder
-                            .speak(resp.Verbal)
-                            .reprompt(resp.Verbal)
-                            .addDirective(display(resp.Header, resp.SubHdr, resp.List))
-                            .getResponse();
         } else if (resp.Type === "header") {
-          const display = require('APL/header');
+          const display = require('APL/header.js');
           return  handlerInput.responseBuilder
                             .speak(resp.Verbal)
                             .reprompt(resp.Verbal)
-                            .addDirective(display(resp.Header, resp.SubHdr, resp.List))
+                            .addDirective(display(resp.BackBtn, resp.Header, resp.SubHdr, resp.List))
                             .getResponse();
       } else if (resp.Type === "Tripple") { 
           const tripple = require('APL/tripple.js');
@@ -102,13 +95,13 @@ const EventHandler = {
           return  handlerInput.responseBuilder
                             .speak(resp.Verbal)
                             .reprompt(resp.Verbal)
-                            .addDirective(select(resp.Header,resp.SubHdr, resp.List))
+                            .addDirective(select(resp.BackBtn, resp.Header,resp.SubHdr, resp.List))
                             .getResponse();     
         } else if (resp.Type === "Search") {
           return  handlerInput.responseBuilder
                           .speak(resp.Verbal)
                           .reprompt(resp.Text)
-                          .addDirective(search(resp.Header, resp.SubHdr, resp.List))
+                          .addDirective(search(resp.BackBtn, resp.BackBtn,resp.Header, resp.SubHdr, resp.List))
                           .getResponse();
         } else {
            return  handlerInput.responseBuilder
@@ -141,18 +134,12 @@ const EventHandler = {
                             .reprompt(resp.Verbal)
                             .addDirective(ingredient(resp.Header,resp.SubHdr, resp.List))
                             .getResponse();
-        } else if (resp.Type === "headerNoBackButton") { 
-           const display = require('APL/headerNoBackButton.js');
-           return  handlerInput.responseBuilder
-                            .speak(resp.Verbal)
-                            .reprompt(resp.Verbal)
-                            .addDirective(display(resp.Header,resp.SubHdr,  resp.List) )
-                            .getResponse();        } else if (resp.Type === "header") { 
+        } else if (resp.Type === "header") { 
            const display = require('APL/header.js');
            return  handlerInput.responseBuilder
                             .speak(resp.Verbal)
                             .reprompt(resp.Verbal)
-                            .addDirective(display(resp.Header,resp.SubHdr,  resp.List) )
+                            .addDirective(display(resp.BackBtn, resp.Header,resp.SubHdr,  resp.List) )
                             .getResponse();
         } else if (resp.Type === "Tripple") { 
            const tripple = require('APL/tripple.js');
@@ -166,22 +153,16 @@ const EventHandler = {
            return  handlerInput.responseBuilder
                             .speak(resp.Verbal)
                             .reprompt(resp.Verbal)
-                            .addDirective(select(resp.Header,resp.SubHdr, resp.List))
+                            .addDirective(select(resp.BackBtn, resp.Header,resp.SubHdr, resp.List))
                             .getResponse();     
         } else if (resp.Type === "Search") {
             const search = require('APL/search.js');
             return  handlerInput.responseBuilder
                           .speak(resp.Verbal)
                           .reprompt(resp.Text)
-                          .addDirective(search(resp.Header, resp.SubHdr, resp.List))
+                          .addDirective(search(resp.BackBtn, resp.Header, resp.SubHdr, resp.List))
                           .getResponse();
-        } else if (resp.Type === "SearchNoBackButton") {
-            const search = require('APL/searchNoBackButton.js');
-            return  handlerInput.responseBuilder
-                          .speak(resp.Verbal)
-                          .reprompt(resp.Text)
-                          .addDirective(search(resp.Header, resp.SubHdr, resp.List))
-                          .getResponse();} else {
+        } else {
            return  handlerInput.responseBuilder
                           .speak(resp.Verbal)
                           .reprompt(resp.Text)
@@ -219,21 +200,14 @@ const BookIntentHandler = {
           return  handlerInput.responseBuilder
                             .speak(resp.Verbal)
                             .reprompt(resp.Verbal)
-                            .addDirective(display(resp.Header, resp.SubHdr, resp.List))
-                            .getResponse();
-       } else if (resp.Type === "headerNoBackButton") {
-          const display = require('APL/headerNoBackButton.js');
-          return  handlerInput.responseBuilder
-                            .speak(resp.Verbal)
-                            .reprompt(resp.Verbal)
-                            .addDirective(display(resp.Header, resp.SubHdr, resp.List))
+                            .addDirective(display(resp.BackBtn, resp.Header, resp.SubHdr, resp.List))
                             .getResponse();
         } else if (resp.Type === "Select") {
           const select = require('APL/select.js');
           return  handlerInput.responseBuilder
                             .speak(resp.Verbal)
                             .reprompt(resp.Verbal)
-                            .addDirective(select(resp.Header,resp.SubHdr, resp.List))
+                            .addDirective(select(resp.BackBtn, resp.Header,resp.SubHdr, resp.List))
                             .getResponse(); 
         }
         }).catch(function (err) { console.log(err, err.stack);  } );
@@ -273,7 +247,7 @@ const CloseBookIntentHandler = {
           return  handlerInput.responseBuilder
                             .speak(resp.Verbal)
                             .reprompt(resp.Verbal)
-                            .addDirective(select(resp.Header,resp.SubHdr, resp.List))
+                            .addDirective(select(resp.BackBtn, resp.Header,resp.SubHdr, resp.List))
                             .getResponse(); 
         }
         }).catch(function (err) { console.log(err, err.stack);  } );
@@ -312,18 +286,12 @@ const SearchIntentHandler = {
                             .reprompt(resp.Verbal)
                             .addDirective(ingredient(resp.Header,resp.SubHdr, resp.List))
                             .getResponse();
-        } else if (resp.Type === "headerNoBackButton") { 
-           const display = require('APL/headerNoBackButton.js');
-           return  handlerInput.responseBuilder
-                            .speak(resp.Verbal)
-                            .reprompt(resp.Verbal)
-                            .addDirective(display(resp.Header,resp.SubHdr,  resp.List) )
-                            .getResponse();        } else if (resp.Type === "header") { 
+        } else if (resp.Type === "header") { 
            const display = require('APL/header.js');
            return  handlerInput.responseBuilder
                             .speak(resp.Verbal)
                             .reprompt(resp.Verbal)
-                            .addDirective(display(resp.Header,resp.SubHdr,  resp.List) )
+                            .addDirective(display(resp.BackBtn, resp.Header,resp.SubHdr,  resp.List) )
                             .getResponse();
         } else if (resp.Type === "Tripple") { 
            const tripple = require('APL/tripple.js');
@@ -335,28 +303,22 @@ const SearchIntentHandler = {
         } else if (resp.Type === "Select"){
            const select = require('APL/select.js');
            return  handlerInput.responseBuilder
-                            .speak(resp.Verbal)
+                            .speak(resp.Verbal+" "+resp.BackBtn)
                             .reprompt(resp.Verbal)
-                            .addDirective(select(resp.Header,resp.SubHdr, resp.List))
+                            .addDirective(select(resp.BackBtn, resp.Header,resp.SubHdr, resp.List))
                             .getResponse();     
         } else if (resp.Type === "Search") {
             const search = require('APL/search.js');
             return  handlerInput.responseBuilder
                           .speak(resp.Verbal)
                           .reprompt(resp.Text)
-                          .addDirective(search(resp.Header, resp.SubHdr, resp.List))
+                          .addDirective(search(resp.BackBtn, resp.Header, resp.SubHdr, resp.List))
                           .getResponse();
-        } else if (resp.Type === "SearchNoBackButton") {
-            const search = require('APL/searchNoBackButton.js');
-            return  handlerInput.responseBuilder
-                          .speak(resp.Verbal)
-                          .reprompt(resp.Text)
-                          .addDirective(search(resp.Header, resp.SubHdr, resp.List))
-                          .getResponse();} else {
+        } else {
            return  handlerInput.responseBuilder
                           .speak(resp.Verbal)
                           .reprompt(resp.Text)
-                          .addDirective(search(resp.Header, resp.SubHdr, resp.List))
+                          .addDirective(search(resp.BackBtn, resp.Header, resp.SubHdr, resp.List))
                           .getResponse(); 
         }
       }).catch(function (err) { console.log(err, err.stack);  } );
@@ -454,14 +416,14 @@ const SelectIntentHandler = {
           return  handlerInput.responseBuilder
                             .speak(resp.Verbal)
                             .reprompt(resp.Verbal)
-                            .addDirective(select(resp.Header,resp.SubHdr, resp.List))
+                            .addDirective(select(resp.BackBtn, resp.Header,resp.SubHdr, resp.List))
                             .getResponse();     
         } else if (resp.Type === "Search") {
           const select = require('APL/search.js');
           return  handlerInput.responseBuilder
                           .speak(resp.Verbal)
                           .reprompt(resp.Text)
-                          .addDirective(search(resp.Header, resp.SubHdr, resp.List))
+                          .addDirective(search(resp.BackBtn, resp.Header, resp.SubHdr, resp.List))
                           .getResponse();
         } else {
            const select = require('APL/search.js');
@@ -528,13 +490,13 @@ const GotoIntentHandler = {
           return  handlerInput.responseBuilder
                             .speak(resp.Verbal)
                             .reprompt(resp.Verbal)
-                            .addDirective(select(resp.Header,resp.SubHdr, resp.List))
+                            .addDirective(select(resp.BackBtn, resp.Header,resp.SubHdr, resp.List))
                             .getResponse();     
         } else if (resp.Type === "Search") {
           return  handlerInput.responseBuilder
                           .speak(resp.Verbal)
                           .reprompt(resp.Text)
-                          .addDirective(search(resp.Header, resp.SubHdr, resp.List))
+                          .addDirective(search(resp.BackBtn, resp.Header, resp.SubHdr, resp.List))
                           .getResponse();
         } else {
            return  handlerInput.responseBuilder
@@ -596,13 +558,13 @@ const NextIntentHandler = {
           return  handlerInput.responseBuilder
                             .speak(resp.Verbal)
                             .reprompt(resp.Verbal)
-                            .addDirective(select(resp.Header,resp.SubHdr, resp.List))
+                            .addDirective(select(resp.BackBtn, resp.Header,resp.SubHdr, resp.List))
                             .getResponse();     
         } else if (resp.Type === "Search") {
           return  handlerInput.responseBuilder
                           .speak(resp.Verbal)
                           .reprompt(resp.Text)
-                          .addDirective(search(resp.Header, resp.SubHdr, resp.List))
+                          .addDirective(search(resp.BackBtn, resp.Header, resp.SubHdr, resp.List))
                           .getResponse();
         } else {
            return  handlerInput.responseBuilder
@@ -658,13 +620,13 @@ const RepeatIntentHandler = {
           return  handlerInput.responseBuilder
                             .speak(resp.Verbal)
                             .reprompt(resp.Verbal)
-                            .addDirective(select(resp.Header,resp.SubHdr, resp.List))
+                            .addDirective(select(resp.BackBtn, resp.Header,resp.SubHdr, resp.List))
                             .getResponse();     
         } else if (resp.Type === "Search") {
           return  handlerInput.responseBuilder
                           .speak(resp.Verbal)
                           .reprompt(resp.Text)
-                          .addDirective(search(resp.Header, resp.SubHdr, resp.List))
+                          .addDirective(search(resp.BackBtn, resp.Header, resp.SubHdr, resp.List))
                           .getResponse();
         } else {
            return  handlerInput.responseBuilder
@@ -725,13 +687,13 @@ const PrevIntentHandler = {
           return  handlerInput.responseBuilder
                             .speak(resp.Verbal)
                             .reprompt(resp.Verbal)
-                            .addDirective(select(resp.Header,resp.SubHdr, resp.List))
+                            .addDirective(select(resp.BackBtn, resp.Header,resp.SubHdr, resp.List))
                             .getResponse();     
         } else if (resp.Type === "Search") {
           return  handlerInput.responseBuilder
                           .speak(resp.Verbal)
                           .reprompt(resp.Text)
-                          .addDirective(search(resp.Header, resp.SubHdr, resp.List))
+                          .addDirective(search(resp.BackBtn, resp.Header, resp.SubHdr, resp.List))
                           .getResponse();
         } else {
            return  handlerInput.responseBuilder

@@ -1,6 +1,6 @@
 
 
-module.exports = (header, subhdr, data) => { return {
+module.exports = (backbtn, header, subhdr, data) => { return {
     type: 'Alexa.Presentation.APL.RenderDocument',
     token: 'splash-screen',
     document: {
@@ -41,7 +41,7 @@ module.exports = (header, subhdr, data) => { return {
               headerTitle: header,
               headerSubtitle: subhdr,
               headerBackgroundColor: "red",
-              headerBackButton: true,
+              headerBackButton: backbtn,
               headerNavigationAction: "backButton"
               },
               {
@@ -59,8 +59,8 @@ module.exports = (header, subhdr, data) => { return {
                      type: "SendEvent",
                      arguments : [
                        "select",
-                       "${ordinal}" ,
-                       "${data.Title}" 
+                       "${ordinal}",
+                       "${data.Type}" 
                      ]
                   },
                   item: {

@@ -47,6 +47,7 @@ module.exports = (header, subhdr, data) => { return {
               {
               type: "Sequence",
               scrollDirection: "vertical",
+              data: "${payload.listdata.properties.data}",
               numbered: true,
               grow: 1,
               shrink: 1,
@@ -54,7 +55,7 @@ module.exports = (header, subhdr, data) => { return {
               height: "100vh",
               item: {
                     type: "Text",
-                    text: "",
+                    text: "  ${data.Title}",
                     grow: 0,
                     shrink: 1,
                     spacing: 4,
