@@ -165,8 +165,9 @@ func (s *sessCtx) setState(ls *stateRec) {
 	if len(s.reqRId) == 0 {
 		s.reqRId = ls.RId
 	}
-	if len(ls.Authors) > 0 {
+	if len(s.authors) == 0 && len(ls.Authors) > 0 {
 		s.authors = ls.Authors
+		s.authorS = strings.Split(s.authors, ",")
 	}
 	if ls.Qid > 0 {
 		s.questionId = ls.Qid

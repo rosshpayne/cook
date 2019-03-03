@@ -989,71 +989,71 @@ func (s *sessCtx) loadBaseRecipe() error {
 	}
 	// find last reference to container in ptS list.
 	// in most cases a container is sourced from to represent its last use
-	for _, v := range ContainerM {
-		var found bool
-		for i := len(ptS) - 1; i >= 0; i-- {
-			// find last appearance (typically sourceC). Start at last ptS and work backwards
-			for _, c := range ptS[i].taskp.AllCp {
-				if c == v {
-					if ptS[i].SortK > c.last {
-						c.last = ptS[i].SortK
-						found = true
-						break
-					}
-				}
-			}
-			if found {
-				break
-			}
-		}
-	}
-	//
-	err = ContainerM.saveContainerUsage(s)
-	if err != nil {
-		return fmt.Errorf("Error in readBaseRecipe after saveContainerUsage - %s", err.Error())
-	}
-	DevicesM := make(DevicesMap)
-	for p := activityStart; p != nil; p = p.next {
-		for _, pp := range p.Prep {
-			if pp.UseDevice != nil {
-				typ := strings.ToLower(pp.UseDevice.Type)
-				if _, ok := DevicesM[typ]; !ok {
-					var str string
+	// for _, v := range ContainerM {
+	// 	var found bool
+	// 	for i := len(ptS) - 1; i >= 0; i-- {
+	// 		// find last appearance (typically sourceC). Start at last ptS and work backwards
+	// 		for _, c := range ptS[i].taskp.AllCp {
+	// 			if c == v {
+	// 				if ptS[i].SortK > c.last {
+	// 					c.last = ptS[i].SortK
+	// 					found = true
+	// 					break
+	// 				}
+	// 			}
+	// 		}
+	// 		if found {
+	// 			break
+	// 		}
+	// 	}
+	// }
+	// //
+	// err = ContainerM.saveContainerUsage(s)
+	// if err != nil {
+	// 	return fmt.Errorf("Error in readBaseRecipe after saveContainerUsage - %s", err.Error())
+	// }
+	// DevicesM := make(DevicesMap)
+	// for p := activityStart; p != nil; p = p.next {
+	// 	for _, pp := range p.Prep {
+	// 		if pp.UseDevice != nil {
+	// 			typ := strings.ToLower(pp.UseDevice.Type)
+	// 			if _, ok := DevicesM[typ]; !ok {
+	// 				var str string
 
-					pp := pp.UseDevice
-					str = pp.String()
-					if len(pp.Purpose) > 0 {
-						str += pp.Purpose
-					}
-					if len(pp.Alternate) > 0 {
-						str += " Alternative: " + pp.Alternate
-					}
-					DevicesM[typ] = str
-				}
-			}
-		}
-		for _, pp := range p.Task {
-			if pp.UseDevice != nil {
-				typ := strings.ToLower(pp.UseDevice.Type)
-				if _, ok := DevicesM[typ]; !ok {
-					var str string
-					pp := pp.UseDevice
-					str = pp.String()
-					if len(pp.Purpose) > 0 {
-						str += pp.Purpose
-					}
-					if len(pp.Alternate) > 0 {
-						str += "Alternative: " + pp.Alternate
-					}
-					DevicesM[typ] = str
-				}
-			}
-		}
-	}
-	err = DevicesM.saveDevices(s)
-	if err != nil {
-		return fmt.Errorf("Error in readBaseRecipe after saveDevice - %s", err.Error())
-	}
+	// 				pp := pp.UseDevice
+	// 				str = pp.String()
+	// 				if len(pp.Purpose) > 0 {
+	// 					str += pp.Purpose
+	// 				}
+	// 				if len(pp.Alternate) > 0 {
+	// 					str += " Alternative: " + pp.Alternate
+	// 				}
+	// 				DevicesM[typ] = str
+	// 			}
+	// 		}
+	// 	}
+	// 	for _, pp := range p.Task {
+	// 		if pp.UseDevice != nil {
+	// 			typ := strings.ToLower(pp.UseDevice.Type)
+	// 			if _, ok := DevicesM[typ]; !ok {
+	// 				var str string
+	// 				pp := pp.UseDevice
+	// 				str = pp.String()
+	// 				if len(pp.Purpose) > 0 {
+	// 					str += pp.Purpose
+	// 				}
+	// 				if len(pp.Alternate) > 0 {
+	// 					str += "Alternative: " + pp.Alternate
+	// 				}
+	// 				DevicesM[typ] = str
+	// 			}
+	// 		}
+	// 	}
+	// }
+	// err = DevicesM.saveDevices(s)
+	// if err != nil {
+	// 	return fmt.Errorf("Error in readBaseRecipe after saveDevice - %s", err.Error())
+	// }
 
 	return nil
 

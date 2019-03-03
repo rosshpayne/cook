@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"log"
 	"net/url"
-	_ "os"
+	"os"
 	"strconv"
 	"strings"
 
 	"github.com/cook/global"
 
-	"github.com/aws/aws-lambda-go/lambda"
+	_ "github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -756,6 +756,7 @@ func handler(request InputEvent) (RespEvent, error) {
 			break
 		}
 		sessctx.noGetRecRequired, sessctx.reset = true, true
+		return RespEvent{}, nil
 	//
 	case "load", "print", "listcontainer":
 		//
@@ -794,6 +795,7 @@ func handler(request InputEvent) (RespEvent, error) {
 			fmt.Println(as.String(r))
 		}
 		sessctx.noGetRecRequired, sessctx.reset = true, true
+		return RespEvent{}, nil
 	//
 	case "genSlotValues":
 		err = sessctx.generateSlotEntries()
@@ -908,19 +910,19 @@ func handler(request InputEvent) (RespEvent, error) {
 }
 
 func main() {
-	lambda.Start(handler)
-	//p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
+	//lambda.Start(handler)
+	p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
 	//p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&rcp=Take-home Chocolate Cake"}
 	//var i float64 = 1.0
 	// p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + "&srch=" + os.Args[2]}
 	// //
-	// pIngrdScale = 1.0
-	// global.Set_WriteCtx(global.UDisplay)
-	// p, _ := handler(p1)
-	// if len(p.Error) > 0 {
-	// 	fmt.Printf("%#v\n", p.Error)
-	// } else {
-	// 	fmt.Printf("output:   %s\n", p.Text)
-	// 	fmt.Printf("output:   %s\n", p.Verbal)
-	// }
+	pIngrdScale = 1.0
+	global.Set_WriteCtx(global.UDisplay)
+	p, _ := handler(p1)
+	if len(p.Error) > 0 {
+		fmt.Printf("%#v\n", p.Error)
+	} else {
+		fmt.Printf("output:   %s\n", p.Text)
+		fmt.Printf("output:   %s\n", p.Verbal)
+	}
 }

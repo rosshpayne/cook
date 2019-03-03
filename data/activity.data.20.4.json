@@ -151,7 +151,7 @@
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
                                   "addToC" : {"SS" : ["crumbleBowl"] },
-                                  "useD" : { "M" : { "type" : {"S": "weight scales" }}}
+                                  "useD" : { "M" : { "type" : {"S": "weight measure" }}}
                                 }}
                                 ]
                                          
@@ -182,7 +182,7 @@
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
                                   "addToC" : { "SS" : ["crumbleBowl"] },
-                                  "useD" : { "M" : { "type" : {"S": "weight scales" }}
+                                  "useD" : { "M" : { "type" : {"S": "weight measure" }}
                                   }
                                 }}
                                 ]
@@ -213,7 +213,7 @@
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
                                   "addToC" : { "SS" : [ "crumbleBowl" ] },
-                                  "useD" : { "M" : { "type" : {"S": "weight scales" }}}
+                                  "useD" : { "M" : { "type" : {"S": "weight measure" }}}
                                 }}
                                 ]
                 }
@@ -362,7 +362,7 @@
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
                                   "addToC" : {"SS" : ["fruitBowl"] },
-                                  "useD" : { "M" : { "type" : {"S": "weight scales" }}
+                                  "useD" : { "M" : { "type" : {"S": "weight measure" }}
                                    }
                                 }}
                                 ]
@@ -393,7 +393,7 @@
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
                                   "addToC" : {"SS" : ["fruitBowl"] },
-                                  "useD" : { "M" : { "type" : {"S": "weight scales" }}
+                                  "useD" : { "M" : { "type" : {"S": "weight measure" }}
                                    }
                                 } }
                                 ]
@@ -666,7 +666,7 @@
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
                                   "addToC" : {"SS" : ["SAB-M"] },
-                                  "useD" : { "M" : { "type" : {"S": "weigth scale" }}
+                                  "useD" : { "M" : { "type" : {"S": "weight measure" }}
                                    } }
                                 },
                                 {"M" : { 

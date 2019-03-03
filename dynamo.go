@@ -309,7 +309,11 @@ type indexRecipeT struct {
 
 func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[string]*Activity) error {
 
-	var indexRecS []indexRecipeT
+	var (
+		indexRecS []indexRecipeT
+		subject   string
+		type_     string
+	)
 	indexRow := make(map[string]bool)
 	// any string() methods will be writing for the display
 	global.Set_WriteCtx(global.UDisplay)
@@ -338,7 +342,7 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 			return
 		}
 		irec := indexRecipeT{SortK: s.reqBkId + "-" + s.reqRId, BkName: s.reqBkName, RName: s.reqRName, Authors: s.authors, Srv: s.recipe.Serves}
-		irec.PKey = strings.TrimRight(strings.TrimLeft(strings.ToLower(entry), " "), " ")
+		irec.PKey = strings.Replace(entry, "-", " ", -1)
 		// only append unique values..
 		indexRow[entry] = true
 		indexRecS = append(indexRecS, irec)
@@ -350,7 +354,7 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 			return
 		}
 		irec := indexRecipeT{SortK: s.reqBkId + "-" + s.reqRId, BkName: s.reqBkName, RName: s.reqRName, Authors: s.authors, Srv: s.recipe.Serves}
-		irec.PKey = entry
+		irec.PKey = strings.Replace(entry, "-", " ", -1)
 		irec.Quantity = ap.String()
 		// only append unique values..
 		indexRow[entry] = true
@@ -395,6 +399,33 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 			indexBasicEntry(entry)
 		}
 	}
+
+	GenerateEntries := func(s string) {
+
+		AddEntry(subject)
+		AddEntry(type_)
+		AddEntry(type_ + " " + subject)
+
+		e := strings.Fields(s)
+		for _, v := range e {
+			AddEntry(v)
+			AddEntry(v + " " + type_)
+			AddEntry(v + " " + subject)
+			AddEntry(v + " " + type_ + " " + subject)
+		}
+		switch len(e) {
+		case 0, 1:
+		case 2:
+			AddEntry(e[0] + " " + e[1] + " " + subject)
+			//AddEntry(e[1] + " " + e[0] + " " + subject)
+			AddEntry(e[0] + " " + e[1] + " " + type_ + " " + subject)
+			//AddEntry(e[1] + " " + e[0] + " " + type_ + " " + subject)
+		default:
+			AddEntry(e[0] + " " + e[1] + " " + subject)
+			AddEntry(e[0] + " " + e[2] + " " + subject)
+			AddEntry(e[1] + " " + e[2] + " " + subject)
+		}
+	}
 	removePunc := []string{",", ";", "!", "@", "&", "(", ")", "{", "}"}
 	removeWords := []string{"the", "and", "of", "with", "fresh", "a", "to", "from", "by"} //TODO: source from dynamo
 
@@ -414,49 +445,143 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 		}
 		return a
 	}
+
+	var mword []string = []string{
+		"rose water",
+		"ice cream",
+		"tin can",
+		"olive oil",
+		"source cream",
+		"soured cream",
+		"rum and raisin",
+		"rum caramel",
+		"tropical fruit",
+		"baileys irish cream",
+		"custard cream",
+		"? topping",
+		"star anise",
+		"white chocolate",
+		"dark chocolate",
+		"baby black",
+	}
+
+	joinWords := func(s string) string {
+		for _, v := range mword {
+			if i := strings.Index(v, "?"); i > -1 {
+				v := v[i+2:] // substring - part 2 of join words
+				//
+				for i, w := range strings.Fields(s) {
+					if w == v {
+						if i < 2 {
+							break
+						}
+						// get all words in recipe
+						allw := strings.Fields(s)
+						var b strings.Builder
+						// now join
+						for _, v := range allw[:i-1] {
+							b.WriteString(v + " ")
+						}
+						for _, v := range allw[i-1 : i] {
+							b.WriteString(v + "-")
+						}
+						for _, v := range allw[i:] {
+							b.WriteString(v + " ")
+						}
+						s = b.String()
+					}
+					continue
+				}
+			}
+			if i := strings.Index(s, v); i > -1 {
+				hv := strings.Replace(v, " ", "-", -1)
+				s = strings.Replace(s, v, hv, -1)
+			}
+		}
+		return s
+	}
+	//*****************************************************************************//
 	//
-	// source index entries from recipe index attribute (saved to sessctx)
-	//  check each word in entry against label and ingredient to add quantity data
-	//  if not present just add recipe name and book data to index entry
+	// index using recipe name
 	//
-	//  entry -> "a b c" , potentially creates the following index entries.
-	//   1      "a b c"
-	//   2     "a" "b" "c"
-	//	 3		"a b"
-	//	 4		"a c"
-	//	 5		"b c"
-	// combine recipe name and keywords
-	index := append(s.recipe.Index, s.recipe.RName)
+	AddEntry(s.recipe.RName)
+	//
+	// check reference to "with"
+	//
+	var recipeIndexed bool
+	//
+	// recipes seem to follow this format:  [a [[,b] and] ] <type> subject [with c [and d]]
+	//
+	// look for "with" in recipe name
+	//
+	words := strings.Fields(joinWords(strings.ToLower(s.recipe.RName)))
+	for i, v := range words {
+		if v == "with" {
+			var s strings.Builder
+			subject = words[i-1]
+			if i > 1 {
+				type_ = words[i-2]
+			}
+			for _, word := range words[:i-2] {
+				w := strings.Split(word, ",")
+				s.WriteString(w[0] + " ")
+			}
+
+			pre := RemoveCommonWords(RemovePuncs(s.String()))
+			s.Reset()
+			for _, word := range words[i+1:] {
+				w := strings.Split(word, ",")
+				s.WriteString(w[0] + " ")
+			}
+			post := RemoveCommonWords(RemovePuncs(s.String()))
+
+			GenerateEntries(pre + post)
+		}
+	}
+	//
+	// if no "with", recipe name format becomes:  [a [[,b] and] ] <type> subject
+	//
+	if !recipeIndexed {
+		type_ = words[len(words)-2]
+		subject = words[len(words)-1]
+
+		var s strings.Builder
+		for _, word := range words[:len(words)-2] {
+			w := strings.Split(word, ",")
+			s.WriteString(w[0] + " ")
+		}
+		pre := RemoveCommonWords(RemovePuncs(s.String()))
+
+		GenerateEntries(pre)
+	}
+	//
+	// index using index attribute from recipe item
+	//
+	index := s.recipe.Index
 	for _, entry := range index {
-		entry := RemovePuncs(entry)
 		AddEntry(entry)
-		entry = RemoveCommonWords(entry)
-		AddEntry(entry)
-		e := strings.Split(entry, " ")
+		e := strings.Fields(entry)
 		for _, v := range e {
 			AddEntry(v)
 		}
 		switch len(e) {
-		case 1, 2:
 		case 3:
 			AddEntry(e[0] + " " + e[1])
 			AddEntry(e[0] + " " + e[2])
 			AddEntry(e[1] + " " + e[2])
-		default:
-			AddEntry(e[0] + " " + e[len(e)-1])
-			AddEntry(e[1] + " " + e[len(e)-1])
-			AddEntry(e[0] + " " + e[len(e)-2] + " " + e[len(e)-1])
-			AddEntry(e[1] + " " + e[len(e)-2] + " " + e[len(e)-1])
-			AddEntry(e[0] + " " + e[1] + " " + e[len(e)-2] + " " + e[len(e)-1])
 		}
 	}
-	s.indexRecs = indexRecS
-	err := s.generateSlotEntries()
+	//s.indexRecs = indexRecS
+	err := saveIngdIndex()
 	if err != nil {
 		return fmt.Errorf("Error in generateAndSaveIndex at  generateSlotEntries - %s", err.Error())
 	}
-	err = saveIngdIndex()
+	//
+	// must refresh Alexa slot entries on each new index build
+	//
+	err = s.generateSlotEntries()
 	return err
+
 }
 
 func (d DevicesMap) saveDevices(s *sessCtx) error {
@@ -836,7 +961,9 @@ func (s *sessCtx) generateSlotEntries() error {
 			case 2:
 				str = PKey + ",," + w[1] + " " + w[0] + "\n"
 			case 3:
-				str = PKey + ",," + w[2] + " " + w[1] + " " + w[0] + "\n"
+				str = PKey + ",," + w[1] + " " + w[0] + " " + w[2] + "\n"
+			case 4:
+				str = PKey + ",," + w[1] + " " + w[0] + " " + w[2] + " " + w[3] + "\n"
 			default:
 				str = PKey + ",," + "\n"
 			}
