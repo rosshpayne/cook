@@ -81,7 +81,7 @@ type sessCtx struct {
 	ddata         string
 	yesno         string
 	//
-	displayData DisplayI
+	displayData Displayer
 	//instructions []InstructionT // cached instructions for complete or part based recipe
 	// Recipe Part data
 	eol   int    // sourced from Sessions table

@@ -319,6 +319,7 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 	global.Set_WriteCtx(global.UDisplay)
 
 	saveIngdIndex := func() error {
+
 		for _, v := range indexRecS {
 			av, err := dynamodbattribute.MarshalMap(v)
 			if err != nil {
@@ -384,7 +385,7 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 		// if not indexed, try searching using individual words in entry
 		//  - but index using whole entry not the word.
 		if !indexed {
-			for _, w := range strings.Split(entry, " ") {
+			for _, w := range strings.Fields(entry) {
 				if a, ok := labelM[strings.ToLower(w)]; ok {
 					makeIndexRecs(entry, a)
 					break
@@ -401,17 +402,25 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 	}
 
 	GenerateEntries := func(s string) {
+		// generate phases based on combination of words from recipe
 
 		AddEntry(subject)
-		AddEntry(type_)
-		AddEntry(type_ + " " + subject)
+		if len(type_) > 0 {
+			AddEntry(type_)
+			AddEntry(type_ + " " + subject)
+		}
 
 		e := strings.Fields(s)
 		for _, v := range e {
 			AddEntry(v)
-			AddEntry(v + " " + type_)
-			AddEntry(v + " " + subject)
-			AddEntry(v + " " + type_ + " " + subject)
+			if len(type_) > 0 {
+				AddEntry(v + " " + type_)
+				AddEntry(v + " " + subject)
+				AddEntry(v + " " + type_ + " " + subject)
+			} else {
+				AddEntry(v + " " + subject)
+			}
+
 		}
 		switch len(e) {
 		case 0, 1:
@@ -439,9 +448,9 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 	}
 
 	RemoveCommonWords := func(entry string) string {
-		a := strings.TrimRight(strings.TrimLeft(strings.ToLower(entry), " "), " ")
+		a := strings.TrimRight(strings.TrimLeft(entry, " "), " ")
 		for _, v := range removeWords {
-			a = strings.Replace(a, " "+v+" ", " ", -1)
+			a = strings.Replace(a+" ", " "+v+" ", " ", -1)
 		}
 		return a
 	}
@@ -463,6 +472,7 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 		"white chocolate",
 		"dark chocolate",
 		"baby black",
+		"raw tomato",
 	}
 
 	joinWords := func(s string) string {
@@ -482,6 +492,7 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 						for _, v := range allw[:i-1] {
 							b.WriteString(v + " ")
 						}
+						fmt.Println("Pre: ", b.String())
 						for _, v := range allw[i-1 : i] {
 							b.WriteString(v + "-")
 						}
@@ -504,7 +515,7 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 	//
 	// index using recipe name
 	//
-	AddEntry(s.recipe.RName)
+	AddEntry(RemovePuncs(s.recipe.RName))
 	//
 	// check reference to "with"
 	//
@@ -512,30 +523,33 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 	//
 	// recipes seem to follow this format:  [a [[,b] and] ] <type> subject [with c [and d]]
 	//
+	words := strings.Fields(joinWords(strings.ToLower(s.recipe.RName)))
+	//
 	// look for "with" in recipe name
 	//
-	words := strings.Fields(joinWords(strings.ToLower(s.recipe.RName)))
 	for i, v := range words {
 		if v == "with" {
+			fmt.Println("Found with at :", i)
 			var s strings.Builder
 			subject = words[i-1]
 			if i > 1 {
 				type_ = words[i-2]
 			}
-			for _, word := range words[:i-2] {
-				w := strings.Split(word, ",")
-				s.WriteString(w[0] + " ")
+			if i > 3 {
+				for _, word := range words[:i-3] {
+					w := strings.Split(word, ",")
+					s.WriteString(w[0] + " ")
+				}
 			}
-
-			pre := RemoveCommonWords(RemovePuncs(s.String()))
-			s.Reset()
 			for _, word := range words[i+1:] {
 				w := strings.Split(word, ",")
 				s.WriteString(w[0] + " ")
 			}
-			post := RemoveCommonWords(RemovePuncs(s.String()))
-
-			GenerateEntries(pre + post)
+			fmt.Println("s.String() ", s.String())
+			str := RemoveCommonWords(RemovePuncs(s.String()))
+			fmt.Println("Str: ", str)
+			GenerateEntries(str)
+			recipeIndexed = true
 		}
 	}
 	//
@@ -551,7 +565,7 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 			s.WriteString(w[0] + " ")
 		}
 		pre := RemoveCommonWords(RemovePuncs(s.String()))
-
+		fmt.Println("Pre: ", pre)
 		GenerateEntries(pre)
 	}
 	//
@@ -572,6 +586,7 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 		}
 	}
 	//s.indexRecs = indexRecS
+
 	err := saveIngdIndex()
 	if err != nil {
 		return fmt.Errorf("Error in generateAndSaveIndex at  generateSlotEntries - %s", err.Error())
@@ -952,7 +967,7 @@ func (s *sessCtx) generateSlotEntries() error {
 		if !srchKeys[PKey] {
 			var str string
 			srchKeys[PKey] = true
-			w := strings.Split(PKey, " ")
+			w := strings.Fields(PKey)
 			switch len(w) {
 			case 1:
 				if PKey[len(PKey)-1] != 's' {

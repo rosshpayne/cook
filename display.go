@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-type DisplayI interface {
+type Displayer interface {
 	GenDisplay(id int, s *sessCtx) RespEvent
 }
 
