@@ -54,14 +54,16 @@ type mRecipeT struct {
 }
 
 type taskRecT struct {
-	PKey   string  `json:"PKey"`  // R-[BkId]
-	SortK  int     `json:"SortK"` // monotonically increasing - task at which user is upto in recipe
-	AId    int     `json:"AId"`   // Activity Id
-	Type   byte    `json:"Type"`
-	time   float32 // all Linked preps sum time components into this field
-	Text   string  `json:"Text"` // all Linked preps combined text into this field
-	Verbal string  `json:"Verbal"`
-	EOL    int     `json:"EOL"` // End-Of-List. Max Id assigned to each record
+	PKey     string  `json:"PKey"`  // R-[BkId]
+	SortK    int     `json:"SortK"` // monotonically increasing - task at which user is upto in recipe
+	AId      int     `json:"AId"`   // Activity Id
+	Type     byte    `json:"Type"`
+	time     float32 // all Linked preps sum time components into this field
+	Division string  `json:"Div"`  // divide tasks/instructs into divisions, e.g. day-before, on-day
+	Thread   int     `json:"Thrd"` // instruction thread
+	Text     string  `json:"Text"` // all Linked preps combined text into this field
+	Verbal   string  `json:"Verbal"`
+	EOL      int     `json:"EOL"` // End-Of-List. Max Id assigned to each record
 	// Recipe Part metadata
 	PEOL int    `json:"PEOL"` // End-of-List-for-part
 	PId  int    `json:"PId"`  // instruction id within a part
@@ -114,16 +116,15 @@ func (a ContainerMap) saveContainerUsage(s *sessCtx) error {
 	return nil
 }
 
-func (s *sessCtx) cacheInstructions(part_ ...string) (InstructionS, error) {
+func (s *sessCtx) cacheInstructions(sId ...int) (Threads, error) {
 
+	// part_ respresents a division of a recipe by ingredients e.g. topping, or a division by instructions e.g. day-before
 	pKey := "T-" + s.pkey
 	keyC := expression.KeyEqual(expression.Key("PKey"), expression.Value(pKey))
 	expr, err := expression.NewBuilder().WithKeyCondition(keyC).Build()
 	if err != nil {
 		panic(err)
 	}
-	//
-	// Table: Tasks - get all instruction associated with recipe
 	//
 	input := &dynamodb.QueryInput{
 		KeyConditionExpression:    expr.KeyCondition(),
@@ -150,49 +151,116 @@ func (s *sessCtx) cacheInstructions(part_ ...string) (InstructionS, error) {
 	}
 	fmt.Printf(" cacheInstructions len() %d\n ", len(ptR))
 	//
-	// find start instruction. For complete it will be based on SortK
+	fmt.Printf("in cacheInstruction:  sId [%] \n", sId[0])
 	//
-	var part string
-	if len(part_) == 0 {
+	//
+	//
+	part := "DivPt"
+	if len(sId) == 0 || sId[0] == 1 {
 		part = CompleteRecipe_
-	} else {
-		part = part_[0]
 	}
-	fmt.Printf("in cacheInstruction:  part [%s] \n", part)
-	var instructs InstructionS
+	//
+	// 	type ThreadT struct {
+	// 	Instructions InstructionS
+	// 	id           int // active record in Instructions starting at 1
+	// }
+	var (
+		threads   Threads // []ThreadT
+		instructs InstructionS
+	)
+
 	switch part {
 	case CompleteRecipe_:
-		instructs = make(InstructionS, len(ptR)+1) // Instructions start at index 1.
-		for i, v := range ptR {
-			global.Set_WriteCtx(global.USay)
-			vmsg := expandScalableTags(expandLiteralTags(v.Verbal))
-			global.Set_WriteCtx(global.UDisplay)
-			dmsg := expandScalableTags(expandLiteralTags(v.Text))
-			instructs[i+1] = InstructionT{Text: dmsg, Verbal: vmsg, Part: v.Part, EOL: v.EOL, PEOL: v.PEOL, PID: v.PId}
+		// look for multiple threads within CompleteRecipe_
+		threads = make(Threads, 1)
+		for thread, i := 0, 0; i < len(ptR); i++ {
+			if ptR[i].Thread > 0 {
+				if ptR[i].Thread > thread {
+					thread = ptR[i].Thread
+					threads = append(threads, ThreadT{Thread: thread})
+				}
+			}
 		}
-	default:
+		// 0 index for no thead case, index 1,2 for threads 1,2
+		for t := 0; t < len(threads); t++ {
+			for _, v := range ptR {
+				if v.Thread == threads[t].Thread {
+					global.Set_WriteCtx(global.USay)
+					vmsg := expandScalableTags(expandLiteralTags(v.Verbal))
+					global.Set_WriteCtx(global.UDisplay)
+					dmsg := expandScalableTags(expandLiteralTags(v.Text))
+					instruct := InstructionT{Text: dmsg, Verbal: vmsg, Thread: v.Thread, Division: v.Division}
+					threads[t].Instructions = append(threads[t].Instructions, instruct)
+				}
+			}
+			threads[t].EOL = len(ptR)
+		}
+	case "DivPt":
 		// find instructions associated with the part
-		for _, v := range s.parts {
-			if v.Title == part {
-				start := v.Start
-				instructs = make(InstructionS, 1)
-				instructs[0] = InstructionT{} // blank instruction at index 0, so Instructions start at index 1.
-				for id := start; id != -1; id = ptR[id-1].Next {
+		v := s.parts[s.selId-2]
+		instructs = make(InstructionS, 1)
+		instructs[0] = InstructionT{} // blank instruction at index 0, so Instructions start at index 1.
+		switch v.type_ {
+		case "Div": // division by instruction - loop through all instructions looking for part
+			// generate threads: look for multiple threads within division/part
+			threads = make(Threads, 1)
+			for thread, i := 0, 0; i < len(ptR); i++ {
+				if ptR[i].Division == part {
+					if ptR[i].Thread > thread {
+						thread = ptR[i].Thread
+						threads = append(threads, ThreadT{Thread: thread})
+					}
+				}
+			}
+			// generate instructions: within a thread for the division
+			// 0 index for no thead case, index 1,2 for threads 1,2
+			for t := 0; t < len(threads); t++ {
+				for i, v := range ptR {
+					if ptR[i].Division == part {
+						if v.Thread == threads[t].Thread {
+							global.Set_WriteCtx(global.USay)
+							vmsg := expandScalableTags(expandLiteralTags(v.Verbal))
+							global.Set_WriteCtx(global.UDisplay)
+							dmsg := expandScalableTags(expandLiteralTags(v.Text))
+							instruct := InstructionT{Text: dmsg, Verbal: vmsg, Thread: v.Thread, Division: v.Division}
+							threads[t].Instructions = append(threads[t].Instructions, instruct)
+						}
+					}
+				}
+			}
+
+		default: // division by ingredient (part) - currently uses linked instructions. May go scan like Div in future.
+			// generate threads: look for multiple threads within part
+			threads = make(Threads, 1)
+			for thread, id := 0, v.Start; id != -1; id = ptR[id-1].Next {
+				if ptR[id].Thread > 0 {
+					if ptR[id].Thread > thread {
+						thread = ptR[id].Thread
+						threads = append(threads, ThreadT{Thread: thread})
+					}
+				}
+			}
+			// generate instructions: within a thread for the part
+			// 0 index for no thead case, index 1,2 for threads 1,2
+			for t := 0; t < len(threads); t++ {
+				for id := v.Start; id != -1; id = ptR[id-1].Next {
 					// ptR.Next points to SortK in table - which starts at 1
 					i := id - 1
-					global.Set_WriteCtx(global.USay)
-					vmsg := expandScalableTags(expandLiteralTags(ptR[i].Verbal))
-					global.Set_WriteCtx(global.UDisplay)
-					dmsg := expandScalableTags(expandLiteralTags(ptR[i].Text))
-					instruct := InstructionT{Text: dmsg, Verbal: vmsg, Part: ptR[i].Part, EOL: ptR[i].EOL, PEOL: ptR[i].PEOL, PID: ptR[i].PId}
-					instructs = append(instructs, instruct)
+					if ptR[i].Thread == threads[t].Thread {
+						global.Set_WriteCtx(global.USay)
+						vmsg := expandScalableTags(expandLiteralTags(ptR[i].Verbal))
+						global.Set_WriteCtx(global.UDisplay)
+						dmsg := expandScalableTags(expandLiteralTags(ptR[i].Text))
+						instruct := InstructionT{Text: dmsg, Verbal: vmsg, Part: ptR[i].Part, EOL: ptR[i].EOL, PEOL: ptR[i].PEOL, PID: ptR[i].PId}
+						threads[t].Instructions = append(threads[t].Instructions, instruct)
+					}
 				}
-				break
 			}
 		}
 	}
+	s.cThread = threads[0].Thread // index into threads
 	//
-	return instructs, nil
+	return threads, nil
 }
 
 type containerT struct {
@@ -529,7 +597,6 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 	//
 	for i, v := range words {
 		if v == "with" {
-			fmt.Println("Found with at :", i)
 			var s strings.Builder
 			subject = words[i-1]
 			if i > 1 {
@@ -545,9 +612,8 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 				w := strings.Split(word, ",")
 				s.WriteString(w[0] + " ")
 			}
-			fmt.Println("s.String() ", s.String())
 			str := RemoveCommonWords(RemovePuncs(s.String()))
-			fmt.Println("Str: ", str)
+
 			GenerateEntries(str)
 			recipeIndexed = true
 		}
@@ -556,7 +622,9 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 	// if no "with", recipe name format becomes:  [a [[,b] and] ] <type> subject
 	//
 	if !recipeIndexed {
-		type_ = words[len(words)-2]
+		if len(words) > 1 {
+			type_ = words[len(words)-2]
+		}
 		subject = words[len(words)-1]
 
 		var s strings.Builder
@@ -565,7 +633,7 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 			s.WriteString(w[0] + " ")
 		}
 		pre := RemoveCommonWords(RemovePuncs(s.String()))
-		fmt.Println("Pre: ", pre)
+
 		GenerateEntries(pre)
 	}
 	//
@@ -782,6 +850,13 @@ func (s *sessCtx) recipeRSearch() (*RecipeT, error) {
 	s.recipe = rec
 	fmt.Println("assign Recipe Parts: ", len(rec.Part))
 	s.parts = rec.Part
+	// add division if any to parts
+	for _, v := range s.parts {
+		v.type_ = "Pt"
+	}
+	for _, v := range rec.Division {
+		s.parts = append(s.parts, PartT{Title: v.Title, type_: "Div", Index: v.Index})
+	}
 	return rec, nil
 }
 

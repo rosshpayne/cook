@@ -61,9 +61,10 @@ type RecipeT struct {
 	SortK int    `json:"PKey"`
 	RName string `json:"RName"`
 	//Title  string   `json:"Title"`
-	Index  []string `json:"Index"`
-	Serves string   `json:"Srv"`
-	Part   []PartT  `json:"Part"` // order list of recipe parts. Load will prepend "nopart_" if parts are detected in Activities and some are not assigned part.
+	Index    []string `json:"Index"`
+	Serves   string   `json:"Srv"`
+	Part     []PartT  `json:"Part"` // order list of recipe parts. Load will prepend "nopart_" if parts are detected in Activities and some are not assigned part.
+	Division []PartT  `json:"Div"`  // order list of recipe divisions. Divisions apply at the instruction level rather than ingredient. Example, All instructions that can be done the day-before.
 }
 
 // type Part struct {
@@ -95,10 +96,12 @@ type taskT struct {
 // }
 
 type MeasureT struct {
-	Unit     string `json:"unit"` // unit of measure, g, kg, cm, ml, litre, pinch, clove, etc.
-	Num      string `json:"num"`  // instance x quantity
-	Quantity string `json:"qty"`  // weight, volume, dimension
-	Size     string `json:"size"` // large, medium, small
+	Unit        string `json:"unit"`  // unit of measure, g, kg, cm, ml, litre, pinch, clove, etc.
+	Num         string `json:"num"`   // instance x quantity
+	Quantity    string `json:"qty"`   // weight, volume, dimension
+	Size        string `json:"size"`  // large, medium, small
+	QualMeasure string `json:"qualm"` // qualifer before measure in ingredients output e.g. <qualm> of <measure> a <ingrd>
+
 	// normalized quantity
 	nzQty float64
 }
@@ -118,6 +121,8 @@ type PerformT struct {
 	UseDevice   *DeviceT  `json:"useD"`
 	Measure     *MeasureT `json:"measure"` // used by those tasks that use some portion of the ingredient.
 	WaitOn      int       `json:"waitOn"`  // depenency on other activity to complete
+	Division    string    `json:"div"`     // inherit from activity if not present. Recipe division based on instructions/tasks not part ingredient e.g. division: day-before, on-day
+	Thread      int       `json:"thrd"`    // inherit from activity if not present. No thread means thread 1.
 	//DeviceT
 	AddToC   []string `json:"addToC"`
 	UseC     []string `json:"useC"`
@@ -132,22 +137,24 @@ type PerformT struct {
 }
 type Activity struct {
 	// Pkey          string     `json:"PKey"`
-	AId           int         `json:"SortK"`
-	Label         string      `json:"label"`    // used in container listing rather than using ingredient
-	Ingredient    string      `json:"ingrd"`    //
-	Alias         string      `json:"alias"`    // used to index recipe when Ingredient is not suitable.
-	IngrdQualifer string      `json:"iQual"`    // (append) to ingredient
-	QualiferIngrd string      `json:"quali"`    // prepend  to ingredient.
-	QualMeasure   string      `json:"qualm"`    // qualifer before measure in ingredients output e.g. <qualm> of <measure> a <ingrd>
-	AltIngrd      string      `json:"altIngrd"` // key into Ingredient table - used for alternate ingredients only
-	Measure       *MeasureT   `json:"measure"`
-	AltMeasure    *MeasureT   `json:"altMeasure"`
-	Part          string      `json:"part"`      // ingredients are aggregated by part
-	Invisible     bool        `json:"invisible"` // do not include in ingredients listing.
-	Overview      string      `json:"ovv"`
-	Coord         [2]float32  // X,Y
-	Task          []*PerformT `json:"task"`
-	Prep          []*PerformT `json:"prep"`
+	AId           int    `json:"SortK"`
+	Label         string `json:"label"` // used in container listing rather than using ingredient
+	Ingredient    string `json:"ingrd"` //
+	Alias         string `json:"alias"` // used to index recipe when Ingredient is not suitable.
+	IngrdQualifer string `json:"iQual"` // (append) to ingredient
+	QualiferIngrd string `json:"quali"` // prepend  to ingredient.
+	//	QualMeasure   string      `json:"qualm"`    // qualifer before measure in ingredients output e.g. <qualm> of <measure> a <ingrd>
+	AltIngrd   string      `json:"altIngrd"` // key into Ingredient table - used for alternate ingredients only
+	Measure    *MeasureT   `json:"measure"`
+	AltMeasure *MeasureT   `json:"altMeasure"`
+	Part       string      `json:"part"`      // ingredients are aggregated by part
+	Invisible  bool        `json:"invisible"` // do not include in ingredients listing.
+	Overview   string      `json:"ovv"`
+	Coord      [2]float32  // X,Y
+	Task       []*PerformT `json:"task"`
+	Prep       []*PerformT `json:"prep"`
+	Division   string      `json:"div"`  // see division in PerformT.
+	Thread     int         `json:"thrd"` // activity belongs to thread. No thread means thread 1. Overrides thread at activity level.
 	//	UnitMap       map[string]*Unit
 	next     *Activity
 	prev     *Activity
@@ -249,7 +256,10 @@ func (c *Container) String() string {
 		b.WriteString(c.Measure.String() + " ")
 	}
 	if len(c.Label) > 0 {
-		b.WriteString(c.Label)
+		b.WriteString(strings.ToLower(c.Label))
+	}
+	if len(c.Requirement) > 0 {
+		b.WriteString(" " + strings.ToLower(c.Requirement))
 	}
 	if c.AltMeasure != nil {
 		b.WriteString(" or ")
@@ -727,9 +737,10 @@ func (a Activity) String() string {
 	if a.Invisible || len(a.Ingredient) == 0 {
 		return ""
 	}
-	if len(a.QualMeasure) > 0 {
+	if a.Measure != nil && len(a.Measure.QualMeasure) > 0 {
+		//if len(a.QualMeasure) > 0 {
 		// [qualm] [measure.num size] [ingrd] ([measure.qty+measure.unit])
-		s = strings.TrimRight(a.QualMeasure, " ")
+		s = strings.TrimRight(a.Measure.QualMeasure, " ")
 		if s[len(s)-3:] != " of" {
 			s += " of"
 		}

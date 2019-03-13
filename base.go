@@ -791,7 +791,7 @@ func (s *sessCtx) loadBaseRecipe() error {
 								c = pt.UseCp[0]
 							} else {
 								if len(pt.AddToCp) == 0 {
-									panic(fmt.Errorf(`Error: useC not suitable in AId [%d] [%s]`, p.AId, str))
+									panic(fmt.Errorf(`Error: addtoC not suitable in AId [%d] [%s]`, p.AId, str))
 								}
 								c = pt.AddToCp[0]
 							}
@@ -804,10 +804,12 @@ func (s *sessCtx) loadBaseRecipe() error {
 									panic(fmt.Errorf(`Error: useC or addtoC tag not followed by "form" or "type" type in AId [%d] [%s]`, p.AId, str))
 								}
 							} else {
-								b.WriteString(c.Label)
+								//	b.WriteString(strings.ToLower(c.Label))
+								b.WriteString(c.String())
 							}
 						case "measure":
 							context = measure
+							// heirarchy - look for a task measure. If not present, use the activity measure.
 							// is it the task measure
 							if pt.Measure != nil {
 								//fmt.Fprintf(&b, "%s", pt.Measure.String())
@@ -823,9 +825,10 @@ func (s *sessCtx) loadBaseRecipe() error {
 							fmt.Fprintf(&b, "%s", "{"+m.Quantity+"|"+m.Unit+"|"+m.Size+"|"+m.Num+"}")
 							//
 							//fmt.Fprintf(&b, "%s", p.Measure.String(formatonly))
-						case "actmeasure", "ameasure":
+						case "actmeasure", "ameasure", "imeasure": // ameasure, imeasure - activity/ingredient measure as opposed to measure attached to task/instruction
+							// TODO: what do these mean, ameasure may mean alternative measure
 							context = measure
-							// is it the task measure
+							// is it the activity measure
 							if p.Measure != nil {
 								m := p.Measure
 								fmt.Fprintf(&b, "%s", "{"+m.Quantity+"|"+m.Unit+"|"+m.Size+"|"+m.Num+"}")
@@ -856,8 +859,10 @@ func (s *sessCtx) loadBaseRecipe() error {
 							}
 							fmt.Fprintf(&b, "%s", strings.ToLower(pt.UseDevice.Alternate))
 							context = device
-						case "qualm":
-							fmt.Fprintf(&b, "%s", strings.ToLower(p.QualMeasure))
+						case "qualm": // this maybe redundant. Measure.String() should incorporate qualm.
+							if p.Measure != nil {
+								fmt.Fprintf(&b, "%s", strings.ToLower(p.Measure.QualMeasure))
+							}
 						case "temp":
 							if pt.UseDevice == nil {
 								return fmt.Errorf("in processBaseRecipe. UseDevice attribute not defined for Activity [%d]\n", p.AId)

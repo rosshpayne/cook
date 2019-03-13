@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"log"
 	"net/url"
-	"os"
+	_ "os"
 	"strconv"
 	"strings"
 
 	"github.com/cook/global"
 
-	_ "github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -87,7 +87,7 @@ type sessCtx struct {
 	eol   int    // sourced from Sessions table
 	peol  int    // End-of-List-for-part
 	part  string // part index/long name depending on context - if no value then no part is being used eventhough recipe may be have a part defined i.e nopart_ & a part
-	parts PartS  // sourced from Recipe (R-)
+	parts PartS  // sourced from Recipe (R-) - contains part and division values
 	// cPart string  // current part being display (long name). All part means complete recipe will be listed.
 	// next  int     // next SortK (recId)
 	// prev  int     // previous SortK (recId) when in part mode as opposed to full recipe mode
@@ -96,6 +96,9 @@ type sessCtx struct {
 	back bool // back button pressed on display
 	//
 	showObjMenu bool
+	//
+	cThread int // current thread
+	oThread int // other active thread
 }
 
 func (s *sessCtx) closeBook() {
@@ -107,6 +110,7 @@ func (s *sessCtx) closeBook() {
 	s.eol, s.peol = 0, 0
 	s.displayData = s.reqOpenBk
 	s.newSession = true
+	s.cThread, s.oThread = 0, 0
 }
 
 func (s *sessCtx) openBook() {
@@ -117,6 +121,7 @@ func (s *sessCtx) openBook() {
 	s.displayData = s.reqOpenBk
 	s.newSession = true
 	fmt.Println("openBook() - ", s.reqOpenBk)
+	s.cThread, s.oThread = 0, 0
 }
 
 func (s *sessCtx) clearForSearch(lastState *stateRec) {
@@ -137,6 +142,7 @@ func (s *sessCtx) clearForSearch(lastState *stateRec) {
 	if len(lastState.OpenBk) == 0 {
 		s.reqBkId, s.reqBkName = "", ""
 	}
+	s.cThread, s.oThread = 0, 0
 }
 
 const (
@@ -410,7 +416,7 @@ func (s *sessCtx) orchestrateRequest() error {
 			}
 			fmt.Printf("selId  %d   recipeList   %#v\n", s.selId, s.part)
 			s.reset = true
-			s.displayData, err = s.cacheInstructions(s.part)
+			s.displayData, err = s.cacheInstructions(s.selId)
 			if err != nil {
 				return err
 			}
@@ -435,6 +441,38 @@ func (s *sessCtx) orchestrateRequest() error {
 	//
 	if s.curReqType == initialiseRequest {
 		//
+		if s.request == "resume" {
+			if s.cThread == 0 || s.object != "task" || s.reqRId == "0" {
+				return fmt.Errorf("There is nothing to resume")
+			}
+			if t, ok := s.displayData.(Threads); ok {
+				if s.oThread == -1 {
+					return fmt.Errorf("All is completed. There is nothing to resume")
+				}
+				if s.oThread > 0 {
+					// resume lower thread
+					if t[s.oThread].Id == len(t[s.oThread].Instructions) {
+						return fmt.Errorf("All is completed. There is nothing to resume")
+					}
+					x := s.cThread
+					s.cThread = s.oThread
+					s.oThread = x
+				} else if s.cThread > 0 {
+					// resume upper thread
+					if t[s.oThread+1].Id == len(t[s.oThread+1].Instructions) {
+						return fmt.Errorf("All is completed. There is nothing to resume")
+					}
+					x := s.oThread
+					s.oThread = s.cThread
+					s.cThread = x
+				}
+				s.recId[objectMap[s.object]] = t[s.cThread].Id
+			} else {
+				return fmt.Errorf("There is nothing to resume")
+			}
+
+			return nil
+		}
 		if s.request == "search" {
 
 			s.clearForSearch(lastState)
@@ -588,31 +626,31 @@ func (s *sessCtx) orchestrateRequest() error {
 		return nil
 	}
 	//  if listing and not finished and object request changes object. Accept and zero or repeat last RecId for requested object.
-	if len(s.object) > 0 {
-		//if !s.finishedListing(s.recId[objectMap[s.object]], objectMap[s.object]) && (s.object != s.object) {
-		fmt.Println(s.object)
-		if len(s.recId) > 0 {
-			if s.eol != s.recId[objectMap[s.object]] && (s.object != s.object) {
-				// show last listed entry otherwise list first entry
-				switch s.recId[objectMap[s.object]] {
-				case 0: // not listed before or been reset after previously completing list
-					s.objRecId = 1 // show first entry
-				default: // in the process of listing
-					s.objRecId = s.recId[objectMap[s.object]] // repeat last shown entry
-				}
-			}
-		}
-	}
-	// if object specified and different from last one
-	if len(s.object) > 0 && len(s.recId) > 0 && (s.object != s.object) {
-		// show last listed entry otherwise list first entry
-		switch s.recId[objectMap[s.object]] {
-		case 0: // not listed before or been reset after previously completing list
-			s.objRecId = 1 // show first entry
-		default: // in the process of listing
-			s.objRecId = s.recId[objectMap[s.object]] // repeat last shown entry
-		}
-	}
+	// if len(s.object) > 0 {
+	// 	//if !s.finishedListing(s.recId[objectMap[s.object]], objectMap[s.object]) && (s.object != s.object) {
+	// 	fmt.Println(s.object)
+	// 	if len(s.recId) > 0 {
+	// 		if s.eol != s.recId[objectMap[s.object]] && (s.object != s.object) {
+	// 			// show last listed entry otherwise list first entry
+	// 			switch s.recId[objectMap[s.object]] {
+	// 			case 0: // not listed before or been reset after previously completing list
+	// 				s.objRecId = 1 // show first entry
+	// 			default: // in the process of listing
+	// 				s.objRecId = s.recId[objectMap[s.object]] // repeat last shown entry
+	// 			}
+	// 		}
+	// 	}
+	// }
+	// // if object specified and different from last one
+	// if len(s.object) > 0 && len(s.recId) > 0 && (s.object != s.object) {
+	// 	// show last listed entry otherwise list first entry
+	// 	switch s.recId[objectMap[s.object]] {
+	// 	case 0: // not listed before or been reset after previously completing list
+	// 		s.objRecId = 1 // show first entry
+	// 	default: // in the process of listing
+	// 		s.objRecId = s.recId[objectMap[s.object]] // repeat last shown entry
+	// 	}
+	// }
 	//  If listing and not finished and object request  has changed (task, ingredient, container, utensil) reset RecId
 	// change in operation does not not need to be taken into account as this is part of the initialisation phase
 	// copy object from last session
@@ -629,7 +667,6 @@ func (s *sessCtx) orchestrateRequest() error {
 		// return - no need to pushState as nothing has changed.  Select current recId.
 		s.objRecId = s.recId[objectMap[s.object]]
 		s.dmsg, s.vmsg, s.ddata = lastState.Dmsg, lastState.Vmsg, lastState.DData
-
 		return nil
 	case "prev":
 		if len(s.object) == 0 {
@@ -642,12 +679,9 @@ func (s *sessCtx) orchestrateRequest() error {
 			s.recId = [4]int{}
 		}
 		//
-		// for Recipe instructions (need to recode for other..)
-		//
 		if len(s.object) == 0 {
 			return fmt.Errorf("Error: no object defined for next in orchestrateRequest")
 		}
-		// }
 		// recId contains last processed instruction. So must add one to get current instruction.
 		s.objRecId = s.recId[objectMap[s.object]] + 1
 		s.recId[objectMap[s.object]] += 1
@@ -693,6 +727,9 @@ type RespEvent struct {
 	ListA    []DisplayItem `json:"ListA"`
 	ListB    []DisplayItem `json:"ListB"`
 	ListC    []DisplayItem `json:"ListC"`
+	ListD    []DisplayItem `json:"ListD"`
+	ListE    []DisplayItem `json:"ListE"`
+	ListF    []DisplayItem `json:"ListF"`
 }
 
 //
@@ -803,7 +840,7 @@ func handler(request InputEvent) (RespEvent, error) {
 			break
 		}
 		sessctx.noGetRecRequired, sessctx.reset = true, true
-	case "book", "recipe", "select", "search", "list", "yesno", "version", "back":
+	case "book", "recipe", "select", "search", "list", "yesno", "version", "back", "resume":
 		sessctx.curReqType = initialiseRequest
 		switch sessctx.request {
 		case "book": // user reponse "open book" "close book"
@@ -898,9 +935,9 @@ func handler(request InputEvent) (RespEvent, error) {
 	var resp RespEvent
 	//
 	s := sessctx
-	resp = s.displayData.GenDisplay(s.objRecId, s)
+	resp = s.displayData.GenDisplay(s)
 	//
-	if _, ok := s.displayData.(InstructionS); ok {
+	if _, ok := s.displayData.(Threads); ok {
 		err = s.updateState()
 		if err != nil {
 			return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg, Error: err.Error()}, nil
@@ -910,19 +947,19 @@ func handler(request InputEvent) (RespEvent, error) {
 }
 
 func main() {
-	//lambda.Start(handler)
-	p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
+	lambda.Start(handler)
+	//p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
 	//p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&rcp=Take-home Chocolate Cake"}
 	//var i float64 = 1.0
 	// p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + "&srch=" + os.Args[2]}
 	// //
-	pIngrdScale = 1.0
-	global.Set_WriteCtx(global.UDisplay)
-	p, _ := handler(p1)
-	if len(p.Error) > 0 {
-		fmt.Printf("%#v\n", p.Error)
-	} else {
-		fmt.Printf("output:   %s\n", p.Text)
-		fmt.Printf("output:   %s\n", p.Verbal)
-	}
+	// pIngrdScale = 1.0
+	// global.Set_WriteCtx(global.UDisplay)
+	// p, _ := handler(p1)
+	// if len(p.Error) > 0 {
+	// 	fmt.Printf("%#v\n", p.Error)
+	// } else {
+	// 	fmt.Printf("output:   %s\n", p.Text)
+	// 	fmt.Printf("output:   %s\n", p.Verbal)
+	// }
 }

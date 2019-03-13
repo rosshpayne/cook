@@ -57,10 +57,13 @@ type stateRec struct {
 	//
 	// Recipe Part related data
 	//
-	Parts PartS  `json:"Parts"` // PartT.Idx - short name for Recipe Part
-	Part  string `json:"Part"`
+	Parts   PartS  `json:"Parts"` // PartT.Idx - short name for Recipe Part
+	Part    string `json:"Part"`
+	CThread int    `json:"CThrd"` // current thread
+	OThread int    `json:"OThrd"` // other active thread - only two threads currently catered for. seems unlikely there would be more.
 	//
-	InstructionData InstructionS `json:"I"`
+	//InstructionData InstructionS `json:"I"`
+	InstructionData Threads `json:"I"`
 	ShowObjMenu     bool
 	//ContainerData   ContainerS   `json:"C"` // no need to save this data. It is never sourced from state data.
 	//
@@ -153,6 +156,8 @@ func (s *sessCtx) setState(ls *stateRec) {
 	if s.eol == 0 {
 		s.eol = ls.EOL
 	}
+	s.cThread = ls.CThread
+	s.oThread = ls.OThread
 	if len(s.reqBkId) == 0 {
 		s.reqBkId = ls.BkId
 	}
@@ -206,13 +211,13 @@ func (s *sessCtx) setState(ls *stateRec) {
 	if len(ls.InstructionData) > 0 {
 		dd := ls.InstructionData
 		if s.peol == 0 && len(dd) > 0 {
-			s.peol = dd[ls.RecId[objectMap[ls.Obj]]].PEOL
+			s.peol = dd[ls.CThread].Instructions[dd[ls.CThread].Id-1].PEOL //[ls.RecId[objectMap[ls.Obj]]].PEOL
 		}
 		if s.pid > 0 && len(dd) > 0 {
-			s.pid = dd[ls.RecId[objectMap[ls.Obj]]].PID
+			s.pid = dd[ls.CThread].Instructions[dd[ls.CThread].Id-1].PID
 		}
 		if ls.EOL > 0 && len(dd) > 0 {
-			s.eol = dd[ls.RecId[objectMap[ls.Obj]]].EOL
+			s.eol = dd[ls.CThread].Instructions[dd[ls.CThread].Id-1].EOL
 		}
 		s.displayData = dd
 	}
@@ -337,9 +342,11 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 	//
 	sr.Parts = s.parts
 	sr.Part = s.part
-	if d, ok := s.displayData.(InstructionS); ok {
+	if d, ok := s.displayData.(Threads); ok {
 		sr.InstructionData = d
 	}
+	sr.CThread = s.cThread
+	sr.OThread = s.oThread
 	sr.ShowObjMenu = s.showObjMenu
 	//
 	State := make(stateStack, 1)
@@ -351,7 +358,7 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 	t.Add(time.Hour * 24 * 1)
 	updateC = expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
 	if s.newSession {
-		sr.RecId = [4]int{}
+		//.RecId = [4]int{}
 		s.state = State[:]
 		updateC = updateC.Set(expression.Name("state"), expression.Value(State))
 		s.newSession = false
@@ -414,6 +421,12 @@ func (s *sessCtx) updateState() error {
 	//
 	atribute := fmt.Sprintf("state[%d].RecId", len(s.state)-1)
 	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
+	atribute = fmt.Sprintf("state[%d].I[%d].id", len(s.state)-1, s.cThread)
+	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId[objectMap[task_]]))
+	atribute = fmt.Sprintf("state[%d].CThrd", len(s.state)-1)
+	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.cThread))
+	atribute = fmt.Sprintf("state[%d].OThrd", len(s.state)-1)
+	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.oThread))
 	atribute = fmt.Sprintf("state[%d].DT", len(s.state)-1)
 	updateC = updateC.Set(expression.Name(atribute), expression.Value(time.Now().Format("Jan 2 15:04:05")))
 	atribute = fmt.Sprintf("state[%d].Request", len(s.state)-1)

@@ -220,6 +220,72 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 		return -1
 	}
 	//
+	// process Div
+	//
+	for pa := &a[0]; pa != nil; pa = pa.next {
+		var adiv string
+		if len(pa.Division) > 0 {
+			adiv = pa.Division
+		}
+		for i := 0; i < len(pa.Prep); i++ {
+			if len(pa.Prep[i].Division) == 0 && len(adiv) > 0 {
+				pa.Prep[i].Division = adiv
+			}
+		}
+		for i := 0; i < len(pa.Task); i++ {
+			if len(pa.Task[i].Division) == 0 && len(adiv) > 0 {
+				pa.Task[i].Division = adiv
+			}
+		}
+	}
+	//
+	// Are threads used..
+	//
+	var (
+		thrdBased bool
+	)
+	for pa := &a[0]; pa != nil; pa = pa.next {
+
+		if pa.Thread > 0 {
+			thrdBased = true
+			break
+		}
+		if !thrdBased {
+			for i := 0; i < len(pa.Prep); i++ {
+				if pa.Prep[i].Thread > 0 {
+					thrdBased = true
+					break
+				}
+			}
+			if !thrdBased {
+				for i := 0; i < len(pa.Task); i++ {
+					if pa.Task[i].Thread > 0 {
+						thrdBased = true
+						break
+					}
+				}
+			}
+		}
+	}
+	//
+	// check all tasks have thread value if activity is assigned to a thread
+	//
+	if thrdBased {
+		// Assign thread values to tasks.
+		for pa := &a[0]; pa != nil; pa = pa.next {
+			for i := 0; i < len(pa.Prep); i++ {
+				if pa.Prep[i].Thread == 0 && pa.Thread > 0 {
+					pa.Prep[i].Thread = pa.Thread
+				}
+			}
+			for i := 0; i < len(pa.Task); i++ {
+				if pa.Task[i].Thread == 0 && pa.Thread > 0 {
+					pa.Task[i].Thread = pa.Thread
+				}
+			}
+		}
+	}
+	//
 	// sort parallelisable prep tasks
 	//
 	for pa := prepctl.start; pa != nil; pa = pa.nextPrep {
@@ -233,7 +299,7 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 			if pp.Parallel && pp.WaitOn == 0 || add {
 				add = false
 				processed[atvTask{pa.AId, ia}] = true
-				pt := taskRecT{PKey: pKey, AId: pa.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Part: pa.Part, taskp: pp}
+				pt := taskRecT{PKey: pKey, AId: pa.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Thread: pp.Thread, Division: pp.Division, Part: pa.Part, taskp: pp}
 				ptS = append(ptS, &pt)
 			}
 		}
@@ -242,7 +308,7 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 	//
 	// generate SortK Ids
 	//
-	var i int = 1 // start at one as works better with Dynamodb UpateItem ADD semantics.
+	var i int = 1 // start at one as works better with Dynamodb UpateItem (nolonger used) ADD semantics.
 	for j := 0; j < len(ptS); i++ {
 		ptS[j].SortK = i
 		j++
@@ -259,7 +325,7 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 				continue
 			}
 			processed[atvTask{pa.AId, ia}] = true
-			pt := taskRecT{PKey: pKey, SortK: i, AId: pa.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Part: pa.Part, taskp: pp}
+			pt := taskRecT{PKey: pKey, SortK: i, AId: pa.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Thread: pp.Thread, Division: pp.Division, Part: pa.Part, taskp: pp}
 			ptS = append(ptS, &pt)
 			i++
 		}
@@ -270,7 +336,7 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 			if _, ok := processed[atvTask{pa.AId, ia}]; ok {
 				continue
 			}
-			pt := taskRecT{PKey: pKey, SortK: i, AId: pa.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Part: pa.Part, taskp: pp}
+			pt := taskRecT{PKey: pKey, SortK: i, AId: pa.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Thread: pp.Thread, Division: pp.Division, Part: pa.Part, taskp: pp}
 			ptS = append(ptS, &pt)
 			i++
 		}
@@ -280,16 +346,16 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 	//
 	for pa := taskctl.start; pa != nil; pa = pa.nextTask {
 		for _, pp := range pa.Task {
-			pt := taskRecT{PKey: pKey, SortK: i, AId: pa.AId, Type: 'T', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Part: pa.Part, taskp: pp}
+			pt := taskRecT{PKey: pKey, SortK: i, AId: pa.AId, Type: 'T', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Thread: pp.Thread, Division: pp.Division, Part: pa.Part, taskp: pp}
 			ptS = append(ptS, &pt)
 			i++
 		}
 	}
 	// now that we know the size of the list assign End-Of-List field. This approach replaces MaxId[] set stored in Recipe table
-	// this mean each record knows how long the list is - helpful in a stateless Lambda app.
+	// this mean each record knows how long the list is - helpful in single record processing (which is nolonger used)
 	eol := len(ptS)
-	//TODO : replace 5
-	pcnt := make(map[string]int, 5)
+	//TODO : consider limit of 10 can be replaced with dynamic value
+	pcnt := make(map[string]int, 10) // upto ten parts only
 	// number of instructions per part
 	for _, v := range ptS {
 		pcnt[v.Part] += 1

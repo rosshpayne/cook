@@ -73,7 +73,7 @@ module.exports = (header, subhdr, dataA, dataB, dataC, verbal, text, dataD, data
                         },
                         {
                         type: "Frame",
-                        borderColor: "yellow",
+                        borderColor: "red",
                         borderWidth: 2,
                         height: "7vh",  
                         item: {
@@ -134,7 +134,7 @@ module.exports = (header, subhdr, dataA, dataB, dataC, verbal, text, dataD, data
                         },
                         {
                         type: "Frame",
-                        borderColor: "green",
+                        borderColor: "red",
                         borderWidth: 2,
                         height: "7vh",  
                         item: {

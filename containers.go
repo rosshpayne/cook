@@ -17,14 +17,15 @@ import (
 
 // instance data from dynamo "activity" table
 type Container struct {
-	Cid      string     `json:"SortK"`
-	Type     string     `json:"type"`
-	Purpose  string     `json:"purpose"`
-	Coord    [2]float32 `json:"coord"`
-	Contains string     `json:"contents"`
-	Message  string     `json:"message"`
+	Cid         string     `json:"SortK"`
+	Type        string     `json:"type"` // value used to aggregate and sort mulitple containers
+	Purpose     string     `json:"purpose"`
+	Coord       [2]float32 `json:"coord"`
+	Contains    string     `json:"contents"`
+	Requirement string     `json:"requ"` // any requirements that the container must have e..g "have a lid"
 	// two instances of this container
-	Label      string     `json:"label"`
+	Label      string     `json:"label"`  // name used in graphics system and String() which generates name using "label requirement"
+	Slabel     string     `json:"slabel"` // short name
 	Measure    *MeasureCT `json:"measure"`
 	AltLabel   string     `json:"altLabel"`
 	AltMeasure *MeasureCT `json:"altMeasure"`
