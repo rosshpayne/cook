@@ -62,6 +62,7 @@ func (s *sessCtx) loadBaseRecipe() error {
 	//
 	// Table:  Activity
 	//
+	fmt.Println("in loadBaseRecipe pkey: ", s.pkey)
 	kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value("A-"+s.pkey))
 	expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
 	if err != nil {
@@ -81,6 +82,8 @@ func (s *sessCtx) loadBaseRecipe() error {
 	}
 	if int(*result.Count) == 0 {
 		return fmt.Errorf("No data found for reqRId %s in processBaseRecipe for Activity - ", s.pkey)
+	} else {
+		fmt.Println(" count: ", int(*result.Count))
 	}
 	//ActivityS := make([]Activity, int(*result.Count))
 	ActivityS := make(Activities, int(*result.Count))
@@ -88,11 +91,15 @@ func (s *sessCtx) loadBaseRecipe() error {
 	if err != nil {
 		return fmt.Errorf("** Error during UnmarshalListOfMaps in processBaseRecipe - %s", err.Error())
 	}
+	if len(ActivityS) != int(*result.Count) {
+		fmt.Println(" num ACtivity records: ", len(ActivityS))
+	}
 	//
 	// link activities together via next, prev, nextTask, nextPrep pointers. Order in ActivityS is sorted from dynamodb sort key.
 	// not sure how useful have next, prev pointers will be but its easy to setup so keep for time being. Do use prev in other part of code.
 	activityStart = &ActivityS[0]
 	for i := 0; i < len(ActivityS)-1; i++ {
+		fmt.Println("Aid ", ActivityS[i].AId)
 		ActivityS[i].next = &ActivityS[i+1]
 		if i > 0 {
 			ActivityS[i].prev = &ActivityS[i-1]
@@ -688,6 +695,7 @@ func (s *sessCtx) loadBaseRecipe() error {
 	for _, taskType := range []PrepTask{prep, task} {
 		for _, interactionType := range []int{text, voice} {
 			for p := activityStart; p != nil; p = p.next {
+				fmt.Println("Activity: ", p.AId, p.Ingredient)
 				switch taskType {
 				case prep:
 					pt = p.Prep
@@ -860,9 +868,7 @@ func (s *sessCtx) loadBaseRecipe() error {
 							fmt.Fprintf(&b, "%s", strings.ToLower(pt.UseDevice.Alternate))
 							context = device
 						case "qualm": // this maybe redundant. Measure.String() should incorporate qualm.
-							if p.Measure != nil {
-								fmt.Fprintf(&b, "%s", strings.ToLower(p.Measure.QualMeasure))
-							}
+							fmt.Fprintf(&b, "%s", strings.ToLower(p.QualMeasure))
 						case "temp":
 							if pt.UseDevice == nil {
 								return fmt.Errorf("in processBaseRecipe. UseDevice attribute not defined for Activity [%d]\n", p.AId)

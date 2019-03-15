@@ -26,17 +26,18 @@ type PartS []PartT
 
 type BookT string
 
-// part of session data that is persisted.
+// part of session data that is persisted in state data under attribute I
 // Activity (table) => taskRecT (by GenerateTasks) => InstructionT (by cacheInstruction)
 type InstructionT struct {
-	Text     string `json:"Txt"` // all Linked preps combined text into this field
-	Verbal   string `json:"Vbl"`
-	Part     string `json: "Pt"` // part index name - combines normal part and division as only one of these is displayed at a time.
-	Thread   int    `json:"Thrd"`
-	Division string `json:"Div"`
-	EOL      int    `json:"EOL"` // End-Of-List. Max Id assigned to each record
-	PEOL     int    `json:"PEOL"`
-	PID      int    `json:"PID"` // id within a part
+	Text      string `json:"Txt"` // all Linked preps combined text into this field
+	Verbal    string `json:"Vbl"`
+	Part      string `json: "Pt"` // part index name - combines normal part and division as only one of these is displayed at a time.
+	Thread    int    `json:"Thrd"`
+	MergeThrd int    `json:"MThrd"`
+	Division  string `json:"Div"`
+	EOL       int    `json:"EOL"` // End-Of-List. Max Id assigned to each record
+	PEOL      int    `json:"PEOL"`
+	PID       int    `json:"PID"` // id within a part
 }
 
 type InstructionS []InstructionT

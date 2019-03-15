@@ -299,7 +299,7 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 			if pp.Parallel && pp.WaitOn == 0 || add {
 				add = false
 				processed[atvTask{pa.AId, ia}] = true
-				pt := taskRecT{PKey: pKey, AId: pa.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Thread: pp.Thread, Division: pp.Division, Part: pa.Part, taskp: pp}
+				pt := taskRecT{PKey: pKey, AId: pa.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Thread: pp.Thread, MergeThrd: pp.MergeThrd, Division: pp.Division, Part: pa.Part, taskp: pp}
 				ptS = append(ptS, &pt)
 			}
 		}
@@ -325,7 +325,7 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 				continue
 			}
 			processed[atvTask{pa.AId, ia}] = true
-			pt := taskRecT{PKey: pKey, SortK: i, AId: pa.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Thread: pp.Thread, Division: pp.Division, Part: pa.Part, taskp: pp}
+			pt := taskRecT{PKey: pKey, SortK: i, AId: pa.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Thread: pp.Thread, MergeThrd: pp.MergeThrd, Division: pp.Division, Part: pa.Part, taskp: pp}
 			ptS = append(ptS, &pt)
 			i++
 		}
@@ -336,7 +336,7 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 			if _, ok := processed[atvTask{pa.AId, ia}]; ok {
 				continue
 			}
-			pt := taskRecT{PKey: pKey, SortK: i, AId: pa.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Thread: pp.Thread, Division: pp.Division, Part: pa.Part, taskp: pp}
+			pt := taskRecT{PKey: pKey, SortK: i, AId: pa.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Thread: pp.Thread, MergeThrd: pp.MergeThrd, Division: pp.Division, Part: pa.Part, taskp: pp}
 			ptS = append(ptS, &pt)
 			i++
 		}
@@ -346,7 +346,7 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 	//
 	for pa := taskctl.start; pa != nil; pa = pa.nextTask {
 		for _, pp := range pa.Task {
-			pt := taskRecT{PKey: pKey, SortK: i, AId: pa.AId, Type: 'T', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Thread: pp.Thread, Division: pp.Division, Part: pa.Part, taskp: pp}
+			pt := taskRecT{PKey: pKey, SortK: i, AId: pa.AId, Type: 'T', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Thread: pp.Thread, MergeThrd: pp.MergeThrd, Division: pp.Division, Part: pa.Part, taskp: pp}
 			ptS = append(ptS, &pt)
 			i++
 		}
@@ -386,6 +386,7 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 	partM := make(map[string]bool)
 	// find if there are any parts to recipe
 	for a := &a[0]; a != nil; a = a.next {
+		fmt.Println("Aid: ", a.AId)
 		if len(a.Part) > 0 {
 			partM[a.Part] = false
 		} else {
@@ -639,6 +640,7 @@ func expandScalableTags(str string) string {
 			// scalable literal - use string method to perform any scaling
 			pt := strings.Split(strings.ToLower(tag[0]), "|")
 			nm = &MeasureT{Num: pt[3], Quantity: pt[0], Size: pt[2], Unit: pt[1]}
+			fmt.Println("Expandable tags: ",nm)
 			b.WriteString(nm.String())
 		}
 		//

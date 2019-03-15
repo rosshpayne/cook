@@ -16,6 +16,7 @@ type Unit struct {
 	Say     string `json:"say"`     // format in verbal communication
 	Display string `json:"display"` // format in display of Alexa device
 	Plural  string // determines whether unit can be plural i.e have s appended. Applies to Llabel only.
+	Nsu     bool   // non-standard-unit (true)
 }
 
 var UnitMap map[string]*Unit // populated in getActivity()
@@ -36,12 +37,16 @@ var unitS []*Unit = []*Unit{
 	&Unit{Slabel: "min", Llabel: "minute", Print: "l", Say: "l", Display: "s", Plural: "s"},
 	&Unit{Slabel: "sec", Llabel: "second", Print: "l", Say: "l", Display: "s", Plural: "s"},
 	&Unit{Slabel: "hr", Llabel: "hour", Print: "l", Say: "l", Display: "l", Plural: "s"},
-	&Unit{Slabel: "clove", Llabel: "clove", Print: "l", Say: "l", Display: "l", Plural: "s"},
-	&Unit{Slabel: "pinch", Llabel: "pinch", Print: "l", Say: "l", Display: "l", Plural: "es"},
-	&Unit{Slabel: "sachet", Llabel: "sachet", Print: "l", Say: "l", Display: "s", Plural: "s"},
-	&Unit{Slabel: "bunch", Llabel: "bunch", Print: "l", Say: "l", Display: "s", Plural: "es"},
-	&Unit{Slabel: "sprig", Llabel: "sprig", Print: "l", Say: "l", Display: "s", Plural: "s"},
-	&Unit{Slabel: "stick", Llabel: "stick", Print: "l", Say: "l", Display: "s", Plural: "s"},
+	&Unit{Slabel: "clove", Llabel: "clove", Print: "l", Say: "l", Display: "l", Plural: "s", Nsu: true},
+	&Unit{Slabel: "pinch", Llabel: "pinch", Print: "l", Say: "l", Display: "l", Plural: "es", Nsu: true},
+	&Unit{Slabel: "sachet", Llabel: "sachet", Print: "l", Say: "l", Display: "s", Plural: "s", Nsu: true},
+	&Unit{Slabel: "bunch", Llabel: "bunch", Print: "l", Say: "l", Display: "s", Plural: "es", Nsu: true},
+	&Unit{Slabel: "sprig", Llabel: "sprig", Print: "l", Say: "l", Display: "s", Plural: "s", Nsu: true},
+	&Unit{Slabel: "stick", Llabel: "stick", Print: "l", Say: "l", Display: "s", Plural: "s", Nsu: true},
+}
+
+func (u *Unit) IsNsu() bool {
+	return u.Nsu
 }
 
 // String output unit text based on mode represented by package variable writeCtx [package_variable-Unit-mode]

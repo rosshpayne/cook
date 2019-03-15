@@ -96,12 +96,10 @@ type taskT struct {
 // }
 
 type MeasureT struct {
-	Unit        string `json:"unit"`  // unit of measure, g, kg, cm, ml, litre, pinch, clove, etc.
-	Num         string `json:"num"`   // instance x quantity
-	Quantity    string `json:"qty"`   // weight, volume, dimension
-	Size        string `json:"size"`  // large, medium, small
-	QualMeasure string `json:"qualm"` // qualifer before measure in ingredients output e.g. <qualm> of <measure> a <ingrd>
-
+	Unit     string `json:"unit"` // unit of measure, g, kg, cm, ml, litre, pinch, clove, etc.
+	Num      string `json:"num"`  // instance x quantity
+	Quantity string `json:"qty"`  // weight, volume, dimension
+	Size     string `json:"size"` // large, medium, small
 	// normalized quantity
 	nzQty float64
 }
@@ -123,6 +121,7 @@ type PerformT struct {
 	WaitOn      int       `json:"waitOn"`  // depenency on other activity to complete
 	Division    string    `json:"div"`     // inherit from activity if not present. Recipe division based on instructions/tasks not part ingredient e.g. division: day-before, on-day
 	Thread      int       `json:"thrd"`    // inherit from activity if not present. No thread means thread 1.
+	MergeThrd   int       `json:"mthrd"`   // task where parallel task (thread) will merge
 	//DeviceT
 	AddToC   []string `json:"addToC"`
 	UseC     []string `json:"useC"`
@@ -144,17 +143,18 @@ type Activity struct {
 	IngrdQualifer string `json:"iQual"` // (append) to ingredient
 	QualiferIngrd string `json:"quali"` // prepend  to ingredient.
 	//	QualMeasure   string      `json:"qualm"`    // qualifer before measure in ingredients output e.g. <qualm> of <measure> a <ingrd>
-	AltIngrd   string      `json:"altIngrd"` // key into Ingredient table - used for alternate ingredients only
-	Measure    *MeasureT   `json:"measure"`
-	AltMeasure *MeasureT   `json:"altMeasure"`
-	Part       string      `json:"part"`      // ingredients are aggregated by part
-	Invisible  bool        `json:"invisible"` // do not include in ingredients listing.
-	Overview   string      `json:"ovv"`
-	Coord      [2]float32  // X,Y
-	Task       []*PerformT `json:"task"`
-	Prep       []*PerformT `json:"prep"`
-	Division   string      `json:"div"`  // see division in PerformT.
-	Thread     int         `json:"thrd"` // activity belongs to thread. No thread means thread 1. Overrides thread at activity level.
+	AltIngrd    string      `json:"altIngrd"` // key into Ingredient table - used for alternate ingredients only
+	QualMeasure string      `json:"qualm"`    // qualifer before measure in ingredients output e.g. <qualm> of <measure> a <ingrd>
+	Measure     *MeasureT   `json:"measure"`
+	AltMeasure  *MeasureT   `json:"altMeasure"`
+	Part        string      `json:"part"`      // ingredients are aggregated by part
+	Invisible   bool        `json:"invisible"` // do not include in ingredients listing.
+	Overview    string      `json:"ovv"`
+	Coord       [2]float32  // X,Y
+	Task        []*PerformT `json:"task"`
+	Prep        []*PerformT `json:"prep"`
+	Division    string      `json:"div"`  // see division in PerformT.
+	Thread      int         `json:"thrd"` // activity belongs to thread. No thread means thread 1. Overrides thread at activity level.
 	//	UnitMap       map[string]*Unit
 	next     *Activity
 	prev     *Activity
@@ -183,7 +183,6 @@ type prepCtl struct {
 var prepctl prepCtl = prepCtl{}
 
 func (m *MeasureT) UPlural() bool {
-	fmt.Println("in UPlural for Measure ", m.Quantity)
 	if len(m.Quantity) > 0 {
 		f, err := strconv.ParseFloat(m.Quantity, 32)
 		if err != nil {
@@ -522,7 +521,7 @@ func (m *MeasureT) String() string {
 			}
 			f = float64(i)
 		}
-		// *1000 as we are about to change to smaller unit
+		// *1000 as we are to change to smaller unit
 		qty = f * pIngrdScale
 		if m.Unit == "l" || m.Unit == "cm" || m.Unit == "kg" {
 			var unit string
@@ -612,24 +611,16 @@ func (m *MeasureT) FormatString() string {
 		return m.Quantity + " " + m.Size
 	}
 	if len(m.Quantity) > 0 && len(m.Unit) > 0 {
+
+		if UnitMap[m.Unit].IsNsu() {
+			return m.Quantity + UnitMap[m.Unit].String(m)
+		}
 		if m.Unit == "tsp" || m.Unit == "tbsp" || m.Unit == "g" || m.Unit == "kg" {
 			if (strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0) && format != "l" {
 				return m.Quantity + UnitMap[m.Unit].String(m)
 			} else {
 				return m.Quantity + UnitMap[m.Unit].String(m)
 			}
-		}
-		if strings.Index(strings.ToLower(m.Unit), "clove") >= 0 {
-			return m.Quantity + UnitMap[m.Unit].String(m) + " of"
-		}
-		if strings.Index(strings.ToLower(m.Unit), "bunch") >= 0 {
-			return m.Quantity + UnitMap[m.Unit].String(m) + " of"
-		}
-		if strings.Index(strings.ToLower(m.Unit), "sachet") >= 0 {
-			return m.Quantity + UnitMap[m.Unit].String(m) + " of"
-		}
-		if strings.Index(strings.ToLower(m.Unit), "sprig") >= 0 {
-			return m.Quantity + UnitMap[m.Unit].String(m) + " of"
 		}
 		if strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0 || m.Quantity == "1" {
 			return m.Quantity + UnitMap[m.Unit].String(m)
@@ -697,14 +688,18 @@ func (a Activity) String() string {
 		}
 	}
 
-	addAltIngrd := func() {
+	addAltIngrdMsure := func() {
 		if a.AltMeasure != nil {
 			m := a.AltMeasure
-			nm := &MeasureT{Quantity: m.Quantity, Size: m.Size, Unit: m.Unit, Num: m.Num}
+			am := &MeasureT{Quantity: m.Quantity, Size: m.Size, Unit: m.Unit, Num: m.Num}
 			if len(a.AltIngrd) == 0 {
-				s += " (" + nm.String() + ")"
+				if UnitMap[m.Unit].IsNsu() {
+					s += " (about " + am.String() + ")"
+				} else {
+					s += " (" + am.String() + ")"
+				}
 			} else {
-				s += " (or " + nm.String() + " " + a.AltIngrd + ")"
+				s += " (or " + am.String() + " " + a.AltIngrd + ")"
 			}
 		} else if len(a.AltIngrd) > 0 {
 			s += " (or " + a.AltIngrd + ")"
@@ -730,42 +725,30 @@ func (a Activity) String() string {
 			}
 		}
 	}
-
 	//sfmt.Println("string() ", a.AId, a.Ingredient)
 	// qualm, qty, unit, quali, i , iqual
 	//
 	if a.Invisible || len(a.Ingredient) == 0 {
 		return ""
 	}
-	if a.Measure != nil && len(a.Measure.QualMeasure) > 0 {
-		//if len(a.QualMeasure) > 0 {
+	if len(a.QualMeasure) > 0 {
 		// [qualm] [measure.num size] [ingrd] ([measure.qty+measure.unit])
-		s = strings.TrimRight(a.Measure.QualMeasure, " ")
+		s = strings.TrimRight(a.QualMeasure, " ")
 		if s[len(s)-3:] != " of" {
 			s += " of"
 		}
-		s = strings.TrimRight(s, " ")
-		if a.Measure != nil && (len(a.Measure.Num) > 0 || len(a.Measure.Quantity) > 0) {
-			//s += " " + a.Measure.Num
-			s += " " + a.Measure.String()
-			if len(a.Measure.Size) > 0 {
-				s += " " + a.Measure.Size
-			}
-		}
+		addMeasure()
 		addIngrd()
-		if a.Measure != nil && len(a.Measure.Quantity) > 0 && len(a.Measure.Unit) > 0 {
-			s += " (" + a.Measure.String() + ")"
-		}
-		addAltIngrd()
+		addAltIngrdMsure()
 		addIngrdQual()
-		return s
+		return expandLiteralTags(s)
 	}
 	//
 	addNumber()
 	addMeasure()
 	addQualIngrd()
 	addIngrd()
-	addAltIngrd()
+	addAltIngrdMsure()
 	addIngrdQual()
 	return expandLiteralTags(s)
 }

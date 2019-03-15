@@ -54,16 +54,17 @@ type mRecipeT struct {
 }
 
 type taskRecT struct {
-	PKey     string  `json:"PKey"`  // R-[BkId]
-	SortK    int     `json:"SortK"` // monotonically increasing - task at which user is upto in recipe
-	AId      int     `json:"AId"`   // Activity Id
-	Type     byte    `json:"Type"`
-	time     float32 // all Linked preps sum time components into this field
-	Division string  `json:"Div"`  // divide tasks/instructs into divisions, e.g. day-before, on-day
-	Thread   int     `json:"Thrd"` // instruction thread
-	Text     string  `json:"Text"` // all Linked preps combined text into this field
-	Verbal   string  `json:"Verbal"`
-	EOL      int     `json:"EOL"` // End-Of-List. Max Id assigned to each record
+	PKey      string  `json:"PKey"`  // R-[BkId]
+	SortK     int     `json:"SortK"` // monotonically increasing - task at which user is upto in recipe
+	AId       int     `json:"AId"`   // Activity Id
+	Type      byte    `json:"Type"`
+	time      float32 // all Linked preps sum time components into this field
+	Division  string  `json:"Div"`  // divide tasks/instructs into divisions, e.g. day-before, on-day
+	Thread    int     `json:"Thrd"` // instruction thread
+	Text      string  `json:"Text"` // all Linked preps combined text into this field
+	MergeThrd int     `json:"Mthrd"`
+	Verbal    string  `json:"Verbal"`
+	EOL       int     `json:"EOL"` // End-Of-List. Max Id assigned to each record
 	// Recipe Part metadata
 	PEOL int    `json:"PEOL"` // End-of-List-for-part
 	PId  int    `json:"PId"`  // instruction id within a part
@@ -189,7 +190,7 @@ func (s *sessCtx) cacheInstructions(sId ...int) (Threads, error) {
 					vmsg := expandScalableTags(expandLiteralTags(v.Verbal))
 					global.Set_WriteCtx(global.UDisplay)
 					dmsg := expandScalableTags(expandLiteralTags(v.Text))
-					instruct := InstructionT{Text: dmsg, Verbal: vmsg, Thread: v.Thread, Division: v.Division}
+					instruct := InstructionT{Text: dmsg, Verbal: vmsg, Thread: v.Thread, Division: v.Division, MergeThrd: v.MergeThrd}
 					threads[t].Instructions = append(threads[t].Instructions, instruct)
 				}
 			}

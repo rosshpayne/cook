@@ -138,11 +138,11 @@
                 "PKey" : { "S": "A-20-8" },
                 "SortK" : { "N": "30"},
                 "ingrd" : { "S" : "orange" },
+                "qualm" : {"S" : "shaved peel" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "1" } ,
-                                      "size" : { "S" : "medium" },
-                                      "qualm" : {"S" : "shaved peel" }
+                                      "size" : { "S" : "medium" }
                                       }
                 },
                 "task" : { "L" : [
@@ -163,6 +163,7 @@
                 "PKey" : { "S": "A-20-8" },
                 "SortK" : { "N": "40"},
                 "ingrd" : { "S" : "bay leaves" },
+                "quali" : { "S" : "fresh" },
                 "iQual" : { "S" : ", torn in half " },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
@@ -318,14 +319,14 @@
                 "SortK" : { "N": "70"},
                 "ingrd" : { "S" : "rhubarb" },
                 "div" :  { "S" : "db" },
-                "iQual" : { "S" : ", cut into {5|cm||} long pieces"},
+                "iQual" : { "S" : ", cut into {m:5|cm||} long pieces"},
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "530" } ,
                                       "unit" : { "S" : "g" } 
                                       }
                 },
-                "ameasure" : { "M" : { 
+                "altmeasure" : { "M" : { 
                                       "qty" : { "S" : "9" } ,
                                       "unit" : { "S" : "stick" } 
                                       }
@@ -345,8 +346,8 @@
                                   }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "While the oven adjusts, in a {addToC} add {measure} or {ameasure} of {iQual} {ingrd}" },
-                                  "say" : { "S" : "While the oven adjusts, in a {addToC} add {measure} or {ameasure} of {iQual} {ingrd}" },
+                                  "txt" : { "S" : "While the oven adjusts, in a {addToC} add {measure} or {altmeasure} of {iQual} {ingrd}" },
+                                  "say" : { "S" : "While the oven adjusts, in a {addToC} add {measure} or {altmeasure} of {iQual} {ingrd}" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" } ,
@@ -398,16 +399,15 @@
                                       "unit" : { "S" : "g" }
                                       }
                 },
-                "ameasure" : { "M" : { 
+                "altmeasure" : { "M" : { 
                                       "qty" : { "S" : "6" } ,
-                                      "qualm" : { "S" : "about"},
                                       "unit" : { "S" : "sprig" }
                                       }
                 },
                "prep" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "separate half the tarragon ie. {5|g||} or {3|sprig||} and roughly chop the leaves and set aside" },
-                                  "say" : { "S" : "separate half the tarragon ie. {5|g||} or {3|sprig||} and roughly chop the leaves and set aside" },
+                                  "txt" : { "S" : "separate half the tarragon or approximately, {3|sprig||} or {5|g||} and roughly chop the leaves and set aside" },
+                                  "say" : { "S" : "separate half the tarragon or approximately, {3|sprig||} or {5|g||} and roughly chop the leaves and set aside" },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" }
@@ -556,8 +556,8 @@
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "while the rhubarb is cooking , place the {ingrd} in a {addToC}" },
-                                  "say" : { "S" : "while the rhubarb is cooking , place the {ingrd} in a {addToC}" },
+                                  "txt" : { "S" : "while the {ingrd.70} is cooking , place the {ingrd} in a {addToC}" },
+                                  "say" : { "S" : "while the {ingrd.70} is cooking , place the {ingrd} in a {addToC}" },
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" },
                                   "div" :  { "S" : "od" },
@@ -652,16 +652,19 @@
                                   "useC" : { "SS" : [ "CreamB"] } }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "spoon a generous amount of rhubarb on top, along with some juices"  },
-                                  "say" : { "S" : "spoon a generous amount of rhubarb on top, along with some juices" },
+                                  "txt" : { "S" : "spoon a generous amount of {ingrd.70} on top, along with some juices"  },
+                                  "say" : { "S" : "spoon a generous amount of {ingrd.70} on top, along with some juices" },
                                   "time" : { "N" : "1" },
+                                  "thrd" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
+                                  "mthrd" : { "N" : "1" },
                                   "useC" : { "SS" : [ "CreamB"] } }
                                 },
                                 { "M" :  {
                                   "txt" : { "S" : "finally, serve with a sprinkling of the {ingrd.90} leaves you cut up previously"  },
                                   "say" : { "S" : "finally, serve with a sprinkling of the {ingrd.90} leaves you cut up previously"  },
                                   "unit" : { "S" : "min" },
+                                  "thrd" : { "N" : "0" },
                                   "useC" : { "SS" : [ "CreamB"] } }
                                 }
                                 ]
