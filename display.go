@@ -61,6 +61,33 @@ var objMenu = ObjMenuT{
 	"Prep tasks",
 	`Start cooking...`}
 
+type DisplayItem struct {
+	Id        string
+	Title     string
+	SubTitle1 string
+	SubTitle2 string
+	Text      string
+}
+type RespEvent struct {
+	Position string        `json:"Position"` // recId|EOL|PEOL|PName
+	BackBtn  bool          `json:"BackBtn"`
+	Type     string        `json:"Type"`
+	Header   string        `json:"Header"`
+	SubHdr   string        `json:"SubHdr"`
+	Text     string        `json:"Text"`
+	Verbal   string        `json:"Verbal"`
+	Error    string        `json:"Error"`
+	List     []DisplayItem `json:"List"` // recipe data: id|Title1|subTitle1|SubTitle2|Text
+	ListA    []DisplayItem `json:"ListA"`
+	ListB    []DisplayItem `json:"ListB"`
+	ListC    []DisplayItem `json:"ListC"`
+	ListD    []DisplayItem `json:"ListD"`
+	ListE    []DisplayItem `json:"ListE"`
+	ListF    []DisplayItem `json:"ListF"`
+	Color1   string        `json:"Color1"`
+	Color2   string        `json:"Color2"`
+}
+
 // cacheInstructions copies data from T- items in recipe table to session data (instructions) that is preserved
 
 func (t Threads) GenDisplay(s *sessCtx) RespEvent {
@@ -88,7 +115,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		return ""
 	}
 	if len(t) == 0 {
-		panic(fmt.Errorf("Error: internal, instructions has not been cached"))
+		s.err = fmt.Errorf("Error: internal, instructions has not been cached")
 	}
 	//
 	// check id within limits
@@ -125,12 +152,12 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		if t[s.cThread-1].Id == len(t[s.cThread-1].Instructions) {
 			// previous thead completed. Have reached end
 			passErr = "Recipe completed"
-			id = len(t[s.cThread].Instructions) - 1
+			id = len(t[s.cThread].Instructions)
 			s.recId[objectMap[s.object]] = id
 		} else {
 			// hint at unfinished thread. Must explicit go to it -not here.
 			passErr = "You must resume previous thread and complete it"
-			id = len(t[s.cThread].Instructions) - 1
+			id = len(t[s.cThread].Instructions)
 			s.recId[objectMap[s.object]] = id
 		}
 
@@ -156,26 +183,18 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 			s.recId[objectMap[s.object]] = id
 		}
 	}
-
+	//
 	t[s.cThread].Id = id
 	fmt.Println("cThread, id = ", s.cThread, id)
 	//
-	// rec is the Instruction record, read from the Thread which is held in state.
-	//
-	rec := &t[s.cThread].Instructions[id-1]
-
-	// session context needs to be updated as these values are used to determine state
-	eol = strconv.Itoa(rec.EOL)
-	//if part != CompleteRecipe_ { //TODO: part not assigned yet, therefore always executed
-	peol = strconv.Itoa(rec.PEOL)
-	part = getLongName(rec.Part)
-	pid = strconv.Itoa(rec.PID)
-	//	}
-	s.eol, s.peol, s.part, s.pid = rec.EOL, rec.PEOL, part, rec.PID
-	//
 	// generate display
 	//
-	if len(passErr) > 0 {
+	if len(passErr) > 0 || s.err != nil {
+		if s.err != nil {
+			hdr = "** Error **   " + s.err.Error()
+		} else {
+			hdr = "** Alert **   " + passErr
+		}
 		hdr = "** Alert **   " + passErr
 	} else {
 		hdr = s.reqRName
@@ -251,8 +270,8 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 	//
 	// is there an other thread means there are two active threads that need to be displayed on a Echo Show.
 	//
-	switch s.cThread {
-	case 0:
+	switch s.oThread {
+	case 0, -1:
 		//
 		// only one thread, split instructions across three sections - used by echo Show only
 		//
@@ -261,18 +280,29 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		listB := SectB(tc)
 		listC := SectC(tc, 6, false)
 		//
+		rec := &t[s.cThread].Instructions[id-1]
+		eol = strconv.Itoa(rec.EOL)
+		peol = strconv.Itoa(rec.PEOL)
+		part = getLongName(rec.Part)
+		pid = strconv.Itoa(rec.PID)
+		s.eol, s.peol, s.part, s.pid = rec.EOL, rec.PEOL, part, rec.PID
 		type_ := "Tripple"
 		if len(t[s.cThread].Instructions[id-1].Text) > 120 {
-			type_ = "Tripple2" // larger text bounding box
+			type_ += "L" // larger text bounding box
 		}
 		speak := "<speak>" + rec.Verbal + "</speak>"
 		return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Text: rec.Text, Verbal: speak, ListA: listA, ListB: listB, ListC: listC}
 
 	default:
 		// two threads with 3 sections in each. should always display threads 1 and 2 in that order, never thread 0
+		// two threads with 3 sections in each. should always display threads 1 and 2 in that order, never thread 0
 		tc := s.oThread
+		type_ := "threadedBottom"
+		color1 := "red"
 		if s.cThread < s.oThread {
 			tc = s.cThread
+			color1 = "green"
+			type_ = "threadedTop"
 		}
 		// lower thread
 		listA := SectA(tc)
@@ -280,21 +310,34 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		listC := SectC(tc, 3, true)
 		// higher thread
 		tc = s.cThread
+		color2 := "green"
 		if s.oThread > s.cThread {
 			tc = s.oThread
+			color2 = "red"
 		}
 		listD := SectA(tc)
 		listE := SectB(tc)
-		listF := SectC(tc, 4, false)
+		listF := SectC(tc, 12, false)
 
+		fmt.Println("cThread, id = ", s.cThread, id)
+		//
+		// rec is the Instruction record, read from the Thread which is held in state.
+		//
+		rec := &t[s.cThread].Instructions[id-1]
+		eol = strconv.Itoa(rec.EOL)
+		peol = strconv.Itoa(rec.PEOL)
+		part = getLongName(rec.Part)
+		pid = strconv.Itoa(rec.PID)
+		s.eol, s.peol, s.part, s.pid = rec.EOL, rec.PEOL, part, rec.PID
 		fmt.Println("4 cThread, id = ", s.cThread, id)
-		type_ := "Threaded"
-		if len(t[s.cThread].Instructions[id-1].Text) > 120 {
-			type_ = "Threaded" // TODO: create ThreadedL script
+
+		if len(rec.Text) > 120 {
+			type_ += "L" // TODO: create ThreadedL script
 		}
 		speak := "<speak>" + rec.Verbal + "</speak>"
+
 		return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Text: rec.Text, Verbal: speak, ListA: listA, ListB: listB, ListC: listC,
-			ListD: listD, ListE: listE, ListF: listF,
+			ListD: listD, ListE: listE, ListF: listF, Color1: color1, Color2: color2,
 		}
 	}
 }

@@ -651,18 +651,20 @@ func (m *MeasureT) FormatString() string {
 }
 
 func (a Activity) String() string {
-	var s string
+	//var s string
+	var b strings.Builder
 
 	addIngrdQual := func() {
 		if len(a.IngrdQualifer) > 0 {
-			if len(s) > 0 {
+			if b.Len() > 0 {
 				if a.IngrdQualifer[0] == ',' {
-					s += a.IngrdQualifer
+					b.WriteString(a.IngrdQualifer)
 				} else {
-					s += " " + a.IngrdQualifer
+					b.WriteString(" ")
+					b.WriteString(a.IngrdQualifer)
 				}
 			} else {
-				s = a.IngrdQualifer
+				b.WriteString(a.IngrdQualifer)
 			}
 		}
 	}
@@ -672,19 +674,20 @@ func (a Activity) String() string {
 			if len(a.Measure.Quantity) > 0 {
 				_, err := strconv.Atoi(a.Measure.Quantity[:1])
 				if err == nil {
-					s = a.Measure.Num + "x"
+					b.WriteString(a.Measure.Num + "x")
 					return
 				}
 			}
-			s = a.Measure.Num
+			b.WriteString(a.Measure.Num)
 		}
 	}
 
 	addIngrd := func() {
-		if len(s) > 0 {
-			s += " " + a.Ingredient
+		if b.Len() > 0 {
+			b.WriteString(" ")
+			b.WriteString(a.Ingredient)
 		} else {
-			s = a.Ingredient
+			b.WriteString(a.Ingredient)
 		}
 	}
 
@@ -693,36 +696,44 @@ func (a Activity) String() string {
 			m := a.AltMeasure
 			am := &MeasureT{Quantity: m.Quantity, Size: m.Size, Unit: m.Unit, Num: m.Num}
 			if len(a.AltIngrd) == 0 {
+				// check if unit is non-standard
 				if UnitMap[m.Unit].IsNsu() {
-					s += " (about " + am.String() + ")"
+					b.WriteString(" (about ")
+					b.WriteString(am.String())
+					b.WriteString(")")
 				} else {
-					s += " (" + am.String() + ")"
+					b.WriteString(" (")
+					b.WriteString(am.String())
+					b.WriteString(")")
 				}
 			} else {
-				s += " (or " + am.String() + " " + a.AltIngrd + ")"
+				b.WriteString(" (or ")
+				b.WriteString(am.String())
+				b.WriteString(" ")
+				b.WriteString(a.AltIngrd)
+				b.WriteString(")")
 			}
 		} else if len(a.AltIngrd) > 0 {
-			s += " (or " + a.AltIngrd + ")"
+			b.WriteString(" (or ")
+			b.WriteString(a.AltIngrd)
+			b.WriteString(")")
 		}
 	}
 
 	addQualIngrd := func() {
 		if len(a.QualiferIngrd) > 0 {
-			if len(s) > 0 {
-				s += " " + a.QualiferIngrd
+			if b.Len() > 0 {
+				b.WriteString(" ")
+				b.WriteString(a.QualiferIngrd)
 			} else {
-				s = a.QualiferIngrd
+				b.WriteString(a.QualiferIngrd)
 			}
 		}
 	}
 
 	addMeasure := func() {
 		if a.Measure != nil {
-			if len(s) > 0 {
-				s += a.Measure.String()
-			} else {
-				s = a.Measure.String()
-			}
+			b.WriteString(a.Measure.String())
 		}
 	}
 	//sfmt.Println("string() ", a.AId, a.Ingredient)
@@ -733,15 +744,25 @@ func (a Activity) String() string {
 	}
 	if len(a.QualMeasure) > 0 {
 		// [qualm] [measure.num size] [ingrd] ([measure.qty+measure.unit])
-		s = strings.TrimRight(a.QualMeasure, " ")
-		if s[len(s)-3:] != " of" {
-			s += " of"
+		s := strings.TrimSpace(a.QualMeasure)
+		b.WriteString(s)
+		if s[len(s)-3:] == " of" {
+			b.WriteString(" ")
+		}
+		s = b.String()
+		if s[len(s)-4:] != " of " {
+			b.WriteString(" of ")
+		}
+		s = b.String()
+		if s[len(s)-1] != ' ' {
+			b.WriteString(" ")
 		}
 		addMeasure()
+		addQualIngrd()
 		addIngrd()
 		addAltIngrdMsure()
 		addIngrdQual()
-		return expandLiteralTags(s)
+		return expandLiteralTags(b.String())
 	}
 	//
 	addNumber()
@@ -750,7 +771,7 @@ func (a Activity) String() string {
 	addIngrd()
 	addAltIngrdMsure()
 	addIngrdQual()
-	return expandLiteralTags(s)
+	return expandLiteralTags(b.String())
 }
 
 func (as Activities) String(r *RecipeT) string {

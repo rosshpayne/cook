@@ -34,9 +34,6 @@ const EventHandler = {
     handlerInput.requestEnvelope.request.type === 'Alexa.Presentation.APL.UserEvent',
   
   handle: handlerInput => {
-    const tripple = require('APL/tripple.js');
-    const select = require('APL/select.js');
-    const ingredient = require('APL/ingredients.js');
     const sid='sid='+handlerInput.requestEnvelope.session.sessionId ;
 
     const args = handlerInput.requestEnvelope.request.arguments;
@@ -300,9 +297,6 @@ const GotoIntentHandler = {
   },
 
   handle(handlerInput) {
-    var speechText;
-    var displayText;
-    var recipe ;
     const sid='sid='+handlerInput.requestEnvelope.session.sessionId;
     const goId='&goId='+handlerInput.requestEnvelope.request.intent.slots.gotoId.resolutions.resolutionsPerAuthority[0].values[0].value.id;
     invokeParams.Payload = '{ "Path" : "goto" ,"Param" : "'+sid+goId+'" }';
@@ -331,11 +325,9 @@ const TestIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'TestIntent';
   },
   handle(handlerInput) {
-    const sid='sid='+handlerInput.requestEnvelope.session.sessionId;
     const test = require('APL/test.js');
     const speakcmd = require('APL/testspeakcmd.js');
-    const testD = require('APL/testdata.js');
-    const resp=testD()
+
     return  handlerInput.responseBuilder
                             .reprompt("testing")
                             .addDirective(test("Header","SubHdr", resp.output))
@@ -378,9 +370,6 @@ const RepeatIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'RepeatIntent';
   },
   handle(handlerInput) {
-    var speechText;
-    var displayText;
-    var recipe ;
     const sid='sid='+handlerInput.requestEnvelope.session.sessionId;
     invokeParams.Payload = '{ "Path" : "repeat" ,"Param" : "'+sid+'" }';
 
@@ -669,8 +658,6 @@ const ErrorHandler = {
   },
 };
 
-const txt = [`Add 1 tbsp, of black  <emphasis>peppercorns</emphasis>`,
-              `Add soup near cat`];
 
 function handleResponse (handlerInput , resp) {
         if (resp.Type === "Ingredient") {
@@ -693,15 +680,16 @@ function handleResponse (handlerInput , resp) {
           const speakcmd = require('APL/speakcmd.js');
           return  handlerInput.responseBuilder
                             .speak("here in tripple")
+                            .reprompt(resp.Verbal)
                             .addDirective(tripple(resp.Header,resp.SubHdr, resp.ListA, resp.ListB, resp.ListC, resp.Verbal, resp.Text))
                             .addDirective(speakcmd())
                             .getResponse(); 
-       } else if (resp.Type === "Threaded") { 
-          const tripple = require('APL/threaded.js');
+       } else if (resp.Type.indexOf("threaded") === 0 ) { 
+          const tripple = require('APL/'+resp.Type+'.js');
           const speakcmd = require('APL/speakcmd.js');
           return  handlerInput.responseBuilder
-                            .speak("here in tripple")
-                            .addDirective(tripple(resp.Header,resp.SubHdr, resp.ListA, resp.ListB, resp.ListC, resp.Verbal, resp.Text, resp.ListD, resp.ListE, resp.ListF))
+                            .reprompt(resp.Verbal)
+                            .addDirective(tripple(resp.Header,resp.SubHdr, resp.ListA, resp.ListB, resp.ListC, resp.Verbal, resp.Text, resp.ListD, resp.ListE, resp.ListF, resp.Color1, resp.Color2))
                             .addDirective(speakcmd())
                             .getResponse(); 
         } else if (resp.Type === "Select"){

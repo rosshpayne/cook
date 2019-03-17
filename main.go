@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"log"
 	"net/url"
-	"os"
+	_ "os"
 	"strconv"
 	"strings"
 
 	"github.com/cook/global"
 
-	_ "github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -25,6 +25,7 @@ import (
 //  also contains state information relevant to current session and not the next session.
 
 type sessCtx struct {
+	err        error
 	newSession bool
 	//path      string // InputEvent.Path
 	request string // pathItem[0]: request from user e.g. select, next, prev,..
@@ -443,34 +444,25 @@ func (s *sessCtx) orchestrateRequest() error {
 		//
 		if s.request == "resume" {
 			if s.cThread == 0 || s.object != "task" || s.reqRId == "0" {
-				return fmt.Errorf("There is nothing to resume")
+				s.err = fmt.Errorf("There is nothing to resume")
+				return nil
 			}
 			if t, ok := s.displayData.(Threads); ok {
 				if s.oThread == -1 {
-					return fmt.Errorf("All is completed. There is nothing to resume")
+					s.err = fmt.Errorf("All is completed. There is nothing to resume")
+					return nil
 				}
-				if s.oThread > 0 {
-					// resume lower thread
-					if t[s.oThread].Id == len(t[s.oThread].Instructions) {
-						return fmt.Errorf("All is completed. There is nothing to resume")
-					}
-					x := s.cThread
-					s.cThread = s.oThread
-					s.oThread = x
-				} else if s.cThread > 0 {
-					// resume upper thread
-					if t[s.oThread+1].Id == len(t[s.oThread+1].Instructions) {
-						return fmt.Errorf("All is completed. There is nothing to resume")
-					}
-					x := s.oThread
-					s.oThread = s.cThread
-					s.cThread = x
+				if t[s.oThread].Id == len(t[s.oThread].Instructions) {
+					s.err = fmt.Errorf("All is completed. There is nothing to resume")
+					return nil
 				}
+				x := s.cThread
+				s.cThread = s.oThread
+				s.oThread = x
 				s.recId[objectMap[s.object]] = t[s.cThread].Id
 			} else {
-				return fmt.Errorf("There is nothing to resume")
+				s.err = fmt.Errorf("There is nothing to resume")
 			}
-
 			return nil
 		}
 		if s.request == "search" {
@@ -707,31 +699,6 @@ func (r *InputEvent) init() {
 	r.PathItem = strings.Split(r.Path, "/")
 }
 
-type DisplayItem struct {
-	Id        string
-	Title     string
-	SubTitle1 string
-	SubTitle2 string
-	Text      string
-}
-type RespEvent struct {
-	Position string        `json:"Position"` // recId|EOL|PEOL|PName
-	BackBtn  bool          `json:"BackBtn"`
-	Type     string        `json:"Type"`
-	Header   string        `json:"Header"`
-	SubHdr   string        `json:"SubHdr"`
-	Text     string        `json:"Text"`
-	Verbal   string        `json:"Verbal"`
-	Error    string        `json:"Error"`
-	List     []DisplayItem `json:"List"` // recipe data: id|Title1|subTitle1|SubTitle2|Text
-	ListA    []DisplayItem `json:"ListA"`
-	ListB    []DisplayItem `json:"ListB"`
-	ListC    []DisplayItem `json:"ListC"`
-	ListD    []DisplayItem `json:"ListD"`
-	ListE    []DisplayItem `json:"ListE"`
-	ListF    []DisplayItem `json:"ListF"`
-}
-
 //
 func handler(request InputEvent) (RespEvent, error) {
 
@@ -951,19 +918,19 @@ func handler(request InputEvent) (RespEvent, error) {
 }
 
 func main() {
-	//lambda.Start(handler)
-	p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
+	lambda.Start(handler)
+	//p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
 	//p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&rcp=Take-home Chocolate Cake"}
 	//var i float64 = 1.0
 	// p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + "&srch=" + os.Args[2]}
 	// //
-	pIngrdScale = 1.0
-	global.Set_WriteCtx(global.UDisplay)
-	p, _ := handler(p1)
-	if len(p.Error) > 0 {
-		fmt.Printf("%#v\n", p.Error)
-	} else {
-		fmt.Printf("output:   %s\n", p.Text)
-		fmt.Printf("output:   %s\n", p.Verbal)
-	}
+	// pIngrdScale = 1.0
+	// global.Set_WriteCtx(global.UDisplay)
+	// p, _ := handler(p1)
+	// if len(p.Error) > 0 {
+	// 	fmt.Printf("%#v\n", p.Error)
+	// } else {
+	// 	fmt.Printf("output:   %s\n", p.Text)
+	// 	fmt.Printf("output:   %s\n", p.Verbal)
+	// }
 }
