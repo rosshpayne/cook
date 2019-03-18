@@ -17,8 +17,8 @@ type RecipeListT []mRecipeT
 type IngredientT string
 
 type PartT struct {
-	Index string `json:"Idx"` // short name which is attached to each activity JSON.
-	type_ string // either Part or Division
+	Index string `json:"Idx"`   // short name which is attached to each activity JSON.
+	Type_ string `json:"Typ"`   // either Part, Division or Thread
 	Title string `json:"Title"` // long name which is printed out in the ingredients listing
 	Start int    `json:"Start"` // SortK value in T-?-? that has first instruction for the partition
 }
@@ -34,6 +34,7 @@ type InstructionT struct {
 	Part      string `json: "Pt"` // part index name - combines normal part and division as only one of these is displayed at a time.
 	Thread    int    `json:"Thrd"`
 	MergeThrd int    `json:"MThrd"`
+	ThrdName  string `json:"ThrdNme"`
 	Division  string `json:"Div"`
 	EOL       int    `json:"EOL"` // End-Of-List. Max Id assigned to each record
 	PEOL      int    `json:"PEOL"`
@@ -58,7 +59,7 @@ type ObjMenuT []string
 var objMenu = ObjMenuT{
 	"Ingredients",
 	"Containers and utensils",
-	"Prep tasks",
+	"Adjust Quantities...",
 	`Start cooking...`}
 
 type DisplayItem struct {
@@ -86,6 +87,8 @@ type RespEvent struct {
 	ListF    []DisplayItem `json:"ListF"`
 	Color1   string        `json:"Color1"`
 	Color2   string        `json:"Color2"`
+	Thread1  string        `json:"Thread1"`
+	Thread2  string        `json:"Thread2"`
 }
 
 // cacheInstructions copies data from T- items in recipe table to session data (instructions) that is preserved
@@ -144,7 +147,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 	case id > len(t[s.cThread].Instructions) && len(t) == 1:
 		// single threaded recipe
 		passErr = "Reached last instruction"
-		id = len(t[s.cThread].Instructions) - 1
+		id = len(t[s.cThread].Instructions)
 		s.recId[objectMap[s.object]] = id
 
 	case id > len(t[s.cThread].Instructions) && len(t) > 1 && s.cThread == len(t)-1:
@@ -295,15 +298,23 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 
 	default:
 		// two threads with 3 sections in each. should always display threads 1 and 2 in that order, never thread 0
-		// two threads with 3 sections in each. should always display threads 1 and 2 in that order, never thread 0
+		threadName := func(thread int) string {
+			for _, v := range s.parts {
+				if v.Type_ == "Thrd" && v.Index == strconv.Itoa(thread) {
+					return v.Title
+				}
+			}
+			return "no-thread"
+		}
 		tc := s.oThread
 		type_ := "threadedBottom"
-		color1 := "red"
+		color1 := "yellow"
 		if s.cThread < s.oThread {
 			tc = s.cThread
 			color1 = "green"
 			type_ = "threadedTop"
 		}
+		trName1 := threadName(tc)
 		// lower thread
 		listA := SectA(tc)
 		listB := SectB(tc)
@@ -313,8 +324,9 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		color2 := "green"
 		if s.oThread > s.cThread {
 			tc = s.oThread
-			color2 = "red"
+			color2 = "yellow"
 		}
+		trName2 := threadName(tc)
 		listD := SectA(tc)
 		listE := SectB(tc)
 		listF := SectC(tc, 12, false)
@@ -337,7 +349,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		speak := "<speak>" + rec.Verbal + "</speak>"
 
 		return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Text: rec.Text, Verbal: speak, ListA: listA, ListB: listB, ListC: listC,
-			ListD: listD, ListE: listE, ListF: listF, Color1: color1, Color2: color2,
+			ListD: listD, ListE: listE, ListF: listF, Color1: color1, Color2: color2, Thread1: trName1, Thread2: trName2,
 		}
 	}
 }
@@ -369,11 +381,15 @@ func (p PartS) GenDisplay(s *sessCtx) RespEvent {
 		hdr = s.reqRName
 		subh = `Recipe is divided into parts. Select first option to follow complete recipe`
 	}
-	list := make([]DisplayItem, len(p)+1)
+	list := make([]DisplayItem, 1)
 	list[0] = DisplayItem{Id: "1", Title: CompleteRecipe_}
 	for i, v := range p {
+		// ignore threads
+		if v.Type_ == "Thrd" {
+			continue
+		}
 		id := strconv.Itoa(i + 2)
-		list[i+1] = DisplayItem{Id: id, Title: v.Title}
+		list = append(list, DisplayItem{Id: id, Title: v.Title})
 	}
 	return RespEvent{Type: "Select", BackBtn: true, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: list}
 

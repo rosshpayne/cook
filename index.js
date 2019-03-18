@@ -689,7 +689,7 @@ function handleResponse (handlerInput , resp) {
           const speakcmd = require('APL/speakcmd.js');
           return  handlerInput.responseBuilder
                             .reprompt(resp.Verbal)
-                            .addDirective(tripple(resp.Header,resp.SubHdr, resp.ListA, resp.ListB, resp.ListC, resp.Verbal, resp.Text, resp.ListD, resp.ListE, resp.ListF, resp.Color1, resp.Color2))
+                            .addDirective(tripple(resp.Header,resp.SubHdr, resp.ListA, resp.ListB, resp.ListC, resp.Verbal, resp.Text, resp.ListD, resp.ListE, resp.ListF, resp.Thread1, resp.Thread2, resp.Color1, resp.Color2))
                             .addDirective(speakcmd())
                             .getResponse(); 
         } else if (resp.Type === "Select"){

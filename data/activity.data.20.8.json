@@ -78,6 +78,17 @@
                                   "Title" : { "S" : "On the day" }}
                                 }
                                 ]
+                },
+                "Thread" : { "L" : [
+                                { "M" : { 
+                                  "Idx" : { "S" : "1"},
+                                  "Title" : { "S" : "RhubarbXX" }}
+                                },
+                                { "M" : { 
+                                  "Idx" : { "S" : "2"},
+                                  "Title" : { "S" : "MainX" }}
+                                }
+                                ]
                 }
         }
         }
@@ -509,10 +520,10 @@
                                     }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "Check rice is cooked. If so remove from oven and set aside to cool" },
-                                  "say" : { "S" : "Check rice is cooked. If so remove from oven and set aside to cool" }, 
+                                  "txt" : { "S" : "Check {ingrd.70} is cooked. If so remove from oven and set aside to cool" },
+                                  "say" : { "S" : "Check {ingrd.70} is cooked. If so remove from oven and set aside to cool" }, 
                                   "time" : { "N" : "1" },
-                                  "thrd" : { "N" : "1" },
+                                  "thrd" : { "S" : "1" }, 
                                   "unit" : { "S" : "min" },
                                   "useC" : { "SS" : ["Tray2"] } 
                                     }
@@ -522,7 +533,7 @@
                                   "say" : { "S" : "Once it has cooled remove the tarragon sprigs and vanilla pod." }, 
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" },
-                                  "thrd" : { "N" : "1" },
+                                  "thrd" : { "S" : "1" },
                                   "useC" : { "SS" : ["Tray2"] } 
                                     }
                                 },
@@ -531,7 +542,7 @@
                                   "say" : { "S" : "The taragon can be discarded but the vanilla pod can be used to flavour caster sugar as a suggestion." },
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" },
-                                  "thrd" : { "N" : "1" },
+                                  "thrd" : { "S" : "1" },
                                   "useC" : { "SS" : ["Tray2"] } 
                                     }
                                 }                               
@@ -547,7 +558,7 @@
                 "SortK" : { "N": "120"},
                 "label" : { "S" : "cream" },
                 "ingrd" : { "S" : "double cream" },
-                "thrd" : { "N" : "2" },
+                "thrd" : { "S" : "2" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "100" } ,
@@ -574,9 +585,9 @@
                 "PKey" : { "S": "A-20-8" },
                 "SortK" : { "N": "130"},
                 "ingrd" : { "S" : "icing sugar" },
-                "thrd" : { "N" : "2" },
+                "thrd" : { "S" : "2" },
                 "div" :  { "S" : "od" },
-                "quali" : { "S" : ", sifted" },
+                "iqual" : { "S" : ", sifted" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "30" } ,
@@ -620,7 +631,7 @@
                 "PKey" : { "S": "A-20-8" },
                 "SortK" : { "N": "140"},
                 "ingrd" : { "S" : "Greek Yogut" },
-                "thrd" : { "N" : "2" },
+                "thrd" : { "S" : "2" },
                 "div" :  { "S" : "od" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
@@ -655,7 +666,6 @@
                                   "txt" : { "S" : "spoon a generous amount of {ingrd.70} on top, along with some juices"  },
                                   "say" : { "S" : "spoon a generous amount of {ingrd.70} on top, along with some juices" },
                                   "time" : { "N" : "1" },
-                                  "thrd" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
                                   "mthrd" : { "N" : "1" },
                                   "useC" : { "SS" : [ "CreamB"] } }
@@ -664,7 +674,6 @@
                                   "txt" : { "S" : "finally, serve with a sprinkling of the {ingrd.90} leaves you cut up previously"  },
                                   "say" : { "S" : "finally, serve with a sprinkling of the {ingrd.90} leaves you cut up previously"  },
                                   "unit" : { "S" : "min" },
-                                  "thrd" : { "N" : "0" },
                                   "useC" : { "SS" : [ "CreamB"] } }
                                 }
                                 ]

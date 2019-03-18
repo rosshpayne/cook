@@ -1,6 +1,6 @@
 
 
-module.exports = (header, subhdr, dataA, dataB, dataC, verbal, text, dataD, dataE, dataF, color1, color2) => { return {
+module.exports = (header, subhdr, dataA, dataB, dataC, verbal, text, dataD, dataE, dataF, thread1, thread2, color1, color2) => { return {
     type: 'Alexa.Presentation.APL.RenderDocument',
     token: 'cook-tripple-screen',
     document: {
@@ -40,7 +40,7 @@ module.exports = (header, subhdr, dataA, dataB, dataC, verbal, text, dataD, data
               type: "AlexaHeader",
               headerTitle: header,
               headerSubtitle: subhdr,
-              headerBackgroundColor: "red",
+              headerBackgroundColor: "rgba(240,24,25,80%)",
               headerBackButton: true,
               headerNavigationAction: "backButton"
               },
@@ -52,44 +52,59 @@ module.exports = (header, subhdr, dataA, dataB, dataC, verbal, text, dataD, data
               shrink: 1,
               width: "100vw",
               height: "100vh",
-              items: [
+              items: [  
+                        {
+                        type: "Container",
+                        direction: "column",
+                        spacing: 4,
+                        height: "7vh",
+                        alignItems: "left",
+                        justifyContent: "end",
+                        items: [
+                                          {
+                                          type: "Text",
+                                          text: thread1,
+                                          color: "rgba(240,240,240,80%)",
+                                          fontSize: "20dp",
+                                          style: "textStylePrimary2"
+                                          }
+                                          ] 
+                        },
                         {
                         type: "Container",
                         direction: "column",
                         data: "${payload.listdata.properties.dataA}",
                         spacing: 4,
-                        height: "14vh",
+                        height: "7vh",
                         alignItems: "left",
                         justifyContent: "end",
                         items: [
                                           {
                                           type: "Text",
                                           text: "${data.Title}",
-                                          grow: 0,
-                                          shrink: 0,
-                                          fontSize: "15dp"
+                                          fontSize: "12dp",
+                                          color: "rgba(240,240,240,80%)"
                                           }
                                           ] 
                         },
                         {
                         type: "Frame",
-                        borderColor: color1,
+                        borderColor: "rgba(240,240,240,60%)",
                         borderWidth: 2,
-                        height: "7vh",  
+                        height: "5vh",  
                         item: {
                               type: "Container",
                               direction: "column",
                               data: "${payload.listdata.properties.dataB}",
-                              spacing: 4,
+                              spacing: 0,
                               alignItems: "left",
-                              height: "7vh",
+                              height: "5vh",
                               justifyContent: "center",
                               items: [
                                       {
                                       type: "Text",
                                       text: "${data.Title}",
-                                      grow: 0,
-                                      shrink: 0,
+                                      color: "rgba(240,240,240,80%)",
                                       fontSize: "17dp",
                                       style: "textStylePrimary2"
                                       }
@@ -100,16 +115,32 @@ module.exports = (header, subhdr, dataA, dataB, dataC, verbal, text, dataD, data
                         type: "Container",
                         direction: "column",
                         data: "${payload.listdata.properties.dataC}",
-                        spacing: 4,
-                        height: "19vh",
+                        spacing: 10,
+                        height: "12vh",
                         alignItems: "left",
                         items: [
                                           {
                                           type: "Text",
                                           text: "${data.Title}",
-                                          grow: 0,
-                                          shrink: 0,
-                                          fontSize: "15dp"
+                                          fontSize: "17dp",
+                                          color: "rgba(240,240,240,80%)",
+                                          }
+                                          ] 
+                        },
+                        {
+                        type: "Container",
+                        direction: "column",
+                        spacing: 2,
+                        height: "7vh",
+                        alignItems: "left",
+                        justifyContent: "end",
+                        items: [
+                                          {
+                                          type: "Text",
+                                          text: thread2,
+                                          fontSize: "20dp",
+                                          color: "rgba(125,240,25,80%)",
+                                          style: "textStylePrimary2"
                                           }
                                           ] 
                         },
@@ -117,23 +148,22 @@ module.exports = (header, subhdr, dataA, dataB, dataC, verbal, text, dataD, data
                         type: "Container",
                         direction: "column",
                         data: "${payload.listdata.properties.dataD}",
-                        spacing: 4,
-                        height: "14vh",
+                        spacing: 14,
+                        height: "7vh",
                         alignItems: "left",
                         justifyContent: "end",
-                        items: [
+                        items: [    
                                           {
                                           type: "Text",
                                           text: "${data.Title}",
-                                          grow: 0,
-                                          shrink: 0,
+                                          color: "rgba(240,240,240,80%)",
                                           fontSize: "15dp"
                                           }
                                           ] 
                         },
                         {
                         type: "Frame",
-                        borderColor: color2,
+                        borderColor:  "rgba(240,240,240,60%)",
                         borderWidth: 2,
                         height: "7vh",  
                         item: {
@@ -149,8 +179,7 @@ module.exports = (header, subhdr, dataA, dataB, dataC, verbal, text, dataD, data
                                       id: "Rinstruction",
                                       text: "  ${payload.listdata.properties.text}",
                                       speech: "${payload.listdata.properties.verbal}",
-                                      grow: 0,
-                                      shrink: 0,
+                                      color: "rgba(125,240,25,90%)",
                                       fontSize: "17dp",
                                       style: "textStylePrimary2"
                                       }
@@ -162,14 +191,13 @@ module.exports = (header, subhdr, dataA, dataB, dataC, verbal, text, dataD, data
                         direction: "column",
                         data: "${payload.listdata.properties.dataF}",
                         spacing: 4,
-                        height: "39vh",
+                        height: "32vh",
                         alignItems: "left",
                         items: [
                                           {
                                           type: "Text",
                                           text: "${data.Title}",
-                                          grow: 0,
-                                          shrink: 0,
+                                          color: "rgba(240,240,240,80%)",
                                           fontSize: "15dp"
                                           }
                                           ] 
@@ -194,6 +222,8 @@ module.exports = (header, subhdr, dataA, dataB, dataC, verbal, text, dataD, data
               dataD,
               dataE,
               dataF,
+              thread1,
+              thread2,
               verbal,
               text,
               color1,

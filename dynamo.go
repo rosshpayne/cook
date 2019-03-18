@@ -54,17 +54,18 @@ type mRecipeT struct {
 }
 
 type taskRecT struct {
-	PKey      string  `json:"PKey"`  // R-[BkId]
-	SortK     int     `json:"SortK"` // monotonically increasing - task at which user is upto in recipe
-	AId       int     `json:"AId"`   // Activity Id
-	Type      byte    `json:"Type"`
-	time      float32 // all Linked preps sum time components into this field
-	Division  string  `json:"Div"`  // divide tasks/instructs into divisions, e.g. day-before, on-day
-	Thread    int     `json:"Thrd"` // instruction thread
-	Text      string  `json:"Text"` // all Linked preps combined text into this field
-	MergeThrd int     `json:"Mthrd"`
-	Verbal    string  `json:"Verbal"`
-	EOL       int     `json:"EOL"` // End-Of-List. Max Id assigned to each record
+	PKey     string  `json:"PKey"`  // R-[BkId]
+	SortK    int     `json:"SortK"` // monotonically increasing - task at which user is upto in recipe
+	AId      int     `json:"AId"`   // Activity Id
+	Type     byte    `json:"Type"`
+	time     float32 // all Linked preps sum time components into this field
+	Division string  `json:"Div"` // divide tasks/instructs into divisions, e.g. day-before, on-day
+	//Thread    string  `json:"Thrd"` // instruction thread
+	Thread    int    `json:"Thrd"`
+	Text      string `json:"Text"` // all Linked preps combined text into this field
+	MergeThrd int    `json:"Mthrd"`
+	Verbal    string `json:"Verbal"`
+	EOL       int    `json:"EOL"` // End-Of-List. Max Id assigned to each record
 	// Recipe Part metadata
 	PEOL int    `json:"PEOL"` // End-of-List-for-part
 	PId  int    `json:"PId"`  // instruction id within a part
@@ -201,30 +202,49 @@ func (s *sessCtx) cacheInstructions(sId ...int) (Threads, error) {
 		v := s.parts[s.selId-2]
 		instructs = make(InstructionS, 1)
 		instructs[0] = InstructionT{} // blank instruction at index 0, so Instructions start at index 1.
-		switch v.type_ {
-		case "Div": // division by instruction - loop through all instructions looking for part
+
+		switch v.Type_ {
+		case "Div": // division by instruction - loop through all instructions looking for any threads
 			// generate threads: look for multiple threads within division/part
+			var thrdCnt int
 			threads = make(Threads, 1)
 			for thread, i := 0, 0; i < len(ptR); i++ {
-				if ptR[i].Division == part {
+				if ptR[i].Division == v.Index {
 					if ptR[i].Thread > thread {
 						thread = ptR[i].Thread
-						threads = append(threads, ThreadT{Thread: thread})
+						thrdCnt++
 					}
 				}
 			}
+			// only multiple parallel threads if more than two threads are active otherwise if only two or less, thread 0 and 1 are be performed in series.
+			if thrdCnt > 2 {
+				for i := 1; i < thrdCnt; i++ {
+					threads = append(threads, ThreadT{Thread: i})
+				}
+			}
+			fmt.Println("Threads len(threads) = ", len(threads))
 			// generate instructions: within a thread for the division
 			// 0 index for no thead case, index 1,2 for threads 1,2
 			for t := 0; t < len(threads); t++ {
-				for i, v := range ptR {
-					if ptR[i].Division == part {
-						if v.Thread == threads[t].Thread {
+				for i, _ := range ptR {
+					if ptR[i].Division == v.Index {
+						switch len(threads) {
+						case 1: // ignore threads if only thread values detected
 							global.Set_WriteCtx(global.USay)
-							vmsg := expandScalableTags(expandLiteralTags(v.Verbal))
+							vmsg := expandScalableTags(expandLiteralTags(ptR[i].Verbal))
 							global.Set_WriteCtx(global.UDisplay)
-							dmsg := expandScalableTags(expandLiteralTags(v.Text))
-							instruct := InstructionT{Text: dmsg, Verbal: vmsg, Thread: v.Thread, Division: v.Division}
+							dmsg := expandScalableTags(expandLiteralTags(ptR[i].Text))
+							instruct := InstructionT{Text: dmsg, Verbal: vmsg, Thread: ptR[i].Thread, Division: ptR[i].Division}
 							threads[t].Instructions = append(threads[t].Instructions, instruct)
+						default:
+							if ptR[i].Thread == threads[t].Thread {
+								global.Set_WriteCtx(global.USay)
+								vmsg := expandScalableTags(expandLiteralTags(ptR[i].Verbal))
+								global.Set_WriteCtx(global.UDisplay)
+								dmsg := expandScalableTags(expandLiteralTags(ptR[i].Text))
+								instruct := InstructionT{Text: dmsg, Verbal: vmsg, Thread: ptR[i].Thread, Division: ptR[i].Division}
+								threads[t].Instructions = append(threads[t].Instructions, instruct)
+							}
 						}
 					}
 				}
@@ -232,13 +252,20 @@ func (s *sessCtx) cacheInstructions(sId ...int) (Threads, error) {
 
 		default: // division by ingredient (part) - currently uses linked instructions. May go scan like Div in future.
 			// generate threads: look for multiple threads within part
+			var thrdCnt int
 			threads = make(Threads, 1)
 			for thread, id := 0, v.Start; id != -1; id = ptR[id-1].Next {
 				if ptR[id].Thread > 0 {
 					if ptR[id].Thread > thread {
 						thread = ptR[id].Thread
-						threads = append(threads, ThreadT{Thread: thread})
+						thrdCnt++
 					}
+				}
+			}
+			// only multiple parallel threads if more than two threads are active otherwise if only two or less, thread 0 and 1 are be performed in series.
+			if thrdCnt > 2 {
+				for i := 1; i < thrdCnt; i++ {
+					threads = append(threads, ThreadT{Thread: i})
 				}
 			}
 			// generate instructions: within a thread for the part
@@ -247,13 +274,23 @@ func (s *sessCtx) cacheInstructions(sId ...int) (Threads, error) {
 				for id := v.Start; id != -1; id = ptR[id-1].Next {
 					// ptR.Next points to SortK in table - which starts at 1
 					i := id - 1
-					if ptR[i].Thread == threads[t].Thread {
+					switch len(threads) {
+					case 1: // ignore threads if only thread values detected
 						global.Set_WriteCtx(global.USay)
 						vmsg := expandScalableTags(expandLiteralTags(ptR[i].Verbal))
 						global.Set_WriteCtx(global.UDisplay)
 						dmsg := expandScalableTags(expandLiteralTags(ptR[i].Text))
 						instruct := InstructionT{Text: dmsg, Verbal: vmsg, Part: ptR[i].Part, EOL: ptR[i].EOL, PEOL: ptR[i].PEOL, PID: ptR[i].PId}
 						threads[t].Instructions = append(threads[t].Instructions, instruct)
+					default:
+						if ptR[i].Thread == threads[t].Thread {
+							global.Set_WriteCtx(global.USay)
+							vmsg := expandScalableTags(expandLiteralTags(ptR[i].Verbal))
+							global.Set_WriteCtx(global.UDisplay)
+							dmsg := expandScalableTags(expandLiteralTags(ptR[i].Text))
+							instruct := InstructionT{Text: dmsg, Verbal: vmsg, Part: ptR[i].Part, EOL: ptR[i].EOL, PEOL: ptR[i].PEOL, PID: ptR[i].PId}
+							threads[t].Instructions = append(threads[t].Instructions, instruct)
+						}
 					}
 				}
 			}
@@ -853,10 +890,13 @@ func (s *sessCtx) recipeRSearch() (*RecipeT, error) {
 	s.parts = rec.Part
 	// add division if any to parts
 	for _, v := range s.parts {
-		v.type_ = "Pt"
+		v.Type_ = "Pt"
 	}
 	for _, v := range rec.Division {
-		s.parts = append(s.parts, PartT{Title: v.Title, type_: "Div", Index: v.Index})
+		s.parts = append(s.parts, PartT{Title: v.Title, Type_: "Div", Index: v.Index})
+	}
+	for _, v := range rec.Thread {
+		s.parts = append(s.parts, PartT{Title: v.Title, Type_: "Thrd", Index: v.Index})
 	}
 	return rec, nil
 }

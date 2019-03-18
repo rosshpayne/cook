@@ -63,8 +63,9 @@ type RecipeT struct {
 	//Title  string   `json:"Title"`
 	Index    []string `json:"Index"`
 	Serves   string   `json:"Srv"`
-	Part     []PartT  `json:"Part"` // order list of recipe parts. Load will prepend "nopart_" if parts are detected in Activities and some are not assigned part.
-	Division []PartT  `json:"Div"`  // order list of recipe divisions. Divisions apply at the instruction level rather than ingredient. Example, All instructions that can be done the day-before.
+	Part     []PartT  `json:"Part"`   // order list of recipe parts. Load will prepend "nopart_" if parts are detected in Activities and some are not assigned part.
+	Division []PartT  `json:"Div"`    // order list of recipe divisions. Divisions apply at the instruction level rather than ingredient. Example, All instructions that can be done the day-before.
+	Thread   []PartT  `json:"Thread"` // List of thread names for each thread index.
 }
 
 // type Part struct {
@@ -120,8 +121,9 @@ type PerformT struct {
 	Measure     *MeasureT `json:"measure"` // used by those tasks that use some portion of the ingredient.
 	WaitOn      int       `json:"waitOn"`  // depenency on other activity to complete
 	Division    string    `json:"div"`     // inherit from activity if not present. Recipe division based on instructions/tasks not part ingredient e.g. division: day-before, on-day
-	Thread      int       `json:"thrd"`    // inherit from activity if not present. No thread means thread 1.
+	Thread      string    `json:"thrd"`    // inherit from activity if not present. No thread means thread 1.
 	MergeThrd   int       `json:"mthrd"`   // task where parallel task (thread) will merge
+	ThrdName    string    `json:"thrdnme"` // title of thread - appears in threadedBottom.json, threadedTop.json
 	//DeviceT
 	AddToC   []string `json:"addToC"`
 	UseC     []string `json:"useC"`
@@ -154,7 +156,7 @@ type Activity struct {
 	Task        []*PerformT `json:"task"`
 	Prep        []*PerformT `json:"prep"`
 	Division    string      `json:"div"`  // see division in PerformT.
-	Thread      int         `json:"thrd"` // activity belongs to thread. No thread means thread 1. Overrides thread at activity level.
+	Thread      string      `json:"thrd"` // activity belongs to thread. No thread means thread 1. Overrides thread at activity level.
 	//	UnitMap       map[string]*Unit
 	next     *Activity
 	prev     *Activity

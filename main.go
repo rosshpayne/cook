@@ -88,7 +88,7 @@ type sessCtx struct {
 	eol   int    // sourced from Sessions table
 	peol  int    // End-of-List-for-part
 	part  string // part index/long name depending on context - if no value then no part is being used eventhough recipe may be have a part defined i.e nopart_ & a part
-	parts PartS  // sourced from Recipe (R-) - contains part and division values
+	parts PartS  // sourced from Recipe (R-) - contains part, division and thread values
 	// cPart string  // current part being display (long name). All part means complete recipe will be listed.
 	// next  int     // next SortK (recId)
 	// prev  int     // previous SortK (recId) when in part mode as opposed to full recipe mode
