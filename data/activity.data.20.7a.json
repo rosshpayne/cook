@@ -40,7 +40,8 @@
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "1-2" } ,
-                                      "unit" : { "S" : "sprig" }
+                                      "unit" : { "S" : "sprig" },
+                                      "ns" : { "BOOL" : true }
                                       }
                 },
                 "altMeasure" : { "M" : { 

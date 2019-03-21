@@ -34,7 +34,6 @@ type InstructionT struct {
 	Part      string `json: "Pt"` // part index name - combines normal part and division as only one of these is displayed at a time.
 	Thread    int    `json:"Thrd"`
 	MergeThrd int    `json:"MThrd"`
-	ThrdName  string `json:"ThrdNme"`
 	Division  string `json:"Div"`
 	EOL       int    `json:"EOL"` // End-Of-List. Max Id assigned to each record
 	PEOL      int    `json:"PEOL"`
@@ -52,15 +51,23 @@ type ThreadT struct {
 
 type Threads []ThreadT
 
+type ObjMenuT struct {
+	id   int
+	item string
+}
+
+type ObjMenu []ObjMenuT
+
+var objMenu ObjMenu = []ObjMenuT{
+	ObjMenuT{0, "Ingredients"},
+	ObjMenuT{1, "Containers and utensils"},
+	ObjMenuT{2, "Modify container size"},
+	ObjMenuT{3, `Start cooking...`},
+}
+
 type ContainerS []string
 
-type ObjMenuT []string
-
-var objMenu = ObjMenuT{
-	"Ingredients",
-	"Containers and utensils",
-	"Adjust Quantities...",
-	`Start cooking...`}
+type menuList []int
 
 type DisplayItem struct {
 	Id        string
@@ -182,7 +189,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		if t[s.cThread].Id == len(t[s.cThread].Instructions) {
 			// previous thead completed. Have reached end
 			passErr = "Recipe completed"
-			id = len(t[s.cThread].Instructions) - 1
+			id = len(t[s.cThread].Instructions)
 			s.recId[objectMap[s.object]] = id
 		}
 	}
@@ -299,12 +306,13 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 	default:
 		// two threads with 3 sections in each. should always display threads 1 and 2 in that order, never thread 0
 		threadName := func(thread int) string {
-			for _, v := range s.parts {
+			for i := 0; i < len(s.parts); i++ {
+				v := &s.parts[i]
 				if v.Type_ == "Thrd" && v.Index == strconv.Itoa(thread) {
 					return v.Title
 				}
 			}
-			return "no-thread"
+			return "no-thread-foundik8,"
 		}
 		tc := s.oThread
 		type_ := "threadedBottom"
@@ -480,12 +488,13 @@ func (r RecipeListT) GenDisplay(s *sessCtx) RespEvent {
 	return RespEvent{Type: type_, BackBtn: backBtn, Header: "Search results: " + s.reqSearch, Text: s.vmsg, Verbal: s.dmsg, List: list}
 }
 
-func (o ObjMenuT) GenDisplay(s *sessCtx) RespEvent {
+func (o ObjMenu) GenDisplay(s *sessCtx) RespEvent {
 	var (
 		hdr     string
 		subh    string
 		op      string
 		backBtn bool
+		noScale bool
 	)
 	if len(s.passErr) > 0 {
 		hdr = s.passErr
@@ -496,15 +505,59 @@ func (o ObjMenuT) GenDisplay(s *sessCtx) RespEvent {
 		hdr = s.reqRName
 		subh = op + "Book:  " + s.reqBkName + "  Authors: " + s.authors
 	}
-	list := make([]DisplayItem, 4)
-	//for i, v := range []string{ingredient_, utensil_, container_, task_} {
-	for i, v := range o {
-		id := strconv.Itoa(i + 1)
-		list[i] = DisplayItem{Id: id, Title: v}
+	//
+	// if back button pressed then s.menuL is assigned via state pop(). menuL is empty during normal forward processing.
+	//
+	var list []DisplayItem
+
+	switch len(s.menuL) {
+	case 0:
+		ct, err := s.getScaleContainer()
+		if err != nil {
+			return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
+		}
+		size := 4
+		if len(ct.Cid) == 0 {
+			// recipe has no scalable container
+			noScale = true
+			size = 3
+		} else {
+			s.dispCtr = &DispContainerT{Type_: ct.Label, Shape: ct.Measure.Shape, Dimension: ct.Measure.Dimension, Unit: ct.Measure.Unit}
+			fmt.Printf("** dispCtr %#v\n", *(s.dispCtr))
+		}
+
+		list = make([]DisplayItem, size)
+		s.menuL = make(menuList, size)
+		k := 0
+		for i, v := range o {
+			if i == 2 && noScale {
+				continue
+			}
+			id := strconv.Itoa(k + 1)
+			list[k] = DisplayItem{Id: id, Title: v.item}
+			s.menuL[k] = v.id
+			k++
+		}
+	default:
+		if len(s.menuL) > 0 {
+			list = make([]DisplayItem, len(s.menuL))
+			for i, v := range s.menuL {
+				id := strconv.Itoa(v + 1)
+				list[i] = DisplayItem{Id: id, Title: objMenu[v].item}
+			}
+		}
 	}
+	var err error
+
 	backBtn = true
 	if len(s.state) < 2 {
 		backBtn = false
+	}
+	if !s.back {
+		err = s.updateState()
+		if err != nil {
+			return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
+		}
 	}
 	return RespEvent{Type: "Select", BackBtn: backBtn, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: list}
 }
@@ -546,4 +599,67 @@ func (b BookT) GenDisplay(s *sessCtx) RespEvent {
 	}
 
 	return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: nil}
+}
+
+// instance of below type saved to state data in dynamo
+type DispContainerT struct {
+	Type_      string `json:"Type"`
+	Shape      string
+	Dimension  string `json:"dim"`
+	UDimension string `json:"udim"`
+	Unit       string
+}
+
+func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
+	var (
+		sf   string
+		hdr  string
+		subh string
+		text string
+		list []DisplayItem
+	)
+	if c == nil {
+		panic("in GenDisplay(): DispContainerT instance is nil ")
+	}
+	if s.dimension > 0 {
+		cdim, err := strconv.Atoi(c.Dimension)
+		if err != nil {
+			panic(err.Error())
+		}
+		c.UDimension = strconv.Itoa(s.dimension)
+		scaleF = float64(s.dimension*s.dimension) / float64(cdim*cdim)
+		// persist  new data
+		err = s.updateState()
+		if err != nil {
+			return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
+		}
+		sf = strconv.FormatFloat(scaleF, 'g', 2, 64)
+		hdr = "Your container"
+		subh = "Scale Factor:  " + sf
+		text = "All quantities will be adjusted to your container specification: "
+		list = make([]DisplayItem, 4)
+		list[0] = DisplayItem{Title: text}
+		list[1] = DisplayItem{Title: " "}
+		list[2] = DisplayItem{Title: "Type:       " + c.Type_}
+		list[3] = DisplayItem{Title: "Size: " + c.UDimension + " " + c.Unit}
+	} else {
+
+		sf = strconv.FormatFloat(scaleF, 'g', 2, 64)
+		hdr = "Specify the size of your container"
+		subh = "Scale Factor:  " + sf
+		text = "Quantities are based on the following container specification: "
+		list = make([]DisplayItem, 6)
+		list[0] = DisplayItem{Title: text}
+		list[1] = DisplayItem{Title: " "}
+		list[2] = DisplayItem{Title: "Type:       " + c.Type_}
+		list[3] = DisplayItem{Title: "Size:   " + c.Dimension + " " + c.Unit}
+		list[4] = DisplayItem{Title: " "}
+		list[5] = DisplayItem{Title: `What is the size of your container, say 'size [newsize]' e.g. size 23 `}
+	}
+	type_ := "Ingredient"
+	backBtn := true
+	if len(s.state) < 2 {
+		backBtn = false
+	}
+	return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr, SubHdr: subh, List: list}
 }

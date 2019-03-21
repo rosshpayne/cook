@@ -83,6 +83,35 @@ const EventHandler = {
   },
 };
 
+const DimensionIntentHandler = {
+  canHandle(handlerInput) {
+    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+      && handlerInput.requestEnvelope.request.intent.name === 'DimensionIntent';
+  },
+  handle(handlerInput) {
+    const sid="sid="+handlerInput.requestEnvelope.session.sessionId;
+    const dim='&dim='+handlerInput.requestEnvelope.request.intent.slots.size.resolutions.resolutionsPerAuthority[0].values[0].value.id;
+    //                  handlerInput.requestEnvelope.request.intent.slots.YesNo.resolutions.resolutionsPerAuthority[0].values[0].value.id;
+    invokeParams.Payload = '{ "Path" : "dimension" ,"Param" : "'+sid+dim+'" }';
+    
+    promise = new Promise((resolve, reject) => {
+          lambda.invoke(invokeParams, function(err, data) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(data.Payload);  }
+          });
+        });    
+        
+    return promise.then((body) => {
+        var  resp = JSON.parse(body);
+        console.log(resp);
+        return handleResponse(handlerInput, resp);
+      }).catch(function (err) { console.log(err, err.stack);  } );
+    
+  },
+};
+
 const BookIntentHandler = {
   canHandle(handlerInput) {
     return handlerInput.requestEnvelope.request.type === 'IntentRequest'
@@ -162,6 +191,7 @@ const CloseBookIntentHandler = {
         }).catch(function (err) { console.log(err, err.stack);  } );
   },
 };
+
 
 const SearchIntentHandler = {
   canHandle(handlerInput) {
@@ -734,6 +764,7 @@ exports.handler = skillBuilder
     YesNoIntentHandler,
     GotoIntentHandler,
     SelectIntentHandler,
+    DimensionIntentHandler,
     SearchIntentHandler,
     PrevIntentHandler,
     RepeatIntentHandler,

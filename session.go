@@ -65,12 +65,10 @@ type stateRec struct {
 	//InstructionData InstructionS `json:"I"`
 	InstructionData Threads `json:"I"`
 	ShowObjMenu     bool
-	//ContainerData   ContainerS   `json:"C"` // no need to save this data. It is never sourced from state data.
+	MenuL           menuList
 	//
-	// DispObjectMenu  bool
-	// DispIngredients bool
-	// DispContainers  bool
-	// DispPartMenu    bool
+	Dispctr DispContainerT `json:"Dctr"`
+	ScaleF  float64
 }
 
 type stateStack []stateRec
@@ -86,13 +84,6 @@ func (ls *stateRec) activeRecipe() bool {
 	}
 	return false
 }
-
-// func (s *sessCtx) setDisplay(ls *stateRec) {
-// 	s.dispObjectMenu = ls.DispObjectMenu
-// 	s.dispIngredients = ls.DispIngredients
-// 	s.dispContainers = ls.DispContainers
-// 	s.dispPartMenu = ls.DispPartMenu
-// }
 
 func (s *sessCtx) getState() (*stateRec, error) {
 	//
@@ -282,6 +273,15 @@ func (s *sessCtx) setState(ls *stateRec) {
 		fmt.Println("in setSession: displaying object menu is set")
 		s.displayData = objMenu
 	}
+	if len(ls.MenuL) > 0 {
+		s.menuL = ls.MenuL
+	}
+	s.dispCtr = &ls.Dispctr
+	if ls.ScaleF == 0 {
+		scaleF = 1
+	} else {
+		scaleF = ls.ScaleF
+	}
 	return
 }
 
@@ -348,6 +348,14 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 	sr.CThread = s.cThread
 	sr.OThread = s.oThread
 	sr.ShowObjMenu = s.showObjMenu
+	//sr.ObjMenu = s.ObjMenu
+	if len(s.menuL) > 0 {
+		sr.MenuL = s.menuL
+	}
+	if s.dispCtr != nil {
+		sr.Dispctr = *(s.dispCtr)
+	}
+	sr.ScaleF = scaleF
 	//
 	State := make(stateStack, 1)
 	State[0] = sr
@@ -419,18 +427,27 @@ func (s *sessCtx) updateState() error {
 	//
 	// for current state
 	//
-	atribute := fmt.Sprintf("state[%d].RecId", len(s.state)-1)
-	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
-	atribute = fmt.Sprintf("state[%d].I[%d].id", len(s.state)-1, s.cThread)
-	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId[objectMap[task_]]))
-	atribute = fmt.Sprintf("state[%d].CThrd", len(s.state)-1)
-	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.cThread))
-	atribute = fmt.Sprintf("state[%d].OThrd", len(s.state)-1)
-	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.oThread))
-	atribute = fmt.Sprintf("state[%d].DT", len(s.state)-1)
-	updateC = updateC.Set(expression.Name(atribute), expression.Value(time.Now().Format("Jan 2 15:04:05")))
-	atribute = fmt.Sprintf("state[%d].Request", len(s.state)-1)
-	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.request))
+	if len(s.menuL) > 0 {
+		atribute := fmt.Sprintf("state[%d].MenuL", len(s.state)-1)
+		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.menuL))
+		atribute = fmt.Sprintf("state[%d].Dctr", len(s.state)-1)
+		updateC = updateC.Set(expression.Name(atribute), expression.Value(*(s.dispCtr)))
+		atribute = fmt.Sprintf("state[%d].ScaleF", len(s.state)-1)
+		updateC = updateC.Set(expression.Name(atribute), expression.Value(scaleF))
+	} else {
+		atribute := fmt.Sprintf("state[%d].RecId", len(s.state)-1)
+		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
+		atribute = fmt.Sprintf("state[%d].I[%d].id", len(s.state)-1, s.cThread)
+		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId[objectMap[task_]]))
+		atribute = fmt.Sprintf("state[%d].CThrd", len(s.state)-1)
+		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.cThread))
+		atribute = fmt.Sprintf("state[%d].OThrd", len(s.state)-1)
+		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.oThread))
+		atribute = fmt.Sprintf("state[%d].DT", len(s.state)-1)
+		updateC = updateC.Set(expression.Name(atribute), expression.Value(time.Now().Format("Jan 2 15:04:05")))
+		atribute = fmt.Sprintf("state[%d].Request", len(s.state)-1)
+		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.request))
+	}
 	//
 	// for previous states - upto object menu
 	//
@@ -620,6 +637,8 @@ func (s *sessCtx) popState() error {
 	fmt.Printf("Popstate: parts %#v\n", s.parts)
 	fmt.Printf("Popstate: sr.showOBjMenu %#v\n", sr.ShowObjMenu)
 	fmt.Printf("Popstate: sr.RecipeList %#v\n", sr.RecipeList)
+	fmt.Printf("Popstate: s.reqBkId %#v\n", s.reqBkId)
+	fmt.Printf("Popstate: s.reqRId %#v\n", s.reqRId)
 	s.displayData = s.parts
 	if len(sr.InstructionData) > 0 {
 		s.displayData = sr.InstructionData
@@ -638,9 +657,19 @@ func (s *sessCtx) popState() error {
 	if sr.Request == "book" && len(sr.OpenBk) > 0 {
 		s.displayData = s.reqOpenBk
 	}
-	return nil
 	if sr.Request == "book/close" && len(sr.OpenBk) > 0 {
 		s.displayData = s.reqOpenBk
 	}
+	if len(sr.MenuL) > 0 {
+		s.menuL = sr.MenuL
+	}
+	s.dispCtr = &sr.Dispctr
+	if sr.ScaleF == 0 {
+		scaleF = 1
+	} else {
+		scaleF = sr.ScaleF
+	}
+	s.pkey = s.reqBkId + "-" + s.reqRId
+	fmt.Printf("Popstate: s.reqRId %#v\n", s.pkey)
 	return nil
 }

@@ -275,7 +275,7 @@ func (s *sessCtx) cacheInstructions(sId ...int) (Threads, error) {
 					// ptR.Next points to SortK in table - which starts at 1
 					i := id - 1
 					switch len(threads) {
-					case 1: // ignore threads if only thread values detected
+					case 1: // ignore threads if only two or less thread values detected  (see thrdCnt)
 						global.Set_WriteCtx(global.USay)
 						vmsg := expandScalableTags(expandLiteralTags(ptR[i].Verbal))
 						global.Set_WriteCtx(global.UDisplay)
@@ -306,12 +306,65 @@ type containerT struct {
 	Text   string `json:"txt"`
 }
 
-func (s *sessCtx) getContainers() []containerT {
+// func (s *sessCtx) getContainers() []containerT {
 
-	// fetch all container rows associated with a recipe
+// 	// fetch all container rows associated with a recipe
+// 	// PKey = C-[BkId]-[RId]
+// 	keyC := expression.KeyEqual(expression.Key("PKey"), expression.Value("C-"+s.pkey))
+// 	expr, err := expression.NewBuilder().WithKeyCondition(keyC).Build()
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	//
+// 	input := &dynamodb.QueryInput{
+// 		KeyConditionExpression:    expr.KeyCondition(),
+// 		FilterExpression:          expr.Filter(),
+// 		ExpressionAttributeNames:  expr.Names(),
+// 		ExpressionAttributeValues: expr.Values(),
+// 	}
+// 	input = input.SetTableName("Recipe").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
+// 	//
+// 	result, err := s.dynamodbSvc.Query(input)
+// 	if err != nil {
+// 		if aerr, ok := err.(awserr.Error); ok {
+// 			switch aerr.Code() {
+// 			case dynamodb.ErrCodeProvisionedThroughputExceededException:
+// 				fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
+// 			case dynamodb.ErrCodeResourceNotFoundException:
+// 				fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
+// 			// case dynamodb.ErrCodeRequestLimitExceeded:
+// 			// 	fmt.Println(dynamodb.ErrCodeRequestLimitExceeded, aerr.Error())
+// 			case dynamodb.ErrCodeInternalServerError:
+// 				fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
+// 			default:
+// 				fmt.Println(aerr.Error())
+// 			}
+// 			panic(aerr.Error())
+// 		} else {
+// 			// Print the error, cast err to awserr.Error to get the Code and
+// 			// Message from an error.
+// 			panic(err.Error())
+// 		}
+// 		panic(fmt.Errorf("%s: %s", "Error in GetItem of getContainerRecById", err.Error()))
+// 	}
+
+// 	recS := make([]containerT, int(*result.Count))
+// 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &recS)
+// 	if err != nil {
+// 		panic(fmt.Errorf("Error: %s [%s] err", "in UnmarshalListMaps of getContainers ", s.reqRName, err.Error()))
+// 	}
+// 	return recS
+// }
+
+func (s *sessCtx) getScaleContainer() (Container, error) {
+
+	// return a single scale container (containers that determine quantity of ingredients)
+	//  if more than one scale container first one is returned.
 	// PKey = C-[BkId]-[RId]
+	fmt.Println("in getScaleContainer - Pkey: ", s.pkey)
 	keyC := expression.KeyEqual(expression.Key("PKey"), expression.Value("C-"+s.pkey))
-	expr, err := expression.NewBuilder().WithKeyCondition(keyC).Build()
+	fcond := expression.Equal(expression.Name("scale"), expression.Value(true))
+	expr, err := expression.NewBuilder().WithKeyCondition(keyC).WithFilter(fcond).Build()
 	if err != nil {
 		panic(err)
 	}
@@ -322,7 +375,7 @@ func (s *sessCtx) getContainers() []containerT {
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
 	}
-	input = input.SetTableName("Recipe").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
+	input = input.SetTableName("Ingredient").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
 	//
 	result, err := s.dynamodbSvc.Query(input)
 	if err != nil {
@@ -347,13 +400,15 @@ func (s *sessCtx) getContainers() []containerT {
 		}
 		panic(fmt.Errorf("%s: %s", "Error in GetItem of getContainerRecById", err.Error()))
 	}
-
-	recS := make([]containerT, int(*result.Count))
+	if len(result.Items) == 0 {
+		return Container{}, nil
+	}
+	recS := make([]Container, int(*result.Count))
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &recS)
 	if err != nil {
-		panic(fmt.Errorf("Error: %s [%s] err", "in UnmarshalListMaps of getContainers ", s.reqRName, err.Error()))
+		return Container{}, fmt.Errorf("Error: %s [%s] err", "in UnmarshalListMaps of getScaleContainer ", s.reqRName, err.Error())
 	}
-	return recS
+	return recS[0], nil
 }
 
 // func (s *sessCtx) getContainerRecById() (alexaDialog, error) {

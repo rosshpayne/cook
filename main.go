@@ -66,7 +66,7 @@ type sessCtx struct {
 	noGetRecRequired bool        // a mutliple record request e.g. ingredients listing
 	recipeList       RecipeListT // multi-choice select. Recipe name and ingredient searches can result in mutliple records being returned. Results are saved.
 	//
-	selCtx selectCtxT // select context either recipe or other (i.e. object)
+	selCtx selectCtxT // select context either recipe or other (i.e. object)k,
 	selId  int        // value selected by user of index in itemList
 	//selClear bool
 	//
@@ -100,7 +100,13 @@ type sessCtx struct {
 	//
 	cThread int // current thread
 	oThread int // other active thread
+	//
+	menuL     menuList
+	dispCtr   *DispContainerT
+	dimension int
 }
+
+var scaleF float64
 
 func (s *sessCtx) closeBook() {
 	fmt.Println("closeBook()")
@@ -131,6 +137,7 @@ func (s *sessCtx) clearForSearch(lastState *stateRec) {
 	s.recId = [4]int{0, 0, 0, 0}
 	s.authors, s.authorS = "", nil
 	s.serves = ""
+	s.menuL = nil
 	s.indexRecs = nil
 	s.object = ""
 	s.objRecId = 0
@@ -151,7 +158,7 @@ const (
 	ingredient_     string = "ingredient"
 	task_           string = "task"
 	container_      string = "container"
-	utensil_        string = "utensil"
+	CtrMsr_         string = "scaleContainer"
 	recipe_         string = "recipe" // list recipe in book
 	CompleteRecipe_ string = "Complete recipe"
 )
@@ -174,15 +181,16 @@ const (
 type objectMapT map[string]int
 
 var objectMap objectMapT
+
 var objectS []string
 
 func init() {
 	objectMap = make(objectMapT, 4)
-	for i, v := range []string{ingredient_, task_, container_, utensil_, recipe_} {
+	for i, v := range []string{ingredient_, task_, container_, CtrMsr_, recipe_} {
 		objectMap[v] = i
 	}
 	objectS = make([]string, 4)
-	for i, v := range []string{ingredient_, utensil_, container_, task_} {
+	for i, v := range []string{ingredient_, container_, CtrMsr_, task_} {
 		objectS[i] = v
 	}
 }
@@ -213,11 +221,35 @@ func (s *sessCtx) orchestrateRequest() error {
 	//
 	// ******************************** process responses to request  ****************************************
 	//
+	if s.request == "dimension" && s.dimension > 0 {
+		if s.dispCtr == nil {
+			return fmt.Errorf("Dimension cannot be set until you have entered adjust menu option")
+		}
+		c := s.dispCtr
+		cdim, err := strconv.Atoi(c.Dimension)
+		fmt.Println("Dimension: cdim = ", cdim)
+		fmt.Println("s.dimension: dimension = ", s.dimension)
+		if err != nil {
+			panic(err.Error())
+		}
+		if float64(s.dimension)/float64(cdim) < 0.5 {
+			return fmt.Errorf("Dimension cannot be less than half recommended container size")
+		}
+		s.displayData = s.dispCtr
+
+		s.reset = true
+		s.showObjMenu = false
+		s.curReqType = 0
+		// NB. updateState is executed from dispCtr.GenDisplay()
+		return nil
+	}
+	//
 	// yes/no response. May assign new book
 	//
 	fmt.Println("yesno: ", s.yesno)
 	fmt.Println("selId: ", s.selId)
 	fmt.Println("Qid: ", lastState.Qid)
+
 	if lastState.Qid > 0 && (len(s.yesno) > 0 || (s.selId == 1 || s.selId == 2)) {
 
 		var err error
@@ -256,9 +288,9 @@ func (s *sessCtx) orchestrateRequest() error {
 		default:
 			// TODO: log error to error table
 		}
-		if s.selId == 2 || s.yesno == "no" {
+		// if s.selId == 2 || s.yesno == "no" {
 
-		}
+		// }
 		if len(s.dmsg) == 0 {
 			s.dmsg = lastState.Dmsg
 		}
@@ -308,15 +340,18 @@ func (s *sessCtx) orchestrateRequest() error {
 			return nil
 
 		case ctxObjectMenu:
+			s.pkey = s.reqBkId + "-" + s.reqRId
 			//	select from: list ingredient, list utensils, list containers, start cooking
 			fmt.Println("selId: ", s.selId)
-			if s.selId > len(objectS) {
+			if s.selId > len(s.menuL) {
 				//s.setDisplay(lastState)
 				s.passErr = "selection is not within range"
 				return nil
 			}
-			s.object = objectS[s.selId-1]
-			fmt.Println("object: ", s.object)
+			s.object = objectS[s.menuL[s.selId-1]]
+			fmt.Println("SElected: ", s.object)
+			// menuL has done its job. Now zero it.
+			s.menuL = nil
 			// clear recipeList which is not necessary in this state. Held in previous state.
 			s.recipeList = nil
 			// object chosen, nothing more to select for the time being
@@ -358,7 +393,6 @@ func (s *sessCtx) orchestrateRequest() error {
 
 			//  "list ingredients" selected
 			case ingredient_:
-				s.pkey = s.reqBkId + "-" + s.reqRId
 				if s.reqVersion != "" {
 					s.pkey += "-" + s.reqVersion
 				}
@@ -386,7 +420,7 @@ func (s *sessCtx) orchestrateRequest() error {
 				}
 				return nil
 
-			case container_, utensil_:
+			case container_:
 				//s.dispContainers = true
 				s.displayData, err = s.loadBaseContainers()
 				if err != nil {
@@ -399,6 +433,19 @@ func (s *sessCtx) orchestrateRequest() error {
 				if err != nil {
 					return err
 				}
+				return nil
+
+			case CtrMsr_:
+				s.displayData = s.dispCtr
+
+				// s.reset = true
+				// s.showObjMenu = false
+				// s.curReqType = 0
+
+				// _, err = s.pushState()
+				// if err != nil {
+				// 	return err
+				// }
 				return nil
 			}
 
@@ -470,7 +517,7 @@ func (s *sessCtx) orchestrateRequest() error {
 			s.clearForSearch(lastState)
 
 			fmt.Println("Search.....")
-			fmt.Println("BookId: ", s.reqBkId)
+			fmt.Println("Before BookId, RecipeId ", s.reqBkId, s.reqRId)
 			fmt.Printf("..about to call keywordSearch with [%s]\n", s.reqSearch)
 
 			err := s.keywordSearch()
@@ -479,7 +526,8 @@ func (s *sessCtx) orchestrateRequest() error {
 			}
 			s.eol, s.reset, s.object = 0, true, ""
 			s.showObjMenu = false
-
+			fmt.Println("after search: BookId, RecipeId ", s.reqBkId, s.reqRId)
+			s.pkey = s.reqBkId + "-" + s.reqRId
 			if len(s.recipeList) == 0 && len(s.reqRId) > 0 {
 				// found single recipe.
 				s.displayData = objMenu
@@ -784,7 +832,7 @@ func handler(request InputEvent) (RespEvent, error) {
 		// read base recipe data and generate tasks, container and device usage and save to dynamodb.
 		switch sessctx.request {
 		case "load":
-			pIngrdScale = 1.0
+			scaleF = 1.0
 
 			fmt.Println("Aboutto loadBaeRecipe()")
 			err = sessctx.loadBaseRecipe()
@@ -811,7 +859,7 @@ func handler(request InputEvent) (RespEvent, error) {
 			break
 		}
 		sessctx.noGetRecRequired, sessctx.reset = true, true
-	case "book", "recipe", "select", "search", "list", "yesno", "version", "back", "resume":
+	case "book", "recipe", "select", "search", "list", "yesno", "version", "back", "resume", "dimension":
 		sessctx.curReqType = initialiseRequest
 		switch sessctx.request {
 		case "book": // user reponse "open book" "close book"
@@ -854,8 +902,17 @@ func handler(request InputEvent) (RespEvent, error) {
 			} else {
 				sessctx.selId = i
 			}
+		case "dimension":
+			var i int
+			i, err = strconv.Atoi(request.QueryStringParameters["dim"])
+			if err != nil {
+				err = fmt.Errorf("%s: %s", "Error in converting int of dimension request \n\n", err.Error())
+			} else {
+				sessctx.dimension = i
+			}
+
 		case "back":
-			// used back button on display device
+			// used back button on display device. Note: back will ignore orachestrateRequest and go straight to displayGen()
 			sessctx.back = true
 			err = sessctx.popState()
 			//
@@ -909,6 +966,7 @@ func handler(request InputEvent) (RespEvent, error) {
 	resp = s.displayData.GenDisplay(s)
 	//
 	if _, ok := s.displayData.(Threads); ok {
+		s.menuL = nil
 		err = s.updateState()
 		if err != nil {
 			return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg, Error: err.Error()}, nil
@@ -924,7 +982,7 @@ func main() {
 	//var i float64 = 1.0
 	// p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + "&srch=" + os.Args[2]}
 	// //
-	// pIngrdScale = 1.0
+	// scaleF = 0.65
 	// global.Set_WriteCtx(global.UDisplay)
 	// p, _ := handler(p1)
 	// if len(p.Error) > 0 {

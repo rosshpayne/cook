@@ -12,6 +12,23 @@
                   "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  }
                   }
             }
+         },
+         {
+          "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-20-7" },
+                  "SortK" : { "S": "caketin" },
+                  "type" : { "S": "caketin" },
+                  "label" : { "S": "cake tin" },
+                  "scale" : { "BOOL": true }, 
+                  "measure" : { "M" : {  "shape" : { "S" : "round" },
+                                          "dim" : { "S" : "25"},
+                                          "height" : { "S" : "5" },
+                                         "unit" : {"S": "cm" }
+                  } },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  }
+                  }
+            }
          }
       ],
       "Recipe" : [ 
@@ -21,7 +38,7 @@
                 "PKey" : { "S": "R-20" },
                 "SortK" : { "N": "7"},
                 "RName" : { "S": "Chocolate tart with hazelnut, rosemary and orange"},
-                "Index" : { "SS" : ["hazelnut chocolate tart", "pastry"]},
+                "Index" : { "SS" : ["pastry"]},
                 "Srv" : { "S" : "8-10" },
                 "Part" : { "L" : [
                                 { "M" : { 
@@ -138,11 +155,11 @@
                 "SortK" : { "N": "40"},
                 "part" : { "S" : "F" },
                 "ingrd" : { "S" : "orange" },
-                "qualm" : { "S" : "shaved peel of" },
                 "iQual" : { "S" : "(avoiding the bitter white pith) " },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
-                                      "qty" : { "S" : "1" } 
+                                      "qty" : { "S" : "1" } ,
+                                      "qualm" : { "S" : "shaved peel of" }
                                       }
                 },
                "task" : { "L" : [ 
@@ -522,10 +539,10 @@
                 "SortK" : { "N": "180"},
                 "part" : { "S" :"S" },
                 "ingrd" : { "S" : "lemon" },
-                "qualm" : { "S" : "finely grated zest of" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
-                                      "qty" : { "S" : "1" } 
+                                      "qty" : { "S" : "1" },
+                                      "qualm" : { "S" : "finely grated zest of" }
                                       }
                 },
                 "altMeasure" : { "M" : { 

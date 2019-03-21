@@ -101,6 +101,7 @@ type MeasureT struct {
 	Num      string `json:"num"`  // instance x quantity
 	Quantity string `json:"qty"`  // weight, volume, dimension
 	Size     string `json:"size"` // large, medium, small
+	NoScale  bool   `json:"ns"`   // do not scale this measure
 	// normalized quantity
 	nzQty float64
 }
@@ -274,6 +275,29 @@ func (c *Container) String() string {
 	return b.String()
 }
 
+func (m *MeasureCT) Shape_() string {
+	if m == nil {
+		panic(fmt.Errorf("%s", "Measure is nil in method String() of Container"))
+	}
+	if len(m.Shape) > 0 {
+		return m.Shape
+	}
+	return ""
+}
+
+func (m *MeasureCT) Dimension_() string {
+	var b strings.Builder
+	if m == nil {
+		panic(fmt.Errorf("%s", "Measure is nil in method String() of Container"))
+	}
+	if len(m.Dimension) > 0 {
+		b.WriteString(m.Dimension)
+		b.WriteString(" ")
+		b.WriteString(m.Unit)
+	}
+	return b.String()
+}
+
 func (m *MeasureCT) String() string {
 	var b strings.Builder
 	if m == nil {
@@ -301,11 +325,11 @@ func (m *MeasureCT) String() string {
 	return b.String()
 }
 
-var pIngrdScale float64 = 1.00
+//var scaleF float64 = 1.00
 
 func (m *MeasureT) String() string {
 
-	if pIngrdScale > 0.85 {
+	if scaleF > 0.85 || m.NoScale {
 		return m.FormatString()
 	}
 	//
@@ -364,7 +388,7 @@ func (m *MeasureT) String() string {
 			}
 			f += n
 		}
-		f *= pIngrdScale
+		f *= scaleF
 		fint, frac := math.Modf(f)
 		if frac > 0.875 {
 			fint += 1
@@ -394,7 +418,7 @@ func (m *MeasureT) String() string {
 		if err != nil {
 			panic(fmt.Errorf("Error: cannot covert Quantity [%s] to float64 in *MeasureT.String()", s))
 		}
-		qty := f * pIngrdScale
+		qty := f * scaleF
 		ff, frac := math.Modf(qty)
 		if frac > 0.875 {
 			ff += 1
@@ -418,7 +442,7 @@ func (m *MeasureT) String() string {
 		if err != nil {
 			panic(fmt.Errorf("Error: cannot covert Quantity [%s] to int in *MeasureT.String()", s))
 		}
-		qty := float64(i) * 10 * pIngrdScale
+		qty := float64(i) * 10 * scaleF
 		qty = roundTo5(qty) / 10
 		if qty < 1 {
 			if qty > 0.875 {
@@ -524,7 +548,7 @@ func (m *MeasureT) String() string {
 			f = float64(i)
 		}
 		// *1000 as we are to change to smaller unit
-		qty = f * pIngrdScale
+		qty = f * scaleF
 		if m.Unit == "l" || m.Unit == "cm" || m.Unit == "kg" {
 			var unit string
 			qty *= 1000
@@ -548,22 +572,24 @@ func (m *MeasureT) String() string {
 		}
 		qty = roundTo5(qty)
 		fint, frac := math.Modf(qty)
-		if frac > .825 {
-			fint += 1.0
-		} else if frac > .625 {
-			part = " 3/4"
-			//part = ".75"
-		} else if frac > .375 {
-			part = " 1/2"
-			//part = ".5"
-		} else if frac > .175 {
-			part = " 1/4"
-			//part = ".25"
-		} else if frac > .75 {
-			part = " 1/8"
-			//part = ".125"
-		} else {
-			part = ""
+		if m.Unit != "g" {
+			if frac > .825 {
+				fint += 1.0
+			} else if frac > .625 {
+				part = " 3/4"
+				//part = ".75"
+			} else if frac > .375 {
+				part = " 1/2"
+				//part = ".5"
+			} else if frac > .175 {
+				part = " 1/4"
+				//part = ".25"
+			} else if frac > .75 {
+				part = " 1/8"
+				//part = ".125"
+			} else {
+				part = ""
+			}
 		}
 		ff := strconv.FormatFloat(fint, 'g', -1, 64)
 		if qty < 5 {

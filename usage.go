@@ -704,9 +704,9 @@ func expandLiteralTags(str string) string {
 	)
 
 	resetScale := func() func() {
-		savedScale := pIngrdScale
-		pIngrdScale = 1
-		return func() { pIngrdScale = savedScale }
+		savedScale := scaleF
+		scaleF = 1
+		return func() { scaleF = savedScale }
 
 	}
 	// literal tags are not scalable, set scale to 1 for duration of function.
