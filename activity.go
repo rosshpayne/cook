@@ -329,7 +329,7 @@ func (m *MeasureCT) String() string {
 
 func (m *MeasureT) String() string {
 
-	if scaleF > 0.94 || m.NoScale {
+	if scaleF > scaleThreshold || m.NoScale {
 		return m.FormatString()
 	}
 	//
@@ -339,7 +339,7 @@ func (m *MeasureT) String() string {
 		c_pinchof string = "pinch of"
 	)
 	roundTo5 := func(f float64) float64 {
-		if f < 10 {
+		if f < 20 {
 			return f
 		}
 		i := int(f/10) * 10

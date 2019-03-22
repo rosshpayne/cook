@@ -83,6 +83,39 @@ const EventHandler = {
   },
 };
 
+const ScaleIntentHandler = {
+  canHandle(handlerInput) {
+    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+      && handlerInput.requestEnvelope.request.intent.name === 'ScaleIntent';
+  },
+  handle(handlerInput) {
+    const querystring = require('querystring');
+    //TODO is querystring necessary here as I believe AWS may escape it.
+   // const srch='&srch='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.ingrdcat.resolutions.resolutionsPerAuthority[0].values[0].value.name);
+   
+    const sid="sid="+handlerInput.requestEnvelope.session.sessionId;
+    const frac='&frac='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.fraction.resolutions.resolutionsPerAuthority[0].values[0].value.id);
+    //                  handlerInput.requestEnvelope.request.intent.slots.YesNo.resolutions.resolutionsPerAuthority[0].values[0].value.id;
+    invokeParams.Payload = '{ "Path" : "scale" ,"Param" : "'+sid+frac+'" }';
+    
+    promise = new Promise((resolve, reject) => {
+          lambda.invoke(invokeParams, function(err, data) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(data.Payload);  }
+          });
+        });    
+        
+    return promise.then((body) => {
+        var  resp = JSON.parse(body);
+        console.log(resp);
+        return handleResponse(handlerInput, resp);
+      }).catch(function (err) { console.log(err, err.stack);  } );
+    
+  },
+};
+
 const DimensionIntentHandler = {
   canHandle(handlerInput) {
     return handlerInput.requestEnvelope.request.type === 'IntentRequest'
@@ -765,6 +798,7 @@ exports.handler = skillBuilder
     GotoIntentHandler,
     SelectIntentHandler,
     DimensionIntentHandler,
+    ScaleIntentHandler,
     SearchIntentHandler,
     PrevIntentHandler,
     RepeatIntentHandler,

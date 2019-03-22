@@ -406,12 +406,20 @@ func (p PartS) GenDisplay(s *sessCtx) RespEvent {
 func (i IngredientT) GenDisplay(s *sessCtx) RespEvent {
 
 	var list []DisplayItem
+	var subhdr string
+
 	for _, v := range strings.Split(string(i), "\n") {
 		item := DisplayItem{Title: v}
 		list = append(list, item)
 	}
+	if scaleF <= scaleThreshold {
+		sf := strconv.FormatFloat(scaleF, 'g', 2, 64)
+		subhdr = "Ingredients       (Scale Factor: " + sf + " )"
+	} else {
+		subhdr = "Ingredients       (Scale Factor: 1.0 )"
+	}
 
-	return RespEvent{Type: "Ingredient", BackBtn: true, Header: s.reqRName, SubHdr: "Ingredients", List: list}
+	return RespEvent{Type: "Ingredient", BackBtn: true, Header: s.reqRName, SubHdr: subhdr, List: list}
 
 }
 

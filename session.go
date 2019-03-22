@@ -43,7 +43,7 @@ type stateRec struct {
 	DData   string
 	Authors string // comma separated string of authors
 	//
-	Ingredients IngredientT // contains complete ingredients listing
+	Ingredients IngredientT `json:"ingrd"` // contains complete ingredients listing
 	//
 	// search
 	//
@@ -231,6 +231,10 @@ func (s *sessCtx) setState(ls *stateRec) {
 	//
 	// determine select context
 	//
+	// fmt.Println("in Session: selId = ", s.selId)
+	// fmt.Println("in Session:ls.SelCtx = ", ls.SelCtx)
+	// fmt.Println("in Session: len(ls.Ingredients) = ", len(ls.Ingredients))
+	// fmt.Println("in Session: s.request = ", s.request)
 	if s.selId > 0 {
 		switch {
 		case ls.SelCtx == 0 && len(s.reqRName) == 0 && (ls.Request == "search" || ls.Request == "recipe"):
@@ -244,6 +248,10 @@ func (s *sessCtx) setState(ls *stateRec) {
 		case s.request == "select" && len(ls.Parts) > 0 && len(ls.Part) == 0:
 			s.selCtx = ctxPartMenu
 			fmt.Println("in SetState: selCtx = ctxPartMenu")
+		case ls.SelCtx == ctxObjectMenu && s.request == "scale" && len(ls.Ingredients) > 0:
+			s.selCtx = ctxObjectMenu
+			s.ingrdList = ls.Ingredients
+			fmt.Println("in setState: s.selCtx = ", s.selCtx)
 		}
 	}
 	//

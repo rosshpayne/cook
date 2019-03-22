@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"log"
 	"net/url"
-	"os"
+	_ "os"
 	"strconv"
 	"strings"
 
 	"github.com/cook/global"
 
-	_ "github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -104,9 +104,12 @@ type sessCtx struct {
 	menuL     menuList
 	dispCtr   *DispContainerT
 	dimension int
+	scalef    float64
 }
 
 var scaleF float64
+
+const scaleThreshold float64 = 0.9
 
 func (s *sessCtx) closeBook() {
 	fmt.Println("closeBook()")
@@ -212,6 +215,7 @@ func (s *sessCtx) orchestrateRequest() error {
 	// ******************************** 	initialise state		****************************************
 	//
 	// fetch state from last session
+	fmt.Println("ingrdList = ", len(s.ingrdList))
 	lastState, err := s.getState()
 	if err != nil {
 		return err
@@ -245,6 +249,23 @@ func (s *sessCtx) orchestrateRequest() error {
 		s.curReqType = 0
 		// NB. updateState is executed from dispCtr.GenDisplay()
 		return nil
+	}
+	//
+	// check if scale requested and state is listing ingredients, otherwise ignore
+	//
+	if s.request == "scale" {
+		fmt.Println("Here in scale..")
+		fmt.Println("selCtx = ", s.selCtx)
+		fmt.Println("selId = ", s.selId)
+		fmt.Println("ingrdList = ", len(s.ingrdList))
+		if s.selId == 1 && s.selCtx == ctxObjectMenu && len(s.ingrdList) > 0 {
+			// state will ensure ingredient gets displayed so don't return just yet
+			scaleF = s.scalef
+			fmt.Println("set ScaleF to .", scaleF)
+		} else {
+			// this request is not suitable to the current state
+			return nil
+		}
 	}
 	//
 	// yes/no response. May assign new book
@@ -346,12 +367,18 @@ func (s *sessCtx) orchestrateRequest() error {
 			s.pkey = s.reqBkId + "-" + s.reqRId
 			//	select from: list ingredient, list utensils, list containers, start cooking
 			fmt.Println("selId: ", s.selId)
-			if s.selId > len(s.menuL) {
-				//s.setDisplay(lastState)
-				s.passErr = "selection is not within range"
-				return nil
+			switch s.request {
+			case "scale":
+				// scale only applies to ingredients
+				s.object = ingredient_
+			default:
+				if s.selId > len(s.menuL) {
+					//s.setDisplay(lastState)
+					s.passErr = "selection is not within range"
+					return nil
+				}
+				s.object = objectS[s.menuL[s.selId-1]]
 			}
-			s.object = objectS[s.menuL[s.selId-1]]
 			fmt.Println("SElected: ", s.object)
 			// menuL has done its job. Now zero it.
 			s.menuL = nil
@@ -363,6 +390,7 @@ func (s *sessCtx) orchestrateRequest() error {
 
 			//  "lets start cooking" selected
 			case task_:
+				s.dispCtr = nil
 				//s.selClear = true //TODO: what if they back at this point we have cleared sel.
 				fmt.Printf("s.parts  %#v [%s] \n", s.parts, s.part)
 				s.showObjMenu = false
@@ -396,6 +424,8 @@ func (s *sessCtx) orchestrateRequest() error {
 
 			//  "list ingredients" selected
 			case ingredient_:
+				fmt.Println("Here in ingredient_.. about to read activity table and generated ingredient string")
+				s.dispCtr = nil
 				if s.reqVersion != "" {
 					s.pkey += "-" + s.reqVersion
 				}
@@ -425,6 +455,7 @@ func (s *sessCtx) orchestrateRequest() error {
 
 			case container_:
 				//s.dispContainers = true
+				s.dispCtr = nil
 				s.displayData, err = s.loadBaseContainers()
 				if err != nil {
 					return err
@@ -862,7 +893,7 @@ func handler(request InputEvent) (RespEvent, error) {
 			break
 		}
 		sessctx.noGetRecRequired, sessctx.reset = true, true
-	case "book", "recipe", "select", "search", "list", "yesno", "version", "back", "resume", "dimension":
+	case "book", "recipe", "select", "search", "list", "yesno", "version", "back", "resume", "dimension", "scale":
 		sessctx.curReqType = initialiseRequest
 		switch sessctx.request {
 		case "book": // user reponse "open book" "close book"
@@ -905,6 +936,25 @@ func handler(request InputEvent) (RespEvent, error) {
 			} else {
 				sessctx.selId = i
 			}
+		case "scale":
+			var f float64
+			fmt.Println("Processing scale request: ")
+			frac, err := url.QueryUnescape(request.QueryStringParameters["frac"])
+			if err != nil {
+				panic(err)
+			}
+			f, err = strconv.ParseFloat(frac, 64)
+			if err != nil {
+				fmt.Printf(" %s", "Error in converting int of scale request \n\n", err.Error())
+				err = fmt.Errorf(" %s", "Error in converting int of scale request \n\n", err.Error())
+			} else {
+
+				fmt.Println("scalef = ", f)
+				sessctx.scalef = f
+				// emulate select ingredient from objMenu, like "select"
+				sessctx.selId = 1
+			}
+
 		case "dimension":
 			var i int
 			i, err = strconv.Atoi(request.QueryStringParameters["dim"])
@@ -979,23 +1029,26 @@ func handler(request InputEvent) (RespEvent, error) {
 }
 
 func main() {
-	var err error
-	//lambda.Start(handler)
-	p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
+
+	lambda.Start(handler)
+
 	//p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&rcp=Take-home Chocolate Cake"}
 	//var i float64 = 1.0
 	// p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + "&srch=" + os.Args[2]}
 	// //
-	scaleF, err = strconv.ParseFloat(os.Args[4], 64)
-	if err != nil {
-		panic(err)
-	}
-	global.Set_WriteCtx(global.UDisplay)
-	p, _ := handler(p1)
-	if len(p.Error) > 0 {
-		fmt.Printf("%#v\n", p.Error)
-	} else {
-		fmt.Printf("output:   %s\n", p.Text)
-		fmt.Printf("output:   %s\n", p.Verbal)
-	}
+	//
+	//var err error
+	//p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
+	// scaleF, err = strconv.ParseFloat(os.Args[4], 64)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// global.Set_WriteCtx(global.UDisplay)
+	// p, _ := handler(p1)
+	// if len(p.Error) > 0 {
+	// 	fmt.Printf("%#v\n", p.Error)
+	// } else {
+	// 	fmt.Printf("output:   %s\n", p.Text)
+	// 	fmt.Printf("output:   %s\n", p.Verbal)
+	// }
 }
