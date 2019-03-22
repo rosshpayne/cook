@@ -622,6 +622,7 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 		panic("in GenDisplay(): DispContainerT instance is nil ")
 	}
 	if s.dimension > 0 {
+		// response to user size intent
 		cdim, err := strconv.Atoi(c.Dimension)
 		if err != nil {
 			panic(err.Error())
@@ -642,6 +643,21 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 		list[1] = DisplayItem{Title: " "}
 		list[2] = DisplayItem{Title: "Type:       " + c.Type_}
 		list[3] = DisplayItem{Title: "Size: " + c.UDimension + " " + c.Unit}
+
+	} else if len(c.UDimension) > 0 {
+
+		sf = strconv.FormatFloat(scaleF, 'g', 2, 64)
+		hdr = "Your container"
+		subh = "Scale Factor:  " + sf
+		text = "All quantities will be adjusted to your container size: "
+		list = make([]DisplayItem, 6)
+		list[0] = DisplayItem{Title: text}
+		list[1] = DisplayItem{Title: " "}
+		list[2] = DisplayItem{Title: "Type:       " + c.Type_}
+		list[3] = DisplayItem{Title: "Size: " + c.UDimension + " " + c.Unit}
+		list[4] = DisplayItem{Title: " "}
+		list[5] = DisplayItem{Title: `To change your container size, say 'size [newsize]' e.g. size 24 `}
+
 	} else {
 
 		sf = strconv.FormatFloat(scaleF, 'g', 2, 64)

@@ -690,24 +690,24 @@ func expandScalableTags(str string) string {
 	return b.String()
 }
 
-// literal tags are non-scalable tags in the form : {type:q|u|s|n}
+// literal tags are tags in the form : {type:q|u|s|n}
 // where type is "m" for measure or "t" for time
 // literal tags are provided to add flexibility to embed a measurement anywhere beyond what the data
-// model is designed to handle.
+// model is designed to handle. All tags except m type are non-scalable
 
 func expandLiteralTags(str string) string {
 	var (
-		b      strings.Builder // supports io.Write write expanded text/verbal text to this buffer before saving to Task or Verbal fields
-		tclose int
-		topen  int
-		nm     *MeasureT
+		b          strings.Builder // supports io.Write write expanded text/verbal text to this buffer before saving to Task or Verbal fields
+		tclose     int
+		topen      int
+		nm         *MeasureT
+		savedScale float64
 	)
 
 	resetScale := func() func() {
-		savedScale := scaleF
+		savedScale = scaleF
 		scaleF = 1
 		return func() { scaleF = savedScale }
-
 	}
 	// literal tags are not scalable, set scale to 1 for duration of function.
 	defer resetScale()()
@@ -732,7 +732,9 @@ func expandLiteralTags(str string) string {
 			// measure literal
 			pt := strings.Split(strings.ToLower(tag[1]), "|")
 			nm = &MeasureT{Num: pt[3], Quantity: pt[0], Size: pt[2], Unit: pt[1]}
+			scaleF = savedScale
 			b.WriteString(nm.String())
+			scaleF = 1.0
 		case "t":
 			// time literal
 			pt := strings.Split(strings.ToLower(tag[1]), "|")

@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"log"
 	"net/url"
-	_ "os"
+	"os"
 	"strconv"
 	"strings"
 
 	"github.com/cook/global"
 
-	"github.com/aws/aws-lambda-go/lambda"
+	_ "github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -221,19 +221,22 @@ func (s *sessCtx) orchestrateRequest() error {
 	//
 	// ******************************** process responses to request  ****************************************
 	//
-	if s.request == "dimension" && s.dimension > 0 {
+	if s.request == "dimension" {
+		if s.dimension == 0 {
+			return fmt.Errorf("Dimension must be greater than zero")
+		}
 		if s.dispCtr == nil {
 			return fmt.Errorf("Dimension cannot be set until you have entered adjust menu option")
 		}
 		c := s.dispCtr
 		cdim, err := strconv.Atoi(c.Dimension)
 		fmt.Println("Dimension: cdim = ", cdim)
-		fmt.Println("s.dimension: dimension = ", s.dimension)
+		fmt.Println("user entered dimension = ", s.dimension)
 		if err != nil {
 			panic(err.Error())
 		}
-		if float64(s.dimension)/float64(cdim) < 0.5 {
-			return fmt.Errorf("Dimension cannot be less than half recommended container size")
+		if float64(s.dimension)/float64(cdim) < 0.6 {
+			return fmt.Errorf("Dimension cannot be less than 60% of recommended container size")
 		}
 		s.displayData = s.dispCtr
 
@@ -976,19 +979,23 @@ func handler(request InputEvent) (RespEvent, error) {
 }
 
 func main() {
-	lambda.Start(handler)
-	//p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
+	var err error
+	//lambda.Start(handler)
+	p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
 	//p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&rcp=Take-home Chocolate Cake"}
 	//var i float64 = 1.0
 	// p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + "&srch=" + os.Args[2]}
 	// //
-	// scaleF = 0.65
-	// global.Set_WriteCtx(global.UDisplay)
-	// p, _ := handler(p1)
-	// if len(p.Error) > 0 {
-	// 	fmt.Printf("%#v\n", p.Error)
-	// } else {
-	// 	fmt.Printf("output:   %s\n", p.Text)
-	// 	fmt.Printf("output:   %s\n", p.Verbal)
-	// }
+	scaleF, err = strconv.ParseFloat(os.Args[4], 64)
+	if err != nil {
+		panic(err)
+	}
+	global.Set_WriteCtx(global.UDisplay)
+	p, _ := handler(p1)
+	if len(p.Error) > 0 {
+		fmt.Printf("%#v\n", p.Error)
+	} else {
+		fmt.Printf("output:   %s\n", p.Text)
+		fmt.Printf("output:   %s\n", p.Verbal)
+	}
 }

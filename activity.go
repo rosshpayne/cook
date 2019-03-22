@@ -329,7 +329,7 @@ func (m *MeasureCT) String() string {
 
 func (m *MeasureT) String() string {
 
-	if scaleF > 0.85 || m.NoScale {
+	if scaleF > 0.94 || m.NoScale {
 		return m.FormatString()
 	}
 	//
