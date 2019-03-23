@@ -301,6 +301,12 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 			type_ += "L" // larger text bounding box
 		}
 		speak := "<speak>" + rec.Verbal + "</speak>"
+
+		s.menuL = nil
+		err := s.updateState()
+		if err != nil {
+			return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
+		}
 		return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Text: rec.Text, Verbal: speak, ListA: listA, ListB: listB, ListC: listC}
 
 	default:
@@ -356,6 +362,12 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		}
 		speak := "<speak>" + rec.Verbal + "</speak>"
 
+		s.menuL = nil
+		err := s.updateState()
+		if err != nil {
+			return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
+		}
+
 		return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Text: rec.Text, Verbal: speak, ListA: listA, ListB: listB, ListC: listC,
 			ListD: listD, ListE: listE, ListF: listF, Color1: color1, Color2: color2, Thread1: trName1, Thread2: trName2,
 		}
@@ -407,7 +419,7 @@ func (i IngredientT) GenDisplay(s *sessCtx) RespEvent {
 
 	var list []DisplayItem
 	var subhdr string
-
+	fmt.Println("HEre in GenDisplay for ingredients. ScaleF = ", scaleF)
 	for _, v := range strings.Split(string(i), "\n") {
 		item := DisplayItem{Title: v}
 		list = append(list, item)
@@ -645,12 +657,14 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 		sf = strconv.FormatFloat(scaleF, 'g', 2, 64)
 		hdr = "Your container"
 		subh = "Scale Factor:  " + sf
-		text = "All quantities will be adjusted to your container specification: "
-		list = make([]DisplayItem, 4)
+		text = "All quantities will be adjusted to your container size: "
+		list = make([]DisplayItem, 6)
 		list[0] = DisplayItem{Title: text}
 		list[1] = DisplayItem{Title: " "}
 		list[2] = DisplayItem{Title: "Type:       " + c.Type_}
 		list[3] = DisplayItem{Title: "Size: " + c.UDimension + " " + c.Unit}
+		list[4] = DisplayItem{Title: " "}
+		list[5] = DisplayItem{Title: `To change your container size, say 'size [newsize]' e.g. size 24 `}
 
 	} else if len(c.UDimension) > 0 {
 
@@ -678,7 +692,7 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 		list[2] = DisplayItem{Title: "Type:       " + c.Type_}
 		list[3] = DisplayItem{Title: "Size:   " + c.Dimension + " " + c.Unit}
 		list[4] = DisplayItem{Title: " "}
-		list[5] = DisplayItem{Title: `What is the size of your container, say 'size [newsize]' e.g. size 23 `}
+		list[5] = DisplayItem{Title: `What is the size of your container? Say 'size [newsize]' e.g. size 23 `}
 	}
 	type_ := "Ingredient"
 	backBtn := true

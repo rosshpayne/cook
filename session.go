@@ -90,11 +90,15 @@ func (s *sessCtx) getState() (*stateRec, error) {
 	// Table:  Sessions
 	//
 	type pKey struct {
-		Sid string
+		Uid string
 	}
 	fmt.Println("entered getState..")
-	pkey := pKey{s.sessionId}
+	pkey := pKey{s.userId}
+	fmt.Println("userId: ", s.userId)
 	av, err := dynamodbattribute.MarshalMap(&pkey)
+	if err != nil {
+		return nil, err
+	}
 	input := &dynamodb.GetItemInput{
 		Key:       av,
 		TableName: aws.String("Sessions"),
@@ -124,11 +128,12 @@ func (s *sessCtx) getState() (*stateRec, error) {
 	if len(result.Item) == 0 {
 		//
 		s.newSession = true
-		return &stateRec{}, err
+		fmt.Println("NEW SESSION..")
+		return &stateRec{}, nil
 	}
 	//
 	type stateItemT struct {
-		Sid   string     `json:"Sid"`
+		Uid   string     `json:"Uid"`
 		State stateStack `json:"state"`
 	}
 
@@ -296,7 +301,7 @@ func (s *sessCtx) setState(ls *stateRec) {
 func (s *sessCtx) pushState() (*stateRec, error) {
 	// equivalent to a push operation for a stack (state data in this case)
 	type pKey struct {
-		Sid string
+		Uid string
 	}
 
 	var (
@@ -387,7 +392,7 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 	if err != nil {
 		return nil, err
 	}
-	pkey := pKey{Sid: s.sessionId}
+	pkey := pKey{Uid: s.userId}
 	av, err := dynamodbattribute.MarshalMap(&pkey)
 	input := &dynamodb.UpdateItemInput{
 		TableName:                 aws.String("Sessions"),
@@ -422,7 +427,7 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 func (s *sessCtx) updateState() error {
 
 	type pKey struct {
-		Sid string
+		Uid string
 	}
 	var updateC expression.UpdateBuilder
 	//
@@ -472,7 +477,7 @@ func (s *sessCtx) updateState() error {
 	// }
 	//
 	expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
-	pkey := pKey{Sid: s.sessionId}
+	pkey := pKey{Uid: s.userId}
 	av, err := dynamodbattribute.MarshalMap(&pkey)
 
 	input := &dynamodb.UpdateItemInput{
@@ -516,7 +521,7 @@ func (s *sessCtx) popState() error {
 	// NB: must exit with s.displayData assigned - as this will route to GenDisplay to produce response.
 	//
 	type pKey struct {
-		Sid string
+		Uid string
 	}
 	var (
 		sr    *stateRec
@@ -543,7 +548,7 @@ func (s *sessCtx) popState() error {
 		updateC = updateC.Set(expression.Name("state"), expression.Value(State))
 		expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
 		//
-		pkey := pKey{Sid: s.sessionId}
+		pkey := pKey{Uid: s.userId}
 		av, err := dynamodbattribute.MarshalMap(&pkey)
 
 		input := &dynamodb.UpdateItemInput{

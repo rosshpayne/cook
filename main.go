@@ -34,7 +34,7 @@ type sessCtx struct {
 	lastState *stateRec // state attribute from state dynamo item - contains state history
 	passErr   string
 	//
-	sessionId   string // sourced from request. Used as PKey to Sessions table
+	userId      string // sourced from request. Used as PKey to Sessions table
 	reqOpenBk   BookT  // BkId|BkName|authors
 	reqRName    string // requested recipe name - query param of recipe request
 	reqBkName   string // requested book name - query param
@@ -254,14 +254,10 @@ func (s *sessCtx) orchestrateRequest() error {
 	// check if scale requested and state is listing ingredients, otherwise ignore
 	//
 	if s.request == "scale" {
-		fmt.Println("Here in scale..")
-		fmt.Println("selCtx = ", s.selCtx)
-		fmt.Println("selId = ", s.selId)
-		fmt.Println("ingrdList = ", len(s.ingrdList))
+
 		if s.selId == 1 && s.selCtx == ctxObjectMenu && len(s.ingrdList) > 0 {
 			// state will ensure ingredient gets displayed so don't return just yet
 			scaleF = s.scalef
-			fmt.Println("set ScaleF to .", scaleF)
 		} else {
 			// this request is not suitable to the current state
 			return nil
@@ -447,9 +443,11 @@ func (s *sessCtx) orchestrateRequest() error {
 				s.showObjMenu = false
 				s.curReqType = 0
 
-				_, err = s.pushState()
-				if err != nil {
-					return err
+				if s.request != "scale" {
+					_, err = s.pushState()
+					if err != nil {
+						return err
+					}
 				}
 				return nil
 
@@ -806,7 +804,7 @@ func handler(request InputEvent) (RespEvent, error) {
 	//var body string
 	// create a new session context and merge with last session data if present.
 	sessctx := &sessCtx{
-		sessionId:   request.QueryStringParameters["sid"],
+		userId:      request.QueryStringParameters["uid"],
 		dynamodbSvc: dynamodbService(),
 		request:     pathItem[0],
 		//path:        request.Path,
@@ -932,7 +930,7 @@ func handler(request InputEvent) (RespEvent, error) {
 			var i int
 			i, err = strconv.Atoi(request.QueryStringParameters["sId"])
 			if err != nil {
-				err = fmt.Errorf("%s: %s", "Error in converting int of select request \n\n", err.Error())
+				err = fmt.Errorf("%s: %s %s", "Error in converting int of select  request. Error:", request.QueryStringParameters["sId"], err.Error())
 			} else {
 				sessctx.selId = i
 			}
@@ -1015,16 +1013,15 @@ func handler(request InputEvent) (RespEvent, error) {
 	//
 	var resp RespEvent
 	//
-	s := sessctx
-	resp = s.displayData.GenDisplay(s)
+	resp = sessctx.displayData.GenDisplay(sessctx)
 	//
-	if _, ok := s.displayData.(Threads); ok {
-		s.menuL = nil
-		err = s.updateState()
-		if err != nil {
-			return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg, Error: err.Error()}, nil
-		}
-	}
+	// if _, ok := s.displayData.(Threads); ok {
+	// 	s.menuL = nil
+	// 	err = s.updateState()
+	// 	if err != nil {
+	// 		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg, Error: err.Error()}, nil
+	// 	}
+	// }
 	return resp, nil
 }
 

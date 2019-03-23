@@ -34,7 +34,7 @@ const EventHandler = {
     handlerInput.requestEnvelope.request.type === 'Alexa.Presentation.APL.UserEvent',
   
   handle: handlerInput => {
-    const sid='sid='+handlerInput.requestEnvelope.session.sessionId ;
+    const uid='uid='+handlerInput.requestEnvelope.session.user.userId ;
 
     const args = handlerInput.requestEnvelope.request.arguments;
     const event = args[0];
@@ -44,7 +44,7 @@ const EventHandler = {
 
     switch (event) {
     case 'select':
-      invokeParams.Payload = '{ "Path" : "select" ,"Param" : "'+sid+selid+'" }';
+      invokeParams.Payload = '{ "Path" : "select" ,"Param" : "'+uid+selid+'" }';
 
       promise = new Promise((resolve, reject) => {
           lambda.invoke(invokeParams, function(err, data) {
@@ -63,7 +63,7 @@ const EventHandler = {
       }).catch(function (err) { console.log(err, err.stack);  } );
         
     case 'backButton':
-       invokeParams.Payload = '{ "Path" : "back" ,"Param" : "'+sid+'" }';
+       invokeParams.Payload = '{ "Path" : "back" ,"Param" : "'+uid+'" }';
         
        promise = new Promise((resolve, reject) => {
           lambda.invoke(invokeParams, function(err, data) {
@@ -93,10 +93,10 @@ const ScaleIntentHandler = {
     //TODO is querystring necessary here as I believe AWS may escape it.
    // const srch='&srch='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.ingrdcat.resolutions.resolutionsPerAuthority[0].values[0].value.name);
    
-    const sid="sid="+handlerInput.requestEnvelope.session.sessionId;
+    const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
     const frac='&frac='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.fraction.resolutions.resolutionsPerAuthority[0].values[0].value.id);
     //                  handlerInput.requestEnvelope.request.intent.slots.YesNo.resolutions.resolutionsPerAuthority[0].values[0].value.id;
-    invokeParams.Payload = '{ "Path" : "scale" ,"Param" : "'+sid+frac+'" }';
+    invokeParams.Payload = '{ "Path" : "scale" ,"Param" : "'+uid+frac+'" }';
     
     promise = new Promise((resolve, reject) => {
           lambda.invoke(invokeParams, function(err, data) {
@@ -122,10 +122,10 @@ const DimensionIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'DimensionIntent';
   },
   handle(handlerInput) {
-    const sid="sid="+handlerInput.requestEnvelope.session.sessionId;
+    const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
     const dim='&dim='+handlerInput.requestEnvelope.request.intent.slots.size.resolutions.resolutionsPerAuthority[0].values[0].value.id;
     //                  handlerInput.requestEnvelope.request.intent.slots.YesNo.resolutions.resolutionsPerAuthority[0].values[0].value.id;
-    invokeParams.Payload = '{ "Path" : "dimension" ,"Param" : "'+sid+dim+'" }';
+    invokeParams.Payload = '{ "Path" : "dimension" ,"Param" : "'+uid+dim+'" }';
     
     promise = new Promise((resolve, reject) => {
           lambda.invoke(invokeParams, function(err, data) {
@@ -151,9 +151,9 @@ const BookIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'BookIntent';
   },
   handle(handlerInput) {
-    const sid="sid="+handlerInput.requestEnvelope.session.sessionId;
+    const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
     const bkid='&bkid='+handlerInput.requestEnvelope.request.intent.slots.BookName.resolutions.resolutionsPerAuthority[0].values[0].value.id;
-    invokeParams.Payload = '{ "Path" : "book" ,"Param" : "'+sid+bkid+'" }';
+    invokeParams.Payload = '{ "Path" : "book" ,"Param" : "'+uid+bkid+'" }';
     
     promise = new Promise((resolve, reject) => {
           lambda.invoke(invokeParams, function(err, data) {
@@ -192,8 +192,8 @@ const CloseBookIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'CloseBookIntent';
   },
   handle(handlerInput) {
-    var sid="sid="+handlerInput.requestEnvelope.session.sessionId;
-    invokeParams.Payload = '{ "Path" : "book/close" ,"Param" : "'+sid+'" }';
+    var uid="uid="+handlerInput.requestEnvelope.session.user.userId;
+    invokeParams.Payload = '{ "Path" : "book/close" ,"Param" : "'+uid+'" }';
 
     promise = new Promise((resolve, reject) => {
           lambda.invoke(invokeParams, function(err, data) {
@@ -236,8 +236,8 @@ const SearchIntentHandler = {
     //TODO is querystring necessary here as I believe AWS may escape it.
    // const srch='&srch='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.ingrdcat.resolutions.resolutionsPerAuthority[0].values[0].value.name);
     const srch='&srch='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.ingrdcat.value);
-    const sid="sid="+handlerInput.requestEnvelope.session.sessionId;
-    invokeParams.Payload = '{ "Path" : "search" ,"Param" : "'+sid+srch+'" }';
+    const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
+    invokeParams.Payload = '{ "Path" : "search" ,"Param" : "'+uid+srch+'" }';
 
     promise = new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
@@ -263,8 +263,8 @@ const ResumeIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'ResumeIntent';
   },
   handle(handlerInput) {
-    const sid="sid="+handlerInput.requestEnvelope.session.sessionId;
-    invokeParams.Payload = '{ "Path" : "resume" ,"Param" : "'+sid+'" }';
+    const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
+    invokeParams.Payload = '{ "Path" : "resume" ,"Param" : "'+uid+'" }';
 
     promise = new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
@@ -291,8 +291,8 @@ const BackIntentHandler = {
   handle(handlerInput) {
     const select = require('APL/select.js');
     const ingredient = require('APL/ingredients.js');
-    const sid='sid='+handlerInput.requestEnvelope.session.sessionId   ; 
-    invokeParams.Payload = '{ "Path" : "back" ,"Param" : "'+sid+'" }';
+    const uid='uid='+handlerInput.requestEnvelope.session.user.userId   ; 
+    invokeParams.Payload = '{ "Path" : "back" ,"Param" : "'+uid+'" }';
 
     promise = new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
@@ -331,10 +331,11 @@ const SelectIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'SelectIntent';
   },
   handle(handlerInput) {
-    const sid='sid='+handlerInput.requestEnvelope.session.sessionId   ; 
+    const uid='uid='+handlerInput.requestEnvelope.session.user.userId   ; 
     const selid='&sId='+handlerInput.requestEnvelope.request.intent.slots.integerValue.resolutions.resolutionsPerAuthority[0].values[0].value.id;
-    invokeParams.Payload = '{ "Path" : "select" ,"Param" : "'+sid+selid+'" }';
-
+    invokeParams.Payload = '{ "Path" : "select" ,"Param" : "'+uid+selid+'" }';
+    console.log("uid "+ uid);
+    console.log("selId " + selid);
     promise = new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
         if (err) {
@@ -360,9 +361,9 @@ const GotoIntentHandler = {
   },
 
   handle(handlerInput) {
-    const sid='sid='+handlerInput.requestEnvelope.session.sessionId;
+    const uid='uid='+handlerInput.requestEnvelope.session.user.userId;
     const goId='&goId='+handlerInput.requestEnvelope.request.intent.slots.gotoId.resolutions.resolutionsPerAuthority[0].values[0].value.id;
-    invokeParams.Payload = '{ "Path" : "goto" ,"Param" : "'+sid+goId+'" }';
+    invokeParams.Payload = '{ "Path" : "goto" ,"Param" : "'+uid+goId+'" }';
 
     promise = new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
@@ -406,8 +407,8 @@ const NextIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'NextIntent';
   },
   handle(handlerInput) {
-    const sid='sid='+handlerInput.requestEnvelope.session.sessionId;
-    invokeParams.Payload = '{ "Path" : "next" ,"Param" : "'+sid+'" }';
+    const uid='uid='+handlerInput.requestEnvelope.session.user.userId;
+    invokeParams.Payload = '{ "Path" : "next" ,"Param" : "'+uid+'" }';
 
     promise = new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
@@ -433,8 +434,8 @@ const RepeatIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'RepeatIntent';
   },
   handle(handlerInput) {
-    const sid='sid='+handlerInput.requestEnvelope.session.sessionId;
-    invokeParams.Payload = '{ "Path" : "repeat" ,"Param" : "'+sid+'" }';
+    const uid='uid='+handlerInput.requestEnvelope.session.user.userId;
+    invokeParams.Payload = '{ "Path" : "repeat" ,"Param" : "'+uid+'" }';
 
     promise = new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
@@ -460,8 +461,8 @@ const PrevIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'PrevIntent';
   },
   handle(handlerInput) {
-    const sid='sid='+handlerInput.requestEnvelope.session.sessionId;
-    invokeParams.Payload = '{ "Path" : "prev" ,"Param" : "'+sid+'" }';
+    const uid='uid='+handlerInput.requestEnvelope.session.user.userId;
+    invokeParams.Payload = '{ "Path" : "prev" ,"Param" : "'+uid+'" }';
 
     promise = new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
@@ -492,12 +493,12 @@ const RecipeIntentHandler = {
     const querystring = require("querystring");
     //const bkIdRId = handlerInput.requestEnvelope.request.intent.slots.recipe.resolutions.resolutionsPerAuthority[0].values[0].value.id;
     const rname = querystring.escape(handlerInput.requestEnvelope.request.intent.slots.recipe.resolutions.resolutionsPerAuthority[0].values[0].value.name);
-    const sid='sid='+handlerInput.requestEnvelope.session.sessionId;
+    const uid='uid='+handlerInput.requestEnvelope.session.user.userId;
     //var path_='&rcp='+bkIdRId
     //if ( bkIdRId.length == 0 ) {
       path_='&rcp='+rname;
     //}
-    invokeParams.Payload = '{ "Path" : "recipe" ,"Param" : "'+sid+path_+'" }';
+    invokeParams.Payload = '{ "Path" : "recipe" ,"Param" : "'+uid+path_+'" }';
 
     promise = new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
@@ -530,9 +531,9 @@ const VersionIntentHandler = {
     var speechText;
     var displayText;
     var recipe ;
-    const sid='sid='+handlerInput.requestEnvelope.session.sessionId;
+    const uid='uid='+handlerInput.requestEnvelope.session.user.userId;
     const ver='&ver='+handlerInput.requestEnvelope.request.intent.slots.version.resolutions.resolutionsPerAuthority[0].values[0].value.name;
-    invokeParams.Payload = '{ "Path" : "version" ,"Param" : "'+sid+ver+'" }';
+    invokeParams.Payload = '{ "Path" : "version" ,"Param" : "'+uid+ver+'" }';
 
     promise = new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
@@ -568,9 +569,9 @@ const YesNoIntentHandler = {
     var speechText;
     var displayText;
     var recipe ;
-    var sid="sid="+handlerInput.requestEnvelope.session.sessionId;
+    var uid="uid="+handlerInput.requestEnvelope.session.user.userId;
     var yesno='&yn='+handlerInput.requestEnvelope.request.intent.slots.YesNo.resolutions.resolutionsPerAuthority[0].values[0].value.id;
-    invokeParams.Payload = '{ "Path" : "yesno" ,"Param" : "'+sid+yesno+'" }';
+    invokeParams.Payload = '{ "Path" : "yesno" ,"Param" : "'+uid+yesno+'" }';
  
     promise = new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
@@ -604,8 +605,8 @@ const TaskIntentHandler = {
     var speechText;
     var displayText;
     var recipe ;
-    var sid="sid="+handlerInput.requestEnvelope.session.sessionId;
-    invokeParams.Payload = '{ "Path" : "task" ,"Param" : "'+sid+'" }';
+    var uid="uid="+handlerInput.requestEnvelope.session.user.userId;
+    invokeParams.Payload = '{ "Path" : "task" ,"Param" : "'+uid+'" }';
 
     promise = new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
@@ -638,8 +639,8 @@ const ContainerIntentHandler = {
         var speechText;
     var displayText;
     var recipe ;
-    var sid="sid="+handlerInput.requestEnvelope.session.sessionId;
-    invokeParams.Payload = '{ "Path" : "container" ,"Param" : "'+sid+'" }';
+    var uid="uid="+handlerInput.requestEnvelope.session.user.userId;
+    invokeParams.Payload = '{ "Path" : "container" ,"Param" : "'+uid+'" }';
 
     promise = new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
