@@ -4,10 +4,10 @@
           "PutRequest": { 
                "Item": { 
                   "PKey" : { "S": "C-20-7" },
-                  "SortK" : { "S": "MixerBowl" },
-                  "type" : { "S": "ebowl" },
-                  "label" : { "S": "electric mixer bowl" },
-                  "measure" : { "M" : {  "size" : { "S" : "large" }
+                  "SortK" : { "S": "chocpan" },
+                  "type" : { "S": "sausepan" },
+                  "label" : { "S": "sausepan" },
+                  "measure" : { "M" : {  "size" : { "S" : "small" }
                   } },
                   "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  }
                   }
@@ -17,14 +17,40 @@
           "PutRequest": { 
                "Item": { 
                   "PKey" : { "S": "C-20-7" },
-                  "SortK" : { "S": "caketin" },
-                  "type" : { "S": "caketin" },
-                  "label" : { "S": "cake tin" },
-                  "scale" : { "BOOL": true }, 
+                  "SortK" : { "S": "brittlepan" },
+                  "type" : { "S": "sausepan" },
+                  "label" : { "S": "sausepan" },
+                  "measure" : { "M" : {  "size" : { "S" : "small" }
+                  } },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  }
+                  }
+            }
+         },
+         {
+          "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-20-7" },
+                  "SortK" : { "S": "tray" },
+                  "type" : { "S": "baking tray" },
+                  "label" : { "S": "baking tray" }, 
+                  "measure" : { "M" : {  "size" : { "S" : "small" }
+                  } },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  }
+                  }
+            }
+         },
+         {
+          "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-20-7" },
+                  "SortK" : { "S": "tarttin" },
+                  "type" : { "S": "tart tin" },
+                  "label" : { "S": "flutted tart tin" }, 
+                  "requirement" : {"removable base"},
                   "measure" : { "M" : {  "shape" : { "S" : "round" },
-                                          "dim" : { "S" : "25"},
-                                          "height" : { "S" : "5" },
+                                          "dim" : { "S" : "23-25"},
                                          "unit" : {"S": "cm" }
+                  } }
                   } },
                   "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  }
                   }
@@ -77,11 +103,11 @@
                 },
                 "task" : { "L" : [
                                 { "M" : { 
-                                  "txt" : { "S" : "Place {measure} of {ingrd} into {addtoC} "},
+                                  "txt" : { "S" : "To infuse the chocolate, place {measure} of {ingrd} into {addtoC} "},
                                   "say" : { "S" : "Place {measure} of {ingrd} into {addtoC}" },
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" },
-                                  "addToC" : { "SS" : ["MixerBowl"] }}}
+                                  "addToC" : { "SS" : ["chocpan"] }}}
                                 ] }
             }
             }
@@ -103,12 +129,12 @@
                 },
                 "task" : { "L" : [
                                 { "M" : {
-                                 "txt" : { "S" : "Add {measure} of {ingrd}  "},
+                                 "txt" : { "S" : "Add {measure} of {iqual} {ingrd} to the sausepan"},
                                   "say" : { "S" : "Add {measure} of {ingrd} " },
                                   "time" : { "N" : "30" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "sec" },
-                                  "addToC" : { "SS" : [ "MixerBowl"] }
+                                  "addToC" : { "SS" : [ "chocpan"] }
                                   }
                                 }
                                 ]}
@@ -135,12 +161,12 @@
                 },
                 "task" : { "L" : [
                                 { "M" : {
-                                  "txt" : { "S" : "Add {measure} of {ingrd} " },
+                                  "txt" : { "S" : "Add {measure} of {ingrd} which should equate to about {altmeasure} " },
                                   "say" : { "S" : "Add {measure} of {ingrd} " },
                                   "time" : { "N" : "30" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "sec" },
-                                  "addToC" : { "SS" : [ "MixerBowl"] }
+                                  "addToC" : { "SS" : [ "chocpan"] }
                                     }
                                 }
                                 ]
@@ -155,141 +181,41 @@
                 "SortK" : { "N": "40"},
                 "part" : { "S" : "F" },
                 "ingrd" : { "S" : "orange" },
+                "qualm" : { "S" : "shaved peel of" }
                 "iQual" : { "S" : "(avoiding the bitter white pith) " },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
-                                      "qty" : { "S" : "1" } ,
-                                      "qualm" : { "S" : "shaved peel of" }
+                                      "qty" : { "S" : "1" } 
                                       }
                 },
                "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Add {quali} of {measure} {ingrd} " },
+                                  "txt" : { "S" : "and finally add the {qualm} of {measure} {ingrd} " },
                                   "say" : { "S" : "Add {quali} of {measure} {ingrd} " },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
-                                  "addToC" : { "SS" : [ "MixerBowl"] }
+                                  "addToC" : { "SS" : [ "chocpan"] }
                                   }
-                                }
-                                ]
-                }
-            }
-            }
-            },
-           {
-            "PutRequest": { 
-            "Item": { 
-                "PKey" : { "S": "A-20-7" },
-                "SortK" : { "N": "50"},
-                "part" : { "S" : "F" },
-                "ingrd" : { "S" : "chocolate" },
-                "quali": { "S" : "cooking" },
-                "iQual" : { "S" : "(70% cocoa solids), finely chopped" },
-                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
-                "measure" : { "M" : { 
-                                      "qty" : { "S" : "270" }  ,
-                                      "unit" : { "S" : "g" }  
-                    
-                }
-                },
-                "task" : { "L" : [
-                                { "M" :  {
-                                  "txt" : { "S" : "Finally, add {measure} of {ingrd}" },
-                                  "say" : { "S" : "Finally, add {measure} of {ingrd}" },
-                                  "time" : { "N" : "15" },
+                                },
+                                { "M" : {
+                                  "txt" : { "S" : "Place the sausepan over a low heat. " },
+                                  "say" : { "S" : "Add {measure} of {ingrd} " },
+                                  "time" : { "N" : "30" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "sec" },
-                                  "addToC" : {"SS" : [ "MixerBowl"] }
-                                }}
-                                ]
-                }
-            }
-            }
-            },
-           {
-            "PutRequest": { 
-            "Item": { 
-                "PKey" : { "S": "A-20-7" },
-                "SortK" : { "N": "60"},
-                "part" : { "S" : "F" },
-                "ingrd" : { "S" : "egg" },
-                "iQual" : { "S" : ", plus {m:3||large|} egg yolks" },
-                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
-                "measure" : { "M" : { 
-                                      "qty" : { "S" : "1" } ,
-                                      "size" : { "S" : "large" } 
-                                      }
-                },
-                "task" : { "L" : [ 
-                                { "M" :  {
-                                  "txt" : { "S" : "Add the {ingrd}, one at a time, beating well after each addition." },
-                                  "say" : { "S" : "Add the {ingrd}, one at a time, beating well after each addition." },
-                                  "time" : { "N" : "2" },
-                                  "tplus" : { "N" : "0" },
-                                  "unit" : { "S" : "min" },
-                                  "addToC" : { "SS" : [ "MixerBowl"] }
+                                  "addToC" : { "SS" : [ "chocpan"] }
+                                    }
+                                } ,
+                                { "M" : {
+                                  "txt" : { "S" : "When the mixture is just coming to a simmer and the butter has melted turn off the heat and set aside to infuse for an {timeu} to {tplus} or overnight in the fridge" },
+                                  "say" : { "S" : "Add {measure} of {ingrd} " },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "1" },
+                                  "unit" : { "S" : "hr" },
+                                  "addToC" : { "SS" : [ "chocpan"] }
                                     }
                                 }
-                                ]
-                }
-            }
-            }
-            },
-            {
-            "PutRequest": { 
-            "Item": { 
-                "PKey" : { "S": "A-20-7" },
-                "SortK" : { "N": "70"},
-                "part" : { "S" : "F" },
-                "ingrd" : { "S" : "icing sugar" },
-                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
-                "measure" : { "M" : { 
-                                      "qty" : { "S" : "90" } ,
-                                      "unit" : { "S" : "g" } 
-                                      }
-                },
-                "task" : { "L" : [ 
-                                { "M" :  {
-                                  "txt" : { "S" : "Reduce the speed to low, add the {ingrd} and mix until just combined" },
-                                  "say" : { "S" : "Reduce the speed to low, add the {ingrd} and mix until just combined" },
-                                  "time" : { "N" : "1" },
-                                  "tplus" : { "N" : "0" },
-                                  "unit" : { "S" : "min" },
-                                  "addToC" : { "SS" : [ "MixerBowl"] }
-                                    }
-                                } 
-                                ]
-                }
-            }
-            }
-            },
-            {
-            "PutRequest": { 
-            "Item": { 
-                "PKey" : { "S": "A-20-7" },
-                "SortK" : { "N": "80"},
-                "part" : { "S" : "F" },
-                "ingrd" : { "S" : "cocoa powder" }, 
-                "quali" : { "S" : "Dutch-processed" }, 
-                "iQual" : { "S" : ", to serve" }, 
-                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
-                "measure" : { "M" : { 
-                                      "qty" : { "S" : "2" } ,
-                                      "unit" : { "S" : "tbsp" }
-                                      }
-                },
-                "prep" : { "L" : [ 
-                                { "M" :  {
-                                  "txt" : { "S" : "chop the {ingrd} into {measure} pieces."  },
-                                  "say" : { "S" : "chop the {ingrd} into {measure} pieces. "  },
-                                  "time" : { "N" : "2" },
-                                  "tplus" : { "N" : "0" },
-                                  "unit" : { "S" : "min" },
-                                  "measure" : { "M" : { "qty" : {"S":"1"} ,
-                                                        "unit" : {"S":"cm" } }
-                                    }}
-                                } 
                                 ]
                 }
             }
@@ -311,16 +237,33 @@
                 },
                "prep" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "zest enough {ingrd} to make {measure}. Set aside."  },
-                                  "say" : { "S" : "zest enough {ingrd} to make {measure}. Set aside."  },
-                                  "time" : { "N" : "2" },
+                                  "txt" : { "S" : "Preheat {used} to {temp}"   },
+                                  "say" : { "S" : "Preheat {used} to {temp}"   },
+                                  "time" : { "N" : "20" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
-                                  "addToC" : { "SS" : [ "SAB-S"] }
-                                    }
+                                  "useD" : { "M" : {
+                                              "type" : { "S": "oven" },
+                                              "temp" : { "N" : "220/200" },
+                                               "unit" : { "S" : "C" },
+                                               "set"  : { "S" : "Gas Mark 7"}
+                                                 }
+                                            }}
                                 } 
                                 ]
-                }
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "To make the brittle, place {measure} of {ingrd} or {altIngrd} into {addToC}"   },
+                                  "say" : { "S" : "Preheat {used} to {temp}"   },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "brittlepan"] }
+                                            }
+                                } 
+                                ]
+                },
             }
             }
             },
@@ -340,12 +283,12 @@
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Scape the seeds of {measure} a {ingrd} and add to the bowl" },
+                                  "txt" : { "S" : "Add {measure} of {ingrd} or {altIngrd} to the pan" },
                                   "say" : { "S" : "Scape the seeds of {measure} a {ingrd} and add to the bowl" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
-                                  "addToC" : { "SS" : [ "MixerBowl"] }
+                                  "addToC" : { "SS" : [ "brittlepan"] }
                                     }
                                 }
                                 ]
@@ -368,12 +311,12 @@
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Add {measure} {ingrd}, one at a time, beating well after each addition." },
-                                  "say" : { "S" : "Add {measure} {ingrd}, one at a time, beating well after each addition." },
-                                  "time" : { "N" : "2" },
+                                  "txt" : { "S" : "Add {measure} {ingrd}." },
+                                  "say" : { "S" : "Add {measure} {ingrd}." },
+                                  "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
-                                  "addToC" : { "SS" : [ "MixerBowl"] }
+                                  "addToC" : { "SS" : [ "brittlepan"] }
                                     }
                                 }
                                 ]
@@ -396,18 +339,21 @@
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "now add {measure} or approximately a half of the {label} and blend" },
-                                  "say" : { "S" : "now add {measure} or approximately a half of the {label} and blend"  },
+                                  "txt" : { "S" : "Add {measure} {ingrd}." },
+                                  "say" : { "S" : "Add {measure} {ingrd}."  },
                                   "time" : { "N" : "20" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "sec" },
-                                  "addToC" : { "SS" : [ "MixerBowl"] },
-                                  "measure" : { "M" : { 
-                                      "qty" : { "S" : "225" } ,
-                                      "unit" : { "S" : "ml" }
-                                      }
-                                    } }
-                                }
+                                  "addToC" : { "SS" : [ "brittlepan"] }
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" : "Place the pan of a low heat and stire until the sugar has disolved" },
+                                  "say" : { "S" : "Place the pan of a low heat and stire until the sugar has disolved" },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "useC" : { "SS" : [ "brittlepan"] }
+                                }}
                                 ]
                 }
             }
@@ -427,15 +373,102 @@
                                       "unit" : { "S" : "g" }
                                       }
                 },
+                "prep" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Chop {measure} of roasted {ingrd} and set aside " },
+                                  "say" : { "S" : "Chop {measure} of roasted {ingrd} and set aside " },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "SAB-S"] }
+                                    }
+                                }
+                                ]
+                }
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Once combined, pour into the prepared cake tin and scatter {measure} of {ingrd} evenly on top. " },
-                                  "say" : { "S" : "Once combined, pour into the prepared cake tin and scatter {measure} of {ingrd} evenly on top." },
+                                  "txt" : { "S" : "Add the {ingrd} and mix until the nuts are evenly coated" },
+                                  "say" : { "S" : "Add the {ingrd} and mix until the nuts are evenly coated" },
                                   "time" : { "N" : "20" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "sec" },
-                                  "sourceC" : { "SS" : [ "MixerBowl"] },
-                                  "addToC" : { "SS" : [ "caketin"] }
+                                  "sourceC" : { "SS" : [ "SAB-S"] },
+                                  "addToC" : { "SS" : [ "brittlepan"] }
+                                    }
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" : "transfer the mixture to a small parchment-lined {addToC} and spread the nuts out evenly with a spoon" },
+                                  "say" : { "S" : "Add the {ingrd} " },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "useD" : { "M" : { "type" : {"S": "spoon" }}},
+                                  "sourceC" : { "SS" : [ "brittlepan"] },
+                                  "addToC" : { "SS" : [ "tray"] }
+                                    }
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" : "transfer the tray to the oven which should now be at {device.oven.temp}" },
+                                  "say" : { "S" : "transfer the tray to the oven which should now be at {device.oven.temp}" },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useD" : { "M" : { "type" : {"S": "spoon" }}},
+                                  "sourceC" : { "SS" : [ "brittlepan"] },
+                                  "addToC" : { "SS" : [ "tray"] }
+                                    }
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" : `set a timer for {timeu} and get back to me then.  `},
+                                  "say" : { "S" : `set a timer for {timeu} and get back to me then. `},
+                                  "time" : { "N" : "7" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useD" : { "M" : { "type" : {"S": "spoon" }}},
+                                  "sourceC" : { "SS" : [ "brittlepan"] },
+                                  "addToC" : { "SS" : [ "tray"] }
+                                    }
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" :"check the mixture is golden brown and bubbling, if not leave for another minute" `=},
+                                  "say" : { "S" : "check the mixture is golden brown and bubbling, if not leave for another minute" },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useD" : { "M" : { "type" : {"S": "spoon" }}},
+                                  "sourceC" : { "SS" : [ "brittlepan"] },
+                                  "addToC" : { "SS" : [ "tray"] }
+                                    }
+                                },
+                                  "say" : { "S" : "when the mixture looks right, remove from the oven and allow to cool completely" },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useD" : { "M" : { "type" : {"S": "spoon" }}},
+                                  "sourceC" : { "SS" : [ "brittlepan"] },
+                                  "addToC" : { "SS" : [ "tray"] }
+                                    }
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" : "once cooled, roughly chop into {l:0.5|cm||} pieces and set aside until ready to use " },
+                                  "say" : { "S" : "once cooled, roughly chop into {l:0.5|cm||} pieces and set aside until ready to use " },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useD" : { "M" : { "type" : {"S": "spoon" }}},
+                                  "sourceC" : { "SS" : [ "brittlepan"] },
+                                  "addToC" : { "SS" : [ "tray"] }
+                                    }
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" : " turn off the oven" },
+                                  "say" : { "S" : "turn off the oven"},
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useD" : { "M" : { "type" : {"S": "spoon" }}},
+                                  "sourceC" : { "SS" : [ "brittlepan"] },
+                                  "addToC" : { "SS" : [ "tray"] }
                                     }
                                 }
                                 ]
@@ -450,7 +483,6 @@
                 "SortK" : { "N": "140"},
                 "part" : { "S" :"S" },
                 "ingrd" : { "S" : "plain flour" },
-                "quali" : { "S" : "chopped roasted" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "300" } ,
@@ -459,13 +491,40 @@
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Once combined, pour into the prepared cake tin and scatter {measure} of {ingrd} evenly on top. " },
-                                  "say" : { "S" : "Once combined, pour into the prepared cake tin and scatter {measure} of {ingrd} evenly on top." },
+                                  "txt" : { "S" : "Measure {measure} of {ingrd} into {addToC} " },
+                                  "say" : { "S" : "Measure {measure} of {ingrd} into {addToC} " },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "SAB:M"] }
+                                    }
+                                } 
+                                ]
+                }
+            }
+            }
+            } ,
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-7" },
+                "SortK" : { "N": "150"},
+                "part" : { "S" :"S" },
+                "ingrd" : { "S" : "icing sugar" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "90" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Measure {measure} of {ingrd} into bowl" },
+                                  "say" : { "S" : "Measure {measure} of {ingrd} into bowl"},
                                   "time" : { "N" : "20" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "sec" },
-                                  "sourceC" : { "SS" : [ "MixerBowl"] },
-                                  "addToC" : { "SS" : [ "caketin"] }
+                                  "addToC" : { "SS" : [ "SAB:M"] }
                                     }
                                 } 
                                 ]
@@ -488,15 +547,24 @@
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Once combined, pour into the prepared cake tin and scatter {measure} of {ingrd} evenly on top. " },
-                                  "say" : { "S" : "Once combined, pour into the prepared cake tin and scatter {measure} of {ingrd} evenly on top." },
+                                  "txt" : { "S" : "Add {measure} of {ingrd} into bowl" },
+                                  "say" : { "S" : "Add {measure} of {ingrd} into bowl" },
                                   "time" : { "N" : "20" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "sec" },
-                                  "sourceC" : { "SS" : [ "MixerBowl"] },
-                                  "addToC" : { "SS" : [ "caketin"] }
+                                  "addToC" : { "SS" : [ "SAB:M"] }
                                     }
-                                } 
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" : "Sift the contents of the bowl into a {device} bowl." },
+                                  "say" : { "S" : "Add {measure} of {ingrd} into bowl" },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                   "useD" : { "M" : { "type" : {"S": "food processor" }}},
+                                   "addToC" : { "SS" : [ "SAFB:M"] }
+                                }
+                                }
                                 ]
                 }
             }
@@ -518,13 +586,12 @@
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Once combined, pour into the prepared cake tin and scatter {measure} of {ingrd} evenly on top. " },
-                                  "say" : { "S" : "Once combined, pour into the prepared cake tin and scatter {measure} of {ingrd} evenly on top." },
+                                  "txt" : { "S" : "Cut {measure} fridge-cold {ingrd} into cubes and add to food processor bowl " },
+                                  "say" : { "S" :"Cut {measure} fridge-cold {ingrd} into cubes and add to food processor bowl "  },
                                   "time" : { "N" : "20" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "sec" },
-                                  "sourceC" : { "SS" : [ "MixerBowl"] },
-                                  "addToC" : { "SS" : [ "caketin"] }
+                                  "addToC" : { "SS" : [ "SAFB:M"] }
                                     }
                                 }
                                 ]
@@ -552,15 +619,24 @@
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Once combined, pour into the prepared cake tin and scatter {measure} of {ingrd} evenly on top. " },
-                                  "say" : { "S" : "Once combined, pour into the prepared cake tin and scatter {measure} of {ingrd} evenly on top." },
+                                  "txt" : { "S" : "Add {qualm}  {qty} {ingrd} to the bowl" },
+                                  "say" : { "S" : "Add {qualm}  {qty} {ingrd} to the bowl"  },
                                   "time" : { "N" : "20" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "sec" },
-                                  "sourceC" : { "SS" : [ "MixerBowl"] },
+                                  "sourceC" : { "SS" : [ "chocpan"] },
                                   "addToC" : { "SS" : [ "caketin"] }
                                     }
-                                } 
+                                } ,
+                                { "M" :  {
+                                  "txt" : { "S" : "Attach the bowl to the food processor and pulse a few times until the mixture has the consistency of fresh breadcrumbs" },
+                                  "say" : { "S" : "Attach the bowl to the food processor and pulse a few times until the mixture has the consistency of fresh breadcrumbs" },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "useC" : { "SS" : [ "SAFB:M"] }
+                                    }
+                                }
                                 ]
                 }
             }
@@ -581,13 +657,12 @@
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Once combined, pour into the prepared cake tin and scatter {measure} of {ingrd} evenly on top. " },
-                                  "say" : { "S" : "Once combined, pour into the prepared cake tin and scatter {measure} of {ingrd} evenly on top." },
+                                  "txt" : { "S" : "Add {measure} {ingrd} to {addToC}" },
+                                  "say" : { "S" : "Add {measure} {ingrd} to {addToC} " },
                                   "time" : { "N" : "20" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "sec" },
-                                  "sourceC" : { "SS" : [ "MixerBowl"] },
-                                  "addToC" : { "SS" : [ "caketin"] }
+                                  "addToC" : { "SS" : [ "SAB-S"] }
                                     }
                                 } 
                                 ]
