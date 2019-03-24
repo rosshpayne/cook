@@ -300,8 +300,8 @@
                                 "timer" : { "M" :  { "set" : { "BOOL" : true }}}
                                 }},
                                  { "M" :  {
-                                  "txt" : { "S" : "To make the brittle, place {measure} of {ingrd} or {altIngrd} into {addToC}"   },
-                                  "say" : { "S" : "Preheat {used} to {temp}"   },
+                                  "txt" : { "S" : "place {measure} of {ingrd} or {altIngrd} into {addToC}"   },
+                                  "say" : { "S" :" place {measure} of {ingrd} or {altIngrd} into {addToC}"   },
                                   "time" : { "N" : "20" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -454,13 +454,14 @@
                                     }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "transfer the {addtoc.label} to the oven which should now be at {device.oven.temp}" },
-                                  "say" : { "S" : "transfer the {addtoc.label} to the oven which should now be at {device.oven.temp}" },
+                                  "txt" : { "S" : "transfer the {usec.label} to the oven which should now be at {device.oven.temp}" },
+                                  "say" : { "S" : "transfer the {usec.label} to the oven which should now be at {device.oven.temp}" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
                                   "useC" : { "SS" : [ "tray"] },
-                                  "timer" : { "M" :  { "set" : { "BOOL" : true }}}
+                                  "timer" : { "M" :  { "set" : { "BOOL" : true }}},
+                                  "useC" : { "SS" : [ "tray"] }
                                     }
                                 },
                                 { "M" :  {
