@@ -50,7 +50,46 @@
                   "measure" : { "M" : {  "shape" : { "S" : "round" },
                                           "dim" : { "S" : "23-25"},
                                          "unit" : {"S": "cm" }
-                  } }
+                  } },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  }
+                  }
+            }
+         },
+         {
+          "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-20-7" },
+                  "SortK" : { "S": "htbowl" },
+                  "type" : { "S": "bowl" },
+                  "label" : { "S": "bowl" }, 
+                  "requirement" : {"heat proof"},
+                  "measure" : { "M" : {  "size" : { "S" : "medium" },
+                  } },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  }
+                  }
+            }
+         },
+         {
+          "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-20-7" },
+                  "SortK" : { "S": "smpan" },
+                  "type" : { "S": "sausepan" },
+                  "label" : { "S": "sausepan" }, 
+                  "measure" : { "M" : {  "size" : { "S" : "medium" },
+                  } },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  }
+                  }
+            }
+         },
+         {
+          "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-20-7" },
+                  "SortK" : { "S": "ebowl" },
+                  "type" : { "S": "electric mixer" },
+                  "label" : { "S": "electric mixer bowl" }, 
+                  "measure" : { "M" : {  "size" : { "S" : "large" },
                   } },
                   "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  }
                   }
