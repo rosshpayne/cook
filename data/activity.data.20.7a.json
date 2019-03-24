@@ -1,6 +1,200 @@
 {                
-
       "Recipe" : [ 
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-7" },
+                "SortK" : { "N": "140"},
+                "part" : { "S" :"S" },
+                "ingrd" : { "S" : "plain flour" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "300" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Measure {measure} of {ingrd} into {addToC} " },
+                                  "say" : { "S" : "Measure {measure} of {ingrd} into {addToC} " },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "hbowl"] }
+                                    }
+                                } 
+                                ]
+                }
+            }
+            }
+            } ,
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-7" },
+                "SortK" : { "N": "150"},
+                "part" : { "S" :"S" },
+                "ingrd" : { "S" : "icing sugar" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "90" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Measure {measure} of {ingrd} into {addToC.label}" },
+                                  "say" : { "S" : "Measure {measure} of {ingrd} into {addToC.label}"},
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "addToC" : { "SS" : [ "hbowl"] }
+                                    }
+                                } 
+                                ]
+                }
+            }
+            }
+            } ,
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-7" },
+                "SortK" : { "N": "160"},
+                "part" : { "S" :"S" },
+                "ingrd" : { "S" : "salt" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "1/4" } ,
+                                      "unit" : { "S" : "tsp" }
+                                      }
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Add {measure} of {ingrd} into {addToC.label}" },
+                                  "say" : { "S" : "Add {measure} of {ingrd} into {addToC.label}" },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "addToC" : { "SS" : [ "hbowl"] }
+                                    }
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" : "Sift the contents of the {sourceC.label} into a {addToC}." },
+                                  "say" : { "S" : "Sift the contents of the {sourceC.label} into a {addToC}." },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                   "useD" : { "M" : { "type" : {"S": "sifter" }}},
+                                   "sourceC" : { "SS" : [ "hbowl"] },
+                                   "addToC" : { "SS" : [ "fpbowl"] }
+                                }
+                                }
+                                ]
+                }
+            }
+            }
+            } ,
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-7" },
+                "SortK" : { "N": "170"},
+                "part" : { "S" :"S" },
+                "ingrd" : { "S" : "unsalted butter" },
+                "iQual" : { "S" : ", fridge-cold, cut into cubes, plus extra for greasing" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "200" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Cut {measure} fridge-cold {ingrd} into cubes and add to {addToC.label} " },
+                                  "say" : { "S" : "Cut {measure} fridge-cold {ingrd} into cubes and add to {addToC.label} "  },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "addToC" : { "SS" : [ "fpbowl"] }
+                                    }
+                                }
+                                ]
+                }
+            }
+            }
+            } ,
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-7" },
+                "SortK" : { "N": "180"},
+                "part" : { "S" :"S" },
+                "ingrd" : { "S" : "lemon" },
+                "qualm" : { "S" : "finely grated zest of" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "1" }
+                                      }
+                },
+                "altMeasure" : { "M" : { 
+                                      "qty" : { "S" : "1" } ,
+                                      "unit" : { "S" : "tsp" }
+                                      }
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Add {qualm} of {qty} {ingrd} to the {addToC.label}" },
+                                  "say" : { "S" : "Add {qualm} of {qty} {ingrd} to the {addToC.label}"  },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "addToC" : { "SS" : [ "fpbowl"] }
+                                    }
+                                } ,
+                                { "M" :  {
+                                  "txt" : { "S" : "Attach the {useC.label} to the food processor and pulse a few times until the mixture has the consistency of fresh breadcrumbs" },
+                                  "say" : { "S" : "Attach the {useC.label} to the food processor and pulse a few times until the mixture has the consistency of fresh breadcrumbs" },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "useC" : { "SS" : [ "fpbowl"] },
+                                  "useD" : { "M" : { "type" : { "S": "food processor" } } }
+                                    }
+                                }
+                                ]
+                }
+            }
+            }
+            } ,
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-7" },
+                "SortK" : { "N": "190"},
+                "part" : { "S" :"S" },
+                "ingrd" : { "S" : "egg yolk" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "1" } ,
+                                      "size" : {"S": "large"}
+                                      }
+                },
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "To start on the pastry, add {measure} {ingrd} to {addToC}" },
+                                  "say" : { "S" : "To start on the pastry, add {measure} {ingrd} to {addToC}" },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "sec" },
+                                  "addToC" : { "SS" : [ "eggbowl"] }
+                                    }
+                                } 
+                                ]
+                }
+            }
+            }
+            },
             {
             "PutRequest": { 
             "Item": { 
@@ -14,13 +208,13 @@
                                       "unit" : { "S" : "ml" }
                                       }
                 },
-                "task" : { "L" : [ 
+                "task" : { "L" : [
                                 { "M" :  {
                                   "txt" : { "S" : "Add {measure} of {ingrd} to the bowl and whisk together" },
                                   "say" : { "S" : "Add {measure} of {ingrd} to the bowl and whisk together" },
                                   "time" : { "N" : "20" },
                                   "unit" : { "S" : "sec" },
-                                  "addToC" : { "SS" : [ "SAB-S"] }
+                                  "addToC" : { "SS" : [ "eggbowl"] }
                                     }
                                 },
                                 { "M" :  {
@@ -28,7 +222,8 @@
                                   "say" : { "S" : "Add the whisked egg to the flour mixture. The dough that forms will feel quite wet, but this is as it should be" },
                                   "time" : { "N" : "30" },
                                   "unit" : { "S" : "sec" },
-                                  "addToC" : { "SS" : [ "SAB-S"] }
+                                  "sourceC" : { "SS" : [ "eggbowl"] },
+                                  "addToC" : { "SS" : [ "fpbowl"] }
                                     }
                                 },
                                 { "M" :  {
@@ -36,8 +231,8 @@
                                   "say" : { "S" : "Process the dough mixture, just until the dough comes together" },
                                   "time" : { "N" : "30" },
                                   "unit" : { "S" : "sec" },
-                                  "useC" : 
-                                  "useD" : { "SS" : [ "food processor"] }
+                                  "useC" : { "SS" : [ "fpbowl"] },
+                                  "useD" : { "M" : { "type" : { "S": "food processor" }}}
                                     }
                                 },
                                 { "M" :  {
@@ -62,22 +257,22 @@
                                     }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "Wrap each half loosely in cling film and press tently to form to flattish discs " },
-                                  "say" : { "S" : "Wrap each half loosely in cling film and press tently to form to flattish discs " },
+                                  "txt" : { "S" : "Wrap each half loosely in cling film and press gently to form to flattish discs " },
+                                  "say" : { "S" : "Wrap each half loosely in cling film and press gently to form to flattish discs " },
                                   "time" : { "N" : "30" },
                                   "unit" : { "S" : "sec" }
                                     }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "The dough is very soft, so you will need to set it aside in the fridge, for atleast {timeu} or alternatively overnight " },
-                                  "say" : { "S" : "The dough is very soft, so you will need to set it aside in the fridge, for atleast {timeu} or alternatively overnight "},
+                                  "txt" : { "S" : "The dough is very soft, so you will need to set it aside in the fridge, for atleast {timeu} or overnight if you have the time " },
+                                  "say" : { "S" : "The dough is very soft, so you will need to set it aside in the fridge, for atleast {timeu} or overnight if you have the time "},
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "hr" },
                                   "timer" : { "M" :  {
                                             "set" : { "BOOL" : true },
                                             "time" :  { "N" : "50" },
                                             "unit" : { "S" : "min" },
-                                            "msg" : { "S" : "Set a timer for %s or leave it till tomorrow to get back to me" } }
+                                            "msg" : { "S" : "Set a timer for %s or get back to me sometime tomorrow " } }
                                     } }
                                 },
                                 { "M" :  {
@@ -95,10 +290,10 @@
                                   "unit" : { "S" : "min" },
                                   "addToC" : { "SS" : [ "tarttin"] }
                                     }
-                                } 
+                                }, 
                                 { "M" :  {
-                                  "txt" : { "S" : "now lightly flour a work surface" },
-                                  "say" : { "S" : "now lightly flour a work surface" },
+                                  "txt" : { "S" : "lightly flour a work surface" },
+                                  "say" : { "S" : "lightly flour a work surface" },
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" }
                                     }
@@ -108,15 +303,15 @@
                                   "say" : { "S" : "Tap the dough all over with a {useD} to soften slightly before rolling out" },
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" },
-                                  "useD" : { "S" : [ "rolling pin"] }
+                                   "useD" : { "M" : { "type" : { "S": "rolling pin" }}}
                                     }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : `rollout the dough until it's about {l:33|cm||} wide and {l:4|mm||} thick`},
-                                  "say" : { "S" : `rollout the dough until it's about {l:33|cm||} wide and {l:4|mm||} thick` },
+                                  "txt" : { "S" : "rollout the dough until its about {l:33|cm||} wide and {l:4|mm||} thick"},
+                                  "say" : { "S" : "rollout the dough until its about {l:33|cm||} wide and {l:4|mm||} thick"},
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" },
-                                  "useD" : { "S" : [ "rolling pin"] }
+                                   "useD" : { "M" : { "type" : { "S": "rolling pin" }}}
                                     }
                                 },
                                 { "M" :  {
@@ -124,7 +319,7 @@
                                   "say" : { "S" : "Drape the pastry over the tart tin and gently press it into place, filling any cracks that you have with a little extra pastry." },
                                   "time" : { "N" : "3" },
                                   "unit" : { "S" : "min" },
-                                  "useC" : { "SS" : [ "tarttin"] }
+                                  "addToC" : { "SS" : [ "tarttin"] }
                                     }
                                 },
                                 { "M" :  {
@@ -133,52 +328,52 @@
                                   "time" : { "N" : "30" },
                                   "unit" : { "S" : "min" },
                                   "useC" : { "SS" : [ "tarttin"] },
-                                  "timer" : { "M" :  { "set" : { "BOOL" : true }}
-                                    }
+                                  "timer" : { "M" :  { "set" : { "BOOL" : true },
+                                                        "time" : { "N" : "20" },
+                                                        "unit" : { "S" : "min" } } }
+                                  }
                                 },
                                 { "M" :  {
                                   "txt" : { "S" : "To blind bake the tart case, preheat the oven to {temp}" },
                                   "say" : { "S" : "To blind bake the tart case, preheat the oven to {temp}" },
-                                  "time" : { "N" : "15" },
+                                  "time" : { "N" : "10" },
                                   "unit" : { "S" : "min" },
                                   "useD" : { "M" : {
                                               "type" : { "S": "oven" },
-                                              "temp" : { "N" : "200/180" },
+                                              "temp" : { "S" : "200/180" },
                                                "unit" : { "S" : "C" },
                                                "set"  : { "S" : "Gas Mark 6"} }
-                                    } },
-                                    "timer" : { "M" :  {
-                                            "set" : { "BOOL" : true },
-                                            "msg" : { "S" : "Set a timer for %s or however long it will take your oven to reach the desired temperature. Get back to me then" } }
-                                    }
+                                    } ,
+                                   "timer" : { "M" :  { "set" : { "BOOL" : true }}} 
+                                }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "Line the tart case with a large piece of {useD}, covering the base and sides" },
-                                  "say" : { "S" : "Line the tart case with a large piece of {useD}, covering the base and sides" },
+                                  "txt" : { "S" : "Remove the tart from the fridge and line the tart case with a large piece of {useD}, covering the base and sides" },
+                                  "say" : { "S" : "Remove the tart from the fridge and line the tart case with a large piece of {useD}, covering the base and sides"  },
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" },
-                                  "useD" : { "M" : { "type" : {"S": "parchment paper" }
+                                  "useD" : { "M" : { "type" : {"S": "parchment paper" } } }
                                     }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "Fill with baking beans or uncooked rice or pulses also work well." },
-                                  "say" : { "S" : "Fill with baking beans or uncooked rice or pulses also work well." },
+                                  "txt" : { "S" : "Fill the tart with baking beans or uncooked rice or pulses. They are all designed to minimise the pastry rising as it cooks." },
+                                  "say" : { "S" : "Fill the tart with baking beans or uncooked rice or pulses. They are all designed to  minimise the pastry rising as it cooks." },
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" },
-                                  "useD" : { "M" : { "type" : {"S": "baking beans" }
+                                  "useD" : { "M" : { "type" : {"S": "baking beans" } }}
                                     }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "Bake for {timeu} having checked the oven has reached the desired temperature of {device.oven.temp}" },
-                                  "say" : { "S" : "Bake for {timeu} having checked the oven has reached the desired temperature of {device.oven.temp}" },
+                                  "txt" : { "S" : "Bake for {timeu}. Check the oven has reached the desired temperature of {device.oven.temp}" },
+                                  "say" : { "S" : "Bake for {timeu}. Check the oven has reached the desired temperature of {device.oven.temp}" },
                                   "time" : { "N" : "20" },
                                   "unit" : { "S" : "min" },
                                   "timer" : { "M" :  { "set" : { "BOOL" : true }} }
                                     }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "Retrieve the tart case from the oven and scoop out the beans or equivalent." },
-                                  "say" : { "S" : "Retrieve the tart case from the oven and scoop out the beans or equivalent." },
+                                  "txt" : { "S" : "Retrieve the tart case from the oven and scoop out the beans." },
+                                  "say" : { "S" : "Retrieve the tart case from the oven and scoop out the beans." },
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" }
                                     }
@@ -221,13 +416,13 @@
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" }
                                     }
-                                },
+                                }
                                 ]
                 }
             }
             }
             } ,
-                      {
+           {
             "PutRequest": { 
             "Item": { 
                 "PKey" : { "S": "A-20-7" },
@@ -250,7 +445,7 @@
                                   "time" : { "N" : "30" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "sec" },
-                                  "addToC" : {"SS" : [ "SAB-M] }
+                                  "addToC" : {"SS" : [ "SAS-M"] }
                                 }},
                                 { "M" :  {
                                   "txt" : { "S" : "while you wait for the water to simmer, finely chop the {ingrd} and add to a {addToC}" },
@@ -266,7 +461,7 @@
                                   "time" : { "N" : "15" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "sec" },
-                                  "useC" : {"SS" : [ "htbowl"] }
+                                  "useC" : {"SS" : [ "htbowl","SAS-M" ] }
                                 }},
                                 { "M" :  {
                                   "txt" : { "S" : "while the chocolate melts, return the infused cream you made earlier, to a low heat and sir gently until it is hot" },
@@ -275,22 +470,22 @@
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "sec" },
                                   "useC" : {"SS" : [ "??"] }
-                                }}
+                                }},
                                 { "M" :  {
                                   "txt" : { "S" : "stir the chocolate a little and then strain the cream over the chocolate. The rosemary and orange peel can be discarded" },
                                   "say" : { "S" : "stir the chocolate a little and then strain the cream over the chocolate. The rosemary and orange peel can be discarded"  },
                                   "time" : { "N" : "15" },
                                   "unit" : { "S" : "sec" },
-                                  "sourceC" : {"SS" : [ "??"] },
+                                  "sourceC" : {"SS" : [ "chocpan"] },
                                   "addToC" : {"SS" : [ "htbowl"] },
-                                  "useD" : { "M" : {"type" : { "S" : "strainer" }}
+                                  "useD" : { "M" : {"type" : { "S" : "strainer" }} }
                                 }},
                                  { "M" :  {
                                   "txt" : { "S" : "Keep stirring the chocolate over the simmering water, until the mixture blends and is nicely smooth." },
-                                  "say" : { "S" : "Keep stirring the chocolate over the simmering water,until the mixture blends and is nicely smooth." },
+                                  "say" : { "S" : "Keep stirring the chocolate over the simmering water, until the mixture blends and is nicely smooth." },
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" },
-                                  "addToC" : {"SS" : [ "htbowl"] },
+                                  "addToC" : {"SS" : [ "htbowl"] }
                                 }},
                                 { "M" :  {
                                   "txt" : { "S" : "remove the bowl from the pan and set aside." },
@@ -304,7 +499,7 @@
             }
             }
             },
-           {
+            {
             "PutRequest": { 
             "Item": { 
                 "PKey" : { "S": "A-20-7" },
@@ -372,7 +567,7 @@
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
                                   "useC" : { "SS" : [ "ebowl"] },
-                                  "useD" : { "M" : { "type" : {"S": "electric mixer" }
+                                  "useD" : { "M" : { "type" : {"S": "electric mixer" }}}
                                     }
                                 } ,
                                 { "M" :  {
@@ -416,8 +611,8 @@
                                   "say" : { "S" : "Using a {useD} transfer the chocolate mixture into the tart case, flooding the bazelnut brittle. "  },
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" },
-                                  "useD" : { "M" : { "type" : {"S": "spatular" } }}
-                                  "sourceC" : {"SS" : [ "ebowl"] }
+                                  "useD" : { "M" : { "type" : {"S": "spatular" } }},
+                                  "sourceC" : {"SS" : [ "ebowl"] },
                                   "addToC" : {"SS" : [ "tarttin"] }
                                     }
                                 },
@@ -465,110 +660,16 @@
                                   "txt" : { "S" : "Using a {useD}, sift {measure} of {quali} {ingrd} over the tart just before serving"  },
                                   "say" : { "S" : "Using a {useD}, sift {measure} of {quali} {ingrd} over the tart just before serving" },
                                   "time" : { "N" : "2" },
-                                  "tplus" : { "N" : "0" },
-                                  "unit" : { "S" : "min" }}
+                                  "unit" : { "S" : "min" },
                                   "useD" : { "M" : { "type" : {"S": "small tea strainer or small sieve" } }} 
+                                    } 
                                 } ,
                                 { "M" :  {
                                   "txt" : { "S" : "if using, garnish with the crystallized rosemary sprigs and serve with some lightly whipped cream if you like"  },
                                   "say" : { "S" : "if using, garnish with the crystallized rosemary sprigs and serve with some lightly whipped cream if you like" },
                                   "time" : { "N" : "2" },
-                                  "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" }} 
                                 } 
-                                ]
-                }
-            }
-            }
-            },
-            {
-            "PutRequest": { 
-            "Item": { 
-                "PKey" : { "S": "A-20-7" },
-                "SortK" : { "N": "230"},
-                "part" : { "S" : "C" },
-                "ingrd" : { "S" : "egg" },
-                "iQual" : { "S" : "white, lightly whisked" },
-                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
-                "measure" : { "M" : { 
-                                      "qty" : { "S" : "1/2" } ,
-                                      "size" : { "S" : "large" }
-                                      }
-                },
-                "task" : { "L" : [ 
-                                { "M" :  {
-                                  "txt" : { "S" : "We are about to crystallize the rosemary sprigs for garnishing. Start by whisking the white of {measure} {ingrd}." },
-                                  "say" : { "S" :  "We are about to crystallize the rosemary sprigs for garnishing. Start by whisking the white of {measure} {ingrd}." },
-                                  "time" : { "N" : "2" },
-                                  "tplus" : { "N" : "0" },
-                                  "unit" : { "S" : "min" },
-                                  "useD" : { "M" : { "type" : {"S": "whisk" }}},
-                                  "addToC" : { "SS" : [ "SAB-S" ] },
-                                    }
-                                }
-                                ]
-                }
-            }
-            }
-            } ,
-            {
-            "PutRequest": { 
-            "Item": { 
-                "PKey" : { "S": "A-20-7" },
-                "SortK" : { "N": "240"},
-                "part" : { "S" : "C" },
-                "ingrd" : { "S" : "rosemary" },
-                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
-                "measure" : { "M" : { 
-                                      "qty" : { "S" : "1-2" } ,
-                                      "unit" : { "S" : "sprig" },
-                                      "ns" : { "BOOL" : true }
-                                      }
-                },
-                "altMeasure" : { "M" : { 
-                                      "qty" : { "S" : "5" } ,
-                                      "unit" : { "S" : "g" }
-                                      }
-                },
-                "task" : { "L" : [ 
-                                { "M" :  {
-                                  "txt" : { "S" : "Lay {measure} of {ingrd} on a {useD} and lightly brush each side with the egg white." },
-                                  "say" : { "S" : "We are about to crystallize the rosemary sprigs for garnishing. Start by laying {measure} of {ingrd} on a chopping board." },
-                                  "time" : { "N" : "1" },
-                                  "tplus" : { "N" : "0" },
-                                  "unit" : { "S" : "min" }, 
-                                  "useD" : { "M" : { "type" : {"S": "pastry brush" }}}
-                                    }
-                                } 
-                                ]
-                }
-            }
-            }
-            } ,
-
-            {
-            "PutRequest": { 
-            "Item": { 
-                "PKey" : { "S": "A-20-7" },
-                "SortK" : { "N": "240"},
-                "part" : { "S" : "C" },
-                "ingrd" : { "S" : "caster sugar" },
-                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
-                "measure" : { "M" : { 
-                                      "qty" : { "S" : "20" } ,
-                                      "unit" : { "S" : "g" }
-                                      }
-                },
-                "task" : { "L" : [ 
-                                { "M" :  {
-                                  "txt" : { "S" : "sprinkle {measure} of {ingrd} evenly and lightly over both sides of the leaves, then set aside in a cool dry place on a {useD} for about {timeu}, until crisp" },
-                                  "say" : { "S" : "sprinkle {measure} of {ingrd} evenly and lightly over both sides of the leaves, then set aside in a cool dry place on a {useD} for about {timeu}, until crisp"},
-                                  "time" : { "N" : "8" },
-                                  "tplus" : { "N" : "0" },
-                                  "unit" : { "S" : "hr" },
-                                  "useD" : { "M" : { "type" : {"S": "wire rack" }}}
-                                    }
-                                }
                                 ]
                 }
             }
