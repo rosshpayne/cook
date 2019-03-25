@@ -532,7 +532,7 @@
             "PutRequest": { 
             "Item": { 
                 "PKey" : { "S": "A-20-7" },
-                "SortK" : { "N": "70"},
+                "SortK" : { "N": "220"},
                 "part" : { "S" : "F" },
                 "ingrd" : { "S" : "icing sugar" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
@@ -543,17 +543,8 @@
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Add {measure} of {ingrd} to the bowl." },
-                                  "say" : { "S" : "Add {measure} of {ingrd} to the bowl" },
-                                  "time" : { "N" : "1" },
-                                  "tplus" : { "N" : "0" },
-                                  "unit" : { "S" : "min" },
-                                  "addToC" : { "SS" : [ "ebowl"] }
-                                    }
-                                },
-                                { "M" :  {
-                                  "txt" : { "S" : "Add {measure} of {ingrd} to the bowl." },
-                                  "say" : { "S" : "Add {measure} of {ingrd} to the bowl" },
+                                  "txt" : { "S" : "Add {measure} of {ingrd} to the {useC.label}." },
+                                  "say" : { "S" : "Add {measure} of {ingrd} to the {useC.label}" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -561,13 +552,13 @@
                                     }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "attach the bowl and a whisk attachment to the electric mixer" },
-                                  "say" : { "S" : "attach the bowl and a whisk attachment to the electric mixer"  },
+                                  "txt" : { "S" : "attach the {useC.label} and install a whisk attachment to the electric mixer" },
+                                  "say" : { "S" : "attach the {useC.label} and install a whisk attachment to the electric mixer"  },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
                                   "useC" : { "SS" : [ "ebowl"] },
-                                  "useD" : { "M" : { "type" : {"S": "electric mixer" }}}
+                                  "useD" : { "M" : { "type" : {"S": "electric mixer with whish attachment" }}}
                                     }
                                 } ,
                                 { "M" :  {
@@ -644,7 +635,7 @@
             "PutRequest": { 
             "Item": { 
                 "PKey" : { "S": "A-20-7" },
-                "SortK" : { "N": "80"},
+                "SortK" : { "N": "230"},
                 "part" : { "S" : "F" },
                 "ingrd" : { "S" : "cocoa powder" }, 
                 "quali" : { "S" : "Dutch-processed" }, 

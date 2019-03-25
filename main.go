@@ -225,6 +225,19 @@ func (s *sessCtx) orchestrateRequest() error {
 	//
 	// ******************************** process responses to request  ****************************************
 	//
+	if s.request == "start" {
+		if _, ok := s.displayData.(Threads); ok {
+			// redirect request
+			s.request = "start-next"
+			// s.objRecId = s.recId[objectMap[s.object]] + 1
+			// s.recId[objectMap[s.object]] += 1
+		} else if !(len(s.reqBkId) > 0 || len(s.reqOpenBk) > 0) {
+			var msg WelcomeT
+			msg = "Please open a book or conduct a search..."
+			s.displayData = msg
+			return nil
+		}
+	}
 	if s.request == "dimension" {
 		if s.dimension == 0 {
 			return fmt.Errorf("Dimension must be greater than zero")
@@ -494,7 +507,7 @@ func (s *sessCtx) orchestrateRequest() error {
 			} else {
 				s.part = s.parts[s.selId-2].Title
 			}
-			fmt.Printf("selId  %d   recipeList   %#v\n", s.selId, s.part)
+			fmt.Printf("selId  %d   parts   %#v\n", s.selId, s.part)
 			s.reset = true
 			s.displayData, err = s.cacheInstructions(s.selId)
 			if err != nil {
@@ -746,7 +759,7 @@ func (s *sessCtx) orchestrateRequest() error {
 		}
 		s.objRecId = s.recId[objectMap[s.object]] - 1
 		s.recId[objectMap[s.object]] -= 1
-	case "next", "select-next":
+	case "next", "select-next", "start-next":
 		if len(s.recId) == 0 {
 			s.recId = [4]int{}
 		}
@@ -891,6 +904,8 @@ func handler(request InputEvent) (RespEvent, error) {
 			break
 		}
 		sessctx.noGetRecRequired, sessctx.reset = true, true
+	case "start":
+		sessctx.curReqType = 0 //TODO: what to put here...if anything
 	case "book", "recipe", "select", "search", "list", "yesno", "version", "back", "resume", "dimension", "scale":
 		sessctx.curReqType = initialiseRequest
 		switch sessctx.request {
@@ -1034,11 +1049,15 @@ func main() {
 	// p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + "&srch=" + os.Args[2]}
 	// //
 	//
-	//var err error
-	//p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
-	// scaleF, err = strconv.ParseFloat(os.Args[4], 64)
-	// if err != nil {
-	// 	panic(err)
+	// var err error
+	// p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
+	// if len(os.Args) < 5 {
+	// 	scaleF = 1.0
+	// } else {
+	// 	scaleF, err = strconv.ParseFloat(os.Args[4], 64)
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
 	// }
 	// global.Set_WriteCtx(global.UDisplay)
 	// p, _ := handler(p1)

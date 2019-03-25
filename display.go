@@ -17,10 +17,11 @@ type RecipeListT []mRecipeT
 type IngredientT string
 
 type PartT struct {
-	Index string `json:"Idx"`   // short name which is attached to each activity JSON.
-	Type_ string `json:"Typ"`   // either Part, Division or Thread
-	Title string `json:"Title"` // long name which is printed out in the ingredients listing
-	Start int    `json:"Start"` // SortK value in T-?-? that has first instruction for the partition
+	Index  string `json:"Idx"`   // short name which is attached to each activity JSON.
+	Type_  string `json:"Typ"`   // either Part, Division or Thread
+	Title  string `json:"Title"` // long name which is printed out in the ingredients listing
+	Start  int    `json:"Start"` // SortK value in T-?-? that has first instruction for the partition
+	InvisI bool   `json:"InvsI"` // invisible in Instruction menu. Applies to Part but not forced.
 }
 type PartS []PartT
 
@@ -64,6 +65,8 @@ var objMenu ObjMenu = []ObjMenuT{
 	ObjMenuT{2, "Modify container size"},
 	ObjMenuT{3, `Start cooking...`},
 }
+
+type WelcomeT string
 
 type ContainerS []string
 
@@ -209,11 +212,12 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 	} else {
 		hdr = s.reqRName
 	}
-	if len(part) > 0 {
-		if part == CompleteRecipe_ {
-			subh = "Cooking Instructions (Complete Recipe) " + "  -  " + strconv.Itoa(id) + " of " + eol
+	if len(s.part) > 0 {
+		if s.part == CompleteRecipe_ {
+			subh = "Cooking Instructions  " + "  -  " + strconv.Itoa(id) + " of " + eol
 		} else {
-			subh = "Cooking Instructions for " + part + "  -  " + pid + " of " + peol
+			hdr += " - " + s.part
+			subh = "Cooking Instructions " + "  -  " + pid + " of " + peol
 		}
 	} else {
 		subh = "Cooking Instructions  -  " + strconv.Itoa(id) + " of " + eol
@@ -223,22 +227,25 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 	// local funcs
 	//
 	SectA := func(thread int) []DisplayItem {
-		var list []DisplayItem
 		var rows int
-		for n, ir := t[thread].Id-1, t[thread].Instructions; n > 0 && rows < 3; rows++ {
-			item := DisplayItem{Title: ir[n-1].Text}
-			list = append(list, item)
+
+		list := make([]DisplayItem, 3)
+
+		for k, n, ir := 2, t[thread].Id-1, t[thread].Instructions; n > 0 && rows < 3; rows++ {
+			list[k] = DisplayItem{Title: ir[n-1].Text}
 			n--
+			k--
 		}
-		if len(list) == 0 {
-			list = []DisplayItem{DisplayItem{Title: " "}}
-		}
-		list2 := make([]DisplayItem, len(list))
-		for n, i := 0, len(list)-1; i > -1; i-- {
-			list2[n] = list[i]
-			n++
-		}
-		return list2
+		// if len(list) == 0 {
+		// 	list = []DisplayItem{DisplayItem{Title: " "}}
+		// }
+		// list2 := make([]DisplayItem, 3)
+		// for n, i := 2, len(list)-1; i > -1; i-- {
+		// 	list2[n] = list[i]
+		// 	n--
+		// }
+
+		return list
 	}
 	SectB := func(thread int) []DisplayItem {
 		list := make([]DisplayItem, 1)
@@ -297,9 +304,9 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		pid = strconv.Itoa(rec.PID)
 		s.eol, s.peol, s.part, s.pid = rec.EOL, rec.PEOL, part, rec.PID
 		type_ := "Tripple"
-		if len(t[s.cThread].Instructions[id-1].Text) > 120 {
-			type_ += "L" // larger text bounding box
-		}
+		// if len(t[s.cThread].Instructions[id-1].Text) > 80 {
+		// 	type_ += "L" // larger text bounding box
+		// }
 		speak := "<speak>" + rec.Verbal + "</speak>"
 
 		s.menuL = nil
@@ -357,9 +364,9 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		s.eol, s.peol, s.part, s.pid = rec.EOL, rec.PEOL, part, rec.PID
 		fmt.Println("4 cThread, id = ", s.cThread, id)
 
-		if len(rec.Text) > 120 {
-			type_ += "L" // TODO: create ThreadedL script
-		}
+		// if len(rec.Text) > 80 {
+		// 	type_ += "L" // TODO: create ThreadedL script
+		// }
 		speak := "<speak>" + rec.Verbal + "</speak>"
 
 		s.menuL = nil
@@ -372,6 +379,19 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 			ListD: listD, ListE: listE, ListF: listF, Color1: color1, Color2: color2, Thread1: trName1, Thread2: trName2,
 		}
 	}
+}
+
+func (m WelcomeT) GenDisplay(s *sessCtx) RespEvent {
+
+	fmt.Printf("in GenDisplay for Welcome message")
+	hdr := "Welcome. Please search for a recipe"
+	subh := "example search chocolate cake, search tarragon, search pastry, search strawberry tart"
+
+	list := make([]DisplayItem, 1)
+	list[0] = DisplayItem{Title: string(m)}
+
+	type_ := "Ingredient"
+	return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, List: list}
 }
 
 func (c ContainerS) GenDisplay(s *sessCtx) RespEvent {
@@ -390,10 +410,11 @@ func (c ContainerS) GenDisplay(s *sessCtx) RespEvent {
 }
 
 func (p PartS) GenDisplay(s *sessCtx) RespEvent {
-
+	// parts sourced from recipe.parts (json list loaded into go slice)
 	var (
 		hdr  string
 		subh string
+		k    int
 	)
 	if len(s.passErr) > 0 {
 		hdr = s.passErr
@@ -403,15 +424,21 @@ func (p PartS) GenDisplay(s *sessCtx) RespEvent {
 	}
 	list := make([]DisplayItem, 1)
 	list[0] = DisplayItem{Id: "1", Title: CompleteRecipe_}
-	for i, v := range p {
-		// ignore threads
-		if v.Type_ == "Thrd" {
+	for _, v := range p {
+		// ignore threads and invisible parts
+		if v.Type_ == "Thrd" || v.InvisI {
 			continue
 		}
-		id := strconv.Itoa(i + 2)
-		list = append(list, DisplayItem{Id: id, Title: v.Title})
+		id := strconv.Itoa(k + 2)
+		s := strings.Split(v.Title, "|")
+		if len(s) == 1 {
+			list = append(list, DisplayItem{Id: id, Title: s[0]})
+		} else {
+			list = append(list, DisplayItem{Id: id, Title: s[0], SubTitle1: s[1]})
+		}
+		k++
 	}
-	return RespEvent{Type: "Select", BackBtn: true, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: list}
+	return RespEvent{Type: "Search", BackBtn: true, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: list}
 
 }
 
@@ -579,7 +606,9 @@ func (o ObjMenu) GenDisplay(s *sessCtx) RespEvent {
 			return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
 		}
 	}
-	return RespEvent{Type: "Select", BackBtn: backBtn, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: list}
+	//return RespEvent{Type: "Select", BackBtn: backBtn, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: list}
+	return RespEvent{Type: "Search", BackBtn: backBtn, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: list}
+
 }
 
 func (b BookT) GenDisplay(s *sessCtx) RespEvent {

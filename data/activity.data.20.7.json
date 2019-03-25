@@ -156,12 +156,7 @@
                 "Part" : { "L" : [
                                 { "M" : { 
                                   "Idx" : { "S" : "C"},
-                                  "Title" : { "S" : "CRYSTALIZED ROSEMARY GARNISH|(OPTIONAL)" }}
-                                },
-                                { "M" : { 
-                                  "Idx" : { "S" : "F"},
-                                  "InvsI" : { "BOOL" : true} ,
-                                  "Title" : { "S" : "FILLING" }}
+                                  "Title" : { "S" : "CRYSTALIZED ROSEMARY GARNISH|(optional)" }}
                                 },
                                 { "M" : { 
                                   "Idx" : { "S" : "H"},
@@ -169,7 +164,11 @@
                                 },
                                 { "M" : { 
                                   "Idx" : { "S" : "S"},
-                                  "Title" : { "S" : "SWEET SHORTCRUST PASTRY|(YOU WILL ONLY NEED 1/2 QUANTITY)" }}
+                                  "Title" : { "S" : "SWEET SHORTCRUST PASTRY|(You will only need half the quantity)" }}
+                                },
+                                { "M" : { 
+                                  "Idx" : { "S" : "F"},
+                                  "Title" : { "S" : "FILLING|(Requires both non-optional parts to be completed first)" }}
                                 }
                                 ]
                 }

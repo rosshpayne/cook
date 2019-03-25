@@ -376,7 +376,7 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 	s.state = append(s.state, sr)
 	//
 	t := time.Now()
-	t.Add(time.Hour * 24 * 1)
+	t.Add(time.Hour * 52 * 1)
 	updateC = expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
 	if s.newSession {
 		//.RecId = [4]int{}

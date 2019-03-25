@@ -18,14 +18,27 @@ const LaunchRequestHandler = {
   },
   
   handle(handlerInput) {
-    var speechText = "Hi. To find a recipe, simply search for a keyword by saying 'search keyword or recipe name' where keyword is any ingredient or ingredients related to the recipe ";
-    var displayText =  "Hi. To find a recipe, simply search for a keyword by saying 'search keyword or recipe name' where keyword is any ingredient or ingredients related to the recipe ";
+    // var speechText = "Hi. To find a recipe, simply search for a keyword by saying 'search keyword or recipe name' where keyword is any ingredient or ingredients related to the recipe ";
+    // var displayText =  "Hi. To find a recipe, simply search for a keyword by saying 'search keyword or recipe name' where keyword is any ingredient or ingredients related to the recipe ";
 
-        return  handlerInput.responseBuilder
-                          .speak(speechText)
-                          .reprompt(speechText)
-                          .withSimpleCard('Recipe World', displayText)
-                          .getResponse();
+    const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
+    invokeParams.Payload = '{ "Path" : "start" ,"Param" : "'+uid+'" }';
+    
+    promise = new Promise((resolve, reject) => {
+          lambda.invoke(invokeParams, function(err, data) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(data.Payload);  }
+          });
+        }); 
+        
+    return promise.then((body) => {
+        var  resp = JSON.parse(body);
+        console.log(resp);
+        return handleResponse(handlerInput, resp);
+      }).catch(function (err) { console.log(err, err.stack);  } );
+        
   },
 };
 
@@ -731,23 +744,23 @@ function handleResponse (handlerInput , resp) {
                             .reprompt(resp.Verbal)
                             .addDirective(ingredient(resp.Header,resp.SubHdr, resp.List))
                             .getResponse();
-       } else if (resp.Type === "Tripple") { 
-          const tripple = require('APL/tripple3.js');
+       } else if (resp.Type.indexOf("Tripple") === 0) { //resp.Type === "Tripple") { 
+          const tripple = require('APL/'+resp.Type+'.js'); //const tripple = require('APL/tripple3.js');
           const speakcmd = require('APL/speakcmd.js');
           return  handlerInput.responseBuilder
                             .reprompt(resp.Verbal)
                             .addDirective(tripple(resp.Header,resp.SubHdr, resp.ListA, resp.ListB, resp.ListC, resp.Verbal, resp.Text))
                             .addDirective(speakcmd())
                             .getResponse();  
-       } else if (resp.Type === "Tripple2") { 
-          const tripple = require('APL/tripple2.js');
-          const speakcmd = require('APL/speakcmd.js');
-          return  handlerInput.responseBuilder
-                            .speak("here in tripple")
-                            .reprompt(resp.Verbal)
-                            .addDirective(tripple(resp.Header,resp.SubHdr, resp.ListA, resp.ListB, resp.ListC, resp.Verbal, resp.Text))
-                            .addDirective(speakcmd())
-                            .getResponse(); 
+      // } else if (resp.Type === "Tripple2") { 
+      //     const tripple = require('APL/tripple2.js');
+      //     const speakcmd = require('APL/speakcmd.js');
+      //     return  handlerInput.responseBuilder
+      //                       .speak("here in tripple")
+      //                       .reprompt(resp.Verbal)
+      //                       .addDirective(tripple(resp.Header,resp.SubHdr, resp.ListA, resp.ListB, resp.ListC, resp.Verbal, resp.Text))
+      //                       .addDirective(speakcmd())
+      //                       .getResponse(); 
        } else if (resp.Type.indexOf("threaded") === 0 ) { 
           const tripple = require('APL/'+resp.Type+'.js');
           const speakcmd = require('APL/speakcmd.js');

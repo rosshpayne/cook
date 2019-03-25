@@ -808,6 +808,8 @@ func (s *sessCtx) loadBaseRecipe() error {
 								switch el2 {
 								case "form": // depreciated - only alt used now. Still here to support existing
 									b.WriteString(c.String())
+								case "label":
+									b.WriteString(c.label())
 								default:
 									panic(fmt.Errorf(`Error: useC or addtoC tag not followed by "form" or "type" type in AId [%d] [%s]`, p.AId, str))
 								}
@@ -932,14 +934,14 @@ func (s *sessCtx) loadBaseRecipe() error {
 								fmt.Fprintf(&b, "%s", strings.ToLower(p.Ingredient))
 							}
 						case "timeu":
-							fmt.Fprintf(&b, "%2.0f%s", pt.Time, UnitMap[pt.Unit].String(pt))
+							fmt.Fprintf(&b, "%d%s", pt.Time, UnitMap[pt.Unit].String(pt))
 						case "time":
 							context = time
-							fmt.Fprintf(&b, "%2.0f", pt.Time)
+							fmt.Fprintf(&b, "%d", pt.Time)
 						case "tplus":
 							{
 								context = time
-								fmt.Fprintf(&b, "%2.0f", pt.Tplus+pt.Time)
+								fmt.Fprintf(&b, "%d", pt.Tplus+pt.Time)
 							}
 						}
 						tclose += 1

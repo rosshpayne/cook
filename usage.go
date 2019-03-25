@@ -194,7 +194,9 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 
 		}
 		// part
+		fmt.Println("Looking for ", idx)
 		for n := 0; n < len(ptS); n++ {
+			fmt.Println("    n, ptS[n].Part ", n, ptS[n].Part)
 			if ptS[n].Part == idx {
 				return ptS[n].SortK
 			}
@@ -368,6 +370,7 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 	//
 	// append tasks
 	//
+	timerMsg := "Set a timer for %s, and get back to me at that time."
 	for pa := taskctl.start; pa != nil; pa = pa.nextTask {
 		for _, pp := range pa.Task {
 			var thrd int
@@ -381,6 +384,24 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 			pt := taskRecT{PKey: pKey, SortK: i, AId: pa.AId, Type: 'T', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Thread: thrd, MergeThrd: pp.MergeThrd, Division: pp.Division, Part: pa.Part, taskp: pp}
 			ptS = append(ptS, &pt)
 			i++
+			if pp.Timer != nil && pp.Timer.Set {
+				var ts string
+				var msg string
+				if pp.Timer.Time == 0 {
+					ts = fmt.Sprintf("%d%s", pp.Time, UnitMap[pp.Unit].String(pp))
+				} else {
+					ts = fmt.Sprintf("%d%s", pp.Timer.Time, UnitMap[pp.Timer.Unit].String(pp.Timer))
+				}
+				if len(pp.Timer.Msg) > 0 {
+					msg = fmt.Sprintf(pp.Timer.Msg, ts)
+				} else {
+					msg = fmt.Sprintf(timerMsg, ts)
+				}
+				pt := taskRecT{PKey: pKey, SortK: i, AId: pa.AId, Type: 'T', Text: msg, Verbal: msg, Thread: thrd, Division: pp.Division, Part: pa.Part, taskp: pp}
+				ptS = append(ptS, &pt)
+				i++
+			}
+
 		}
 	}
 	// now that we know the size of the list assign End-Of-List field. This approach replaces MaxId[] set stored in Recipe table
@@ -428,10 +449,12 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 	// check there are no unregistered (in recipe) parts/div/threads
 	//
 	for k, _ := range partM {
+		// for each part in Map - which was just populated by scanning across all activities
 		var found bool
 		if k == "nopart_" {
 			continue
 		}
+		// loop through all entries in recipe parts
 		for _, p := range s.parts {
 			if k == p.Index {
 				found = true
@@ -691,7 +714,7 @@ func expandScalableTags(str string) string {
 }
 
 // literal tags are tags in the form : {type:q|u|s|n}
-// where type is "m" for measure or "t" for time
+// where type is "m" for measure or "t" for time or "l" for length
 // literal tags are provided to add flexibility to embed a measurement anywhere beyond what the data
 // model is designed to handle. All tags except m type are non-scalable
 
@@ -729,7 +752,7 @@ func expandLiteralTags(str string) string {
 		tag := strings.Split(strings.ToLower(str[topen+1:tclose]), ":")
 		switch tag[0] {
 		case "m":
-			// measure literal
+			// weight measure literal - needs to be scaled
 			pt := strings.Split(strings.ToLower(tag[1]), "|")
 			nm = &MeasureT{Num: pt[3], Quantity: pt[0], Size: pt[2], Unit: pt[1]}
 			scaleF = savedScale
@@ -737,6 +760,10 @@ func expandLiteralTags(str string) string {
 			scaleF = 1.0
 		case "t":
 			// time literal
+			pt := strings.Split(strings.ToLower(tag[1]), "|")
+			b.WriteString(pt[0] + UnitMap[pt[1]].String())
+		case "l":
+			// length literal
 			pt := strings.Split(strings.ToLower(tag[1]), "|")
 			b.WriteString(pt[0] + UnitMap[pt[1]].String())
 		default:

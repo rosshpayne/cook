@@ -106,6 +106,18 @@ type MeasureT struct {
 	nzQty float64
 }
 
+// "timer" : { "M" :  {
+//                                             "set" : { "BOOL" : true },
+//                                             "time" :  { "N" : "50" },
+//                                             "unit" : { "S" : "min" },
+//                                             "msg" : { "S" : "Set a tim
+type TimerT struct {
+	Set  bool   `json:"set"`
+	Time int    `json:"time"`
+	Unit string `json:"unit"`
+	Msg  string `json:"msg"`
+}
+
 type PerformT struct {
 	//	type      PrepTask q // Prep or Task Activity
 	id          int       // order as appears in Activity JSON
@@ -115,8 +127,8 @@ type PerformT struct {
 	verbal      string    // has {tag} replaced with actual activity attribute
 	Label       string    `json:"label"`
 	IngredientS []string  `json:"ingrd"` // case where ingredient prepping produces other ingredients e.g. separating eggs
-	Time        float32   `json:"time"`
-	Tplus       float32   `json:"tPlus"`
+	Time        int       `json:"time"`
+	Tplus       int       `json:"tPlus"`
 	Unit        string    `json:"unit"`
 	UseDevice   *DeviceT  `json:"useD"`
 	Measure     *MeasureT `json:"measure"` // used by those tasks that use some portion of the ingredient.
@@ -131,6 +143,8 @@ type PerformT struct {
 	SourceC  []string `json:"sourceC"`
 	Parallel bool     `json:"parallel"`
 	Link     bool     `json:"link"`
+	//
+	Timer *TimerT `json:"timer"`
 	//
 	AddToCp  []*Container // it is thought that only one addToC will be used per activity - but lets be flexible.
 	UseCp    []*Container // ---"---
@@ -216,6 +230,13 @@ func (t *PerformT) UPlural() bool {
 	}
 }
 
+func (t *TimerT) UPlural() bool {
+	if t.Time > 1 {
+		return true
+	} else {
+		return false
+	}
+}
 func (d *DeviceT) String() string {
 	var s string
 	if len(d.Temp) > 0 {
@@ -273,6 +294,16 @@ func (c *Container) String() string {
 		}
 	}
 	return b.String()
+}
+
+func (c *Container) label() string {
+	if len(c.Label) > 0 {
+		return c.Label
+	}
+	if len(c.Slabel) > 0 {
+		return c.Slabel
+	}
+	return c.Type
 }
 
 func (m *MeasureCT) Shape_() string {
