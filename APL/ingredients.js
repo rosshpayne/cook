@@ -1,3 +1,5 @@
+
+
 module.exports = (header, subhdr, data) => { return {
     type: 'Alexa.Presentation.APL.RenderDocument',
     token: 'splash-screen',
@@ -38,7 +40,7 @@ module.exports = (header, subhdr, data) => { return {
               type: "AlexaHeader",
               headerTitle: header,
               headerSubtitle: subhdr,
-              headerBackgroundColor: "red",
+              headerBackgroundColor: "blue",
               headerBackButton: true,
               headerNavigationAction: "backButton"
               },
