@@ -54,12 +54,12 @@ type mRecipeT struct {
 }
 
 type taskRecT struct {
-	PKey     string  `json:"PKey"`  // R-[BkId]
-	SortK    int     `json:"SortK"` // monotonically increasing - task at which user is upto in recipe
-	AId      int     `json:"AId"`   // Activity Id
-	Type     byte    `json:"Type"`
-	time     float32 // all Linked preps sum time components into this field
-	Division string  `json:"Div"` // divide tasks/instructs into divisions, e.g. day-before, on-day
+	PKey     string `json:"PKey"`  // R-[BkId]
+	SortK    int    `json:"SortK"` // monotonically increasing - task at which user is upto in recipe
+	AId      int    `json:"AId"`   // Activity Id
+	Type     byte   `json:"Type"`
+	time     int    // all Linked preps sum time components into this field
+	Division string `json:"Div"` // divide tasks/instructs into divisions, e.g. day-before, on-day
 	//Thread    string  `json:"Thrd"` // instruction thread
 	Thread    int    `json:"Thrd"`
 	Text      string `json:"Text"` // all Linked preps combined text into this field
@@ -255,9 +255,11 @@ func (s *sessCtx) cacheInstructions(sId ...int) (Threads, error) {
 			var thrdCnt int
 			threads = make(Threads, 1)
 			for thread, id := 0, v.Start; id != -1; id = ptR[id-1].Next {
-				if ptR[id].Thread > 0 {
-					if ptR[id].Thread > thread {
-						thread = ptR[id].Thread
+				i := id - 1
+				//fmt.Println("id = ", id)
+				if ptR[i].Thread > 0 {
+					if ptR[i].Thread > thread {
+						thread = ptR[i].Thread
 						thrdCnt++
 					}
 				}
@@ -306,56 +308,6 @@ type containerT struct {
 	Text   string `json:"txt"`
 }
 
-// func (s *sessCtx) getContainers() []containerT {
-
-// 	// fetch all container rows associated with a recipe
-// 	// PKey = C-[BkId]-[RId]
-// 	keyC := expression.KeyEqual(expression.Key("PKey"), expression.Value("C-"+s.pkey))
-// 	expr, err := expression.NewBuilder().WithKeyCondition(keyC).Build()
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	//
-// 	input := &dynamodb.QueryInput{
-// 		KeyConditionExpression:    expr.KeyCondition(),
-// 		FilterExpression:          expr.Filter(),
-// 		ExpressionAttributeNames:  expr.Names(),
-// 		ExpressionAttributeValues: expr.Values(),
-// 	}
-// 	input = input.SetTableName("Recipe").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
-// 	//
-// 	result, err := s.dynamodbSvc.Query(input)
-// 	if err != nil {
-// 		if aerr, ok := err.(awserr.Error); ok {
-// 			switch aerr.Code() {
-// 			case dynamodb.ErrCodeProvisionedThroughputExceededException:
-// 				fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
-// 			case dynamodb.ErrCodeResourceNotFoundException:
-// 				fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
-// 			// case dynamodb.ErrCodeRequestLimitExceeded:
-// 			// 	fmt.Println(dynamodb.ErrCodeRequestLimitExceeded, aerr.Error())
-// 			case dynamodb.ErrCodeInternalServerError:
-// 				fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
-// 			default:
-// 				fmt.Println(aerr.Error())
-// 			}
-// 			panic(aerr.Error())
-// 		} else {
-// 			// Print the error, cast err to awserr.Error to get the Code and
-// 			// Message from an error.
-// 			panic(err.Error())
-// 		}
-// 		panic(fmt.Errorf("%s: %s", "Error in GetItem of getContainerRecById", err.Error()))
-// 	}
-
-// 	recS := make([]containerT, int(*result.Count))
-// 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &recS)
-// 	if err != nil {
-// 		panic(fmt.Errorf("Error: %s [%s] err", "in UnmarshalListMaps of getContainers ", s.reqRName, err.Error()))
-// 	}
-// 	return recS
-// }
-
 func (s *sessCtx) getScaleContainer() (Container, error) {
 
 	// return a single scale container (containers that determine quantity of ingredients)
@@ -401,6 +353,7 @@ func (s *sessCtx) getScaleContainer() (Container, error) {
 		panic(fmt.Errorf("%s: %s", "Error in GetItem of getContainerRecById", err.Error()))
 	}
 	if len(result.Items) == 0 {
+		fmt.Println("in getScaleContainer - no records found.")
 		return Container{}, nil
 	}
 	recS := make([]Container, int(*result.Count))
@@ -408,55 +361,9 @@ func (s *sessCtx) getScaleContainer() (Container, error) {
 	if err != nil {
 		return Container{}, fmt.Errorf("Error: %s [%s] err", "in UnmarshalListMaps of getScaleContainer ", s.reqRName, err.Error())
 	}
+	fmt.Printf("in getScaleContainer - recS  %#v\n", recS[0])
 	return recS[0], nil
 }
-
-// func (s *sessCtx) getContainerRecById() (alexaDialog, error) {
-// 	type pKey struct {
-// 		PKey  string
-// 		SortK float64
-// 	}
-// 	ctrec := ctRec{}
-// 	pkey := pKey{PKey: "C-" + s.pkey, SortK: float64(s.objRecId)}
-// 	av, err := dynamodbattribute.MarshalMap(&pkey)
-// 	if err != nil {
-// 		return ctrec, fmt.Errorf("%s: %s", "Error in MarshalMap of getContainerRecById", err.Error())
-// 	}
-// 	input := &dynamodb.GetItemInput{
-// 		Key:       av,
-// 		TableName: aws.String("Recipe"),
-// 	}
-// 	result, err := s.dynamodbSvc.GetItem(input)
-// 	if err != nil {
-// 		if aerr, ok := err.(awserr.Error); ok {
-// 			switch aerr.Code() {
-// 			case dynamodb.ErrCodeProvisionedThroughputExceededException:
-// 				fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
-// 			case dynamodb.ErrCodeResourceNotFoundException:
-// 				fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
-// 			//case dynamodb.ErrCodeRequestLimitExceeded:
-// 			//	fmt.Println(dynamodb.ErrCodeRequestLimitExceeded, aerr.Error())
-// 			case dynamodb.ErrCodeInternalServerError:
-// 				fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
-// 			default:
-// 				fmt.Println(aerr.Error())
-// 			}
-// 		} else {
-// 			// Print the error, cast err to awserr.Error to get the Code and
-// 			// Message from an error.
-// 			fmt.Println(err.Error())
-// 		}
-// 		return ctrec, fmt.Errorf("%s: %s", "Error in GetItem of getContainerRecById", err.Error())
-// 	}
-// 	if len(result.Item) == 0 {
-// 		return ctrec, fmt.Errorf("%s", "No data Found in GetItem in getContainerRecById")
-// 	}
-// 	err = dynamodbattribute.UnmarshalMap(result.Item, &ctrec)
-// 	if err != nil {
-// 		return ctrec, fmt.Errorf("%s: %s", "Error in UnmarshalMap of getContainerRecById", err.Error())
-// 	}
-// 	return ctrec, nil
-// }
 
 type indexRecipeT struct {
 	PKey     string
@@ -809,7 +716,6 @@ func (a Activities) generateAndSaveTasks(s *sessCtx) (prepTaskS, error) {
 		if err != nil {
 			return prepTaskS{}, fmt.Errorf("failed to put Record to DynamoDB, %v", err)
 		}
-		//time.Sleep(50 * time.Millisecond)
 	}
 	return ptS, nil
 }
@@ -941,7 +847,7 @@ func (s *sessCtx) recipeRSearch() (*RecipeT, error) {
 	s.vmsg = "sFound " + s.reqRName + " in " + s.reqBkName + " by " + s.authors
 	s.vmsg += `What would you like to list?. Say "list containers" or "List Ingredients" or "start Cooking" or "cancel"`
 	s.recipe = rec
-	fmt.Println("assign Recipe Parts: ", len(rec.Part))
+	//fmt.Printf("assign Recipe Parts: %d, %#v\n\n", len(rec.Part), rec.Part)
 	s.parts = rec.Part
 	// add division if any to parts
 	for _, v := range s.parts {

@@ -185,7 +185,8 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 
 	firstInstructon := func(idx string) int {
 		// no-part part
-		if idx == "_" {
+		fmt.Println("Looking for ", idx)
+		if idx == "nopart_" {
 			for n := 0; n < len(ptS); n++ {
 				if len(ptS[n].Part) == 0 {
 					return ptS[n].SortK
@@ -194,9 +195,7 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 
 		}
 		// part
-		fmt.Println("Looking for ", idx)
 		for n := 0; n < len(ptS); n++ {
-			fmt.Println("    n, ptS[n].Part ", n, ptS[n].Part)
 			if ptS[n].Part == idx {
 				return ptS[n].SortK
 			}
@@ -466,6 +465,14 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 		}
 	}
 	//
+	// check to see if recipe not already assigned part start values
+	//  this fuction has two entry points, one from loadBaseRecipe and the other loadBaseContainers
+	//
+	for i := 0; i < len(s.parts); i++ {
+		if s.parts[i].Index == "nopart_" {
+			return ptS
+		}
+	}
 	// assign recipe.Start of first SortK value for a part.
 	//
 	Parts := s.parts
@@ -475,7 +482,7 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 	// prepend no-part part to Parts
 	if _, ok := partM["nopart_"]; ok {
 		var rpart []PartT
-		rpart = []PartT{PartT{Index: "nopart_", Title: "Main", Start: firstInstructon("_")}}
+		rpart = []PartT{PartT{Index: "nopart_", Title: "Main", Start: firstInstructon("nopart_")}}
 		rpart = append(rpart, Parts...)
 		s.parts = rpart
 	}

@@ -744,6 +744,13 @@ function handleResponse (handlerInput , resp) {
                             .reprompt(resp.Verbal)
                             .addDirective(ingredient(resp.Header,resp.SubHdr, resp.List))
                             .getResponse();
+        } else if (resp.Type === "PartList") {
+          const search = require('APL/PartList.js');
+          return  handlerInput.responseBuilder
+                          .speak(resp.Verbal)
+                          .reprompt(resp.Text)
+                          .addDirective(search(resp.BackBtn, resp.Header, resp.SubHdr, resp.Height, resp.List))
+                          .getResponse();
        } else if (resp.Type.indexOf("Tripple") === 0) { //resp.Type === "Tripple") { 
           const tripple = require('APL/'+resp.Type+'.js'); //const tripple = require('APL/tripple3.js');
           const speakcmd = require('APL/speakcmd.js');

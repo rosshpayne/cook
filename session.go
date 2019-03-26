@@ -206,13 +206,13 @@ func (s *sessCtx) setState(ls *stateRec) {
 	}
 	if len(ls.InstructionData) > 0 {
 		dd := ls.InstructionData
-		if s.peol == 0 && len(dd) > 0 {
-			s.peol = dd[ls.CThread].Instructions[dd[ls.CThread].Id-1].PEOL //[ls.RecId[objectMap[ls.Obj]]].PEOL
-		}
-		if s.pid > 0 && len(dd) > 0 {
-			s.pid = dd[ls.CThread].Instructions[dd[ls.CThread].Id-1].PID
-		}
-		if ls.EOL > 0 && len(dd) > 0 {
+		// if s.peol == 0 && len(dd) > 0 && dd[ls.CThread].Id > 0 {
+		// 	s.peol = dd[ls.CThread].Instructions[dd[ls.CThread].Id-1].PEOL //[ls.RecId[objectMap[ls.Obj]]].PEOL
+		// }
+		// if s.pid > 0 && len(dd) > 0 && dd[ls.CThread].Id > 0 {
+		// 	s.pid = dd[ls.CThread].Instructions[dd[ls.CThread].Id-1].PID
+		// }
+		if ls.EOL > 0 && len(dd) > 0 && dd[ls.CThread].Id > 0 {
 			s.eol = dd[ls.CThread].Instructions[dd[ls.CThread].Id-1].EOL
 		}
 		s.displayData = dd

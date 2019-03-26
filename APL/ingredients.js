@@ -1,5 +1,3 @@
-
-
 module.exports = (header, subhdr, data) => { return {
     type: 'Alexa.Presentation.APL.RenderDocument',
     token: 'splash-screen',
@@ -59,7 +57,7 @@ module.exports = (header, subhdr, data) => { return {
                     grow: 0,
                     shrink: 1,
                     spacing: 4,
-                    fontSize: "30dp"
+                    fontSize: "24dp"
                   }
               },
               {

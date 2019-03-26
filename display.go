@@ -21,7 +21,7 @@ type PartT struct {
 	Type_  string `json:"Typ"`   // either Part, Division or Thread
 	Title  string `json:"Title"` // long name which is printed out in the ingredients listing
 	Start  int    `json:"Start"` // SortK value in T-?-? that has first instruction for the partition
-	InvisI bool   `json:"InvsI"` // invisible in Instruction menu. Applies to Part but not forced.
+	InvisI bool   `json:"InvsI"` // portion after "|" invisible in Ingredient menu. Applies to Part but not forced.
 }
 type PartS []PartT
 
@@ -87,6 +87,7 @@ type RespEvent struct {
 	SubHdr   string        `json:"SubHdr"`
 	Text     string        `json:"Text"`
 	Verbal   string        `json:"Verbal"`
+	Height   int           `json:"Height"`
 	Error    string        `json:"Error"`
 	List     []DisplayItem `json:"List"` // recipe data: id|Title1|subTitle1|SubTitle2|Text
 	ListA    []DisplayItem `json:"ListA"`
@@ -107,12 +108,13 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 
 	var (
 		passErr string
-		eol     string
-		peol    string
-		part    string
-		pid     string
-		hdr     string
-		subh    string
+		p       []string
+		//eol     int
+		peol int
+		part string
+		//pid     string
+		hdr  string
+		subh string
 	)
 
 	getLongName := func(index string) string {
@@ -198,7 +200,9 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 	}
 	//
 	t[s.cThread].Id = id
+	//rec := &t[s.cThread].Instructions[id-1]
 	fmt.Println("cThread, id = ", s.cThread, id)
+	//eol := t[s.cThread].EOL
 	//
 	// generate display
 	//
@@ -214,13 +218,22 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 	}
 	if len(s.part) > 0 {
 		if s.part == CompleteRecipe_ {
-			subh = "Cooking Instructions  " + "  -  " + strconv.Itoa(id) + " of " + eol
+			p = strings.Split(s.part, "|")
+			peol = len(t[s.cThread].Instructions)
+			hdr += "  -  " + strings.ToUpper(p[0])
+			subh = "Cooking Instructions  " + "  -  " + strconv.Itoa(id) + " of " + strconv.Itoa(peol)
 		} else {
-			hdr += " - " + s.part
-			subh = "Cooking Instructions " + "  -  " + pid + " of " + peol
+			p = strings.Split(s.part, "|")
+			hdr += "  -  " + strings.ToUpper(p[0])
+			peol := len(t[s.cThread].Instructions)
+			subh = "Cooking Instructions " + "  -  " + strconv.Itoa(id) + " of " + strconv.Itoa(peol)
 		}
 	} else {
-		subh = "Cooking Instructions  -  " + strconv.Itoa(id) + " of " + eol
+		// p = getLongName(rec.part)
+		// p = strings.Split(s.part, "|")
+		// hdr += "  -  " + strings.ToUpper(p[0])
+		eol := len(t[s.cThread].Instructions)
+		subh = "Cooking Instructions  -  " + strconv.Itoa(id) + " of " + strconv.Itoa(eol)
 	}
 	fmt.Println("switch on thread: ", t[s.cThread].Thread)
 	//
@@ -230,20 +243,11 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		var rows int
 
 		list := make([]DisplayItem, 3)
-
 		for k, n, ir := 2, t[thread].Id-1, t[thread].Instructions; n > 0 && rows < 3; rows++ {
 			list[k] = DisplayItem{Title: ir[n-1].Text}
 			n--
 			k--
 		}
-		// if len(list) == 0 {
-		// 	list = []DisplayItem{DisplayItem{Title: " "}}
-		// }
-		// list2 := make([]DisplayItem, 3)
-		// for n, i := 2, len(list)-1; i > -1; i-- {
-		// 	list2[n] = list[i]
-		// 	n--
-		// }
 
 		return list
 	}
@@ -298,11 +302,12 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		listC := SectC(tc, 6, false)
 		//
 		rec := &t[s.cThread].Instructions[id-1]
-		eol = strconv.Itoa(rec.EOL)
-		peol = strconv.Itoa(rec.PEOL)
+		// eol = strconv.Itoa(rec.EOL)
+		// peol = strconv.Itoa(rec.PEOL)
 		part = getLongName(rec.Part)
-		pid = strconv.Itoa(rec.PID)
-		s.eol, s.peol, s.part, s.pid = rec.EOL, rec.PEOL, part, rec.PID
+		// pid = strconv.Itoa(rec.PID)
+		//s.eol, s.peol, s.part, s.pid = rec.EOL, rec.PEOL, part, rec.PID
+		s.part = part
 		type_ := "Tripple"
 		// if len(t[s.cThread].Instructions[id-1].Text) > 80 {
 		// 	type_ += "L" // larger text bounding box
@@ -357,11 +362,12 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		// rec is the Instruction record, read from the Thread which is held in state.
 		//
 		rec := &t[s.cThread].Instructions[id-1]
-		eol = strconv.Itoa(rec.EOL)
-		peol = strconv.Itoa(rec.PEOL)
+		// eol = strconv.Itoa(rec.EOL)
+		// peol = strconv.Itoa(rec.PEOL)
 		part = getLongName(rec.Part)
-		pid = strconv.Itoa(rec.PID)
-		s.eol, s.peol, s.part, s.pid = rec.EOL, rec.PEOL, part, rec.PID
+		// pid = strconv.Itoa(rec.PID)
+		//s.eol, s.peol, s.part, s.pid = rec.EOL, rec.PEOL, part, rec.PID
+		s.part = part
 		fmt.Println("4 cThread, id = ", s.cThread, id)
 
 		// if len(rec.Text) > 80 {
@@ -426,7 +432,7 @@ func (p PartS) GenDisplay(s *sessCtx) RespEvent {
 	list[0] = DisplayItem{Id: "1", Title: CompleteRecipe_}
 	for _, v := range p {
 		// ignore threads and invisible parts
-		if v.Type_ == "Thrd" || v.InvisI {
+		if v.Type_ == "Thrd" {
 			continue
 		}
 		id := strconv.Itoa(k + 2)
@@ -438,14 +444,16 @@ func (p PartS) GenDisplay(s *sessCtx) RespEvent {
 		}
 		k++
 	}
-	return RespEvent{Type: "Search", BackBtn: true, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: list}
+	return RespEvent{Type: "PartList", BackBtn: true, Header: hdr, SubHdr: subh, Height: 90, Text: s.vmsg, Verbal: s.dmsg, List: list}
 
 }
 
 func (i IngredientT) GenDisplay(s *sessCtx) RespEvent {
 
-	var list []DisplayItem
-	var subhdr string
+	var (
+		list   []DisplayItem
+		subhdr string
+	)
 	fmt.Println("HEre in GenDisplay for ingredients. ScaleF = ", scaleF)
 	for _, v := range strings.Split(string(i), "\n") {
 		item := DisplayItem{Title: v}
@@ -566,6 +574,7 @@ func (o ObjMenu) GenDisplay(s *sessCtx) RespEvent {
 		size := 4
 		if len(ct.Cid) == 0 {
 			// recipe has no scalable container
+			fmt.Println("*** no scalable container found.....")
 			noScale = true
 			size = 3
 		} else {

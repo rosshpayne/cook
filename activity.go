@@ -858,8 +858,23 @@ func (as Activities) String(r *RecipeT) string {
 	}
 	// r.Part is an ordered list of recipe parts
 	for _, v := range r.Part {
+
 		if len(v.Title) > 0 {
-			fmt.Fprintf(&b, "\n%s\n\n", strings.ToUpper(v.Title))
+			var l []string
+			var p string
+			l = strings.Split(v.Title, "|")
+			switch len(l) {
+			case 1:
+				p = strings.ToUpper(l[0])
+			default:
+				// display second string or not
+				if v.InvisI {
+					p = strings.ToUpper(l[0])
+				} else {
+					p = strings.ToUpper(l[0]) + "    " + strings.ToLower(l[1])
+				}
+			}
+			fmt.Fprintf(&b, "\n%s\n\n", p)
 		}
 		for _, a := range partM[v.Index] {
 			if s := a.String(); len(s) > 0 {

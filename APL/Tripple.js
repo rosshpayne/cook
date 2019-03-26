@@ -73,7 +73,7 @@ module.exports = (header, subhdr, dataA, dataB, dataC, verbal, text ) => { retur
                         },
                         {
                         type: "Frame",
-                        borderColor: "green",
+                        borderColor: "blue",
                         borderWidth: 2,
                         height: "14vh",  
                         item: {

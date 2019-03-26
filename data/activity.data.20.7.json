@@ -168,6 +168,7 @@
                                 },
                                 { "M" : { 
                                   "Idx" : { "S" : "F"},
+                                  "InvsI" : {"BOOL":true},
                                   "Title" : { "S" : "FILLING|(Requires both non-optional parts to be completed first)" }}
                                 }
                                 ]
@@ -227,7 +228,7 @@
                 "task" : { "L" : [ 
                                 { "M" :  {
                                   "txt" : { "S" : "Lay {measure} of {ingrd} on a {useD} and lightly brush each side with the egg white." },
-                                  "say" : { "S" : "We are about to crystallize the rosemary sprigs for garnishing. Start by laying {measure} of {ingrd} on a chopping board." },
+                                  "say" : { "S" : "Lay {measure} of {ingrd} on a {useD} and lightly brush each side with the egg white." },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" }, 
