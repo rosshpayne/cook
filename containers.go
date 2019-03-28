@@ -30,13 +30,13 @@ type Container struct {
 	AltLabel   string     `json:"altLabel"`
 	AltMeasure *MeasureCT `json:"altMeasure"`
 	// non-dynamo
-	start    int     // first id in recipe tasks where container is used
-	last     int     // last id in recipe tasks where container is sourced from or recipe is complete.
-	reused   int     // links containers that can be the same physical container.
-	Activity []taskT // slice of tasks (Prep and Task activites) associated with container
+	start      int     // first id in recipe tasks where container is used
+	last       int     // last id in recipe tasks where container is sourced from or recipe is complete.
+	physicalId int     // each container is assigned a physical container id : 1..n
+	Activity   []taskT // slice of tasks (Prep and Task activites) associated with container
 }
 
-type ContainerMap map[string]*Container
+type ContainerMap map[string]*Container // key: container.Cid e.g. CakeTin
 
 var ContainerM ContainerMap
 
@@ -209,7 +209,7 @@ func (s *sessCtx) loadBaseContainers() (ContainerS, error) {
 		i++
 	}
 	//
-	// link Prep Activities - prepctl is a package variable.
+	// link Prep Activities - prepctl is a package variable. - emulates a Go slice structure
 	//
 	for i, v := 0, &ActivityS[0]; v != nil; v = v.next {
 		if v.Prep != nil {
@@ -336,32 +336,36 @@ func (s *sessCtx) loadBaseContainers() (ContainerS, error) {
 						// ContainerM contains registered containers
 						cId, ok := ContainerM[strings.TrimSpace(p.AddToC[i])]
 						if !ok {
-							// ContainerSAM contains single activity containers
-							// format: <SA?>.<purpose>
+							// not a registered container. Now check if its a SAM container.
 							sac := strings.Split(strings.TrimSpace(p.AddToC[i]), ".")
 							p.AddToC[i] = sac[0]
 							if cId, ok = ContainerSAM[sac[0]]; !ok {
-								// is not a single ingredient container or not a registered container
+								// is not a single activity container or not a registered container
 								fmt.Printf("Error:   Container [%s] not found for %s %d\n", strings.TrimSpace(p.AddToC[i]), ap.Label, ap.AId)
 								continue
 							}
-							// Single-Activity-Containers are not pre-configured by the user into the Container repo - to make life easier.
+							// Single-Activity-Containers are not pre-configured by the user - to make life easier.
 							// dynamically create a container with a new Cid, and add to ContainerM and update all references to it.
 							cs := sac[0] // original Single-activity container name
 							c := new(Container)
+							// append Aid to make unique name
 							c.Cid = p.AddToC[i] + "-" + strconv.Itoa(ap.AId)
-							switch len(sac) {
-							case 1, 2:
-								c.Contains = ap.Ingredient
-							default:
-								c.Contains = sac[2] // prefer to use label as its bit more informative for container listing.
-							}
 							c.Measure = cId.Measure
 							c.Label = cId.Label
 							c.Type = cId.Type
+							switch len(cId.Contains) {
+							case 0:
+								c.Contains = ap.Ingredient
+							default:
+								c.Contains = cId.Contains // use label attached to SAM
+							}
 							switch len(sac) {
 							case 1:
-								c.Purpose = cId.Purpose
+								if len(cId.Purpose) > 0 {
+									c.Purpose = cId.Purpose
+								} else {
+									c.Purpose = "holds"
+								}
 							default:
 								c.Purpose = sac[1]
 							}
@@ -369,7 +373,7 @@ func (s *sessCtx) loadBaseContainers() (ContainerS, error) {
 							ContainerM[c.Cid] = c
 							// update container id in activity
 							p.AddToC[i] = c.Cid
-							// search for other references and change its name
+							// search for other references in prep/tasks within the same activity and change its name
 							if len(ap.Task) > 0 {
 								for _, t := range ap.Task {
 									for i := 0; i < len(t.SourceC); i++ {
@@ -395,10 +399,10 @@ func (s *sessCtx) loadBaseContainers() (ContainerS, error) {
 							cId = c
 						}
 						// activity to container edge
-						p.AddToCp = append(p.AddToCp, cId)
-						p.AllCp = append(p.AllCp, cId)
+						p.addToCp = append(p.addToCp, cId)
+						p.allCp = append(p.allCp, cId)
 						// container to activity edge
-						associatedTask := taskT{Type: l, Activityp: ap, Idx: idx}
+						associatedTask := taskT{Type: l, Activityp: ap, Idx: idx} // task that uses the container - don't actually make use of this (?)
 						cId.Activity = append(cId.Activity, associatedTask)
 					}
 				}
@@ -421,18 +425,22 @@ func (s *sessCtx) loadBaseContainers() (ContainerS, error) {
 							cs := sac[0] // original non-activity-specific container name
 							c := new(Container)
 							c.Cid = p.UseC[i] + "-" + strconv.Itoa(ap.AId)
-							switch len(sac) {
-							case 0, 1:
-								c.Contains = ap.Ingredient
-							default:
-								c.Contains = sac[2] // prefer to use label as its bit more informative for container listing.
-							}
 							c.Measure = cId.Measure
 							c.Label = cId.Label
 							c.Type = cId.Type
+							switch len(cId.Contains) {
+							case 0:
+								c.Contains = ap.Ingredient
+							default:
+								c.Contains = cId.Contains // use label attached to SAM
+							}
 							switch len(sac) {
-							case 1, 2:
-								c.Purpose = cId.Purpose
+							case 1:
+								if len(cId.Purpose) > 0 {
+									c.Purpose = cId.Purpose
+								} else {
+									c.Purpose = "holds"
+								}
 							default:
 								c.Purpose = sac[1]
 							}
@@ -465,8 +473,8 @@ func (s *sessCtx) loadBaseContainers() (ContainerS, error) {
 							}
 							cId = c
 						}
-						p.UseCp = append(p.UseCp, cId)
-						p.AllCp = append(p.AllCp, cId)
+						p.useCp = append(p.useCp, cId)
+						p.allCp = append(p.allCp, cId)
 						associatedTask := taskT{Type: l, Activityp: ap, Idx: idx}
 						cId.Activity = append(cId.Activity, associatedTask)
 					}
@@ -489,18 +497,22 @@ func (s *sessCtx) loadBaseContainers() (ContainerS, error) {
 							cs := sac[0] // original non-activity-specific container name
 							c := new(Container)
 							c.Cid = p.SourceC[i] + "-" + strconv.Itoa(ap.AId)
-							switch len(sac) {
-							case 1, 2:
-								c.Contains = ap.Ingredient
-							default:
-								c.Contains = sac[2] // prefer to use label as its bit more informative for container listing.
-							}
 							c.Measure = cId.Measure
 							c.Label = cId.Label
 							c.Type = cId.Type
+							switch len(cId.Contains) {
+							case 0:
+								c.Contains = ap.Ingredient
+							default:
+								c.Contains = cId.Contains // use label attached to SAM
+							}
 							switch len(sac) {
 							case 1:
-								c.Purpose = cId.Purpose
+								if len(cId.Purpose) > 0 {
+									c.Purpose = cId.Purpose
+								} else {
+									c.Purpose = "holds"
+								}
 							default:
 								c.Purpose = sac[1]
 							}
@@ -533,8 +545,8 @@ func (s *sessCtx) loadBaseContainers() (ContainerS, error) {
 							}
 							cId = c
 						}
-						p.SourceCp = append(p.SourceCp, cId)
-						p.AllCp = append(p.AllCp, cId)
+						p.sourceCp = append(p.sourceCp, cId)
+						p.allCp = append(p.allCp, cId)
 						associatedTask := taskT{Type: l, Activityp: ap, Idx: idx}
 						cId.Activity = append(cId.Activity, associatedTask)
 					}
@@ -544,113 +556,16 @@ func (s *sessCtx) loadBaseContainers() (ContainerS, error) {
 	}
 
 	// check container is associated with an activity. if not delete from container map.
-	for _, c := range ContainerM {
-		fmt.Printf("Container: Id: [%s]  Type: [%s]  Size:[%s]  Label: [%s] \n", c.Cid, c.Type, c.Measure.Size, c.Label)
-	}
+
 	for _, c := range ContainerM {
 		if len(c.Activity) == 0 {
 			delete(ContainerM, c.Cid)
 		}
 	}
-
-	// populate prep/task id
-	for i, p := 0, activityStart; p != nil; p = p.next {
-		for _, pp := range p.Prep {
-			i++
-			pp.id = i
-		}
-		for _, pp := range p.Task {
-			i++
-			pp.id = i
-		}
+	for _, c := range ContainerM {
+		fmt.Printf("Container: Id: [%s]  Type: [%s]  Size:[%s]  Label: [%s] \n", c.Cid, c.Type, c.Measure.Size, c.Label)
 	}
-	//
-	// populate device map using device type as key. Maintains latest attribute values for DeviceT which
-	// . can be referenced at any point in txt using {device.<deviceType>.<attribute>}
-	//
-	var ovenOn bool
-	DeviceM := make(DeviceMap)
-
-	for p := activityStart; p != nil; p = p.next {
-		for _, pp := range p.Prep {
-			if pp.UseDevice != nil {
-				dt := *pp.UseDevice
-				if dt.Type == "oven" {
-					ovenOn = true
-				}
-				typ := strings.ToLower(dt.Type)
-				if dt_, ok := DeviceM[typ]; ok {
-					// only preserve attributes that have values
-					// NB. DeviceM value is a struct not *struct
-					ppU := pp.UseDevice
-					if len(ppU.Set) > 0 {
-						dt_.Set = ppU.Set
-					}
-					if len(ppU.Purpose) > 0 {
-						dt_.Purpose = ppU.Purpose
-					}
-					if len(ppU.Alternate) > 0 {
-						dt_.Alternate = ppU.Alternate
-					}
-					if len(ppU.Temp) > 0 {
-						dt_.Temp = ppU.Temp
-					}
-					if len(ppU.Unit) > 0 {
-						dt_.Unit = ppU.Unit
-					}
-					DeviceM[typ] = dt_
-					dt = dt_
-				} else {
-					DeviceM[typ] = dt
-				}
-				// preserve state of Device for the prep/task id
-				key := strconv.Itoa(pp.id) + "-" + dt.Type
-				DeviceM[key] = dt
-			}
-		}
-		for _, pp := range p.Task {
-			if ovenOn {
-				key := strconv.Itoa(pp.id) + "-" + "oven"
-				DeviceM[key] = DeviceM["oven"]
-			}
-			if pp.UseDevice != nil {
-				dt := *pp.UseDevice
-				if dt.Type == "oven" {
-					ovenOn = true
-				}
-				typ := strings.ToLower(dt.Type)
-				if dt_, ok := DeviceM[typ]; ok {
-					// only preserve attributes that have values
-					// NB. DeviceM value is a struct not *struct
-					ppU := pp.UseDevice
-					if len(ppU.Set) > 0 {
-						dt_.Set = ppU.Set
-					}
-					if len(ppU.Purpose) > 0 {
-						dt_.Purpose = ppU.Purpose
-					}
-					if len(ppU.Alternate) > 0 {
-						dt_.Alternate = ppU.Alternate
-					}
-					if len(ppU.Temp) > 0 {
-						dt_.Temp = ppU.Temp
-					}
-					if len(ppU.Unit) > 0 {
-						dt_.Unit = ppU.Unit
-					}
-					DeviceM[typ] = dt_
-					dt = dt_
-				} else {
-					DeviceM[typ] = dt
-				}
-				// preserve state of Device for the Activity
-				key := strconv.Itoa(pp.id) + "-" + dt.Type
-				DeviceM[key] = dt
-			}
-		}
-	}
-	//
-	ptS := ActivityS.GenerateTasks("T-"+s.pkey, s.recipe, s)
+	ptS := ActivityS.GenerateTasks("T-"+s.pkey, s.recipe, s) // Read task items from recipe table instead of generate them.
 	//
 	// populate device map using device type as key. Maintains latest attribute values for DeviceT which
 	// . can be referenced at any point in txt using {device.<deviceType>.<attribute>}
@@ -666,7 +581,7 @@ func (s *sessCtx) loadBaseContainers() (ContainerS, error) {
 		var found bool
 		v.start = 99999
 		for _, pt := range ptS {
-			for _, c := range pt.taskp.AllCp {
+			for _, c := range pt.taskp.allCp {
 				if c == v {
 					if c.start > pt.SortK {
 						c.start = pt.SortK
@@ -686,7 +601,7 @@ func (s *sessCtx) loadBaseContainers() (ContainerS, error) {
 		var found bool
 		for i := len(ptS) - 1; i >= 0; i-- {
 			// find last appearance (typically sourceC). Start at last ptS and work backwards
-			for _, c := range ptS[i].taskp.AllCp {
+			for _, c := range ptS[i].taskp.allCp {
 				if c == v {
 					if ptS[i].SortK > c.last {
 						c.last = ptS[i].SortK
