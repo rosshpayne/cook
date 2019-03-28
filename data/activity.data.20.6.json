@@ -158,7 +158,8 @@
                 "PKey" : { "S": "A-20-6" },
                 "SortK" : { "N": "40"},
                 "ingrd" : { "S" : "vanilla pod" },
-                "qualm" : { "S" : "scapped seeds of " }, 
+                "quali" : { "S" : "a" },
+                "qualm" : { "S" : "scapped seeds " }, 
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
                                       "num" : { "S" : "1/2" } 
@@ -463,7 +464,7 @@
                 "SortK" : { "N": "120"},
                 "ingrd" : { "S" : "vanilla pod" },
                 "part" : { "S" : "WG"},
-                "qualm" : { "S" : "scapped seeds of " }, 
+                "qualm" : { "S" : "scapped seeds of" }, 
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
                                       "num" : { "S" : "1/2" } 

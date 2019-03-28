@@ -465,8 +465,10 @@ func (s *sessCtx) orchestrateRequest() error {
 				return nil
 
 			case container_:
+				fmt.Println("Here in container.. about to loadBaseContainers")
 				//s.dispContainers = true
 				s.dispCtr = nil
+				global.Set_WriteCtx(global.UPrint)
 				s.displayData, err = s.loadBaseContainers()
 				if err != nil {
 					return err
@@ -1027,16 +1029,7 @@ func handler(request InputEvent) (RespEvent, error) {
 	// package the response data RespEvent (an APL aware "display" structure) and return
 	//
 	var resp RespEvent
-	//
 	resp = sessctx.displayData.GenDisplay(sessctx)
-	//
-	// if _, ok := s.displayData.(Threads); ok {
-	// 	s.menuL = nil
-	// 	err = s.updateState()
-	// 	if err != nil {
-	// 		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg, Error: err.Error()}, nil
-	// 	}
-	// }
 	return resp, nil
 }
 

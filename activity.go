@@ -81,10 +81,17 @@ type MeasureCT struct {
 	Quantity  string `json:"qty"`
 	Size      string `json:"size"`
 	Shape     string `json:"shape"` // typically, round, square, rect
-	Dimension string `json:"dim"`
+	Dimension string `json:"dim"`   // round "23" or "22-23", rectangular "23x18"
 	Height    string `json:"height"`
 	Unit      string `json:"unit`
 }
+
+// type MeasureCT struct {
+// 	MeasureT
+// 	Shape     string `json:"shape"` // typically, round, square, rect
+// 	Dimension string `json:"dim"`
+// 	Height    string `json:"height"`
+// }
 
 type taskT struct {
 	Type      PrepTask // Prep or Task Activity
@@ -138,7 +145,7 @@ type PerformT struct {
 	MergeThrd   int       `json:"mthrd"`   // task where parallel task (thread) will merge
 	ThrdName    string    `json:"thrdnme"` // title of thread - appears in threadedBottom.json, threadedTop.json
 	//DeviceT
-	AddToC   []string `json:"addToC"`
+	AddToC   []string `json:"addToC"` // id string for container
 	UseC     []string `json:"useC"`
 	SourceC  []string `json:"sourceC"`
 	Parallel bool     `json:"parallel"`
@@ -146,10 +153,10 @@ type PerformT struct {
 	//
 	Timer *TimerT `json:"timer"`
 	//
-	AddToCp  []*Container // it is thought that only one addToC will be used per activity - but lets be flexible.
-	UseCp    []*Container // ---"---
-	SourceCp []*Container // ---"---
-	AllCp    []*Container // all containers (addTo, use, source) get saved here.
+	addToCp  []*Container // it is thought that only one addToC will be used per activity - but lets be flexible.
+	useCp    []*Container // ---"---
+	sourceCp []*Container // ---"---
+	allCp    []*Container // all containers (addTo, use, source) get saved here.
 }
 type Activity struct {
 	// Pkey          string     `json:"PKey"`

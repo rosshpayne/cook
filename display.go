@@ -66,6 +66,15 @@ var objMenu ObjMenu = []ObjMenuT{
 	ObjMenuT{3, `Start cooking...`},
 }
 
+// instance of below type saved to state data in dynamo
+type DispContainerT struct {
+	Type_      string `json:"Type"`
+	Shape      string
+	Dimension  string `json:"dim"`  // recipe container size
+	UDimension string `json:"udim"` // user defined container size
+	Unit       string
+}
+
 type WelcomeT string
 
 type ContainerS []string
@@ -659,15 +668,6 @@ func (b BookT) GenDisplay(s *sessCtx) RespEvent {
 	return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: nil}
 }
 
-// instance of below type saved to state data in dynamo
-type DispContainerT struct {
-	Type_      string `json:"Type"`
-	Shape      string
-	Dimension  string `json:"dim"`
-	UDimension string `json:"udim"`
-	Unit       string
-}
-
 func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 	var (
 		sf   string
@@ -680,7 +680,7 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 		panic("in GenDisplay(): DispContainerT instance is nil ")
 	}
 	if s.dimension > 0 {
-		// response to user size intent
+		// response to user size request
 		cdim, err := strconv.Atoi(c.Dimension)
 		if err != nil {
 			panic(err.Error())
@@ -693,44 +693,80 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 			return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
 		}
 		sf = strconv.FormatFloat(scaleF, 'g', 2, 64)
-		hdr = "Your container"
+		hdr = "1 Your container"
 		subh = "Scale Factor:  " + sf
 		text = "All quantities will be adjusted to your container size: "
-		list = make([]DisplayItem, 6)
+		list = make([]DisplayItem, 8)
 		list[0] = DisplayItem{Title: text}
 		list[1] = DisplayItem{Title: " "}
 		list[2] = DisplayItem{Title: "Type:       " + c.Type_}
-		list[3] = DisplayItem{Title: "Size: " + c.UDimension + " " + c.Unit}
-		list[4] = DisplayItem{Title: " "}
-		list[5] = DisplayItem{Title: `To change your container size, say 'size [newsize]' e.g. size 24 `}
+		if len(c.UDimension) > 0 {
+			list[3] = DisplayItem{Title: "Original container Size: " + c.Dimension + " " + c.Unit}
+			list[4] = DisplayItem{Title: "Your container Size: " + c.UDimension + " " + c.Unit}
+			list[5] = DisplayItem{Title: " "}
+		} else {
+			list[3] = DisplayItem{Title: "Size: " + c.UDimension + " " + c.Unit}
+			list[4] = DisplayItem{Title: " "}
+		}
+		odim, err := strconv.Atoi(c.Dimension)
+		if err != nil {
+			panic(fmt.Errorf("in GenDisplay for container: cannot covert container dimension to int [%s]", err.Error()))
+		}
+		suggdim := strconv.Itoa(odim - 3)
+		if suggdim == c.UDimension {
+			suggdim = strconv.Itoa(odim - 2)
+		}
+		if len(c.UDimension) > 0 {
+			list[6] = DisplayItem{Title: `To change your container? Say 'size [newsize]' e.g. size ` + suggdim}
+		} else {
+			list[6] = DisplayItem{Title: `What is the size of your container? Say 'size [newsize]' e.g. size ` + suggdim}
+		}
+		list[7] = DisplayItem{Title: `Note: must be less than the recipe container size`}
 
 	} else if len(c.UDimension) > 0 {
-
+		// info screen where user has specified resize. Can resize again.
 		sf = strconv.FormatFloat(scaleF, 'g', 2, 64)
-		hdr = "Your container"
+		hdr = "2 Your container"
 		subh = "Scale Factor:  " + sf
 		text = "All quantities will be adjusted to your container size: "
-		list = make([]DisplayItem, 6)
+		list = make([]DisplayItem, 8)
 		list[0] = DisplayItem{Title: text}
 		list[1] = DisplayItem{Title: " "}
 		list[2] = DisplayItem{Title: "Type:       " + c.Type_}
-		list[3] = DisplayItem{Title: "Size: " + c.UDimension + " " + c.Unit}
-		list[4] = DisplayItem{Title: " "}
-		list[5] = DisplayItem{Title: `To change your container size, say 'size [newsize]' e.g. size 24 `}
+		list[3] = DisplayItem{Title: "Original container Size: " + c.Dimension + " " + c.Unit}
+		list[4] = DisplayItem{Title: "Your container Size: " + c.UDimension + " " + c.Unit}
+		list[5] = DisplayItem{Title: " "}
+		// suggested resize
+		odim, err := strconv.Atoi(c.Dimension)
+		if err != nil {
+			panic(fmt.Errorf("in GenDisplay for container: cannot covert container dimension to int [%s]", err.Error()))
+		}
+		suggdim := strconv.Itoa(odim - 3)
+		if suggdim == c.UDimension {
+			suggdim = strconv.Itoa(odim - 2)
+		}
+		list[6] = DisplayItem{Title: `To change your container size, say 'size [newsize]' e.g. size ` + suggdim}
+		list[7] = DisplayItem{Title: `Note: must be less than the original recipe container size `}
 
 	} else {
-
+		// info screen where user has NOT specified resize yet. Can resize if necessary
 		sf = strconv.FormatFloat(scaleF, 'g', 2, 64)
-		hdr = "Specify the size of your container"
+		hdr = "3 Specify the size of your container"
 		subh = "Scale Factor:  " + sf
 		text = "Quantities are based on the following container specification: "
-		list = make([]DisplayItem, 6)
+		list = make([]DisplayItem, 7)
 		list[0] = DisplayItem{Title: text}
 		list[1] = DisplayItem{Title: " "}
 		list[2] = DisplayItem{Title: "Type:       " + c.Type_}
-		list[3] = DisplayItem{Title: "Size:   " + c.Dimension + " " + c.Unit}
+		list[3] = DisplayItem{Title: "Container Size: " + c.Dimension + " " + c.Unit}
 		list[4] = DisplayItem{Title: " "}
-		list[5] = DisplayItem{Title: `What is the size of your container? Say 'size [newsize]' e.g. size 23 `}
+		odim, err := strconv.Atoi(c.Dimension)
+		if err != nil {
+			panic(fmt.Errorf("in GenDisplay for container: cannot covert container dimension to int [%s]", err.Error()))
+		}
+		suggdim := strconv.Itoa(odim - 3)
+		list[5] = DisplayItem{Title: `What is the size of your container? Say 'size [newsize]' e.g. size ` + suggdim}
+		list[6] = DisplayItem{Title: `Note: your container size must be less than the recipe container size displayed above`}
 	}
 	type_ := "Ingredient"
 	backBtn := true

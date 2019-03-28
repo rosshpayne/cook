@@ -1,0 +1,301 @@
+{
+      "Ingredient" : [
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAMB-L" },
+                  "label" : { "S" : "electric mixer bowl" },
+                  "type" : { "S": "ebowl" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "large" } 
+                                      }
+                              },
+                  "purpose" : {"S":"blending"}
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAMB-M" },
+                  "label" : { "S" : "electric mixer bowl" },
+                  "type" : { "S": "ebowl" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "medium" } 
+                                      }
+                              },
+                  "purpose" : {"S":"blending"}
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAB-S" },
+                  "label" : { "S" : "bowl" },
+                  "type" : { "S": "bowl" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "small" } 
+                                      }
+                              },
+                  "purpose" : {"S":"holding"}
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAB-M" },
+                  "label" : { "S" : "bowl" },
+                  "type" : { "S": "bowl" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "medium" } 
+                                      }
+                              },
+                  "purpose" : {"S":"holding"}
+                   }
+            }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAB-L" },
+                  "label" : { "S" : "bowl" },
+                  "type" : { "S": "bowl" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "large" } 
+                                      }
+                              },
+                  "purpose" : {"S":"holding"}
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAT-S" },
+                  "label" : { "S" : "tray" },
+                  "type" : { "S": "tray" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "small" } 
+                                      }
+                              },
+                  "purpose" : {"S":"holding"}
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAT-M" },
+                  "label" : { "S" : "tray" },
+                  "type" : { "S": "tray" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "medium" } 
+                                      }
+                              },
+                  "purpose" : {"S":"holding"}
+                   }
+            }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAT-L" },
+                  "label" : { "S" : "tray" },
+                  "type" : { "S": "tray" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "large" } 
+                                      }
+                              },
+                  "purpose" : {"S":"holding"}
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAPN-S" },
+                  "label" : { "S" : "pan" },
+                  "type" : { "S": "pan" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "small" } 
+                                      }
+                              },
+                  "purpose" : {"S":"cooking"}
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAPN-M" },
+                  "label" : { "S" : "pan" },
+                  "type" : { "S": "pan" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "medium" } 
+                                      }
+                              },
+                  "purpose" : {"S":"cooking"}
+                   }
+            }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAPN-L" },
+                  "label" : { "S" : "pan" },
+                  "type" : { "S": "pan" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "large" } 
+                                      }
+                              },
+                  "purpose" : {"S":"cooking"}
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAP-S" },
+                  "label" : { "S" : "plate" },
+                  "type" : { "S": "plate" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "small" } 
+                                      }
+                              },
+                  "purpose" : {"S":"holding"}
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAP-M" },
+                  "label" : { "S" : "plate" },
+                  "type" : { "S": "plate" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "medium" } 
+                                      }
+                              },
+                  "purpose" : {"S":"holding"}
+                   }
+            }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAP-L" },
+                  "label" : { "S" : "plate" },
+                  "type" : { "S": "plate" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "large" } 
+                                      }
+                              },
+                  "purpose" : {"S":"holding"}
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAS-L" },
+                  "label" : { "S" : "Sausepan" },
+                  "type" : { "S": "Sausepan" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "large" } 
+                                      }
+                              },
+                  "purpose" : {"S":"heating"}
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAS-M" },
+                  "label" : { "S" : "Sausepan" },
+                  "type" : { "S": "Sausepan" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "medium" } 
+                                      }
+                              },
+                  "purpose" : {"S":"heating"}
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "SAS-S" },
+                  "label" : { "S" : "Sausepan" },
+                  "type" : { "S": "Sausepan" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "small" } 
+                                      }
+                              },
+                  "purpose" : {"S":"heating"}
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "MC-S" },
+                  "label" : { "S" : "Measuring Cup" },
+                  "type" : { "S": "Measuring Cup" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "1.5cup" } 
+                                      }
+                              }
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "MC-M" },
+                  "label" : { "S" : "Measuring Cup" },
+                  "type" : { "S": "Measuring Cup" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "2.5cup" } 
+                                      }
+                              }
+                   }
+               }
+            },
+            {
+            "PutRequest": { 
+               "Item": {
+                  "PKey" : { "S": "C-0-0" },
+                  "SortK" : { "S": "MC-L" },
+                  "label" : { "S" : "Measuring Bowl" },
+                  "type" : { "S": "Measuring Cup" },
+                  "measure" : { "M" : { 
+                                      "size" : { "S" : "4.5cup" } 
+                                      }
+                              }
+                   }
+               }
+            }
+      ]
+}

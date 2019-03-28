@@ -6,10 +6,11 @@
                   "PKey" : { "S": "C-20-5" },
                   "SortK" : { "S": "caketin" },
                   "type" : { "S": "caketin" },
+                  "scale" : {"BOOL": true},
                   "label" : { "S": "angle food cake tin" },
                   "measure" : { "M" : {  "shape" : { "S" : "round" },
                                           "dim" : { "S" : "25"},
-                                          "height" : { "S" : "10" },
+                                          "height" : { "S" : "5" },
                                          "unit" : {"S": "cm" }
                   } },
                   "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  }
@@ -321,8 +322,8 @@
                 },
                 "prep" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "zest enough {ingrd} to make {measure}. Set aside."  },
-                                  "say" : { "S" : "zest enough {ingrd} to make {measure}. Set aside."  },
+                                  "txt" : { "S" : "zest enough {ingrd} to make {measure} and set aside."  },
+                                  "say" : { "S" : "zest enough {ingrd} to make {measure} and set aside."  },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -364,8 +365,8 @@
                 },
                "prep" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "zest enough {ingrd} to make {measure}. Set aside."  },
-                                  "say" : { "S" : "zest enough {ingrd} to make {measure}. Set aside."  },
+                                  "txt" : { "S" : "zest enough {ingrd} to make {measure} and set aside."  },
+                                  "say" : { "S" : "zest enough {ingrd} to make {measure} and set aside."  },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -377,7 +378,7 @@
                 "task" : { "L" : [ 
                                 { "M" :  {
                                   "txt" : { "S" : "now add the {ingrd_} zest to the bowl"  },
-                                  "say" : { "S" : "now add the {ingrd_} zest  to the bowl"  },
+                                  "say" : { "S" : "now add the {ingrd_} zest to the bowl"  },
                                   "time" : { "N" : "20" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "sec" },

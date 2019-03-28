@@ -17,12 +17,12 @@
             }
          },
          {
-         "PutRequest" : {
-              "Item": { 
+         "PutRequest": { 
+               "Item": { 
                   "PKey" : { "S": "C-20-8" },
                   "SortK" : { "S": "Tray2" },
                   "type" : { "S": "Tray" },
-                  "label" : { "S": "Baking Tray" },
+                  "label" : { "S": "second baking Tray" },
                   "slabel" : { "S" : "Tray" },
                   "requ" : { "S": "high sided" },
                   "measure" : { "M" : {  "dim" : { "S" : "30x20" },

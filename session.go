@@ -240,6 +240,7 @@ func (s *sessCtx) setState(ls *stateRec) {
 	// fmt.Println("in Session:ls.SelCtx = ", ls.SelCtx)
 	// fmt.Println("in Session: len(ls.Ingredients) = ", len(ls.Ingredients))
 	// fmt.Println("in Session: s.request = ", s.request)
+	fmt.Println("in SetState: selId = ", s.selId)
 	if s.selId > 0 {
 		switch {
 		case ls.SelCtx == 0 && len(s.reqRName) == 0 && (ls.Request == "search" || ls.Request == "recipe"):
@@ -247,9 +248,9 @@ func (s *sessCtx) setState(ls *stateRec) {
 			fmt.Println("in SetState: selCtx = ctxRecipeMenu")
 			//s.displayData = objMenu
 			//s.dispObjectMenu = true
-		case ls.SelCtx == 0 || (ls.SelCtx == ctxRecipeMenu && len(s.reqRName) > 0):
+		case (ls.SelCtx == 0 && ls.ShowObjMenu) || (ls.SelCtx == ctxRecipeMenu && len(s.reqRName) > 0):
 			s.selCtx = ctxObjectMenu
-			fmt.Println("in SetState: selCtx = ctxRecipeMenu")
+			fmt.Println("in SetState: selCtx = ctxObjectMenu")
 		case s.request == "select" && len(ls.Parts) > 0 && len(ls.Part) == 0:
 			s.selCtx = ctxPartMenu
 			fmt.Println("in SetState: selCtx = ctxPartMenu")

@@ -83,9 +83,9 @@
                "Item": { 
                   "PKey" : { "S": "C-20-7" },
                   "SortK" : { "S": "tarttin" },
-                  "type" : { "S": "tart tin" },
-                  "label" : { "S": "flutted tart tin" }, 
-                  "requirement" : {"S": "removable base"},
+                  "type" : { "S": "AAtarttin" },
+                  "label" : { "S": "flutted tart tin" },
+                  "requ" : {"S": "with removable base"},
                   "measure" : { "M" : {  "shape" : { "S" : "round" },
                                           "dim" : { "S" : "23-25"},
                                          "unit" : {"S": "cm" }
@@ -136,7 +136,7 @@
                "Item": { 
                   "PKey" : { "S": "C-20-7" },
                   "SortK" : { "S": "ebowl" },
-                  "type" : { "S": "electric mixer" },
+                  "type" : { "S": "electric mixer bowl" },
                   "label" : { "S": "electric mixer bowl" }, 
                   "measure" : { "M" : {  "size" : { "S" : "large" }} },
                   "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  }

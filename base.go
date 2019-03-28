@@ -362,18 +362,20 @@ func (s *sessCtx) loadBaseRecipe() error {
 							cs := sac[0] // original Single-activity container name
 							c := new(Container)
 							c.Cid = p.AddToC[i] + "-" + strconv.Itoa(ap.AId)
-							switch len(sac) {
-							case 1, 2:
-								c.Contains = ap.Ingredient
-							default:
-								c.Contains = sac[2] // prefer to use label as its bit more informative for container listing.
-							}
 							c.Measure = cId.Measure
 							c.Label = cId.Label
 							c.Type = cId.Type
+							switch len(cId.Contains) {
+							case 0:
+								c.Contains = ap.Ingredient
+							default:
+								c.Contains = cId.Contains // use label attached to SAM
+							}
 							switch len(sac) {
 							case 1:
-								c.Purpose = cId.Purpose
+								if len(cId.Purpose) > 0 {
+									c.Purpose = cId.Purpose
+								}
 							default:
 								c.Purpose = sac[1]
 							}
@@ -407,8 +409,8 @@ func (s *sessCtx) loadBaseRecipe() error {
 							cId = c
 						}
 						// activity to container edge
-						p.AddToCp = append(p.AddToCp, cId)
-						p.AllCp = append(p.AllCp, cId)
+						p.addToCp = append(p.addToCp, cId)
+						p.allCp = append(p.allCp, cId)
 						// container to activity edge
 						associatedTask := taskT{Type: l, Activityp: ap, Idx: idx}
 						cId.Activity = append(cId.Activity, associatedTask)
@@ -432,19 +434,20 @@ func (s *sessCtx) loadBaseRecipe() error {
 							// manually create container and add to ContainerM and update all references to it.
 							cs := sac[0] // original non-activity-specific container name
 							c := new(Container)
-							c.Cid = p.UseC[i] + "-" + strconv.Itoa(ap.AId)
-							switch len(sac) {
-							case 0, 1:
-								c.Contains = ap.Ingredient
-							default:
-								c.Contains = sac[2] // prefer to use label as its bit more informative for container listing.
-							}
 							c.Measure = cId.Measure
 							c.Label = cId.Label
 							c.Type = cId.Type
+							switch len(cId.Contains) {
+							case 0:
+								c.Contains = ap.Ingredient
+							default:
+								c.Contains = cId.Contains // use label attached to SAM
+							}
 							switch len(sac) {
-							case 1, 2:
-								c.Purpose = cId.Purpose
+							case 1:
+								if len(cId.Purpose) > 0 {
+									c.Purpose = cId.Purpose
+								}
 							default:
 								c.Purpose = sac[1]
 							}
@@ -477,8 +480,8 @@ func (s *sessCtx) loadBaseRecipe() error {
 							}
 							cId = c
 						}
-						p.UseCp = append(p.UseCp, cId)
-						p.AllCp = append(p.AllCp, cId)
+						p.useCp = append(p.useCp, cId)
+						p.allCp = append(p.allCp, cId)
 						associatedTask := taskT{Type: l, Activityp: ap, Idx: idx}
 						cId.Activity = append(cId.Activity, associatedTask)
 					}
@@ -501,18 +504,20 @@ func (s *sessCtx) loadBaseRecipe() error {
 							cs := sac[0] // original non-activity-specific container name
 							c := new(Container)
 							c.Cid = p.SourceC[i] + "-" + strconv.Itoa(ap.AId)
-							switch len(sac) {
-							case 1, 2:
-								c.Contains = ap.Ingredient
-							default:
-								c.Contains = sac[2] // prefer to use label as its bit more informative for container listing.
-							}
 							c.Measure = cId.Measure
 							c.Label = cId.Label
 							c.Type = cId.Type
+							switch len(cId.Contains) {
+							case 0:
+								c.Contains = ap.Ingredient
+							default:
+								c.Contains = cId.Contains // use label attached to SAM
+							}
 							switch len(sac) {
 							case 1:
-								c.Purpose = cId.Purpose
+								if len(cId.Purpose) > 0 {
+									c.Purpose = cId.Purpose
+								}
 							default:
 								c.Purpose = sac[1]
 							}
@@ -545,8 +550,8 @@ func (s *sessCtx) loadBaseRecipe() error {
 							}
 							cId = c
 						}
-						p.SourceCp = append(p.SourceCp, cId)
-						p.AllCp = append(p.AllCp, cId)
+						p.sourceCp = append(p.sourceCp, cId)
+						p.allCp = append(p.allCp, cId)
 						associatedTask := taskT{Type: l, Activityp: ap, Idx: idx}
 						cId.Activity = append(cId.Activity, associatedTask)
 					}
@@ -793,15 +798,15 @@ func (s *sessCtx) loadBaseRecipe() error {
 							var c *Container
 
 							if el == "usec" {
-								if len(pt.UseCp) == 0 {
+								if len(pt.useCp) == 0 {
 									panic(fmt.Errorf(`Error: useC not suitable in AId [%d] [%s]`, p.AId, str))
 								}
-								c = pt.UseCp[0]
+								c = pt.useCp[0]
 							} else {
-								if len(pt.AddToCp) == 0 {
+								if len(pt.addToCp) == 0 {
 									panic(fmt.Errorf(`Error: addtoC not suitable in AId [%d] [%s]`, p.AId, str))
 								}
-								c = pt.AddToCp[0]
+								c = pt.addToCp[0]
 							}
 							// useC.form
 							if len(el2) > 0 {
@@ -986,7 +991,7 @@ func (s *sessCtx) loadBaseRecipe() error {
 		var found bool
 		v.start = 99999
 		for _, pt := range ptS {
-			for _, c := range pt.taskp.AllCp {
+			for _, c := range pt.taskp.allCp {
 				if c == v {
 					if c.start > pt.SortK {
 						c.start = pt.SortK
@@ -1006,7 +1011,7 @@ func (s *sessCtx) loadBaseRecipe() error {
 	// 	var found bool
 	// 	for i := len(ptS) - 1; i >= 0; i-- {
 	// 		// find last appearance (typically sourceC). Start at last ptS and work backwards
-	// 		for _, c := range ptS[i].taskp.AllCp {
+	// 		for _, c := range ptS[i].taskp.allCp {
 	// 			if c == v {
 	// 				if ptS[i].SortK > c.last {
 	// 					c.last = ptS[i].SortK

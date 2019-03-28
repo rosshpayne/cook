@@ -59,6 +59,7 @@
                   "SortK" : { "S": "caketin" },
                   "type" : { "S": "caketin" },
                   "label" : { "S": "cake tin" },
+                  "scale" : { "BOOL" : true },
                   "AltLabel" : { "S": "cake tin" },
                   "message": { "S": "with springform or a tin with a removable base"},
                   "measure" : { "M" : {"shape" : { "S" : "round" },

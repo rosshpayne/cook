@@ -29,8 +29,8 @@ func (cs clsort) Swap(i, j int)      { cs[i], cs[j] = cs[j], cs[i] }
 
 func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 	type ctCount struct {
-		C   []*Container
-		num int
+		C           []*Container // list of logical containers in the group
+		numPhysical int          // number of physicalId containers in the group e.g. 10 logical containers for 2 physicalId means 1 physicalId container has many uses (reuse) across activities
 	}
 	var b strings.Builder
 	var output_ []string
@@ -39,13 +39,13 @@ func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 		return nil
 	}
 	// use map to group-by-container-type-and-size - map value contains list of identical containers and the number of them
-	identicalC := make(map[mkey]*ctCount)
+	ctGroup := make(map[mkey]*ctCount)
 	//
-	done := make(map[string]bool)
 	for k, v := range cm {
 		var size_ string
-		// for each container aggregate based on type and size
+		// for each container aggregate based on type (bowl, plate, tray, ebowl) and size (small,medium,large)
 		if v.Measure == nil {
+			// ingore container if no measurements defined - unlikely
 			continue
 		}
 		if len(v.Measure.Size) > 0 {
@@ -54,118 +54,94 @@ func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 			// where no size defined give each container its own size - order at the top
 			size_ = "AAA" + k
 		}
+		//
+		// key is made up of a containers, size & type
+		//
 		z := mkey{size: size_, Type: strings.ToLower(v.Type)}
 		// identical based on {size,Type}
-		if y, ok := identicalC[z]; !ok {
+		if y, ok := ctGroup[z]; !ok {
 			// {size,Type} does not exist - create first one
 			y := new(ctCount)
-			y.num = 1
+			y.numPhysical = 1
+			v.physicalId = y.numPhysical
 			y.C = append(y.C, v)
-			identicalC[z] = y
+			ctGroup[z] = y
 		} else {
-			// check if the container can be reused by examining other containers in the identical list
-			var reuse bool
-			if !done[v.Cid] {
-				// for containers not already matched as ok to reuse
+			// assign the logical container (v) to a physical container id.
+			var ok bool
+			for i := 1; i <= y.numPhysical; i++ {
+				ok = true
 				for _, oc := range y.C {
-					// fmt.Printf("loop check for %s  %s\n", v.Cid, oc.Cid)
-					// fmt.Printf("oc.last %d  < %d v.start,  v.last  %d  < %d oc.start \n", oc.last, v.start, v.last, oc.start)
-					if oc.last <= v.start || v.last <= oc.start {
-						done[oc.Cid] = true // don't check for this Container again.
-						reuse = true
-						// all containers that represent the same physical container have the same reused value
-						oc.reused, v.reused = y.num, y.num
-						// bind these containers which means that are the same physical container.
-						fmt.Printf("reuse true for %s\n", oc.Cid)
-						break
+					if oc.physicalId == i {
+						if !(oc.last < v.start || v.last < oc.start) {
+							ok = false
+						}
 					}
 				}
-				if !reuse {
-					y.num += 1
+				if ok {
+					// logical container can work with this physicalId container
+					v.physicalId = y.numPhysical
+					break
 				}
 			}
+			if !ok { // logical container requires new physicalId container
+				y.numPhysical++
+				v.physicalId = y.numPhysical
+			}
+			// append v reused or not..
 			y.C = append(y.C, v)
 		}
 	}
-	// Populate slice, which satisfies sort interface, with the map key.
-	// Objective - sort the may key which we then use to access the map in sorted order.
+	// The key in ctGroup can be sorted using clsort type. Once sorted we can access ctGroup in sorted ordered.\
 	clsorted := clsort{}
-	for k, _ := range identicalC {
+	for k, _ := range ctGroup {
 		clsorted = append(clsorted, k)
 	}
-	// use sorted key to index into container map - sorted by size attribute in container.measure.
+	// use sorted key to index into container map
 	sort.Sort(clsorted)
+	var footnote bool
 	for _, v := range clsorted {
 		//
 		// containers belonging to same {size,type}
 		//
-		if len(identicalC[v].C) > 1 {
-			// use Type as this is the attribute that is used to aggregated the containers
-			// and each container may have a different label. Not so if were dealing with just one container of course
-			fmt.Printf("v = %#v\n", v)
-			b.WriteString(fmt.Sprintf(" %d %s %s", identicalC[v].num, strings.Title(v.size), v.Type))
-
-			if len(identicalC[v].C) != identicalC[v].num {
-				if identicalC[v].num > 1 {
-					b.WriteString(fmt.Sprintf("%s ", "s"))
-				}
-				// some containers are reused
-				for i := identicalC[v].num; i > 0; i-- {
-					b.WriteString(fmt.Sprintf(" ( "))
-					var newLine bool
-					for _, c := range identicalC[v].C {
-						if c.reused == i {
-							if !newLine {
-								b.WriteString(fmt.Sprintf(" %s ", strings.ToLower(c.Contains)))
-								newLine = true
-							} else {
-								b.WriteString(fmt.Sprintf(" then %s ", strings.ToLower(c.Contains)))
-							}
-						}
-					}
-					b.WriteString(fmt.Sprintf(" ) "))
-				}
-			} else {
-				// no containers are reused.
-				if identicalC[v].num > 1 {
-					b.WriteString(fmt.Sprintf("%s ", "s"))
-				}
-				for i, d := range identicalC[v].C {
-					switch i {
-					case 0:
-						if len(d.Contains) > 0 {
-							b.WriteString(fmt.Sprintf(" one for %s ", strings.ToLower(d.Contains)))
-						}
-					default:
-						if len(d.Contains) > 0 {
-							b.WriteString(fmt.Sprintf(" another for %s ", strings.ToLower(d.Contains)))
-						}
-					}
-				}
-			}
+		cCnt := len(ctGroup[v].C)
+		if cCnt != ctGroup[v].numPhysical {
+			b.WriteString(fmt.Sprintf(" %d-%d* %s %s", ctGroup[v].numPhysical, cCnt, strings.ToLower(v.size), v.Type) + "s")
+			footnote = true
 		} else {
-			//
-			// only one logical container or only one physical container in the identical grouping
-			//
-			c := identicalC[v].C[0]
-			if v.size[:3] == "AAA" {
-				b.WriteString(" 1 ")
-				b.WriteString(c.String())
+			if cCnt == 1 {
+				var (
+					t string
+					m string
+					r string
+				)
+				c := ctGroup[v].C[0]
+				t = v.Type
+				if len(c.Label) > 0 {
+					t = c.Label
+				}
+				if c.Measure != nil {
+					m = c.Measure.String()
+				}
+				if len(c.Requirement) > 0 {
+					r = ", " + c.Requirement
+				}
+				b.WriteString(fmt.Sprintf(" 1 %s %s %s", m, strings.ToLower(t), r))
 			} else {
-				b.WriteString(fmt.Sprintf(" 1 %s %s", strings.Title(v.size), c.Label))
-			}
-			if len(c.Purpose) > 0 {
-				if c.Purpose[0] == '_' {
-					b.WriteString(fmt.Sprintf(" for %s ", strings.ToLower(c.Contains+"  "+c.Purpose[1:]+" ")))
-				} else {
-					b.WriteString(fmt.Sprintf(" for %s ", strings.ToLower(c.Purpose+" "+c.Contains+"  ")))
+				b.WriteString(fmt.Sprintf(" %d %s %s", cCnt, strings.ToLower(v.size), v.Type))
+				if cCnt > 1 {
+					b.WriteString("s")
 				}
 			}
 		}
 		output_ = append(output_, b.String())
 		b.Reset()
 	}
-
+	if footnote {
+		b.WriteString("  ")
+		b.WriteString(" * lower value applies when you wash the container immediately after use, so it can then be reused")
+	}
+	output_ = append(output_, b.String())
 	// store number of records in recipe table
 	return output_
 }

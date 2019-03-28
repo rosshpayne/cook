@@ -78,7 +78,7 @@
                 "PKey" : { "S": "R-21" },
                 "SortK" : { "N": "9"},
                 "RName" : { "S": "Ravioli with Ricotta, Raw Tomato and Basil"},
-                "Index" : { "SS" : ["Vegetarian","ravioli ricotta"] },
+                "Index" : { "SS" : ["Vegetarian", "tomato","tomotoes","pasta"] },
                 "Srv" : { "S" : "4" } }
         }
         },
@@ -250,7 +250,7 @@
                 "PKey" : { "S": "A-21-9" },
                 "SortK" : { "N": "50"},
                 "label" : { "S": "tomatoes"},
-                "ingrd" : { "S" : "tomatoes" },
+                "ingrd" : { "S" : "tomato" },
                 "quali" : { "S" : "very ripe, fresh San Marzano plum" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
