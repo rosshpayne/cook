@@ -17,14 +17,17 @@ const LaunchRequestHandler = {
     return handlerInput.requestEnvelope.request.type === 'LaunchRequest';
   },
   
-  handle(handlerInput) {
+  async handle(handlerInput) {
     // var speechText = "Hi. To find a recipe, simply search for a keyword by saying 'search keyword or recipe name' where keyword is any ingredient or ingredients related to the recipe ";
     // var displayText =  "Hi. To find a recipe, simply search for a keyword by saying 'search keyword or recipe name' where keyword is any ingredient or ingredients related to the recipe ";
 
     const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
+    const accessToken = handlerInput.requestEnvelope.context.System.apiAccessToken;
+    const accessEndpoint = handlerInput.requestEnvelope.context.System.apiEndpoint;
+    
     invokeParams.Payload = '{ "Path" : "start" ,"Param" : "'+uid+'" }';
     
-    promise = new Promise((resolve, reject) => {
+    var promise= new Promise((resolve, reject) => {
           lambda.invoke(invokeParams, function(err, data) {
           if (err) {
             reject(err);
@@ -33,12 +36,86 @@ const LaunchRequestHandler = {
           });
         }); 
         
-    return promise.then((body) => {
-        var  resp = JSON.parse(body);
-        console.log(resp);
-        return handleResponse(handlerInput, resp);
-      }).catch(function (err) { console.log(err, err.stack);  } );
-        
+    return promise.then((resp) => {
+        resp = JSON.parse(resp);
+        console.log("inner resp:", resp);
+        if (resp.Type === 'email') {
+              //await getEmail(accessToken,accessEndpoint);
+              const https = require('https');
+    
+              const options = {
+                hostname: accessEndpoint.substring(8,accessEndpoint.length),
+                path: "/v2/accounts/~current/settings/Profile.email",
+                //method: "GET",
+                headers: {
+                      "content-type": "application/json",
+                      "accept": "application/json",
+                      "authorization": "Bearer" + " " + accessToken
+                }
+              };
+              var prom= new Promise((resolve, reject) => {
+                    var req = https.get(options, function(res) {
+                        // reject on bad status
+                        if (res.statusCode < 200 || res.statusCode >= 300) {
+                            return reject(new Error('statusCode=' + res.statusCode));
+                        }
+                        // cumulate data
+                        var body = [];
+                        res.on('data', function(chunk) {
+                            body.push(chunk);
+                        });
+                        // resolve on end
+                        res.on('end', function() {
+                            try {
+                                body=String(body);      
+                            } catch(e) {
+                                reject(e);
+                            }
+                            resolve(body);
+                        });
+                    });
+                    // reject on request error
+                    req.on('error', function(err) {
+                        // This is not a "Second reject", just a different sort of failure
+                        reject(err);
+                    });
+                    req.on('data', data=> {
+                      resolve();
+                    });
+                    req.end();
+                  });
+              
+              return prom.then( (data) => {
+                      let email=data;
+                      invokeParams.Payload = '{ "Path" : "startWithEmail" ,"Param" : "'+uid+'&email=' + email.substring(1,email.length-1) + '" }';
+                      var promise2 = new Promise((resolve, reject) => {
+                          lambda.invoke(invokeParams, function(err, data) {
+                          if (err) {
+                            reject(err);
+                          } else {
+                            resolve(data.Payload);  }
+                          });
+                        });
+                        
+                      return promise2.then((body) => {
+                              var  resp = JSON.parse(body);
+                              console.log("promise 2 resp: ",resp);
+                              return handleResponse(handlerInput, resp);
+                      }).catch(function(err) {
+                         console.log("promise 2 error catch: ", err);
+                      });
+                      
+              }).catch(function(err) {
+                 console.log("prom error catch: ", err);
+                });
+        } else {
+              return handleResponse(handlerInput, resp);
+        }
+    }).catch(function(err) {
+      console.log("error catch: ", err);
+           return "xyz";
+    });
+            
   },
 };
 
@@ -59,7 +136,7 @@ const EventHandler = {
     case 'select':
       invokeParams.Payload = '{ "Path" : "select" ,"Param" : "'+uid+selid+'" }';
 
-      promise = new Promise((resolve, reject) => {
+      var promise= new Promise((resolve, reject) => {
           lambda.invoke(invokeParams, function(err, data) {
           if (err) {
             reject(err);
@@ -78,7 +155,7 @@ const EventHandler = {
     case 'backButton':
        invokeParams.Payload = '{ "Path" : "back" ,"Param" : "'+uid+'" }';
         
-       promise = new Promise((resolve, reject) => {
+       var promise= new Promise((resolve, reject) => {
           lambda.invoke(invokeParams, function(err, data) {
           if (err) {
             reject(err);
@@ -96,6 +173,149 @@ const EventHandler = {
   },
 };
 
+
+const GetAddressIntentHandler = {
+  canHandle(handlerInput) {
+    const { request } = handlerInput.requestEnvelope;
+
+    return request.type === 'IntentRequest' && request.intent.name === 'GetAddressIntent';
+  },
+  async handle(handlerInput) {
+    const messages = {
+      WELCOME: 'Welcome to the Sample Device Address API Skill!  You can ask for the device address by saying what is my address.  What do you want to ask?',
+      WHAT_DO_YOU_WANT: 'What do you want to ask?',
+      NOTIFY_MISSING_PERMISSIONS: 'Please enable Location permissions in the Amazon Alexa app.',
+      NO_ADDRESS: 'It looks like you don\'t have an address set. You can set your address from the companion app.',
+      ADDRESS_AVAILABLE: 'Here is your full address: ',
+      ERROR: 'Uh Oh. Looks like something went wrong.',
+      LOCATION_FAILURE: 'There was an error with the Device Address API. Please try again.',
+      GOODBYE: 'Bye! Thanks for using the Sample Device Address API Skill!',
+      UNHANDLED: 'This skill doesn\'t support that. Please ask something else.',
+      HELP: 'You can use this skill by asking something like: whats my address?',
+      STOP: 'Bye! Thanks for using the Sample Device Address API Skill!',
+    };
+    console.log('=> Get Address -> handle -> handlerInput', JSON.stringify(handlerInput));
+    const PERMISSIONS = ['read::alexa:device:all:address'];
+    const { requestEnvelope, serviceClientFactory, responseBuilder } = handlerInput;
+
+    const consentToken = requestEnvelope.context.System.user.permissions
+      && requestEnvelope.context.System.user.permissions.consentToken;
+    if (!consentToken) {
+      return responseBuilder
+        .speak(messages.NOTIFY_MISSING_PERMISSIONS)
+        .withAskForPermissionsConsentCard(PERMISSIONS)
+        .getResponse();
+    }
+    try {
+      const { deviceId } = requestEnvelope.context.System.device;
+      const deviceAddressServiceClient = serviceClientFactory.getDeviceAddressServiceClient();
+      const address = await deviceAddressServiceClient.getFullAddress(deviceId);
+
+      console.log('Address successfully retrieved, now responding to user.');
+
+      let response;
+      if (address.addressLine1 === null && address.stateOrRegion === null) {
+        response = responseBuilder.speak(messages.NO_ADDRESS).getResponse();
+      } else {
+        const ADDRESS_MESSAGE = `${messages.ADDRESS_AVAILABLE + address.addressLine1}, ${address.stateOrRegion}, ${address.postalCode}`;
+        response = responseBuilder.speak(ADDRESS_MESSAGE).getResponse();
+      }
+      return response;
+    } catch (error) {
+      if (error.name !== 'ServiceError') {
+        const response = responseBuilder.speak(messages.ERROR).getResponse();
+        return response;
+      }
+      throw error;
+    }
+  },
+};
+
+const GetEmailIntentHandler = {
+  canHandle(handlerInput) {
+    const { request } = handlerInput.requestEnvelope;
+
+    return request.type === 'IntentRequest' && request.intent.name === 'GetEmailIntent';
+  },
+  handle(handlerInput) {
+    const https = require('https');
+    const messages = {
+      WELCOME: 'Welcome to the Sample Device Address API Skill!  You can ask for the device address by saying what is my address.  What do you want to ask?',
+      WHAT_DO_YOU_WANT: 'What do you want to ask?',
+      NOTIFY_MISSING_PERMISSIONS: 'Please enable Location permissions in the Amazon Alexa app.',
+      NO_ADDRESS: 'It looks like you don\'t have an address set. You can set your address from the companion app.',
+      ADDRESS_AVAILABLE: 'Here is your full address: ',
+      ERROR: 'Uh Oh. Looks like something went wrong.',
+      LOCATION_FAILURE: 'There was an error with the Device Address API. Please try again.',
+      GOODBYE: 'Bye! Thanks for using the Sample Device Address API Skill!',
+      UNHANDLED: 'This skill doesn\'t support that. Please ask something else.',
+      HELP: 'You can use this skill by asking something like: whats my address?',
+      STOP: 'Bye! Thanks for using the Sample Device Address API Skill!',
+    };
+     console.log('=> Get Email -> handle -> handlerInput', JSON.stringify(handlerInput));
+    const accessToken = handlerInput.requestEnvelope.context.System.apiAccessToken;
+    const accessEndpoint = handlerInput.requestEnvelope.context.System.apiEndpoint;
+    
+    const options = {
+      hostname: accessEndpoint.substring(8,accessEndpoint.length),
+      path: "/v2/accounts/~current/settings/Profile.email",
+      //method: "GET",
+      headers: {
+            "content-type": "application/json",
+            "accept": "application/json",
+            "authorization": "Bearer" + " " + accessToken
+      }
+    };
+    var promise= new Promise((resolve, reject) => {
+        var req = https.get(options, function(res) {
+            // reject on bad status
+            if (res.statusCode < 200 || res.statusCode >= 300) {
+                return reject(new Error('statusCode=' + res.statusCode));
+            }
+            // cumulate data
+            var body = [];
+            res.on('data', function(chunk) {
+                body.push(chunk);
+            });
+            // resolve on end
+            res.on('end', function() {
+                try {
+                    body=String(body);      
+                } catch(e) {
+                    reject(e);
+                }
+                resolve(body);
+            });
+        });
+        // reject on request error
+        req.on('error', function(err) {
+            // This is not a "Second reject", just a different sort of failure
+            reject(err);
+        });
+        req.on('data', data=> {
+          resolve();
+        });
+        req.end();
+      });
+    
+    return promise.then( (data) => {
+           console.log("process then " , data);
+           return  handlerInput.responseBuilder
+                          .speak(data)
+                          .reprompt("reprompt message")
+                          .getResponse();
+    }).catch(function(err) {
+      console.log("error catch: ", err);
+      const PERMISSIONS = ['alexa::profile:email:read'];
+      return handlerInput.responseBuilder
+        .speak(messages.NOTIFY_MISSING_PERMISSIONS)
+        .withAskForPermissionsConsentCard(PERMISSIONS)
+        .getResponse();
+    });
+  },
+};
+
+
 const ScaleIntentHandler = {
   canHandle(handlerInput) {
     return handlerInput.requestEnvelope.request.type === 'IntentRequest'
@@ -111,7 +331,7 @@ const ScaleIntentHandler = {
     //                  handlerInput.requestEnvelope.request.intent.slots.YesNo.resolutions.resolutionsPerAuthority[0].values[0].value.id;
     invokeParams.Payload = '{ "Path" : "scale" ,"Param" : "'+uid+frac+'" }';
     
-    promise = new Promise((resolve, reject) => {
+    var promise= new Promise((resolve, reject) => {
           lambda.invoke(invokeParams, function(err, data) {
           if (err) {
             reject(err);
@@ -140,7 +360,7 @@ const DimensionIntentHandler = {
     //                  handlerInput.requestEnvelope.request.intent.slots.YesNo.resolutions.resolutionsPerAuthority[0].values[0].value.id;
     invokeParams.Payload = '{ "Path" : "dimension" ,"Param" : "'+uid+dim+'" }';
     
-    promise = new Promise((resolve, reject) => {
+    var promise= new Promise((resolve, reject) => {
           lambda.invoke(invokeParams, function(err, data) {
           if (err) {
             reject(err);
@@ -153,7 +373,7 @@ const DimensionIntentHandler = {
         var  resp = JSON.parse(body);
         console.log(resp);
         return handleResponse(handlerInput, resp);
-      }).catch(function (err) { console.log(err, err.stack);  } );
+      }).catch((err) => { console.log("this is in error", err, err.stack);  } );
     
   },
 };
@@ -168,7 +388,7 @@ const BookIntentHandler = {
     const bkid='&bkid='+handlerInput.requestEnvelope.request.intent.slots.BookName.resolutions.resolutionsPerAuthority[0].values[0].value.id;
     invokeParams.Payload = '{ "Path" : "book" ,"Param" : "'+uid+bkid+'" }';
     
-    promise = new Promise((resolve, reject) => {
+    var promise= new Promise((resolve, reject) => {
           lambda.invoke(invokeParams, function(err, data) {
           if (err) {
             reject(err);
@@ -208,7 +428,7 @@ const CloseBookIntentHandler = {
     var uid="uid="+handlerInput.requestEnvelope.session.user.userId;
     invokeParams.Payload = '{ "Path" : "book/close" ,"Param" : "'+uid+'" }';
 
-    promise = new Promise((resolve, reject) => {
+    var promise= new Promise((resolve, reject) => {
           lambda.invoke(invokeParams, function(err, data) {
           if (err) {
             reject(err);
@@ -252,7 +472,7 @@ const SearchIntentHandler = {
     const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
     invokeParams.Payload = '{ "Path" : "search" ,"Param" : "'+uid+srch+'" }';
 
-    promise = new Promise((resolve, reject) => {
+    var promise= new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
         if (err) {
           reject(err);
@@ -279,7 +499,7 @@ const ResumeIntentHandler = {
     const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
     invokeParams.Payload = '{ "Path" : "resume" ,"Param" : "'+uid+'" }';
 
-    promise = new Promise((resolve, reject) => {
+    var promise= new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
         if (err) {
           reject(err);
@@ -299,7 +519,7 @@ const ResumeIntentHandler = {
 const BackIntentHandler = {
   canHandle(handlerInput) {
     return handlerInput.requestEnvelope.request.type === 'IntentRequest'
-      && handlerInput.requestEnvelope.request.intent.name === 'BackIntent';
+      && handlerInput.requestEnvelope.request.intent.name === 'backIntent';
   },
   handle(handlerInput) {
     const select = require('APL/select.js');
@@ -307,7 +527,7 @@ const BackIntentHandler = {
     const uid='uid='+handlerInput.requestEnvelope.session.user.userId   ; 
     invokeParams.Payload = '{ "Path" : "back" ,"Param" : "'+uid+'" }';
 
-    promise = new Promise((resolve, reject) => {
+    var promise= new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
         if (err) {
           reject(err);
@@ -349,7 +569,7 @@ const SelectIntentHandler = {
     invokeParams.Payload = '{ "Path" : "select" ,"Param" : "'+uid+selid+'" }';
     console.log("uid "+ uid);
     console.log("selId " + selid);
-    promise = new Promise((resolve, reject) => {
+    var promise= new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
         if (err) {
           reject(err);
@@ -378,7 +598,7 @@ const GotoIntentHandler = {
     const goId='&goId='+handlerInput.requestEnvelope.request.intent.slots.gotoId.resolutions.resolutionsPerAuthority[0].values[0].value.id;
     invokeParams.Payload = '{ "Path" : "goto" ,"Param" : "'+uid+goId+'" }';
 
-    promise = new Promise((resolve, reject) => {
+    var promise= new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
         if (err) {
           reject(err);
@@ -423,7 +643,7 @@ const NextIntentHandler = {
     const uid='uid='+handlerInput.requestEnvelope.session.user.userId;
     invokeParams.Payload = '{ "Path" : "next" ,"Param" : "'+uid+'" }';
 
-    promise = new Promise((resolve, reject) => {
+    var promise= new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
         if (err) {
           reject(err);
@@ -450,7 +670,7 @@ const RepeatIntentHandler = {
     const uid='uid='+handlerInput.requestEnvelope.session.user.userId;
     invokeParams.Payload = '{ "Path" : "repeat" ,"Param" : "'+uid+'" }';
 
-    promise = new Promise((resolve, reject) => {
+    var promise= new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
         if (err) {
           reject(err);
@@ -477,7 +697,7 @@ const PrevIntentHandler = {
     const uid='uid='+handlerInput.requestEnvelope.session.user.userId;
     invokeParams.Payload = '{ "Path" : "prev" ,"Param" : "'+uid+'" }';
 
-    promise = new Promise((resolve, reject) => {
+    var promise= new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
         if (err) {
           reject(err);
@@ -513,7 +733,7 @@ const RecipeIntentHandler = {
     //}
     invokeParams.Payload = '{ "Path" : "recipe" ,"Param" : "'+uid+path_+'" }';
 
-    promise = new Promise((resolve, reject) => {
+    var promise= new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
         if (err) {
           reject(err);
@@ -548,7 +768,7 @@ const VersionIntentHandler = {
     const ver='&ver='+handlerInput.requestEnvelope.request.intent.slots.version.resolutions.resolutionsPerAuthority[0].values[0].value.name;
     invokeParams.Payload = '{ "Path" : "version" ,"Param" : "'+uid+ver+'" }';
 
-    promise = new Promise((resolve, reject) => {
+    var promise= new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
         if (err) {
           reject(err);
@@ -586,7 +806,7 @@ const YesNoIntentHandler = {
     var yesno='&yn='+handlerInput.requestEnvelope.request.intent.slots.YesNo.resolutions.resolutionsPerAuthority[0].values[0].value.id;
     invokeParams.Payload = '{ "Path" : "yesno" ,"Param" : "'+uid+yesno+'" }';
  
-    promise = new Promise((resolve, reject) => {
+    var promise= new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
         if (err) {
           reject(err);
@@ -621,7 +841,7 @@ const TaskIntentHandler = {
     var uid="uid="+handlerInput.requestEnvelope.session.user.userId;
     invokeParams.Payload = '{ "Path" : "task" ,"Param" : "'+uid+'" }';
 
-    promise = new Promise((resolve, reject) => {
+    var promise= new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
         if (err) {
           reject(err);
@@ -655,7 +875,7 @@ const ContainerIntentHandler = {
     var uid="uid="+handlerInput.requestEnvelope.session.user.userId;
     invokeParams.Payload = '{ "Path" : "container" ,"Param" : "'+uid+'" }';
 
-    promise = new Promise((resolve, reject) => {
+    var promise= new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
         if (err) {
           reject(err);
@@ -807,6 +1027,8 @@ exports.handler = skillBuilder
   .addRequestHandlers(
     LaunchRequestHandler,
     ResumeIntentHandler,
+    GetAddressIntentHandler,
+    GetEmailIntentHandler,
     BookIntentHandler,
     BackIntentHandler,
     TestIntentHandler,
@@ -830,4 +1052,5 @@ exports.handler = skillBuilder
     EventHandler
   )
   .addErrorHandlers(ErrorHandler)
+  .withApiClient(new Alexa.DefaultApiClient())
   .lambda();
