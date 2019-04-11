@@ -11,6 +11,19 @@ var   invokeParams = {
 var lambda = new AWS.Lambda();
 AWS.config.region = 'us-east-1';
 
+const messages = {
+      WELCOME: 'Welcome to the Sample Device Address API Skill!  You can ask for the device address by saying what is my address.  What do you want to ask?',
+      WHAT_DO_YOU_WANT: 'What do you want to ask?',
+      NOTIFY_MISSING_PERMISSIONS: 'Please enable Location permissions in the Amazon Alexa app.',
+      NO_ADDRESS: 'It looks like you don\'t have an address set. You can set your address from the companion app.',
+      ADDRESS_AVAILABLE: 'Here is your full address: ',
+      ERROR: 'Uh Oh. Looks like something went wrong.',
+      LOCATION_FAILURE: 'There was an error with the Device Address API. Please try again.',
+      GOODBYE: 'Bye! Thanks for using the Sample Device Address API Skill!',
+      UNHANDLED: 'This skill doesn\'t support that. Please ask something else.',
+      HELP: 'You can use this skill by asking something like: whats my address?',
+      STOP: 'Bye! Thanks for using the Sample Device Address API Skill!',
+    };
 
 const LaunchRequestHandler = {
   canHandle(handlerInput) {
@@ -22,8 +35,8 @@ const LaunchRequestHandler = {
     // var displayText =  "Hi. To find a recipe, simply search for a keyword by saying 'search keyword or recipe name' where keyword is any ingredient or ingredients related to the recipe ";
 
     const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
-    const accessToken = handlerInput.requestEnvelope.context.System.apiAccessToken;
-    const accessEndpoint = handlerInput.requestEnvelope.context.System.apiEndpoint;
+    //const accessToken = handlerInput.requestEnvelope.context.System.apiAccessToken;
+    //const accessEndpoint = handlerInput.requestEnvelope.context.System.apiEndpoint;
     
     invokeParams.Payload = '{ "Path" : "start" ,"Param" : "'+uid+'" }';
     
@@ -40,56 +53,11 @@ const LaunchRequestHandler = {
         resp = JSON.parse(resp);
         console.log("inner resp:", resp);
         if (resp.Type === 'email') {
-              //await getEmail(accessToken,accessEndpoint);
-              const https = require('https');
-    
-              const options = {
-                hostname: accessEndpoint.substring(8,accessEndpoint.length),
-                path: "/v2/accounts/~current/settings/Profile.email",
-                //method: "GET",
-                headers: {
-                      "content-type": "application/json",
-                      "accept": "application/json",
-                      "authorization": "Bearer" + " " + accessToken
-                }
-              };
-              var prom= new Promise((resolve, reject) => {
-                    var req = https.get(options, function(res) {
-                        // reject on bad status
-                        if (res.statusCode < 200 || res.statusCode >= 300) {
-                            return reject(new Error('statusCode=' + res.statusCode));
-                        }
-                        // cumulate data
-                        var body = [];
-                        res.on('data', function(chunk) {
-                            body.push(chunk);
-                        });
-                        // resolve on end
-                        res.on('end', function() {
-                            try {
-                                body=String(body);      
-                            } catch(e) {
-                                reject(e);
-                            }
-                            resolve(body);
-                        });
-                    });
-                    // reject on request error
-                    req.on('error', function(err) {
-                        // This is not a "Second reject", just a different sort of failure
-                        reject(err);
-                    });
-                    req.on('data', data=> {
-                      resolve();
-                    });
-                    req.end();
-                  });
-              
-              return prom.then( (data) => {
-                      let email=data;
-                      invokeParams.Payload = '{ "Path" : "startWithEmail" ,"Param" : "'+uid+'&email=' + email.substring(1,email.length-1) + '" }';
-                      var promise2 = new Promise((resolve, reject) => {
-                          lambda.invoke(invokeParams, function(err, data) {
+              const email=getEmail(handlerInput);
+
+              invokeParams.Payload = '{ "Path" : "startWithEmail" ,"Param" : "'+uid+'&email=' + email.substring(1,email.length-1) + '" }';
+              var promise2 = new Promise((resolve, reject) => {
+                      lambda.invoke(invokeParams, function(err, data) {
                           if (err) {
                             reject(err);
                           } else {
@@ -104,11 +72,8 @@ const LaunchRequestHandler = {
                       }).catch(function(err) {
                          console.log("promise 2 error catch: ", err);
                       });
-                      
-              }).catch(function(err) {
-                 console.log("prom error catch: ", err);
-                });
         } else {
+              // respType != email  
               return handleResponse(handlerInput, resp);
         }
     }).catch(function(err) {
@@ -118,6 +83,27 @@ const LaunchRequestHandler = {
             
   },
 };
+
+async function getEmail(handlerInput) {
+        const PERMISSIONS = ['alexa::profile:email:read'];
+        const { responseBuilder, serviceClientFactory } = handlerInput;
+              try {
+                const upsServiceClient = serviceClientFactory.getUpsServiceClient();  
+                const email = await upsServiceClient.getProfileEmail(); 
+                
+                return email;
+                
+              } catch (error) {
+                if (error.name == 'ServiceError') {
+                  console.log('ERROR StatusCode:' + error.statusCode + ' ' + error.message);
+                }
+                return responseBuilder
+                  .speak(messages.NOTIFY_MISSING_EMAIL_PERMISSIONS)
+                  .withAskForPermissionsConsentCard(PERMISSIONS)
+                  .getResponse();
+              }
+}
+
 
 const EventHandler = {
   canHandle: handlerInput =>
@@ -181,19 +167,7 @@ const GetAddressIntentHandler = {
     return request.type === 'IntentRequest' && request.intent.name === 'GetAddressIntent';
   },
   async handle(handlerInput) {
-    const messages = {
-      WELCOME: 'Welcome to the Sample Device Address API Skill!  You can ask for the device address by saying what is my address.  What do you want to ask?',
-      WHAT_DO_YOU_WANT: 'What do you want to ask?',
-      NOTIFY_MISSING_PERMISSIONS: 'Please enable Location permissions in the Amazon Alexa app.',
-      NO_ADDRESS: 'It looks like you don\'t have an address set. You can set your address from the companion app.',
-      ADDRESS_AVAILABLE: 'Here is your full address: ',
-      ERROR: 'Uh Oh. Looks like something went wrong.',
-      LOCATION_FAILURE: 'There was an error with the Device Address API. Please try again.',
-      GOODBYE: 'Bye! Thanks for using the Sample Device Address API Skill!',
-      UNHANDLED: 'This skill doesn\'t support that. Please ask something else.',
-      HELP: 'You can use this skill by asking something like: whats my address?',
-      STOP: 'Bye! Thanks for using the Sample Device Address API Skill!',
-    };
+
     console.log('=> Get Address -> handle -> handlerInput', JSON.stringify(handlerInput));
     const PERMISSIONS = ['read::alexa:device:all:address'];
     const { requestEnvelope, serviceClientFactory, responseBuilder } = handlerInput;
