@@ -119,10 +119,12 @@ type MeasureT struct {
 //                                             "unit" : { "S" : "min" },
 //                                             "msg" : { "S" : "Set a tim
 type TimerT struct {
-	Set  bool   `json:"set"`
-	Time int    `json:"time"`
-	Unit string `json:"unit"`
-	Msg  string `json:"msg"`
+	Set    bool   `json:"set"`
+	Time   int    `json:"time"`
+	Unit   string `json:"unit"`
+	Msg    string `json:"msg"`
+	Ask    bool   `json:"ask"` // ask user if they want timer set
+	Expire int    `json:"sec"`
 }
 
 type PerformT struct {
@@ -151,7 +153,7 @@ type PerformT struct {
 	Parallel bool     `json:"parallel"`
 	Link     bool     `json:"link"`
 	//
-	Timer *TimerT `json:"timer"`
+	Timer *TimerT `json:"timer"` // may make this []TimerT so a single instruction can generate multiple timer instructions
 	//
 	addToCp  []*Container // it is thought that only one addToC will be used per activity - but lets be flexible.
 	useCp    []*Container // ---"---
@@ -367,7 +369,7 @@ func (m *MeasureCT) String() string {
 
 func (m *MeasureT) String() string {
 
-	if scaleF > scaleThreshold || m.NoScale {
+	if global.GetScale() > scaleThreshold || m.NoScale {
 		return m.FormatString()
 	}
 	//
@@ -426,7 +428,7 @@ func (m *MeasureT) String() string {
 			}
 			f += n
 		}
-		f *= scaleF
+		f *= global.GetScale()
 		fint, frac := math.Modf(f)
 		if frac > 0.875 {
 			fint += 1
@@ -456,7 +458,7 @@ func (m *MeasureT) String() string {
 		if err != nil {
 			panic(fmt.Errorf("Error: cannot covert Quantity [%s] to float64 in *MeasureT.String()", s))
 		}
-		qty := f * scaleF
+		qty := f * global.GetScale()
 		ff, frac := math.Modf(qty)
 		if frac > 0.875 {
 			ff += 1
@@ -480,7 +482,7 @@ func (m *MeasureT) String() string {
 		if err != nil {
 			panic(fmt.Errorf("Error: cannot covert Quantity [%s] to int in *MeasureT.String()", s))
 		}
-		qty := float64(i) * 10 * scaleF
+		qty := float64(i) * 10 * global.GetScale()
 		qty = roundTo5(qty) / 10
 		if qty < 1 {
 			if qty > 0.875 {
@@ -586,7 +588,7 @@ func (m *MeasureT) String() string {
 			f = float64(i)
 		}
 		// *1000 as we are to change to smaller unit
-		qty = f * scaleF
+		qty = f * global.GetScale()
 		if m.Unit == "l" || m.Unit == "cm" || m.Unit == "kg" {
 			var unit string
 			qty *= 1000

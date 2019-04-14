@@ -30,13 +30,13 @@ const LaunchRequestHandler = {
     return handlerInput.requestEnvelope.request.type === 'LaunchRequest';
   },
   
-  async handle(handlerInput) {
+  handle(handlerInput) {
     // var speechText = "Hi. To find a recipe, simply search for a keyword by saying 'search keyword or recipe name' where keyword is any ingredient or ingredients related to the recipe ";
     // var displayText =  "Hi. To find a recipe, simply search for a keyword by saying 'search keyword or recipe name' where keyword is any ingredient or ingredients related to the recipe ";
 
     const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
-    //const accessToken = handlerInput.requestEnvelope.context.System.apiAccessToken;
-    //const accessEndpoint = handlerInput.requestEnvelope.context.System.apiEndpoint;
+    const accessToken = handlerInput.requestEnvelope.context.System.apiAccessToken;
+    const accessEndpoint = handlerInput.requestEnvelope.context.System.apiEndpoint;
     
     invokeParams.Payload = '{ "Path" : "start" ,"Param" : "'+uid+'" }';
     
@@ -53,11 +53,58 @@ const LaunchRequestHandler = {
         resp = JSON.parse(resp);
         console.log("inner resp:", resp);
         if (resp.Type === 'email') {
-              const email=getEmail(handlerInput);
-
-              invokeParams.Payload = '{ "Path" : "startWithEmail" ,"Param" : "'+uid+'&email=' + email.substring(1,email.length-1) + '" }';
-              var promise2 = new Promise((resolve, reject) => {
-                      lambda.invoke(invokeParams, function(err, data) {
+              //await getEmail(accessToken,accessEndpoint);
+              const https = require('https');
+    
+              const options = {
+                hostname: accessEndpoint.substring(8,accessEndpoint.length),
+                path: "/v2/accounts/~current/settings/Profile.email",
+                //method: "GET",
+                headers: {
+                      "content-type": "application/json",
+                      "accept": "application/json",
+                      "authorization": "Bearer" + " " + accessToken
+                }
+              };
+              var prom= new Promise((resolve, reject) => {
+                    var req = https.get(options, function(res) {
+                        // reject on bad status
+                        if (res.statusCode < 200 || res.statusCode >= 300) {
+                            return reject(new Error('statusCode=' + res.statusCode));
+                        }
+                        // cumulate data
+                        var body = [];
+                        res.on('data', function(chunk) {
+                            body.push(chunk);
+                        });
+                        // resolve on end
+                        res.on('end', function() {
+                            try {
+                                body=String(body);      
+                            } catch(e) {
+                                reject(e);
+                            }
+                            resolve(body);
+                        });
+                    });
+                    // reject on request error
+                    req.on('error', function(err) {
+                        // This is not a "Second reject", just a different sort of failure
+                        reject(err);
+                    });
+                    req.on('data', data=> {
+                      resolve();
+                    });
+                    req.end();
+                  });
+              
+              return prom.then( (data) => {
+                      let email=data;
+                      console.log("Email is: ",email);
+                      invokeParams.Payload = '{ "Path" : "startWithEmail" ,"Param" : "'+uid+'&email=' + email.substring(1,email.length-1) + '" }';
+                      
+                      var promise2 = new Promise((resolve, reject) => {
+                          lambda.invoke(invokeParams, function(err, data) {
                           if (err) {
                             reject(err);
                           } else {
@@ -69,40 +116,155 @@ const LaunchRequestHandler = {
                               var  resp = JSON.parse(body);
                               console.log("promise 2 resp: ",resp);
                               return handleResponse(handlerInput, resp);
-                      }).catch(function(err) {
-                         console.log("promise 2 error catch: ", err);
-                      });
-        } else {
-              // respType != email  
+                              
+                              }).catch(function(err) { // catch invoke start with Email
+                                     console.log("promise 2 error catch: ", err);
+                              });
+                      
+              }).catch(function(err) { // catch resp from http.get email
+                 //console.log("prom error catch: ");
+                 const PERMISSIONS = ['alexa::profile:email:read'];
+                 return handlerInput.responseBuilder
+                                  .speak("please give permission to email")
+                                  .withAskForPermissionsConsentCard(PERMISSIONS)
+                                  .getResponse();
+                });
+        } else { // resp from invoke start
+              console.log("about to handle response....");
               return handleResponse(handlerInput, resp);
         }
-    }).catch(function(err) {
-      console.log("error catch: ", err);
-           return "xyz";
+    }).catch(function(err) { // catch invoke start..
+      console.log("invoke start .. error catch: ", err);
+                      return handlerInput.responseBuilder
+                                   .speak("Error has occured")
+                                   .getResponse();
     });
             
   },
 };
 
-async function getEmail(handlerInput) {
-        const PERMISSIONS = ['alexa::profile:email:read'];
-        const { responseBuilder, serviceClientFactory } = handlerInput;
-              try {
-                const upsServiceClient = serviceClientFactory.getUpsServiceClient();  
-                const email = await upsServiceClient.getProfileEmail(); 
-                
-                return email;
-                
-              } catch (error) {
-                if (error.name == 'ServiceError') {
-                  console.log('ERROR StatusCode:' + error.statusCode + ' ' + error.message);
+
+const XYZIntentHandler = {
+  canHandle(handlerInput) {
+    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+      && handlerInput.requestEnvelope.request.intent.name === 'XYZIntent';
+  },
+  handle(handlerInput) {
+    //const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
+    const accessToken = handlerInput.requestEnvelope.context.System.apiAccessToken;
+    const accessEndpoint = handlerInput.requestEnvelope.context.System.apiEndpoint;
+    //function setTimer(expireSec, msg, accessToken, accessEndpoint, handlerInput){
+    console.log("In TimerInternHandler accessEndpoint ",accessEndpoint);
+    setTimer(300,"Test timer today", accessToken,accessEndpoint,handlerInput);
+  },
+};
+
+
+
+function setTimer(expireSec, msg, accessToken, accessEndpoint, handlerInput){
+  const https = require('https');
+  const event = handlerInput.requestEnvelope;
+              const request = {
+                                requestTime : new Date(),
+                                trigger: {
+                                      type : "SCHEDULED_RELATIVE",
+                                      offsetInSeconds : expireSec
+                                },
+                                alertInfo : {
+                                      spokenInfo : {
+                                          content : [{
+                                              locale : event.request.locale,
+                                              text : msg
+                                          }]
+                                      }
+                                  },
+                                  pushNotification : {                            
+                                      status : "ENABLED"         
+                                  }
+                              };
+              const data = JSON.stringify(request);
+              
+              console.log("Reminder data: ",data);
+
+              const options = {
+                hostname: accessEndpoint.substring(8,accessEndpoint.length),
+                path: "/v1/alerts/reminders",
+                method: "Post",
+                headers: {
+                      "content-type" : "application/json",
+                      "authorization" : "Bearer" + " " + accessToken,
+                      "content-length" : Buffer.byteLength(data)
                 }
-                return responseBuilder
-                  .speak(messages.NOTIFY_MISSING_EMAIL_PERMISSIONS)
-                  .withAskForPermissionsConsentCard(PERMISSIONS)
-                  .getResponse();
-              }
+              };
+              var prom= new Promise((resolve, reject) => {
+                    var req = https.request(options, function(res) {
+                        // reject on bad status
+                        if (res.statusCode < 200 || res.statusCode >= 300) {
+                            return reject(new Error('statusCode=' + res.statusCode));
+                        }
+                        res.setEncoding('utf8');
+                        // cumulate data
+                        var body = [];
+                        res.on('data', function(chunk) {
+                            body.push(chunk);
+                        });
+                        // resolve on end
+                        res.on('end', function() {
+                            try {
+                                body=String(body);      
+                            } catch(e) {
+                               console.log("on res-on-end Error deteceted...");
+                                reject(e);
+                            }
+                            resolve(body);
+                        });
+                    });
+                    // reject on request error
+                    req.on('error', function(err) {
+                        // This is not a "Second reject", just a different sort of failure
+                        console.log("Here in req-on-error");
+                        reject(err);
+                    });
+                    req.on('data', data=> {
+                      resolve();
+                    });
+                    req.write(data);
+                    req.end();
+                  });
+              
+              return prom.then( (data) => {
+                  // timer set
+                  console.log("response: ", JSON.stringify(data) );
+                      
+              }).catch(function(err) { // catch resp from http.get email
+                console.log("prom error catch: ",err);
+                const PERMISSIONS = ['alexa::alerts:reminders:skill:readwrite'];
+                return handlerInput.responseBuilder
+                                  .speak("please give permission to set a timer for you")
+                                  .withAskForPermissionsConsentCard(PERMISSIONS)
+                                  .getResponse();
+                });
 }
+
+// async function getEmail(handlerInput) {
+//         const PERMISSIONS = ['alexa::profile:email:read'];
+//         const { responseBuilder, serviceClientFactory } = handlerInput;
+//         try {
+//                 const upsServiceClient = serviceClientFactory.getUpsServiceClient();  
+//                 const email = await upsServiceClient.getProfileEmail(); 
+                
+//                 return email;
+                
+//         } catch (error) {
+//                 if (error.name == 'ServiceError') {
+//                   console.log('ERROR StatusCode:' + error.statusCode + ' ' + error.message);
+//                 }
+//                 return responseBuilder
+//                   .speak(messages.NOTIFY_MISSING_EMAIL_PERMISSIONS)
+//                   .withAskForPermissionsConsentCard(PERMISSIONS)
+//                   .getResponse();
+//         }
+// }
 
 
 const EventHandler = {
@@ -141,7 +303,7 @@ const EventHandler = {
     case 'backButton':
        invokeParams.Payload = '{ "Path" : "back" ,"Param" : "'+uid+'" }';
         
-       var promise= new Promise((resolve, reject) => {
+       promise= new Promise((resolve, reject) => {
           lambda.invoke(invokeParams, function(err, data) {
           if (err) {
             reject(err);
@@ -290,6 +452,8 @@ const GetEmailIntentHandler = {
 };
 
 
+
+
 const ScaleIntentHandler = {
   canHandle(handlerInput) {
     return handlerInput.requestEnvelope.request.type === 'IntentRequest'
@@ -373,22 +537,10 @@ const BookIntentHandler = {
     
     return promise.then((body) => {
         var  resp = JSON.parse(body);
-        if (resp.Type === "header") {
-          const display = require('APL/header.js');
-          return  handlerInput.responseBuilder
-                            .speak(resp.Verbal)
-                            .reprompt(resp.Verbal)
-                            .addDirective(display(resp.BackBtn, resp.Header, resp.SubHdr, resp.List))
-                            .getResponse();
-        } else if (resp.Type === "Select") {
-          const select = require('APL/select.js');
-          return  handlerInput.responseBuilder
-                            .speak(resp.Verbal)
-                            .reprompt(resp.Verbal)
-                            .addDirective(select(resp.BackBtn, resp.Header,resp.SubHdr, resp.List))
-                            .getResponse(); 
-        }
-        }).catch(function (err) { console.log(err, err.stack);  } );
+        console.log(resp);
+        return handleResponse(handlerInput, resp);
+      }).catch((err) => { console.log("this is in error", err, err.stack);  } );
+    
   },
 };
 
@@ -496,8 +648,8 @@ const BackIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'backIntent';
   },
   handle(handlerInput) {
-    const select = require('APL/select.js');
-    const ingredient = require('APL/ingredients.js');
+    //const select = require('APL/select.js');
+    //const ingredient = require('APL/ingredients.js');
     const uid='uid='+handlerInput.requestEnvelope.session.user.userId   ; 
     invokeParams.Payload = '{ "Path" : "back" ,"Param" : "'+uid+'" }';
 
@@ -513,19 +665,7 @@ const BackIntentHandler = {
     return promise.then((body) => {
         var  resp = JSON.parse(body);
         console.log(resp);
-        if (resp.Type === "Ingredient") {
-          return  handlerInput.responseBuilder
-                            .speak(resp.Verbal)
-                            .reprompt(resp.Verbal)
-                            .addDirective(ingredient(resp.Header,resp.SubHdr, resp.List))
-                            .getResponse();
-        } else {
-          return  handlerInput.responseBuilder
-                            .speak(resp.Verbal)
-                            .reprompt(resp.Verbal)
-                            .addDirective(select(resp.Header,resp.SubHdr, resp.List))
-                            .getResponse();     
-        }
+        return handleResponse(handlerInput, resp);
       }).catch(function (err) { console.log(err, err.stack);  } );
   
   },
@@ -590,22 +730,6 @@ const GotoIntentHandler = {
   },
 };
 
-const TestIntentHandler = {
-  canHandle(handlerInput) {
-    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
-      && handlerInput.requestEnvelope.request.intent.name === 'TestIntent';
-  },
-  handle(handlerInput) {
-    const test = require('APL/test.js');
-    const speakcmd = require('APL/testspeakcmd.js');
-
-    return  handlerInput.responseBuilder
-                            .reprompt("testing")
-                            .addDirective(test("Header","SubHdr", resp.output))
-                            .addDirective(speakcmd())
-                            .getResponse(); 
-  },
-};
 
 
 const NextIntentHandler = {
@@ -703,7 +827,7 @@ const RecipeIntentHandler = {
     const uid='uid='+handlerInput.requestEnvelope.session.user.userId;
     //var path_='&rcp='+bkIdRId
     //if ( bkIdRId.length == 0 ) {
-      path_='&rcp='+rname;
+    const path_='&rcp='+rname;
     //}
     invokeParams.Payload = '{ "Path" : "recipe" ,"Param" : "'+uid+path_+'" }';
 
@@ -936,7 +1060,7 @@ function handleResponse (handlerInput , resp) {
           return  handlerInput.responseBuilder
                             .speak(resp.Verbal)
                             .reprompt(resp.Verbal)
-                            .addDirective(ingredient(resp.Header,resp.SubHdr, resp.List))
+                            .addDirective(ingredient(resp.BackBtn, resp.Header,resp.SubHdr, resp.List))
                             .getResponse();
         } else if (resp.Type === "PartList") {
           const search = require('APL/PartList.js');
@@ -1005,7 +1129,6 @@ exports.handler = skillBuilder
     GetEmailIntentHandler,
     BookIntentHandler,
     BackIntentHandler,
-    TestIntentHandler,
     CloseBookIntentHandler,
     RecipeIntentHandler,
     VersionIntentHandler,
@@ -1022,6 +1145,7 @@ exports.handler = skillBuilder
     ContainerIntentHandler,
     HelpIntentHandler,
     CancelAndStopIntentHandler,
+    XYZIntentHandler,
     SessionEndedRequestHandler,
     EventHandler
   )

@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cook/global"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	_ "github.com/aws/aws-sdk-go/aws/credentials"
@@ -69,6 +71,8 @@ type stateRec struct {
 	//
 	Dispctr DispContainerT `json:"Dctr"`
 	ScaleF  float64
+	//
+	Display apldisplayT `json:"AplD"`
 }
 
 type stateStack []stateRec
@@ -92,9 +96,7 @@ func (s *sessCtx) getState() (*stateRec, error) {
 	type pKey struct {
 		Uid string
 	}
-	fmt.Println("entered getState..")
 	pkey := pKey{s.userId}
-	fmt.Println("userId: ", s.userId)
 	av, err := dynamodbattribute.MarshalMap(&pkey)
 	if err != nil {
 		return nil, err
@@ -128,7 +130,6 @@ func (s *sessCtx) getState() (*stateRec, error) {
 	if len(result.Item) == 0 {
 		//
 		s.newSession = true
-		fmt.Println("NEW SESSION..")
 		return &stateRec{}, nil
 	}
 	//
@@ -149,6 +150,15 @@ func (s *sessCtx) getState() (*stateRec, error) {
 
 func (s *sessCtx) setState(ls *stateRec) {
 	//return staterow.state.pop(), nil
+	// DONT SET display here. This must set just before pushState.
+	//if ls.Display.Type != 0 {
+	// 	s.display = &ls.Display
+	// 	switch s.display.Type {
+	// 	case WELCOME:
+	// 		var w WelcomeT
+	// 		s.displayData = w
+	// 	}
+	// }
 	if s.eol == 0 {
 		s.eol = ls.EOL
 	}
@@ -200,7 +210,7 @@ func (s *sessCtx) setState(ls *stateRec) {
 	if len(s.part) == 0 {
 		s.part = ls.Part
 	}
-	if len(s.parts) == 0 {
+	if len(s.parts) == 0 && len(ls.Parts) > 0 {
 		s.parts = ls.Parts
 		s.displayData = ls.Parts
 	}
@@ -240,6 +250,7 @@ func (s *sessCtx) setState(ls *stateRec) {
 	// fmt.Println("in Session:ls.SelCtx = ", ls.SelCtx)
 	// fmt.Println("in Session: len(ls.Ingredients) = ", len(ls.Ingredients))
 	// fmt.Println("in Session: s.request = ", s.request)
+	//
 	fmt.Println("in SetState: selId = ", s.selId)
 	if s.selId > 0 {
 		switch {
@@ -292,9 +303,16 @@ func (s *sessCtx) setState(ls *stateRec) {
 	}
 	s.dispCtr = &ls.Dispctr
 	if ls.ScaleF == 0 {
-		scaleF = 1
+		global.SetScale(1.0)
 	} else {
-		scaleF = ls.ScaleF
+		global.SetScale(ls.ScaleF)
+	}
+	//
+	// must exist with displayData set
+	//
+	if s.request == "start" && s.displayData == nil {
+		var w WelcomeT
+		s.displayData = w
 	}
 	return
 }
@@ -314,8 +332,7 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 	//sr.Path = s.path
 	//sr.Param = s.param
 	sr.DT = time.Now().Format("Jan 2 15:04:05")
-	sr.RId = s.reqRId // Recipe Id
-	fmt.Println("BkId = ", s.reqBkId)
+	sr.RId = s.reqRId       // Recipe Id
 	sr.BkId = s.reqBkId     // Book Id
 	sr.BkName = s.reqBkName // Book name - saves a lookup under some circumstances
 	sr.RName = s.reqRName   // Recipe name - saves a lookup under some circumstances
@@ -369,7 +386,11 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 	if s.dispCtr != nil {
 		sr.Dispctr = *(s.dispCtr)
 	}
-	sr.ScaleF = scaleF
+	sr.ScaleF = global.GetScale()
+	//
+	if s.display != nil {
+		sr.Display = *(s.display)
+	}
 	//
 	State := make(stateStack, 1)
 	State[0] = sr
@@ -381,7 +402,7 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 	updateC = expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
 	if s.newSession {
 		//.RecId = [4]int{}
-		s.state = State[:]
+		//s.state = State[:]
 		updateC = updateC.Set(expression.Name("state"), expression.Value(State))
 		s.newSession = false
 	} else if len(s.state) > 12 {
@@ -397,7 +418,7 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 	av, err := dynamodbattribute.MarshalMap(&pkey)
 	input := &dynamodb.UpdateItemInput{
 		TableName:                 aws.String("Sessions"),
-		Key:                       av, // accets []map[]*attributeValues so must use marshal not expression
+		Key:                       av, // accepts []map[]*attributeValues so must use marshal not expression
 		UpdateExpression:          expr.Update(),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
@@ -431,6 +452,7 @@ func (s *sessCtx) updateState() error {
 		Uid string
 	}
 	var updateC expression.UpdateBuilder
+	var atribute string
 	//
 	// update RecId attribute of latest state item
 	//
@@ -441,46 +463,59 @@ func (s *sessCtx) updateState() error {
 	//
 	// for current state
 	//
+	if len(s.state) == 0 {
+		// this case for new session. No UserId in session table so no state.
+		panic(fmt.Errorf("s.state not set in UpdateState()"))
+	}
 	if len(s.menuL) > 0 {
-		atribute := fmt.Sprintf("state[%d].MenuL", len(s.state)-1)
+		atribute = fmt.Sprintf("state[%d].MenuL", len(s.state)-1)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.menuL))
+	}
+	if s.dispCtr != nil {
 		atribute = fmt.Sprintf("state[%d].Dctr", len(s.state)-1)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(*(s.dispCtr)))
-		atribute = fmt.Sprintf("state[%d].ScaleF", len(s.state)-1)
-		updateC = updateC.Set(expression.Name(atribute), expression.Value(scaleF))
-	} else {
-		atribute := fmt.Sprintf("state[%d].RecId", len(s.state)-1)
-		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
+	}
+	// if scale changes then history must change to new value upto but not including last ingredients display or end of state list.
+	for scale, i := global.GetScale(), len(s.state)-1; i > 0; i-- {
+		if s.state[i].ScaleF == scale || (len(s.state[i].Ingredients) > 0 && i < len(s.state)-1) {
+			// break when listed Ingredients are not current one
+			break
+		}
+		atribute = fmt.Sprintf("state[%d].ScaleF", i)
+		updateC = updateC.Set(expression.Name(atribute), expression.Value(scale))
+	}
+	atribute = fmt.Sprintf("state[%d].RecId", len(s.state)-1)
+	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
+	if len(s.state[len(s.state)-1].InstructionData) > 0 {
 		atribute = fmt.Sprintf("state[%d].I[%d].id", len(s.state)-1, s.cThread)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId[objectMap[task_]]))
-		atribute = fmt.Sprintf("state[%d].CThrd", len(s.state)-1)
-		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.cThread))
-		atribute = fmt.Sprintf("state[%d].OThrd", len(s.state)-1)
-		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.oThread))
-		atribute = fmt.Sprintf("state[%d].DT", len(s.state)-1)
-		updateC = updateC.Set(expression.Name(atribute), expression.Value(time.Now().Format("Jan 2 15:04:05")))
+	}
+	if len(s.state[len(s.state)-1].Ingredients) > 0 && len(s.ingrdList) > 0 {
+		atribute = fmt.Sprintf("state[%d].ingrd", len(s.state)-1)
+		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.ingrdList))
+	}
+	atribute = fmt.Sprintf("state[%d].CThrd", len(s.state)-1)
+	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.cThread))
+	atribute = fmt.Sprintf("state[%d].OThrd", len(s.state)-1)
+	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.oThread))
+	atribute = fmt.Sprintf("state[%d].DT", len(s.state)-1)
+	updateC = updateC.Set(expression.Name(atribute), expression.Value(time.Now().Format("Jan 2 15:04:05")))
+	if len(s.request) > 0 {
 		atribute = fmt.Sprintf("state[%d].Request", len(s.state)-1)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.request))
 	}
-	//
-	// for previous states - upto object menu
-	//
-	// fmt.Println("len(s.state)  ", len(s.state))
-	// if len(s.state)-2 > 0 {
-	// 	atribute := fmt.Sprintf("state[%d].RecId", len(s.state)-2)
-	// 	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
-	// }
-	// //back to object choice menu - if recipe part's involved
-	// fmt.Println(" back to object menu")
-	// if len(s.state)-3 > 0 && (s.request == "select" || s.request == "search") && len(s.reqRName) > 0 {
-	// 	atribute := fmt.Sprintf("state[%d].RecId", len(s.state)-3)
-	// 	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
-	// }
+	if s.display != nil {
+		atribute = fmt.Sprintf("state[%d].AplD", len(s.state)-1)
+		updateC = updateC.Set(expression.Name(atribute), expression.Value(*(s.display)))
+	}
+
 	//
 	expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
 	pkey := pKey{Uid: s.userId}
 	av, err := dynamodbattribute.MarshalMap(&pkey)
-
+	if err != nil {
+		panic(err)
+	}
 	input := &dynamodb.UpdateItemInput{
 		TableName:                 aws.String("Sessions"),
 		Key:                       av, // accets []map[]*attributeValues so must use marshal not expression
@@ -500,11 +535,13 @@ func (s *sessCtx) updateState() error {
 			case dynamodb.ErrCodeInternalServerError:
 				fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
 			default:
+				fmt.Println("error in UpdateItem: ")
 				fmt.Println(aerr.Error())
 			}
 		} else {
 			// Print the error, cast err to awserr.Error to get the Code and
 			// Message from an error.
+			fmt.Println("error in UpdateItem:2 ")
 			fmt.Println(err.Error())
 		}
 		return err
@@ -638,6 +675,7 @@ func (s *sessCtx) popState() error {
 	//
 	s.parts = sr.Parts
 	s.part = sr.Part
+	//
 	//s.peol = sr.PEOL
 	//s.pid = sr.PId
 	//
@@ -653,6 +691,7 @@ func (s *sessCtx) popState() error {
 	fmt.Printf("Popstate: sr.RecipeList %#v\n", sr.RecipeList)
 	fmt.Printf("Popstate: s.reqBkId %#v\n", s.reqBkId)
 	fmt.Printf("Popstate: s.reqRId %#v\n", s.reqRId)
+	//
 	s.displayData = s.parts
 	if len(sr.InstructionData) > 0 {
 		s.displayData = sr.InstructionData
@@ -679,11 +718,28 @@ func (s *sessCtx) popState() error {
 	}
 	s.dispCtr = &sr.Dispctr
 	if sr.ScaleF == 0 {
-		scaleF = 1
+		global.SetScale(1.0)
 	} else {
-		scaleF = sr.ScaleF
+		global.SetScale(sr.ScaleF)
 	}
 	s.pkey = s.reqBkId + "-" + s.reqRId
-	fmt.Printf("Popstate: s.reqRId %#v\n", s.pkey)
+	//
+	// set displayData - important to do this as "back" will rely on popstate() to determine apl display to show
+	//
+	// do we use Request or Display to drive off - only one need be used, but will persis with Request for time being until
+	// Display is fully implemented (if ever)
+	//if sr.Request == "start" && sr.Display.Type != 0 && s.displayData == nil {
+	if sr.Request == "start" {
+		fmt.Println(" ** back now in start")
+		s.display = &sr.Display
+		fmt.Printf("s.display = %#v\n", s.display)
+		var w WelcomeT
+		s.displayData = w
+	}
+	// switch s.display.Type {
+	// case WELCOME:
+	// 	var w WelcomeT
+	// 	s.displayData = w
+	// }
 	return nil
 }

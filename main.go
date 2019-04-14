@@ -24,6 +24,10 @@ import (
 // Session Context - assigned from request and Session table.
 //  also contains state information relevant to current session and not the next session.
 
+type apldisplayT struct {
+	Type     int           `json:"typ"`
+	DispList []DisplayItem `json:"dlist"`
+}
 type sessCtx struct {
 	err        error
 	newSession bool
@@ -34,10 +38,11 @@ type sessCtx struct {
 	lastState *stateRec // state attribute from state dynamo item - contains state history
 	passErr   string
 	//
-	userId      string // sourced from request. Used as PKey to Sessions table
-	reqOpenBk   BookT  // BkId|BkName|authors
-	reqRName    string // requested recipe name - query param of recipe request
-	reqBkName   string // requested book name - query param
+	userId      string   // sourced from request. Used as PKey to Sessions table
+	bkids       []string // registered book to user
+	reqOpenBk   BookT    // BkId|BkName|authors
+	reqRName    string   // requested recipe name - query param of recipe request
+	reqBkName   string   // requested book name - query param
 	CloseBkName string
 	reqRId      string // Recipe Id - 0 means no recipe id has been assigned.  All RId's start at 1.
 	reqBkId     string
@@ -60,11 +65,11 @@ type sessCtx struct {
 	dynamodbSvc *dynamodb.DynamoDB
 	object      string //container,ingredient,instruction,utensil. Sourced from Sessions table or request
 	//updateAdd      int        // dynamodb Update ADD. Operation dependent
-	gotoRecId        int         // sourced from request
-	objRecId         int         // current record id for object. Object is a ingredient,task,container,utensil.- displayed record id persisted to session after use.
-	recIdNotExists   bool        // determines whether to create []RecId set attribute in Session  table
-	noGetRecRequired bool        // a mutliple record request e.g. ingredients listing
-	recipeList       RecipeListT // multi-choice select. Recipe name and ingredient searches can result in mutliple records being returned. Results are saved.
+	gotoRecId      int  // sourced from request
+	objRecId       int  // current record id for object. Object is a ingredient,task,container,utensil.- displayed record id persisted to session after use.
+	recIdNotExists bool // determines whether to create []RecId set attribute in Session  table
+	//noGetRecRequired bool        // a mutliple record request e.g. ingredients listing
+	recipeList RecipeListT // multi-choice select. Recipe name and ingredient searches can result in mutliple records being returned. Results are saved.
 	//
 	selCtx selectCtxT // select context either recipe or other (i.e. object)k,
 	selId  int        // value selected by user of index in itemList
@@ -105,9 +110,12 @@ type sessCtx struct {
 	dispCtr   *DispContainerT
 	dimension int
 	scalef    float64
+	reScale   bool
+	//
+	display *apldisplayT
+	//
+	email string
 }
-
-var scaleF float64
 
 const scaleThreshold float64 = 0.9
 
@@ -215,7 +223,6 @@ func (s *sessCtx) orchestrateRequest() error {
 	// ******************************** 	initialise state		****************************************
 	//
 	// fetch state from last session
-	fmt.Println("ingrdList = ", len(s.ingrdList))
 	lastState, err := s.getState()
 	if err != nil {
 		return err
@@ -225,17 +232,55 @@ func (s *sessCtx) orchestrateRequest() error {
 	//
 	// ******************************** process responses to request  ****************************************
 	//
+	// alexa launch request
+	//
 	if s.request == "start" {
-		if _, ok := s.displayData.(Threads); ok {
+		fmt.Println("start...")
+		switch s.displayData.(type) {
+		case Threads:
+			fmt.Println("Threads..")
 			// redirect request
 			s.request = "start-next"
 			// s.objRecId = s.recId[objectMap[s.object]] + 1
 			// s.recId[objectMap[s.object]] += 1
-		} else if !(len(s.reqBkId) > 0 || len(s.reqOpenBk) > 0) {
-			var msg WelcomeT
-			msg = "Please open a book or conduct a search..."
-			s.displayData = msg
-			return nil
+		case WelcomeT:
+			fmt.Println("Welcome..")
+			// no previous session - check if userId is registered
+			// check for row U-[userId] in ingredients table. This item contains books registered to userId
+			//  if no data then user is not registered and therefore ineligble to uer app
+			if len(s.email) > 0 {
+				// resp from startwithEmail. (see below) for the case of no registerd books.
+				var w WelcomeT
+				w.msg = fmt.Sprintf("Hi, you have no books registered against this device. Please go to www.eburypress.co.uk and register your  book purchase, using the email: %s ", s.email)
+				s.displayData = w
+				return nil
+			}
+			// always check for books = don't rely on cached result even if it reasonably current
+			// check if bkids (in DispList) are populated from previous session
+			// if s.display != nil && len(s.display.DispList) > 1 {
+			// 	return nil
+			// }
+			bkids, err := s.getUserBooks()
+			if err != nil {
+				return err
+			}
+			switch len(bkids) {
+			case 0:
+				fmt.Println("No books found...")
+				// user has no registered books. Get index.js to supply email and start again using startWithEmail
+				var w WelcomeT
+				w.msg = "no books found. There was an error with getting permissions to your email. Please say yes."
+				w.request = "email"
+				s.displayData = w
+				return nil
+			default:
+				fmt.Println("Books found")
+				s.bkids = bkids
+				var w WelcomeT
+				w.msg = "You have the following books registered to your email.  Please open one of them or conduct a search across all your books."
+				s.displayData = w
+				return nil
+			}
 		}
 	}
 	if s.request == "dimension" {
@@ -267,13 +312,23 @@ func (s *sessCtx) orchestrateRequest() error {
 	// check if scale requested and state is listing ingredients, otherwise ignore
 	//
 	if s.request == "scale" {
-
-		if s.selId == 1 && s.selCtx == ctxObjectMenu && len(s.ingrdList) > 0 {
-			// state will ensure ingredient gets displayed so don't return just yet
-			scaleF = s.scalef
-		} else {
-			// this request is not suitable to the current state
-			return nil
+		fmt.Println(" save scale - updateState() ")
+		s.reScale = true
+		//
+		//  define current state
+		//
+		s.request = lastState.Request
+		s.selId = lastState.SelId
+		fmt.Println("lastState.Request (now s.request) = ", lastState.Request)
+		s.selCtx = lastState.SelCtx
+		fmt.Println("lastState.selCtx (now s.selCtx) = ", lastState.SelCtx)
+		s.object = lastState.Obj
+		//
+		// only save when in the appropriate state
+		//
+		if s.selCtx != ctxPartMenu {
+			// update scale if not in instruction screen
+			global.SetScale(s.scalef)
 		}
 	}
 	//
@@ -345,19 +400,23 @@ func (s *sessCtx) orchestrateRequest() error {
 		switch s.selCtx {
 		case ctxRecipeMenu:
 			// select from: multiple recipes
-			if s.selId > len(s.recipeList) || s.selId < 1 {
-				s.passErr = "selection is not within range"
-				return nil
-			}
-			p := s.recipeList[s.selId-1]
-			s.reqRId, s.reqRName, s.reqBkId, s.reqBkName = p.RId, p.RName, p.BkId, p.BkName
-			s.dmsg = fmt.Sprintf(`Now that you have selected [%s] recipe would you like to list ingredients, cooking instructions, utensils or containers or cancel`, s.reqRName)
-			s.vmsg = fmt.Sprintf(`Now that you have selected {%s] recipe would you like to list ingredients, cooking instructions, utensils or containers or cancel`, s.reqRName)
-			// chosen recipe, so set select context to object (ingredient, utensil, container, tas			s.selCtx = ctxObjectMenu
-			//
-			_, err := s.recipeRSearch()
-			if err != nil {
-				return err
+			if !s.reScale {
+				// select id only checked for genuine selection which doesn't happen if request is scale.
+				if s.selId > len(s.recipeList) || s.selId < 1 {
+					s.passErr = "selection is not within range"
+					return nil
+				}
+
+				p := s.recipeList[s.selId-1]
+				s.reqRId, s.reqRName, s.reqBkId, s.reqBkName = p.RId, p.RName, p.BkId, p.BkName
+				s.dmsg = fmt.Sprintf(`Now that you have selected [%s] recipe would you like to list ingredients, cooking instructions, utensils or containers or cancel`, s.reqRName)
+				s.vmsg = fmt.Sprintf(`Now that you have selected {%s] recipe would you like to list ingredients, cooking instructions, utensils or containers or cancel`, s.reqRName)
+				// chosen recipe, so set select context to object (ingredient, utensil, container, tas			s.selCtx = ctxObjectMenu
+				//
+				_, err := s.recipeRSearch()
+				if err != nil {
+					return err
+				}
 			}
 			s.displayData = objMenu
 			s.showObjMenu = true
@@ -365,9 +424,13 @@ func (s *sessCtx) orchestrateRequest() error {
 
 			s.reset = true
 			fmt.Println("ctxRecipeMenu: about to pushState")
-			_, err = s.pushState()
-			if err != nil {
-				return err
+			if !s.reScale {
+				_, err = s.pushState()
+				if err != nil {
+					return err
+				}
+			} else {
+				s.updateState()
 			}
 
 			return nil
@@ -376,11 +439,12 @@ func (s *sessCtx) orchestrateRequest() error {
 			s.pkey = s.reqBkId + "-" + s.reqRId
 			//	select from: list ingredient, list utensils, list containers, start cooking
 			fmt.Println("selId: ", s.selId)
-			switch s.request {
-			case "scale":
-				// scale only applies to ingredients
-				s.object = ingredient_
-			default:
+			// if s.reScale {
+			// 	// current operation is a rescale - which only applies to ingredients so set Ingredient
+			// 	s.object = ingredient_
+			// } else {
+			if !s.reScale {
+				// check select id is within menu range. For reScale there is no menu listing in its current state.
 				if s.selId > len(s.menuL) {
 					//s.setDisplay(lastState)
 					s.passErr = "selection is not within range"
@@ -456,12 +520,17 @@ func (s *sessCtx) orchestrateRequest() error {
 				s.showObjMenu = false
 				s.curReqType = 0
 
-				if s.request != "scale" {
+				if s.reScale { // change in scale from last session
+					fmt.Println("in ingredient List: update state not pushState")
+					s.updateState()
+				} else {
+					fmt.Println("in ingredient List: pushState")
 					_, err = s.pushState()
-					if err != nil {
-						return err
-					}
 				}
+				if err != nil {
+					return err
+				}
+				//	}
 				return nil
 
 			case container_:
@@ -475,7 +544,7 @@ func (s *sessCtx) orchestrateRequest() error {
 				}
 				s.showObjMenu = false
 				s.curReqType = 0
-
+				fmt.Println("Here in container.. about to pushState")
 				_, err = s.pushState()
 				if err != nil {
 					return err
@@ -788,6 +857,7 @@ func (r *InputEvent) init() {
 	r.QueryStringParameters = make(map[string]string)
 	params := strings.Split(r.Param, "&")
 	for _, v := range params {
+		fmt.Println(v)
 		param := strings.Split(v, "=")
 		r.QueryStringParameters[param[0]] = param[1]
 	}
@@ -819,7 +889,7 @@ func handler(request InputEvent) (RespEvent, error) {
 	//var body string
 	// create a new session context and merge with last session data if present.
 	sessctx := &sessCtx{
-		userId:      request.QueryStringParameters["uid"],
+		userId:      request.QueryStringParameters["uid"], // empty when not called
 		dynamodbSvc: dynamodbService(),
 		request:     pathItem[0],
 		//path:        request.Path,
@@ -835,29 +905,7 @@ func handler(request InputEvent) (RespEvent, error) {
 	//
 	fmt.Println("REQUEST: ", sessctx.request)
 	switch sessctx.request {
-	case "purge":
-		sessctx.reqBkId = request.QueryStringParameters["bkid"]
-		sessctx.reqRId = request.QueryStringParameters["rid"]
-		sessctx.reqVersion = request.QueryStringParameters["ver"]
-		//
-		sessctx.pkey = sessctx.reqBkId + "-" + sessctx.reqRId
-		if sessctx.reqVersion != "" {
-			sessctx.pkey += "-" + sessctx.reqVersion
-		}
-		// fetch recipe name and book name
-		_, err = sessctx.recipeRSearch()
-		if err != nil {
-			break
-		}
-		// read base recipe data and generate tasks, container and device usage and save to dynamodb.
-		err = sessctx.purgeRecipe()
-		if err != nil {
-			break
-		}
-		sessctx.noGetRecRequired, sessctx.reset = true, true
-		return RespEvent{}, nil
-	//
-	case "load", "print", "listcontainer":
+	case "load", "print", "listcontainer", "purge":
 		//
 		//   these requests are used for the standalone executable
 		//   print :ingredients" also accessible in the Alexa interaction via screen interaction
@@ -879,7 +927,7 @@ func handler(request InputEvent) (RespEvent, error) {
 		// read base recipe data and generate tasks, container and device usage and save to dynamodb.
 		switch sessctx.request {
 		case "load":
-			scaleF = 1.0
+			//scaleF = 1.0
 
 			fmt.Println("Aboutto loadBaeRecipe()")
 			err = sessctx.loadBaseRecipe()
@@ -896,17 +944,37 @@ func handler(request InputEvent) (RespEvent, error) {
 			}
 			fmt.Println("========")
 			fmt.Println(as.String(r))
+		case "purge":
+			err = sessctx.purgeRecipe()
+			if err != nil {
+				break
+			}
 		}
-		sessctx.noGetRecRequired, sessctx.reset = true, true
+		//sessctx.noGetRecRequired= true
+		sessctx.reset = true
 		return RespEvent{}, nil
 	//
+	case "addUser":
+		bkids := request.QueryStringParameters["bkids"]
+		fmt.Printf("bkids: %s\n", bkids)
+		sessctx.bkids = strings.Split(bkids, ",")
+		err := sessctx.addUserBooks()
+		if err != nil {
+			panic(err)
+		}
+		return RespEvent{}, nil
 	case "genSlotValues":
 		err = sessctx.generateSlotEntries()
 		if err != nil {
 			break
 		}
-		sessctx.noGetRecRequired, sessctx.reset = true, true
+		//sessctx.noGetRecRequired, sessctx.reset = true, true
+		sessctx.reset = true
 	case "start":
+		sessctx.curReqType = 0 //TODO: what to put here...if anything
+	case "startWithEmail":
+		sessctx.email = request.QueryStringParameters["email"]
+		sessctx.request = "start"
 		sessctx.curReqType = 0 //TODO: what to put here...if anything
 	case "book", "recipe", "select", "search", "list", "yesno", "version", "back", "resume", "dimension", "scale":
 		sessctx.curReqType = initialiseRequest
@@ -963,11 +1031,10 @@ func handler(request InputEvent) (RespEvent, error) {
 				fmt.Printf(" %s", "Error in converting int of scale request \n\n", err.Error())
 				err = fmt.Errorf(" %s", "Error in converting int of scale request \n\n", err.Error())
 			} else {
-
 				fmt.Println("scalef = ", f)
 				sessctx.scalef = f
-				// emulate select ingredient from objMenu, like "select"
-				sessctx.selId = 1
+				// emulate select ingredient from objMenu, like "select", this will force update to screen
+				//sessctx.selId = 1
 			}
 
 		case "dimension":
@@ -1037,15 +1104,18 @@ func main() {
 
 	lambda.Start(handler)
 
-	//p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&rcp=Take-home Chocolate Cake"}
+	//p1 := InputEvent{Path: os.Args[1], Param: "uid=asdf-asdf-asdf-asdf-asdf-987654&rcp=Take-home Chocolate Cake"}
 	//var i float64 = 1.0
-	// p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + "&srch=" + os.Args[2]}
+	// p1 := InputEvent{Path: os.Args[1], Param: "uid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + "&srch=" + os.Args[2]}
 	// //
 	//
 	// var err error
 	// p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
+	// uid := `amzn1.ask.account.AFTQJDFZKJIDFN6GRQFTSILWMGO2BHFRTP55PK6KT42XY22GR4BABOP4Y663SUNVBWYABLLQCHEK22MZVUVR7HXVRO247IQZ5KSVNLMDBRDRYEINWGRB6N2U7J2BBWEOEKLY2HKQ6VQTTLGKT2JCH4VOE5A7XPFDI4VMNJW63YP4XCMYGIA5IU4VJGNHI2AAU33Q5J2TJIXP3DI`
+	// p2 := InputEvent{Path: "addUser", Param: "uid=" + uid + "&bkids=20,21"}
+
 	// if len(os.Args) < 5 {
-	// 	scaleF = 1.0
+	//scaleF = 1.0
 	// } else {
 	// 	scaleF, err = strconv.ParseFloat(os.Args[4], 64)
 	// 	if err != nil {
@@ -1053,7 +1123,7 @@ func main() {
 	// 	}
 	// }
 	// global.Set_WriteCtx(global.UDisplay)
-	// p, _ := handler(p1)
+	// p, _ := handler(p2)
 	// if len(p.Error) > 0 {
 	// 	fmt.Printf("%#v\n", p.Error)
 	// } else {

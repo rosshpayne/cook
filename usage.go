@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cook/global"
+
 	"github.com/aws/aws-sdk-go/aws"
 	_ "github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -360,6 +362,9 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 			ptS = append(ptS, &pt)
 			i++
 			if pp.Timer != nil && pp.Timer.Set {
+				//
+				// create a timer instruction - this may trigger a Alexa Reminder in future.
+				//
 				var ts string
 				var msg string
 				if pp.Timer.Time == 0 {
@@ -711,9 +716,9 @@ func expandLiteralTags(str string) string {
 	)
 
 	resetScale := func() func() {
-		savedScale = scaleF
-		scaleF = 1
-		return func() { scaleF = savedScale }
+		savedScale = global.GetScale() //scaleF
+		global.SetScale(1)
+		return func() { global.SetScale(savedScale) }
 	}
 	// literal tags are not scalable, set scale to 1 for duration of function.
 	defer resetScale()()
@@ -738,9 +743,9 @@ func expandLiteralTags(str string) string {
 			// weight measure literal - needs to be scaled
 			pt := strings.Split(strings.ToLower(tag[1]), "|")
 			nm = &MeasureT{Num: pt[3], Quantity: pt[0], Size: pt[2], Unit: pt[1]}
-			scaleF = savedScale
+			global.SetScale(savedScale)
 			b.WriteString(nm.String())
-			scaleF = 1.0
+			global.SetScale(1.0)
 		case "t":
 			// time literal
 			pt := strings.Split(strings.ToLower(tag[1]), "|")

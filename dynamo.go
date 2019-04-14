@@ -65,7 +65,10 @@ type taskRecT struct {
 	Text      string `json:"Text"` // all Linked preps combined text into this field
 	MergeThrd int    `json:"Mthrd"`
 	Verbal    string `json:"Verbal"`
-	EOL       int    `json:"EOL"` // End-Of-List. Max Id assigned to each record
+	//
+	Timer []TimerT `json:"Tmr"`
+	//
+	EOL int `json:"EOL"` // End-Of-List. Max Id assigned to each record
 	// Recipe Part metadata
 	PEOL int    `json:"PEOL"` // End-of-List-for-part
 	PId  int    `json:"PId"`  // instruction id within a part
@@ -152,11 +155,6 @@ func (s *sessCtx) cacheInstructions(sId ...int) (Threads, error) {
 		return nil, fmt.Errorf("Error: %s - %s", "in UnmarshalMap in cacheInstructions ", err.Error())
 	}
 	fmt.Printf(" cacheInstructions len() %d\n ", len(ptR))
-	//
-	fmt.Printf("in cacheInstruction:  sId [%] \n", sId[0])
-	//
-	//
-	//
 	part := "DivPt"
 	if len(sId) == 0 || sId[0] == 1 {
 		part = CompleteRecipe_
@@ -876,16 +874,15 @@ func (s *sessCtx) keywordSearch() error {
 		Quantity string `json:"Quantity"`
 		Serves   string `json:"Srv"`
 	}
+
 	var (
+		recS   []searchRecT
 		result *dynamodb.QueryOutput
-		//allBooks bool
-		err error
 	)
 	// zero recipeList list
 	//
 	fmt.Println("^^^^^^^^^^ entered keywordSearch ^^^^^^^^^^^^")
 	if len(s.reqOpenBk) > 0 {
-
 		// look for recipes in current book only
 		kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value(s.reqSearch))
 		kcond = kcond.And(expression.KeyBeginsWith(expression.Key("SortK"), s.reqBkId+"-"))
@@ -905,73 +902,79 @@ func (s *sessCtx) keywordSearch() error {
 		if err != nil {
 			return fmt.Errorf("Error: %s [%s] %s", "in Query in keywordSearch of ", s.reqSearch, err.Error())
 		}
+		recS = make([]searchRecT, int(*result.Count))
+		err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &recS)
+		if err != nil {
+			return fmt.Errorf("Error: %s [%s] err", "in UnmarshalListMaps of keywordSearch ", s.reqRName, err.Error())
+		}
 		// if int(*result.Count) == 0 {
 		// 	allBooks = true
 		// }
 	}
 	if len(s.reqOpenBk) == 0 { //|| allBooks {
-		// no active book or active book does not contain recipe type
-		kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value(s.reqSearch))
-		expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
-		if err != nil {
-			panic(err)
-		}
-		input := &dynamodb.QueryInput{
-			KeyConditionExpression:    expr.KeyCondition(),
-			FilterExpression:          expr.Filter(),
-			ExpressionAttributeNames:  expr.Names(),
-			ExpressionAttributeValues: expr.Values(),
-		}
-		input = input.SetTableName("Ingredient").SetConsistentRead(false)
 		//
-		result, err = s.dynamodbSvc.Query(input)
+		// loop through registered books index by userid.  Need to associate userId with email - in external system.
+		// 1. external system contains: email as registered by user and book names.
+		// 2. on first use of App by user, the App passes [email,userid] to external system  - using index.js to source email & userid. (see github example)
+		// 3. this triggers external to pass [userid,[]bkidExt] via Gateway API or insert directly to dynamo
+		// 4. Every 5 mins external system loads newly registered books into dynamo passing [userId,bkidExt]. Use Gateway API (http request) or load directly using dynamo call.
+		//		4a. check is book is registered, if not inserts [bookName, Authors].  Gets back [bkid].
+		//		4b. pass [bkid, BookName], back to external system. External system has following Ids:  [bkid, userId] which maybe stored in Dynamo or external system db.
+		//		4c. for each userid inserts [userId,bkid] into dynamo.
+		// 5. on each recipe search, App consults dynamo to see what [bkid] are registered to [userId]
+		//
+
+		// for each book id for userId loop..(table: Ingredient: PKey: uId, SortK: BkId)
+		bkids, err := s.getUserBooks()
 		if err != nil {
-			return fmt.Errorf("Error: %s [%s] %s", "in Query in keywordSearch of ", s.reqBkId, err.Error())
+			return (fmt.Errorf("Error:  ", err.Error()))
 		}
-		// if int(*result.Count) == 0 {
-		// 	switch allBooks {
-		// 	case true:
-		// 		return fmt.Errorf(`Recipe [%s] not found in [%s] or library. Please notify support`, s.reqRName, s.reqBkName)
-		// 	case false:
-		// 		return fmt.Errorf(`Recipe [%s] not found in library. Please notify support`, s.reqRName)
-		// 	}
-		// }
+		fmt.Println("Num books found: ", len(bkids))
+		//
+		// if more than four books maybe better to scan all book and merge with known books
+		//
+		for _, v := range bkids {
+			fmt.Println("About to search book: ", v)
+			kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value(s.reqSearch))
+			kcond = kcond.And(expression.KeyBeginsWith(expression.Key("SortK"), v+"-"))
+			expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
+			if err != nil {
+				return fmt.Errorf("Error: %s [%s] %s", "in NewBuilder in keywordSearch of ", s.reqSearch, err.Error())
+			}
+			input := &dynamodb.QueryInput{
+				KeyConditionExpression:    expr.KeyCondition(),
+				FilterExpression:          expr.Filter(),
+				ExpressionAttributeNames:  expr.Names(),
+				ExpressionAttributeValues: expr.Values(),
+			}
+			input = input.SetTableName("Ingredient").SetConsistentRead(false)
+			//
+			result, err = s.dynamodbSvc.Query(input)
+			if err != nil {
+				return fmt.Errorf("Error: %s [%s] %s", "in Query in keywordSearch of ", s.reqBkId, err.Error())
+			}
+			input = input.SetTableName("Ingredient").SetConsistentRead(false)
+			//
+			result, err = s.dynamodbSvc.Query(input)
+			if err != nil {
+				return fmt.Errorf("Error: %s [%s] %s", "in Query in keywordSearch of ", s.reqBkId, err.Error())
+			}
+			if int(*(result.Count)) == 0 {
+				fmt.Println("No books found in Query..")
+				continue
+			}
+			recS_ := make([]searchRecT, int(*result.Count))
+			err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &recS_)
+			if err != nil {
+				return fmt.Errorf("Error: %s [%s] err", "in UnmarshalListMaps of keywordSearch ", s.reqRName, err.Error())
+			}
+			recS = append(recS, recS_...)
+		}
 	}
-	recS := make([]searchRecT, int(*result.Count))
-	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &recS)
-	if err != nil {
-		return fmt.Errorf("Error: %s [%s] err", "in UnmarshalListMaps of keywordSearch ", s.reqRName, err.Error())
-	}
-	// if allBooks {
-	// 	// case where active book did not contain recipe type so library searched.
-	// 	switch int(*result.Count) {
-	// 	case 0:
-	// 		s.vmsg = fmt.Sprintf("%s not found in [%s] and all other books. ", s.reqSearch, s.reqBkName)
-	// 		s.dmsg = fmt.Sprintf("%s not found in [%s] and all other books. ", s.reqSearch, s.reqBkName)
-	// 		//s.reqRId, s.reqRName, s.reqBkId, s.reqBkName = "", "", "", ""
-	// 	case 1:
-	// 		s.vmsg = fmt.Sprintf("%s not found in [%s], but was found in [%s]. Do you want to swap to this book?", s.reqSearch, s.reqBkName, recS[0].BkName)
-	// 		s.dmsg = fmt.Sprintf("%s not found in [%s], but was found in [%s]. Do you want to swap to this book?", s.reqSearch, s.reqBkName, recS[0].BkName)
-	// 		sortk := strings.Split(recS[0].SortK, "-")
-	// 		s.reqRId, s.reqRName, s.reqBkId, s.reqBkName, s.serves = sortk[1], recS[0].RName, sortk[0], recS[0].BkName, recS[0].Serves
-	// 		s.recipeRSearch()
-	// 	default:
-	// 		//s.makeSelect = true
-	// 		s.vmsg = fmt.Sprintf(`No %s recipes found in [%s] but where found in other books. Please see the display`, s.reqSearch, s.reqBkName)
-	// 		s.dmsg = fmt.Sprintf(`No %s recipes found in [%s], but were found in the following. Please select one. `, s.reqSearch, s.reqBkName)
-	// 		for i, v := range recS {
-	// 			sortk := strings.Split(v.SortK, "-")
-	// 			s.ddata += strconv.Itoa(i+1) + ": " + v.BkName + " by " + v.Authors + ". Quantity: " + v.Quantity + "\n "
-	// 			rec := mRecipeT{Id: i + 1, IngrdCat: v.PKey, RName: v.RName, RId: sortk[1], BkName: v.BkName, BkId: sortk[0], Authors: v.Authors, Quantity: v.Quantity, Serves: v.Serves}
-	// 			s.recipeList = append(s.recipeList, rec)
-	// 		}
-	// 	}
-	// 	return nil
-	// }
 	//
 	// result of seach within open book
 	//
-	switch int(*result.Count) {
+	switch len(recS) {
 	case 0:
 		if len(s.reqOpenBk) > 0 {
 			s.vmsg = fmt.Sprintf(`No recipes for "%s" were found in the currently opened book, %s. `, s.reqSearch, s.reqBkName)
@@ -1196,7 +1199,6 @@ func (s *sessCtx) bookNameLookup() error {
 		PKey    string
 		Authors []string `json:"Authors"`
 	}
-	fmt.Println(" &&&&& entered bookNameLookup &&&&&&")
 	flatten := func(w []string) string {
 		var a string
 		for i, v := range w {

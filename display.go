@@ -7,6 +7,8 @@ import (
 	_ "os"
 	"strconv"
 	"strings"
+
+	"github.com/cook/global"
 )
 
 type Displayer interface {
@@ -75,7 +77,10 @@ type DispContainerT struct {
 	Unit       string
 }
 
-type WelcomeT string
+type WelcomeT struct {
+	msg     string
+	request string
+}
 
 type ContainerS []string
 
@@ -90,6 +95,7 @@ type DisplayItem struct {
 }
 type RespEvent struct {
 	Position string        `json:"Position"` // recId|EOL|PEOL|PName
+	Timer    int           `json:"Tmr"`
 	BackBtn  bool          `json:"BackBtn"`
 	Type     string        `json:"Type"`
 	Header   string        `json:"Header"`
@@ -110,6 +116,12 @@ type RespEvent struct {
 	Thread1  string        `json:"Thread1"`
 	Thread2  string        `json:"Thread2"`
 }
+
+const (
+	WELCOME int = iota + 1
+	THREADS
+	RECIPELIST
+)
 
 // cacheInstructions copies data from T- items in recipe table to session data (instructions) that is preserved
 
@@ -230,19 +242,23 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 			p = strings.Split(s.part, "|")
 			peol = len(t[s.cThread].Instructions)
 			hdr += "  -  " + strings.ToUpper(p[0])
-			subh = "Cooking Instructions  " + "  -  " + strconv.Itoa(id) + " of " + strconv.Itoa(peol)
 		} else {
 			p = strings.Split(s.part, "|")
 			hdr += "  -  " + strings.ToUpper(p[0])
-			peol := len(t[s.cThread].Instructions)
-			subh = "Cooking Instructions " + "  -  " + strconv.Itoa(id) + " of " + strconv.Itoa(peol)
+			peol = len(t[s.cThread].Instructions)
 		}
+		sf := strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
+		subh = "Cooking Instructions  -  " + strconv.Itoa(id) + " of " + strconv.Itoa(peol) + "   (Scale: " + sf + ")"
 	} else {
 		// p = getLongName(rec.part)
 		// p = strings.Split(s.part, "|")
 		// hdr += "  -  " + strings.ToUpper(p[0])
 		eol := len(t[s.cThread].Instructions)
-		subh = "Cooking Instructions  -  " + strconv.Itoa(id) + " of " + strconv.Itoa(eol)
+		sf := strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
+		subh = "Cooking Instructions  -  " + strconv.Itoa(id) + " of " + strconv.Itoa(eol) + "   (Scale: " + sf + ")"
+	}
+	if s.reScale {
+		hdr = " *** Alert :  you cannot scale a recipe when following instructions. You must exit intructions"
 	}
 	fmt.Println("switch on thread: ", t[s.cThread].Thread)
 	//
@@ -250,9 +266,9 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 	//
 	SectA := func(thread int) []DisplayItem {
 		var rows int
-
-		list := make([]DisplayItem, 3)
-		for k, n, ir := 2, t[thread].Id-1, t[thread].Instructions; n > 0 && rows < 3; rows++ {
+		lines := 3
+		list := make([]DisplayItem, lines)
+		for k, n, ir := lines-1, t[thread].Id-1, t[thread].Instructions; n > 0 && rows < lines; rows++ {
 			list[k] = DisplayItem{Title: ir[n-1].Text}
 			n--
 			k--
@@ -271,7 +287,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		list[0] = DisplayItem{Title: "<speak>" + t[thread].Instructions[id-1].Text + "</speak>"}
 		return list
 	}
-	SectC := func(thread int, totrows int, terminate bool) []DisplayItem {
+	SectC := func(thread int, lines int, terminate bool) []DisplayItem {
 		var list []DisplayItem
 		var rows int
 		for tr := thread; tr < len(t); tr++ {
@@ -281,7 +297,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 			} else {
 				start = 0
 			}
-			for n, ir := start, t[tr].Instructions; n < len(t[tr].Instructions) && rows < totrows; rows++ {
+			for n, ir := start, t[tr].Instructions; n < len(t[tr].Instructions) && rows < lines; rows++ {
 				fmt.Println("n: ", n)
 				item := DisplayItem{Title: ir[n].Text}
 				list = append(list, item)
@@ -291,7 +307,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 				break
 			}
 		}
-		if rows == totrows {
+		if rows == lines {
 			list[rows-1] = DisplayItem{Title: "more.."}
 		}
 
@@ -308,7 +324,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		tc := s.cThread
 		listA := SectA(tc)
 		listB := SectB(tc)
-		listC := SectC(tc, 6, false)
+		listC := SectC(tc, 2, false)
 		//
 		rec := &t[s.cThread].Instructions[id-1]
 		// eol = strconv.Itoa(rec.EOL)
@@ -353,7 +369,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		// lower thread
 		listA := SectA(tc)
 		listB := SectB(tc)
-		listC := SectC(tc, 3, true)
+		listC := SectC(tc, 2, true)
 		// higher thread
 		tc = s.cThread
 		color2 := "green"
@@ -364,7 +380,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		trName2 := threadName(tc)
 		listD := SectA(tc)
 		listE := SectB(tc)
-		listF := SectC(tc, 12, false)
+		listF := SectC(tc, 3, false)
 
 		fmt.Println("cThread, id = ", s.cThread, id)
 		//
@@ -396,17 +412,67 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 	}
 }
 
-func (m WelcomeT) GenDisplay(s *sessCtx) RespEvent {
-
-	fmt.Printf("in GenDisplay for Welcome message")
-	hdr := "Welcome. Please search for a recipe"
-	subh := "example search chocolate cake, search tarragon, search pastry, search strawberry tart"
-
-	list := make([]DisplayItem, 1)
-	list[0] = DisplayItem{Title: string(m)}
+func (w WelcomeT) GenDisplay(s *sessCtx) RespEvent {
+	var (
+		hdr  string
+		subh string
+		list []DisplayItem
+	)
+	//
+	if s.display == nil {
+		s.display = &apldisplayT{Type: WELCOME}
+	}
+	//
+	fmt.Printf("in GenDisplay for Welcome message\n")
+	if len(s.reqOpenBk) > 0 {
+		hdr = `You have the following book open:    ` + string(s.reqOpenBk)
+		subh = `Either close the book, say "close", open another or conduct a search `
+	} else if len(s.bkids) > 0 || s.back {
+		if len(s.bkids) > 1 {
+			hdr = "Welcome to EburyPress books. Please open a book or search for a recipe across all books"
+			subh = "examples:  search chocolate cake, search tarragon, search pastry, search fennel chicken" // TODO examples should match books
+		} else {
+			hdr = "Welcome to EburyPress books. Search for a recipe in the book"
+			subh = "examples:  search chocolate cake, search tarragon, search pastry, search strawberry tart"
+		}
+	} else if len(s.bkids) == 0 {
+		hdr = "Welcome to EburyPress Books"
+	}
+	if s.display != nil && (len(s.display.DispList) == len(s.bkids)+1 || s.back) {
+		// used cached results if still appropriate
+		list = s.display.DispList
+	} else if len(w.msg) > 0 { //len(s.bkids) > 0 {
+		list = make([]DisplayItem, 1)
+		list[0] = DisplayItem{Title: w.msg}
+		for _, v := range s.bkids {
+			fmt.Println("Book: ", v)
+			s.reqBkId = v
+			err := s.bookNameLookup()
+			if err != nil {
+				panic(err)
+			}
+			msg := s.reqBkName + "  by " + s.authors
+			fmt.Println(msg)
+			list = append(list, DisplayItem{Title: msg})
+		}
+		s.display.DispList = list
+		// clear all book/recipe data as populated by bookNameLookup(), as we currently have not user selected book/recipe.
+		s.reqBkId, s.reqBkName, s.reqRId, s.reqRName, s.authors = "", "", "", "", ""
+		fmt.Printf("s.display: %#v\n", s.display)
+		//
+		_, err := s.pushState()
+		if err != nil {
+			type_ := "Ingredient"
+			return RespEvent{Type: type_, BackBtn: false, Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
+		}
+	}
 
 	type_ := "Ingredient"
-	return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, List: list}
+	if len(w.request) > 0 {
+		type_ = w.request // nb: email - as in get me email. index.js handles it.
+	}
+
+	return RespEvent{Type: type_, BackBtn: false, Header: hdr, SubHdr: subh, List: list}
 }
 
 func (c ContainerS) GenDisplay(s *sessCtx) RespEvent {
@@ -431,6 +497,7 @@ func (p PartS) GenDisplay(s *sessCtx) RespEvent {
 		subh string
 		k    int
 	)
+
 	if len(s.passErr) > 0 {
 		hdr = s.passErr
 	} else {
@@ -463,13 +530,13 @@ func (i IngredientT) GenDisplay(s *sessCtx) RespEvent {
 		list   []DisplayItem
 		subhdr string
 	)
-	fmt.Println("HEre in GenDisplay for ingredients. ScaleF = ", scaleF)
+
 	for _, v := range strings.Split(string(i), "\n") {
 		item := DisplayItem{Title: v}
 		list = append(list, item)
 	}
-	if scaleF <= scaleThreshold {
-		sf := strconv.FormatFloat(scaleF, 'g', 2, 64)
+	if global.GetScale() <= scaleThreshold {
+		sf := strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
 		subhdr = "Ingredients       (Scale Factor: " + sf + " )"
 	} else {
 		subhdr = "Ingredients       (Scale Factor: 1.0 )"
@@ -568,9 +635,13 @@ func (o ObjMenu) GenDisplay(s *sessCtx) RespEvent {
 		}
 		hdr = s.reqRName
 		subh = op + "Book:  " + s.reqBkName + "  Authors: " + s.authors
+		if global.GetScale() < 1.0 {
+			sf := strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
+			subh += "  (Scale: " + sf + " )"
+		}
 	}
 	//
-	// if back button pressed then s.menuL is assigned via state pop(). menuL is empty during normal forward processing.
+	// if back button pressed then s.menuL is assigned via state pop(). menuL is empty, at this point, during normal forward processing.
 	//
 	var list []DisplayItem
 
@@ -604,13 +675,13 @@ func (o ObjMenu) GenDisplay(s *sessCtx) RespEvent {
 			k++
 		}
 	default:
-		if len(s.menuL) > 0 {
-			list = make([]DisplayItem, len(s.menuL))
-			for i, v := range s.menuL {
-				id := strconv.Itoa(v + 1)
-				list[i] = DisplayItem{Id: id, Title: objMenu[v].item}
-			}
+		//if len(s.menuL) > 0 {
+		list = make([]DisplayItem, len(s.menuL))
+		for i, v := range s.menuL {
+			id := strconv.Itoa(v + 1)
+			list[i] = DisplayItem{Id: id, Title: objMenu[v].item}
 		}
+		//}
 	}
 	var err error
 
@@ -619,6 +690,7 @@ func (o ObjMenu) GenDisplay(s *sessCtx) RespEvent {
 		backBtn = false
 	}
 	if !s.back {
+		// only update state if going forward not going back
 		err = s.updateState()
 		if err != nil {
 			return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
@@ -686,13 +758,13 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 			panic(err.Error())
 		}
 		c.UDimension = strconv.Itoa(s.dimension)
-		scaleF = float64(s.dimension*s.dimension) / float64(cdim*cdim)
+		global.SetScale(float64(s.dimension*s.dimension) / float64(cdim*cdim))
 		// persist  new data
 		err = s.updateState()
 		if err != nil {
 			return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
 		}
-		sf = strconv.FormatFloat(scaleF, 'g', 2, 64)
+		sf = strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
 		hdr = "1 Your container"
 		subh = "Scale Factor:  " + sf
 		text = "All quantities will be adjusted to your container size: "
@@ -725,7 +797,7 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 
 	} else if len(c.UDimension) > 0 {
 		// info screen where user has specified resize. Can resize again.
-		sf = strconv.FormatFloat(scaleF, 'g', 2, 64)
+		sf = strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
 		hdr = "2 Your container"
 		subh = "Scale Factor:  " + sf
 		text = "All quantities will be adjusted to your container size: "
@@ -750,7 +822,7 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 
 	} else {
 		// info screen where user has NOT specified resize yet. Can resize if necessary
-		sf = strconv.FormatFloat(scaleF, 'g', 2, 64)
+		sf = strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
 		hdr = "3 Specify the size of your container"
 		subh = "Scale Factor:  " + sf
 		text = "Quantities are based on the following container specification: "
