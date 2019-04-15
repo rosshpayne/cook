@@ -72,7 +72,8 @@ type stateRec struct {
 	Dispctr DispContainerT `json:"Dctr"`
 	ScaleF  float64
 	//
-	Display apldisplayT `json:"AplD"`
+	//Display apldisplayT `json:"AplD"` // Welcome display - contains registered
+	Welcome *WelcomeT `json:"Welc"`
 }
 
 type stateStack []stateRec
@@ -229,6 +230,7 @@ func (s *sessCtx) setState(ls *stateRec) {
 	}
 	if len(ls.Ingredients) > 0 {
 		s.displayData = ls.Ingredients
+		fmt.Println("** setState: s.displayData set to Ingredients")
 	}
 	// if len(ls.ContainerData) > 0 {
 	// 	s.displayData = ls.ContainerData
@@ -310,10 +312,16 @@ func (s *sessCtx) setState(ls *stateRec) {
 	//
 	// must exist with displayData set
 	//
-	if s.request == "start" && s.displayData == nil {
-		var w WelcomeT
-		s.displayData = w
+	// initial request is always start but above logic checks for current state to sets displayData accordingly
+	if s.displayData != nil {
+		fmt.Println("** setState: s.displayData is not nil")
 	}
+	if s.request == "start" && s.displayData == nil {
+		// if this is a genuine start with no previous state
+		fmt.Printf(" & start set welcome display %#v ", ls.Welcome)
+		s.displayData = ls.Welcome
+	}
+	//
 	return
 }
 
@@ -388,8 +396,11 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 	}
 	sr.ScaleF = global.GetScale()
 	//
-	if s.display != nil {
-		sr.Display = *(s.display)
+	// if s.display != nil {
+	// 	sr.Display = *(s.display)
+	// }
+	if s.welcome != nil {
+		sr.Welcome = s.welcome
 	}
 	//
 	State := make(stateStack, 1)
@@ -475,12 +486,19 @@ func (s *sessCtx) updateState() error {
 		atribute = fmt.Sprintf("state[%d].Dctr", len(s.state)-1)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(*(s.dispCtr)))
 	}
+	fmt.Println("About to update ScaleF..")
 	// if scale changes then history must change to new value upto but not including last ingredients display or end of state list.
-	for scale, i := global.GetScale(), len(s.state)-1; i > 0; i-- {
+	for scale, i := global.GetScale(), len(s.state)-1; i > len(s.state)-3 && i > 0; i-- {
+		fmt.Println("About to update ScaleF..2   i ", i)
 		if s.state[i].ScaleF == scale || (len(s.state[i].Ingredients) > 0 && i < len(s.state)-1) {
 			// break when listed Ingredients are not current one
 			break
 		}
+		fmt.Println("About to update ScaleF..2 . i ", i)
+		if len(s.state[i].RecipeList) > 0 || s.state[i].Request == "start" {
+			break
+		}
+		fmt.Println("About to update ScaleF..3 . i ", i)
 		atribute = fmt.Sprintf("state[%d].ScaleF", i)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(scale))
 	}
@@ -504,10 +522,10 @@ func (s *sessCtx) updateState() error {
 		atribute = fmt.Sprintf("state[%d].Request", len(s.state)-1)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.request))
 	}
-	if s.display != nil {
-		atribute = fmt.Sprintf("state[%d].AplD", len(s.state)-1)
-		updateC = updateC.Set(expression.Name(atribute), expression.Value(*(s.display)))
-	}
+	// if s.display != nil {
+	// 	atribute = fmt.Sprintf("state[%d].AplD", len(s.state)-1)
+	// 	updateC = updateC.Set(expression.Name(atribute), expression.Value(*(s.display)))
+	// }
 
 	//
 	expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
@@ -546,7 +564,7 @@ func (s *sessCtx) updateState() error {
 		}
 		return err
 	}
-	fmt.Println("updateState in sessions.go")
+	fmt.Println("finish updateState in sessions.go")
 	return nil
 }
 
@@ -729,12 +747,15 @@ func (s *sessCtx) popState() error {
 	// do we use Request or Display to drive off - only one need be used, but will persis with Request for time being until
 	// Display is fully implemented (if ever)
 	//if sr.Request == "start" && sr.Display.Type != 0 && s.displayData == nil {
+	// if sr.Request == "start" {
+	// 	fmt.Println(" ** back now in start")
+	// 	s.display = &sr.Display
+	// 	fmt.Printf("s.display = %#v\n", s.display)
+	// 	var w WelcomeT
+	// 	s.displayData = w
+	// }
 	if sr.Request == "start" {
-		fmt.Println(" ** back now in start")
-		s.display = &sr.Display
-		fmt.Printf("s.display = %#v\n", s.display)
-		var w WelcomeT
-		s.displayData = w
+		s.displayData = sr.Welcome
 	}
 	// switch s.display.Type {
 	// case WELCOME:

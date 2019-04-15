@@ -581,11 +581,13 @@ func (m *MeasureT) String() string {
 				panic(fmt.Errorf("Error: cannot covert Quantity [%s] to float64 in *MeasureT.String()", m.Quantity))
 			}
 		} else {
-			i, err := strconv.Atoi(m.Quantity)
-			if err != nil {
-				panic(fmt.Errorf("Error: cannot covert Quantity [%s] to int in *MeasureT.String()", m.Quantity))
+			if strings.IndexByte(m.Quantity, '-') == -1 {
+				i, err := strconv.Atoi(m.Quantity)
+				if err != nil {
+					panic(fmt.Errorf("Error: cannot covert Quantity [%s] to int in *MeasureT.String()", m.Quantity))
+				}
+				f = float64(i)
 			}
-			f = float64(i)
 		}
 		// *1000 as we are to change to smaller unit
 		qty = f * global.GetScale()

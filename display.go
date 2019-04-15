@@ -77,11 +77,6 @@ type DispContainerT struct {
 	Unit       string
 }
 
-type WelcomeT struct {
-	msg     string
-	request string
-}
-
 type ContainerS []string
 
 type menuList []int
@@ -104,6 +99,7 @@ type RespEvent struct {
 	Verbal   string        `json:"Verbal"`
 	Height   int           `json:"Height"`
 	Error    string        `json:"Error"`
+	Hint     string        `json:"Hint"`
 	List     []DisplayItem `json:"List"` // recipe data: id|Title1|subTitle1|SubTitle2|Text
 	ListA    []DisplayItem `json:"ListA"`
 	ListB    []DisplayItem `json:"ListB"`
@@ -258,7 +254,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		subh = "Cooking Instructions  -  " + strconv.Itoa(id) + " of " + strconv.Itoa(eol) + "   (Scale: " + sf + ")"
 	}
 	if s.reScale {
-		hdr = " *** Alert :  you cannot scale a recipe when following instructions. You must exit intructions"
+		hdr = " *** Alert :  you cannot scale a recipe when following instructions. You must exit, scale then return"
 	}
 	fmt.Println("switch on thread: ", t[s.cThread].Thread)
 	//
@@ -412,59 +408,79 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 	}
 }
 
-func (w WelcomeT) GenDisplay(s *sessCtx) RespEvent {
+// type apldisplayT struct {
+// 	Type     int           `json:"typ"`
+// 	DispList []DisplayItem `json:"dlist"`
+// }
+
+type WelcomeT struct {
+	msg     string
+	Bkids   []string // registered book ids
+	Display []DisplayItem
+	//
+	request string
+}
+
+func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 	var (
 		hdr  string
 		subh string
 		list []DisplayItem
 	)
 	//
-	if s.display == nil {
-		s.display = &apldisplayT{Type: WELCOME}
-	}
-	//
-	fmt.Printf("in GenDisplay for Welcome message\n")
-	if len(s.reqOpenBk) > 0 {
-		hdr = `You have the following book open:    ` + string(s.reqOpenBk)
-		subh = `Either close the book, say "close", open another or conduct a search `
-	} else if len(s.bkids) > 0 || s.back {
-		if len(s.bkids) > 1 {
-			hdr = "Welcome to EburyPress books. Please open a book or search for a recipe across all books"
-			subh = "examples:  search chocolate cake, search tarragon, search pastry, search fennel chicken" // TODO examples should match books
-		} else {
-			hdr = "Welcome to EburyPress books. Search for a recipe in the book"
-			subh = "examples:  search chocolate cake, search tarragon, search pastry, search strawberry tart"
-		}
-	} else if len(s.bkids) == 0 {
-		hdr = "Welcome to EburyPress Books"
-	}
-	if s.display != nil && (len(s.display.DispList) == len(s.bkids)+1 || s.back) {
-		// used cached results if still appropriate
-		list = s.display.DispList
-	} else if len(w.msg) > 0 { //len(s.bkids) > 0 {
-		list = make([]DisplayItem, 1)
+	if len(w.Display) == 0 || (len(w.Bkids) != len(s.bkids) && s.back == false) {
+		fmt.Println("w.Bkids ", len(w.Bkids))
+		fmt.Println("s.bkids ", len(s.bkids))
+		// s.bkids is the latest book register value
+		// w.Bkids is the cached value and hence maybe out-of-date
+		list = make([]DisplayItem, 2)
 		list[0] = DisplayItem{Title: w.msg}
+		list[1] = DisplayItem{Title: " "}
+		w.Bkids = s.bkids
+		//
 		for _, v := range s.bkids {
-			fmt.Println("Book: ", v)
 			s.reqBkId = v
 			err := s.bookNameLookup()
 			if err != nil {
 				panic(err)
 			}
 			msg := s.reqBkName + "  by " + s.authors
-			fmt.Println(msg)
 			list = append(list, DisplayItem{Title: msg})
 		}
-		s.display.DispList = list
+		w.Display = list
 		// clear all book/recipe data as populated by bookNameLookup(), as we currently have not user selected book/recipe.
 		s.reqBkId, s.reqBkName, s.reqRId, s.reqRName, s.authors = "", "", "", "", ""
-		fmt.Printf("s.display: %#v\n", s.display)
 		//
+		s.welcome = w
 		_, err := s.pushState()
 		if err != nil {
 			type_ := "Ingredient"
 			return RespEvent{Type: type_, BackBtn: false, Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
 		}
+	} else {
+		fmt.Printf("in display: list = %#v", w.Display)
+		list = w.Display
+	}
+
+	//
+	fmt.Printf("in GenDisplay for Welcome message\n")
+
+	if len(s.reqOpenBk) > 0 {
+		bk := strings.Split(string(s.reqOpenBk), "|")
+		hdr = `You have the following book open:  ` + bk[1] + "  by " + bk[2]
+		subh = `Either close the book, say "close", open another or conduct a search `
+
+	} else if len(w.Bkids) > 0 || s.back {
+		if len(w.Bkids) > 1 {
+			hdr = "Welcome to EburyPress books. Please open a book or search for a recipe across all books"
+			subh = "examples:  search chocolate cake, search tarragon, search pastry, search fennel chicken" // TODO examples should match books
+		} else {
+			hdr = "Welcome to EburyPress books. Search for a recipe in the book"
+			subh = "examples:  search chocolate cake, search tarragon, search pastry, search strawberry tart"
+		}
+
+	} else if len(w.Bkids) == 0 {
+		hdr = "Welcome to EburyPress Books"
 	}
 
 	type_ := "Ingredient"
@@ -502,7 +518,8 @@ func (p PartS) GenDisplay(s *sessCtx) RespEvent {
 		hdr = s.passErr
 	} else {
 		hdr = s.reqRName
-		subh = `Recipe is divided into parts. Select first option to follow complete recipe`
+		sf := strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
+		subh = `Recipe is divided into parts. Select first option to follow complete recipe  (Scale: ` + sf + ")"
 	}
 	list := make([]DisplayItem, 1)
 	list[0] = DisplayItem{Id: "1", Title: CompleteRecipe_}
@@ -529,20 +546,17 @@ func (i IngredientT) GenDisplay(s *sessCtx) RespEvent {
 	var (
 		list   []DisplayItem
 		subhdr string
+		hint   string
 	)
 
 	for _, v := range strings.Split(string(i), "\n") {
 		item := DisplayItem{Title: v}
 		list = append(list, item)
 	}
-	if global.GetScale() <= scaleThreshold {
-		sf := strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
-		subhdr = "Ingredients       (Scale Factor: " + sf + " )"
-	} else {
-		subhdr = "Ingredients       (Scale Factor: 1.0 )"
-	}
-
-	return RespEvent{Type: "Ingredient", BackBtn: true, Header: s.reqRName, SubHdr: subhdr, List: list}
+	sf := strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
+	subhdr = "Ingredients       (Scale: " + sf + " )"
+	hint = "hint:  scale recipe 75 percent"
+	return RespEvent{Type: "Ingredient", BackBtn: true, Header: s.reqRName, SubHdr: subhdr, List: list, Hint: hint}
 
 }
 
@@ -635,10 +649,10 @@ func (o ObjMenu) GenDisplay(s *sessCtx) RespEvent {
 		}
 		hdr = s.reqRName
 		subh = op + "Book:  " + s.reqBkName + "  Authors: " + s.authors
-		if global.GetScale() < 1.0 {
-			sf := strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
-			subh += "  (Scale: " + sf + " )"
-		}
+		//	if global.GetScale() < 1.0 {
+		sf := strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
+		subh += "  (Scale: " + sf + " )"
+		//	}
 	}
 	//
 	// if back button pressed then s.menuL is assigned via state pop(). menuL is empty, at this point, during normal forward processing.

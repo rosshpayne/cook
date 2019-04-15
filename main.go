@@ -24,10 +24,6 @@ import (
 // Session Context - assigned from request and Session table.
 //  also contains state information relevant to current session and not the next session.
 
-type apldisplayT struct {
-	Type     int           `json:"typ"`
-	DispList []DisplayItem `json:"dlist"`
-}
 type sessCtx struct {
 	err        error
 	newSession bool
@@ -39,7 +35,7 @@ type sessCtx struct {
 	passErr   string
 	//
 	userId      string   // sourced from request. Used as PKey to Sessions table
-	bkids       []string // registered book to user
+	bkids       []string // registered books to user
 	reqOpenBk   BookT    // BkId|BkName|authors
 	reqRName    string   // requested recipe name - query param of recipe request
 	reqBkName   string   // requested book name - query param
@@ -112,7 +108,8 @@ type sessCtx struct {
 	scalef    float64
 	reScale   bool
 	//
-	display *apldisplayT
+	//display *apldisplayT
+	welcome *WelcomeT
 	//
 	email string
 }
@@ -236,14 +233,14 @@ func (s *sessCtx) orchestrateRequest() error {
 	//
 	if s.request == "start" {
 		fmt.Println("start...")
-		switch s.displayData.(type) {
+		switch wx := s.displayData.(type) {
 		case Threads:
 			fmt.Println("Threads..")
 			// redirect request
 			s.request = "start-next"
 			// s.objRecId = s.recId[objectMap[s.object]] + 1
 			// s.recId[objectMap[s.object]] += 1
-		case WelcomeT:
+		case *WelcomeT:
 			fmt.Println("Welcome..")
 			// no previous session - check if userId is registered
 			// check for row U-[userId] in ingredients table. This item contains books registered to userId
@@ -252,33 +249,30 @@ func (s *sessCtx) orchestrateRequest() error {
 				// resp from startwithEmail. (see below) for the case of no registerd books.
 				var w WelcomeT
 				w.msg = fmt.Sprintf("Hi, you have no books registered against this device. Please go to www.eburypress.co.uk and register your  book purchase, using the email: %s ", s.email)
-				s.displayData = w
+				s.displayData = &w
 				return nil
 			}
 			// always check for books = don't rely on cached result even if it reasonably current
-			// check if bkids (in DispList) are populated from previous session
-			// if s.display != nil && len(s.display.DispList) > 1 {
-			// 	return nil
-			// }
-			bkids, err := s.getUserBooks()
+			s.bkids, err = s.getUserBooks()
 			if err != nil {
 				return err
 			}
-			switch len(bkids) {
+			if wx != nil {
+				return nil
+			}
+			switch len(s.bkids) {
 			case 0:
 				fmt.Println("No books found...")
 				// user has no registered books. Get index.js to supply email and start again using startWithEmail
 				var w WelcomeT
 				w.msg = "no books found. There was an error with getting permissions to your email. Please say yes."
 				w.request = "email"
-				s.displayData = w
+				s.displayData = &w
 				return nil
 			default:
-				fmt.Println("Books found")
-				s.bkids = bkids
 				var w WelcomeT
-				w.msg = "You have the following books registered to your email.  Please open one of them or conduct a search across all your books."
-				s.displayData = w
+				w.msg = "You have the following books registered to your email."
+				s.displayData = &w
 				return nil
 			}
 		}
@@ -326,8 +320,24 @@ func (s *sessCtx) orchestrateRequest() error {
 		//
 		// only save when in the appropriate state
 		//
+		// if s.request == "search" {
+		// 	s.displayData = s.recipeList
+		// 	fmt.Println("scaling will Search for ", s.reqSearch)
+
+		// 	return nil
+		// 	// s.reqSearch = lastState.Search
+		// 	// s.curReqType = initialiseRequest
+		// }
+		if s.showObjMenu {
+			s.displayData = objMenu
+			global.SetScale(s.scalef)
+			s.updateState()
+			return nil
+		}
 		if s.selCtx != ctxPartMenu {
 			// update scale if not in instruction screen
+			global.SetScale(s.scalef)
+		} else {
 			global.SetScale(s.scalef)
 		}
 	}
@@ -472,9 +482,13 @@ func (s *sessCtx) orchestrateRequest() error {
 					s.displayData = s.parts
 					s.curReqType = 0
 					//
-					_, err = s.pushState()
-					if err != nil {
-						return err
+					if s.reScale {
+						s.updateState()
+					} else {
+						_, err = s.pushState()
+						if err != nil {
+							return err
+						}
 					}
 					return nil
 				} else {
@@ -580,12 +594,11 @@ func (s *sessCtx) orchestrateRequest() error {
 			}
 			fmt.Printf("selId  %d   parts   %#v\n", s.selId, s.part)
 			s.reset = true
+			s.showObjMenu = false
 			s.displayData, err = s.cacheInstructions(s.selId)
 			if err != nil {
 				return err
 			}
-			s.showObjMenu = false
-			//
 			_, err = s.pushState()
 			if err != nil {
 				return err
