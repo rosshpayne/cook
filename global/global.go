@@ -26,12 +26,11 @@ func WriteCtx() WriteContextT {
 }
 
 func SetScale(s float64) {
-	fmt.Println("set Scale ", s)
+	fmt.Println("** set Scale ", s)
 	scaleF = s
 }
 
 func GetScale() float64 {
-	fmt.Println("get Scale ", scaleF)
 	return scaleF
 }
 

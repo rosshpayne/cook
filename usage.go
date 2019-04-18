@@ -140,7 +140,7 @@ func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 		b.Reset()
 	}
 	if footnote {
-		b.WriteString("  ")
+		b.WriteString(" . ")
 		b.WriteString(" * lower value applies when you wash the container immediately after use, so it can then be reused")
 	}
 	output_ = append(output_, b.String())

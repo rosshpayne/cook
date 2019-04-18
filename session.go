@@ -130,6 +130,7 @@ func (s *sessCtx) getState() (*stateRec, error) {
 	}
 	if len(result.Item) == 0 {
 		//
+		fmt.Println("getState.... 0 rows found")
 		s.newSession = true
 		return &stateRec{}, nil
 	}
@@ -160,6 +161,10 @@ func (s *sessCtx) setState(ls *stateRec) {
 	// 		s.displayData = w
 	// 	}
 	// }
+	fmt.Printf("** in setState()")
+	if len(ls.Request) > 0 {
+		s.lastreq = ls.Request
+	}
 	if s.eol == 0 {
 		s.eol = ls.EOL
 	}
@@ -184,8 +189,6 @@ func (s *sessCtx) setState(ls *stateRec) {
 	if ls.Qid > 0 {
 		s.questionId = ls.Qid
 	}
-	fmt.Printf("reqVersion: [%s]\n", s.reqVersion)
-	fmt.Println("len(s.reqVersion) = ", len(s.reqVersion))
 	if len(s.reqVersion) == 0 {
 		s.reqVersion = ls.Ver
 	}
@@ -197,7 +200,12 @@ func (s *sessCtx) setState(ls *stateRec) {
 		id := strings.Split(string(ls.OpenBk), "|")
 		s.reqBkId, s.reqBkName = id[0], id[1]
 		s.authors = id[2]
-		fmt.Println("set BookId: ", s.reqBkId, " from ls.OpenBk")
+		fmt.Println("set ls.OPenBk: ", ls.OpenBk)
+		//s.displayData = ls.OpenBk
+		// if s.request == "start" {
+		// 	// redirect
+		// 	s.request = "book"
+		// }
 	}
 	// object rec Id
 	//
@@ -239,19 +247,6 @@ func (s *sessCtx) setState(ls *stateRec) {
 		s.recipeList = ls.RecipeList
 		s.displayData = s.recipeList
 	}
-	// if dd, ok := s.displayData.(InstructionS); ok {
-	// 	lsd := ls.DisplayData.(InstructionS)
-	// 	if len(dd) == 0 {
-	// 		dd = lsd
-	// 	}
-	// }
-	//
-	// determine select context
-	//
-	// fmt.Println("in Session: selId = ", s.selId)
-	// fmt.Println("in Session:ls.SelCtx = ", ls.SelCtx)
-	// fmt.Println("in Session: len(ls.Ingredients) = ", len(ls.Ingredients))
-	// fmt.Println("in Session: s.request = ", s.request)
 	//
 	fmt.Println("in SetState: selId = ", s.selId)
 	if s.selId > 0 {
@@ -268,6 +263,10 @@ func (s *sessCtx) setState(ls *stateRec) {
 			s.selCtx = ctxPartMenu
 			fmt.Println("in SetState: selCtx = ctxPartMenu")
 		case ls.SelCtx == ctxObjectMenu && s.request == "scale" && len(ls.Ingredients) > 0:
+			s.selCtx = ctxObjectMenu
+			s.ingrdList = ls.Ingredients
+			fmt.Println("in setState: s.selCtx = ", s.selCtx)
+		case ls.SelCtx == ctxObjectMenu && len(ls.Ingredients) > 0:
 			s.selCtx = ctxObjectMenu
 			s.ingrdList = ls.Ingredients
 			fmt.Println("in setState: s.selCtx = ", s.selCtx)
@@ -314,12 +313,18 @@ func (s *sessCtx) setState(ls *stateRec) {
 	//
 	// initial request is always start but above logic checks for current state to sets displayData accordingly
 	if s.displayData != nil {
-		fmt.Println("** setState: s.displayData is not nil")
+		fmt.Println("** setState: s.displayData is set")
 	}
-	if s.request == "start" && s.displayData == nil {
+	if (s.request == "start" || s.request == "book" || s.request == "close") && s.displayData == nil {
+		var err error
 		// if this is a genuine start with no previous state
-		fmt.Printf(" & start set welcome display %#v ", ls.Welcome)
+		fmt.Printf("in setState:  welcome display %#v ", ls.Welcome)
 		s.displayData = ls.Welcome
+		// always check for books = don't rely on cached result even if it reasonably current
+		s.bkids, err = s.getUserBooks()
+		if err != nil {
+			panic(err)
+		}
 	}
 	//
 	return
@@ -417,6 +422,7 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 		updateC = updateC.Set(expression.Name("state"), expression.Value(State))
 		s.newSession = false
 	} else if len(s.state) > 12 {
+		fmt.Println("> 12.. : ", State)
 		updateC = updateC.Set(expression.Name("state"), expression.Value(s.state[len(s.state)-8:]))
 	} else {
 		updateC = updateC.Set(expression.Name("state"), expression.ListAppend(expression.Name("state"), expression.Value(State)))
@@ -454,6 +460,7 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 		}
 		return nil, err
 	}
+	fmt.Println("Exit pushState....")
 	return &sr, nil
 }
 
@@ -504,6 +511,12 @@ func (s *sessCtx) updateState() error {
 	}
 	atribute = fmt.Sprintf("state[%d].RecId", len(s.state)-1)
 	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
+	if s.openBkChange {
+		atribute = fmt.Sprintf("state[%d].OpenBk", len(s.state)-1)
+		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.reqOpenBk))
+		atribute = fmt.Sprintf("state[%d].Welc", len(s.state)-1)
+		updateC = updateC.Set(expression.Name(atribute), expression.Value(*(s.welcome)))
+	}
 	if len(s.state[len(s.state)-1].InstructionData) > 0 {
 		atribute = fmt.Sprintf("state[%d].I[%d].id", len(s.state)-1, s.cThread)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId[objectMap[task_]]))
@@ -518,15 +531,12 @@ func (s *sessCtx) updateState() error {
 	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.oThread))
 	atribute = fmt.Sprintf("state[%d].DT", len(s.state)-1)
 	updateC = updateC.Set(expression.Name(atribute), expression.Value(time.Now().Format("Jan 2 15:04:05")))
-	if len(s.request) > 0 {
-		atribute = fmt.Sprintf("state[%d].Request", len(s.state)-1)
-		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.request))
+	if s.request == "book" || s.request == "close" {
+		// don't record book open/close requests. Contents of reqOpenBk tells us about this request.
+		s.request = s.lastreq
 	}
-	// if s.display != nil {
-	// 	atribute = fmt.Sprintf("state[%d].AplD", len(s.state)-1)
-	// 	updateC = updateC.Set(expression.Name(atribute), expression.Value(*(s.display)))
-	// }
-
+	atribute = fmt.Sprintf("state[%d].Request", len(s.state)-1)
+	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.request))
 	//
 	expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
 	pkey := pKey{Uid: s.userId}
@@ -596,7 +606,7 @@ func (s *sessCtx) popState() error {
 		//
 		State = s.state[:len(s.state)-1]
 		s.state = State[:]
-
+		fmt.Println("pop: len(s.state", len(s.state))
 		t := time.Now()
 		t.Add(time.Hour * 24 * 1)
 		updateC = expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
@@ -617,6 +627,7 @@ func (s *sessCtx) popState() error {
 		}
 		_, err = s.dynamodbSvc.UpdateItem(input)
 		if err != nil {
+			fmt.Println("Dyamo error in popstate 1: ", err)
 			if aerr, ok := err.(awserr.Error); ok {
 				switch aerr.Code() {
 				case dynamodb.ErrCodeProvisionedThroughputExceededException:
@@ -633,6 +644,7 @@ func (s *sessCtx) popState() error {
 				// Message from an error.
 				fmt.Println(err.Error())
 			}
+			fmt.Println("Dyamo error in popstate 2: ", err)
 			return err
 		}
 		// pop last entry from session context state
@@ -642,7 +654,7 @@ func (s *sessCtx) popState() error {
 		sr = s.state.pop() //[len(s.state)-1]
 	}
 	//
-
+	fmt.Println("after dynamo: ")
 	// transfer state data to session context
 	//s.path = sr.Path
 	//s.param = sr.Param
@@ -666,6 +678,7 @@ func (s *sessCtx) popState() error {
 	s.ddata = sr.DData
 	s.authors = sr.Authors
 	//
+	fmt.Println("here . 2")
 	if len(sr.OpenBk) > 0 {
 		bk := strings.Split(string(sr.OpenBk), "|")
 		fmt.Printf("popstate: open bk %#v\n", bk)
@@ -673,6 +686,7 @@ func (s *sessCtx) popState() error {
 		s.authorS = strings.Split(s.authors, ",")
 		s.reqOpenBk = sr.OpenBk
 	}
+	fmt.Println("here . 3 ")
 	//
 	s.ingrdList = sr.Ingredients
 	//
@@ -704,33 +718,31 @@ func (s *sessCtx) popState() error {
 	// s.dispContainers = sr.DispContainers
 	// s.dispPartMenu = sr.DispPartMenu
 	//
-	fmt.Printf("Popstate: parts %#v\n", s.parts)
-	fmt.Printf("Popstate: sr.showOBjMenu %#v\n", sr.ShowObjMenu)
-	fmt.Printf("Popstate: sr.RecipeList %#v\n", sr.RecipeList)
-	fmt.Printf("Popstate: s.reqBkId %#v\n", s.reqBkId)
-	fmt.Printf("Popstate: s.reqRId %#v\n", s.reqRId)
 	//
 	s.displayData = s.parts
 	if len(sr.InstructionData) > 0 {
+		fmt.Println("displayData = InstructionData")
 		s.displayData = sr.InstructionData
 	}
 	if len(sr.Ingredients) > 0 {
+		fmt.Println("displayData = Ingredients")
 		s.displayData = sr.Ingredients
 	}
 	if len(sr.RecipeList) > 0 {
+		fmt.Println("displayData = RecipeList")
 		s.displayData = sr.RecipeList
 	}
 	if sr.ShowObjMenu {
-		fmt.Println("In popState: showObjMenu true")
+		fmt.Println("displayData = showObjMenu")
 		s.displayData = objMenu
 		//		s.showObjMenu = sr.ShowObjMenu
 	}
-	if sr.Request == "book" && len(sr.OpenBk) > 0 {
-		s.displayData = s.reqOpenBk
-	}
-	if sr.Request == "book/close" && len(sr.OpenBk) > 0 {
-		s.displayData = s.reqOpenBk
-	}
+	// if sr.Request == "book" && len(sr.OpenBk) > 0 { // book request value not saved in session - as it is
+	// 	s.displayData = s.reqOpenBk
+	// }
+	// if sr.Request == "book/close" && len(sr.OpenBk) > 0 {
+	// 	s.displayData = s.reqOpenBk
+	// }
 	if len(sr.MenuL) > 0 {
 		s.menuL = sr.MenuL
 	}
@@ -755,6 +767,7 @@ func (s *sessCtx) popState() error {
 	// 	s.displayData = w
 	// }
 	if sr.Request == "start" {
+		fmt.Println("displayData = Welcome")
 		s.displayData = sr.Welcome
 	}
 	// switch s.display.Type {
@@ -762,5 +775,14 @@ func (s *sessCtx) popState() error {
 	// 	var w WelcomeT
 	// 	s.displayData = w
 	// }
+
+	fmt.Printf("Popstate: parts %#v\n", s.parts)
+	fmt.Println("Popstate: sr.showOBjMenu ", sr.ShowObjMenu)
+	fmt.Printf("Popstate: sr.RecipeList %#v\n", sr.RecipeList)
+	fmt.Printf("Popstate: s.reqBkId %s\n", s.reqBkId)
+	fmt.Printf("Popstate: s.reqRId %s\n", s.reqRId)
+	fmt.Printf("Popstate: s.request %s\n", s.request)
+
+	fmt.Println("Exit popState()..")
 	return nil
 }

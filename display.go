@@ -132,6 +132,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		//pid     string
 		hdr  string
 		subh string
+		hint string
 	)
 
 	getLongName := func(index string) string {
@@ -244,17 +245,17 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 			peol = len(t[s.cThread].Instructions)
 		}
 		sf := strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
-		subh = "Cooking Instructions  -  " + strconv.Itoa(id) + " of " + strconv.Itoa(peol) + "   (Scale: " + sf + ")"
+		subh = "Cooking Instructions  -  " + strconv.Itoa(id) + " of " + strconv.Itoa(peol) + "   (Fixed Scale: " + sf + ")"
 	} else {
 		// p = getLongName(rec.part)
 		// p = strings.Split(s.part, "|")
 		// hdr += "  -  " + strings.ToUpper(p[0])
 		eol := len(t[s.cThread].Instructions)
 		sf := strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
-		subh = "Cooking Instructions  -  " + strconv.Itoa(id) + " of " + strconv.Itoa(eol) + "   (Scale: " + sf + ")"
+		subh = "Cooking Instructions  -  " + strconv.Itoa(id) + " of " + strconv.Itoa(eol) + "   (Fixed Scale: " + sf + ")"
 	}
 	if s.reScale {
-		hdr = " *** Alert :  you cannot scale a recipe when following instructions. You must exit, scale then return"
+		hdr = " *** Alert :  you cannot scale a recipe while following instructions."
 	}
 	fmt.Println("switch on thread: ", t[s.cThread].Thread)
 	//
@@ -340,7 +341,8 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		if err != nil {
 			return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
 		}
-		return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Text: rec.Text, Verbal: speak, ListA: listA, ListB: listB, ListC: listC}
+		hint = "hint:  next, previous, say again"
+		return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Hint: hint, Text: rec.Text, Verbal: speak, ListA: listA, ListB: listB, ListC: listC}
 
 	default:
 		// two threads with 3 sections in each. should always display threads 1 and 2 in that order, never thread 0
@@ -401,8 +403,8 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		if err != nil {
 			return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
 		}
-
-		return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Text: rec.Text, Verbal: speak, ListA: listA, ListB: listB, ListC: listC,
+		hint = "hint:  next, previous, say again, resume"
+		return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Hint: hint, Text: rec.Text, Verbal: speak, ListA: listA, ListB: listB, ListC: listC,
 			ListD: listD, ListE: listE, ListF: listF, Color1: color1, Color2: color2, Thread1: trName1, Thread2: trName2,
 		}
 	}
@@ -423,36 +425,54 @@ type WelcomeT struct {
 
 func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 	var (
-		hdr  string
-		subh string
-		list []DisplayItem
+		hdr    string
+		subh   string
+		title  string
+		hint   string
+		openBk string
+		list   []DisplayItem
 	)
 	//
-	if len(w.Display) == 0 || (len(w.Bkids) != len(s.bkids) && s.back == false) {
+	fmt.Println("GenDisplay:  WelcomeT")
+	if w == nil {
+		panic(fmt.Errorf("WelcomeT: w not assigned"))
+	}
+	if len(w.Display) == 0 || (len(w.Bkids) != len(s.bkids) && s.back == false) || s.openBkChange {
+		fmt.Println(" push or update.... len(s.state) = ", len(s.state))
+		fmt.Println(" openBkChange.. ", s.openBkChange)
 		fmt.Println("w.Bkids ", len(w.Bkids))
 		fmt.Println("s.bkids ", len(s.bkids))
 		// s.bkids is the latest book register value
 		// w.Bkids is the cached value and hence maybe out-of-date
-		list = make([]DisplayItem, 2)
-		list[0] = DisplayItem{Title: w.msg}
-		list[1] = DisplayItem{Title: " "}
+		ob := strings.Split(string(s.reqOpenBk), "|")
 		w.Bkids = s.bkids
 		//
-		for _, v := range s.bkids {
+		for i, v := range s.bkids {
 			s.reqBkId = v
 			err := s.bookNameLookup()
 			if err != nil {
 				panic(err)
 			}
 			msg := s.reqBkName + "  by " + s.authors
+			if s.reqBkId == ob[0] {
+				msg += "  (now open and searcheable)"
+			}
+			if i < 2 {
+				openBk = `"open book ` + s.reqBkName + `"`
+			}
 			list = append(list, DisplayItem{Title: msg})
 		}
 		w.Display = list
 		// clear all book/recipe data as populated by bookNameLookup(), as we currently have not user selected book/recipe.
 		s.reqBkId, s.reqBkName, s.reqRId, s.reqRName, s.authors = "", "", "", "", ""
 		//
+		var err error
 		s.welcome = w
-		_, err := s.pushState()
+		if len(s.state) == 0 {
+			_, err = s.pushState()
+		} else {
+			err = s.updateState()
+		}
 		if err != nil {
 			type_ := "Ingredient"
 			return RespEvent{Type: type_, BackBtn: false, Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
@@ -461,34 +481,42 @@ func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 		fmt.Printf("in display: list = %#v", w.Display)
 		list = w.Display
 	}
-
 	//
-	fmt.Printf("in GenDisplay for Welcome message\n")
-
+	hdr = "Welcome to Your EburyPress Cook Books on Alexa"
+	srch := `, "search ingredient(s)", "search keyword(s)", "search recipe-name", "search any-part-of-recipe-name" e.g. "search pasta", "search tarragon", "search chocolate cake"`
 	if len(s.reqOpenBk) > 0 {
 		bk := strings.Split(string(s.reqOpenBk), "|")
-		hdr = `You have the following book open:  ` + bk[1] + "  by " + bk[2]
-		subh = `Either close the book, say "close", open another or conduct a search `
+		title = bk[1] + " is now open. Searches will be restricted to this book"
+		list = w.Display
+		hint = `hint: "close book" ` + srch
+
+	} else if len(s.CloseBkName) > 0 {
+		title = s.CloseBkName + " is now closed. Searches will be across all your books"
+		list = w.Display
+		hint = `hint: "open book" ` + srch
 
 	} else if len(w.Bkids) > 0 || s.back {
 		if len(w.Bkids) > 1 {
-			hdr = "Welcome to EburyPress books. Please open a book or search for a recipe across all books"
-			subh = "examples:  search chocolate cake, search tarragon, search pastry, search fennel chicken" // TODO examples should match books
+			title = "Listed below are the books registered to this device."
 		} else {
-			hdr = "Welcome to EburyPress books. Search for a recipe in the book"
-			subh = "examples:  search chocolate cake, search tarragon, search pastry, search strawberry tart"
+			hdr = "Welcome to EburyPress books. "
+			title = "You have the following book registered to this device. Searches will be across all the books unless you open one"
 		}
-
-	} else if len(w.Bkids) == 0 {
-		hdr = "Welcome to EburyPress Books"
+		hint = "hint: " + openBk + " " + srch
 	}
 
-	type_ := "Ingredient"
+	if s.tryOpenBk {
+		hdr = s.dmsg
+		s.tryOpenBk = false
+	}
+
+	type_ := "start"
 	if len(w.request) > 0 {
 		type_ = w.request // nb: email - as in get me email. index.js handles it.
+		hint = `hint: ` + openBk + " " + srch
 	}
 
-	return RespEvent{Type: type_, BackBtn: false, Header: hdr, SubHdr: subh, List: list}
+	return RespEvent{Type: type_, BackBtn: false, Header: hdr, SubHdr: subh, Hint: hint, Text: title, List: list}
 }
 
 func (c ContainerS) GenDisplay(s *sessCtx) RespEvent {
@@ -496,14 +524,14 @@ func (c ContainerS) GenDisplay(s *sessCtx) RespEvent {
 	fmt.Printf("in GenDisplay for containers: %#v\n", c)
 	hdr := s.reqRName
 	subh := "Containers and Utensils"
-
+	hint := ""
 	var list []DisplayItem
 	for _, v := range c {
-		di := DisplayItem{Title: v}
+		di := DisplayItem{Text: v}
 		list = append(list, di)
 	}
 	type_ := "Ingredient"
-	return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, List: list}
+	return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Hint: hint, List: list}
 }
 
 func (p PartS) GenDisplay(s *sessCtx) RespEvent {
@@ -511,6 +539,7 @@ func (p PartS) GenDisplay(s *sessCtx) RespEvent {
 	var (
 		hdr  string
 		subh string
+		hint string
 		k    int
 	)
 
@@ -537,7 +566,8 @@ func (p PartS) GenDisplay(s *sessCtx) RespEvent {
 		}
 		k++
 	}
-	return RespEvent{Type: "PartList", BackBtn: true, Header: hdr, SubHdr: subh, Height: 90, Text: s.vmsg, Verbal: s.dmsg, List: list}
+	hint = "hint: select 1, scale recipe 55 percent"
+	return RespEvent{Type: "PartList", BackBtn: true, Header: hdr, SubHdr: subh, Hint: hint, Height: 90, Text: s.vmsg, Verbal: s.dmsg, List: list}
 
 }
 
@@ -568,6 +598,7 @@ func (r RecipeListT) GenDisplay(s *sessCtx) RespEvent {
 		hdr     string
 		subh    string
 		type_   string
+		hint    string
 		backBtn bool
 	)
 	if len(s.reqOpenBk) > 0 {
@@ -602,7 +633,8 @@ func (r RecipeListT) GenDisplay(s *sessCtx) RespEvent {
 		if len(s.state) < 2 {
 			backBtn = false
 		}
-		return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: nil}
+		hint = "hint: select three "
+		return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr, SubHdr: subh, Hint: hint, Text: s.vmsg, Verbal: s.dmsg, List: nil}
 	}
 	//
 	// mutli-choice recipes
@@ -629,8 +661,8 @@ func (r RecipeListT) GenDisplay(s *sessCtx) RespEvent {
 	if len(s.state) < 2 {
 		backBtn = false
 	}
-
-	return RespEvent{Type: type_, BackBtn: backBtn, Header: "Search results: " + s.reqSearch, Text: s.vmsg, Verbal: s.dmsg, List: list}
+	hint = "hint: select three "
+	return RespEvent{Type: type_, BackBtn: backBtn, Header: "Search results: " + s.reqSearch, Hint: hint, Text: s.vmsg, Verbal: s.dmsg, List: list}
 }
 
 func (o ObjMenu) GenDisplay(s *sessCtx) RespEvent {
@@ -638,9 +670,11 @@ func (o ObjMenu) GenDisplay(s *sessCtx) RespEvent {
 		hdr     string
 		subh    string
 		op      string
+		hint    string
 		backBtn bool
 		noScale bool
 	)
+	fmt.Println("GenDisplay:  ObjMenu")
 	if len(s.passErr) > 0 {
 		hdr = s.passErr
 	} else {
@@ -658,7 +692,7 @@ func (o ObjMenu) GenDisplay(s *sessCtx) RespEvent {
 	// if back button pressed then s.menuL is assigned via state pop(). menuL is empty, at this point, during normal forward processing.
 	//
 	var list []DisplayItem
-
+	fmt.Println("len(menuL) = ", len(s.menuL))
 	switch len(s.menuL) {
 	case 0:
 		ct, err := s.getScaleContainer()
@@ -710,55 +744,63 @@ func (o ObjMenu) GenDisplay(s *sessCtx) RespEvent {
 			return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
 		}
 	}
+	hint = `hint: "select one", "select two", "go back"`
 	//return RespEvent{Type: "Select", BackBtn: backBtn, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: list}
-	return RespEvent{Type: "Search", BackBtn: backBtn, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: list}
+	return RespEvent{Type: "Search", BackBtn: backBtn, Header: hdr, SubHdr: subh, Text: s.vmsg, Hint: hint, Verbal: s.dmsg, List: list}
 
 }
 
-func (b BookT) GenDisplay(s *sessCtx) RespEvent {
-	var (
-		hdr     string
-		subh    string
-		type_   string
-		backBtn bool
-	)
+// func (b BookT) GenDisplay(s *sessCtx) RespEvent {
+// 	var (
+// 		hdr     string
+// 		subh    string
+// 		hint    string
+// 		type_   string
+// 		text    string
+// 		backBtn bool
+// 	)
 
-	type_ = "header"
-	backBtn = true
-	if len(s.state) < 2 {
-		backBtn = false
-	}
-	id := strings.Split(string(b), "|")
-	switch len(id) {
-	case 1:
-		if s.request == "book/close" {
-			hdr = s.CloseBkName + " closed."
-			subh = "Future searches will be across all books"
-		} else {
-			type_ = "Select"
-			hdr = "Issue with opening book " + s.reqBkName
-			subh = s.dmsg
-			list := make([]DisplayItem, 2)
-			list[0] = DisplayItem{Id: "1", Title: "Yes"}
-			list[1] = DisplayItem{Id: "2", Title: "No"}
-			return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: list}
-		}
-	default:
-		// book successfully opened. No errors can occur during book close so b will always be empty.
-		_, BkName := id[0], id[1]
-		authors := id[2]
-		hdr = "Opened book " + BkName + "  by " + authors
-		subh = "All searches will be restricted to this book until it is closed"
-	}
-
-	return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: nil}
-}
+// 	backBtn = true
+// 	if len(s.state) < 2 {
+// 		backBtn = false
+// 	}
+// 	fmt.Println("in GenDisplay for BookT: [", string(b), "]")
+// 	id := strings.Split(string(b), "|")
+// 	fmt.Printf("id = %d %#v\n", len(id), id)
+// 	switch len(id) {
+// 	case 0, 1:
+// 		// only bkid
+// 		if s.request == "close" {
+// 			hdr = s.CloseBkName + " closed."
+// 			subh = "Future searches will be across all your books"
+// 		} else {
+// 			type_ = "Select"
+// 			hdr = "Issue with opening book " + s.reqBkName
+// 			subh = s.dmsg
+// 			list := make([]DisplayItem, 2)
+// 			list[0] = DisplayItem{Id: "1", Title: "Yes"}
+// 			list[1] = DisplayItem{Id: "2", Title: "No"}
+// 			return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: list}
+// 		}
+// 	default:
+// 		// book successfully opened. No errors can occur during book close so b will always be empty.
+// 		BkName := id[1]
+// 		authors := id[2]
+// 		hdr = "Opened book " + BkName + "  by " + authors
+// 		text = "All searches will be restricted to " + BkName + " until it is closed"
+// 	}
+// 	fmt.Println("in GenDisplay: ", hdr)
+// 	type_ = "OpenBook"
+// 	hint = "hint: search orange tart, search chocolate cake, close book"
+// 	return RespEvent{Type: type_, Header: hdr, SubHdr: subh, Hint: hint, Text: text, Verbal: text}
+// }
 
 func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 	var (
 		sf   string
 		hdr  string
 		subh string
+		hint string
 		text string
 		list []DisplayItem
 	)
@@ -859,5 +901,5 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 	if len(s.state) < 2 {
 		backBtn = false
 	}
-	return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr, SubHdr: subh, List: list}
+	return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr, SubHdr: subh, Hint: hint, List: list}
 }

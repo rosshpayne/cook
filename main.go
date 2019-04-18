@@ -29,6 +29,7 @@ type sessCtx struct {
 	newSession bool
 	//path      string // InputEvent.Path
 	request string // pathItem[0]: request from user e.g. select, next, prev,..
+	lastreq string // previous request
 	//param     string // InputEvent.Param
 	state     stateStack
 	lastState *stateRec // state attribute from state dynamo item - contains state history
@@ -36,7 +37,6 @@ type sessCtx struct {
 	//
 	userId      string   // sourced from request. Used as PKey to Sessions table
 	bkids       []string // registered books to user
-	reqOpenBk   BookT    // BkId|BkName|authors
 	reqRName    string   // requested recipe name - query param of recipe request
 	reqBkName   string   // requested book name - query param
 	CloseBkName string
@@ -112,31 +112,43 @@ type sessCtx struct {
 	welcome *WelcomeT
 	//
 	email string
+	//
+	reqOpenBk    BookT // BkId|BkName|authors
+	openBkChange bool
+	tryOpenBk    bool
 }
 
 const scaleThreshold float64 = 0.9
 
 func (s *sessCtx) closeBook() {
 	fmt.Println("closeBook()")
-	s.reqOpenBk = ""
+	s.openBkChange = true
 	s.CloseBkName = s.reqBkName
 	s.reqBkId, s.reqBkName, s.reqRId, s.reqRName = "", "", "", ""
 	s.reqOpenBk, s.authorS, s.authors = "", nil, ""
 	s.eol, s.peol = 0, 0
-	s.displayData = s.reqOpenBk
-	s.newSession = true
+	//s.displayData = s.reqOpenBk
+	//s.newSession = true
 	s.cThread, s.oThread = 0, 0
+
 }
 
-func (s *sessCtx) openBook() {
+func (s *sessCtx) openBook() error {
 
+	s.tryOpenBk = false
+	s.openBkChange = true
 	s.reqOpenBk = BookT(s.reqBkId + "|" + s.reqBkName + "|" + s.authors)
 	s.eol, s.peol = 0, 0
 	s.reqRName, s.reqRId = "", ""
-	s.displayData = s.reqOpenBk
-	s.newSession = true
+	//s.displayData = s.reqOpenBk
+	//s.newSession = true
 	fmt.Println("openBook() - ", s.reqOpenBk)
 	s.cThread, s.oThread = 0, 0
+	// err := s.updateState()
+	// if err != nil {
+	// 	return err
+	// }
+	return nil
 }
 
 func (s *sessCtx) clearForSearch(lastState *stateRec) {
@@ -238,24 +250,17 @@ func (s *sessCtx) orchestrateRequest() error {
 			fmt.Println("Threads..")
 			// redirect request
 			s.request = "start-next"
-			// s.objRecId = s.recId[objectMap[s.object]] + 1
-			// s.recId[objectMap[s.object]] += 1
 		case *WelcomeT:
 			fmt.Println("Welcome..")
 			// no previous session - check if userId is registered
 			// check for row U-[userId] in ingredients table. This item contains books registered to userId
-			//  if no data then user is not registered and therefore ineligble to uer app
+			//  if no data then user is not registered and therefore ineligble to use app
 			if len(s.email) > 0 {
 				// resp from startwithEmail. (see below) for the case of no registerd books.
 				var w WelcomeT
-				w.msg = fmt.Sprintf("Hi, you have no books registered against this device. Please go to www.eburypress.co.uk and register your  book purchase, using the email: %s ", s.email)
+				w.msg = fmt.Sprintf("Hi, you have no books registered. Please go to www.eburypress.co.uk and register your  book purchase, using the email: %s ", s.email)
 				s.displayData = &w
 				return nil
-			}
-			// always check for books = don't rely on cached result even if it reasonably current
-			s.bkids, err = s.getUserBooks()
-			if err != nil {
-				return err
 			}
 			if wx != nil {
 				return nil
@@ -275,6 +280,13 @@ func (s *sessCtx) orchestrateRequest() error {
 				s.displayData = &w
 				return nil
 			}
+			// default:
+			// should let it fall through as setState may not have assigned displayData but relies on other state data
+			//  to determine what should be displayed - so let it fall through and not return at this point
+			// 	if s.displayData == nil {
+			// 		panic("error: displayData is nil - setState should have assigned it a value but didnot")
+			// 	}
+			// 	return nil
 		}
 	}
 	if s.request == "dimension" {
@@ -334,12 +346,7 @@ func (s *sessCtx) orchestrateRequest() error {
 			s.updateState()
 			return nil
 		}
-		if s.selCtx != ctxPartMenu {
-			// update scale if not in instruction screen
-			global.SetScale(s.scalef)
-		} else {
-			global.SetScale(s.scalef)
-		}
+		global.SetScale(s.scalef)
 	}
 	//
 	// yes/no response. May assign new book
@@ -369,7 +376,10 @@ func (s *sessCtx) orchestrateRequest() error {
 				fmt.Println(">> Yes to Open Book")
 				s.vmsg = fmt.Sprintf(`[%s] is now open. You can now search or open a recipe within this book`, lastState.BkName)
 				s.dmsg = fmt.Sprintf(`[%s] is now open. You can now search or open a recipe within this book`, lastState.BkName)
-				s.openBook()
+				err = s.openBook()
+				if err != nil {
+					return err
+				}
 			} else {
 				s.popState()
 			}
@@ -379,7 +389,10 @@ func (s *sessCtx) orchestrateRequest() error {
 				s.reqBkId, s.reqBkName, s.reset = lastState.SwpBkId, lastState.SwpBkNm, true
 				s.vmsg = fmt.Sprintf(`Book [%s] is now open. You can now search or open a recipe within this book`, lastState.BkName)
 				s.dmsg = fmt.Sprintf(`Book [%s] is now open. You can now search or open a recipe within this book`, lastState.BkName)
-				s.openBook()
+				err = s.openBook()
+				if err != nil {
+					return err
+				}
 			} else {
 				s.popState()
 			}
@@ -616,7 +629,8 @@ func (s *sessCtx) orchestrateRequest() error {
 	// 2. BookName will always co-exist with BookId in session table by the end of this section
 	//	  similarly, RecipeName will always co-exist with RecipeId in the session table by the end of this section
 	//
-	if s.curReqType == initialiseRequest {
+
+	if s.curReqType == initialiseRequest || s.initialiseRequest_() {
 		//
 		if s.request == "resume" {
 			if s.cThread == 0 || s.object != "task" || s.reqRId == "0" {
@@ -696,13 +710,13 @@ func (s *sessCtx) orchestrateRequest() error {
 
 			return nil
 		}
-		if s.request == "book/close" {
+		if s.request == "close" {
 			if len(s.object) > 0 && s.eol != s.recId[objectMap[s.object]] {
 				s.dmsg = fmt.Sprintf("You currently have recipe %s open. Do you still want to close the book?", lastState.RName)
 				s.vmsg = fmt.Sprintf("You currently have recipe %s open. Do you still want to close the book?", lastState.RName)
 				s.questionId = 20
 			} else {
-				switch len(s.reqBkId) {
+				switch len(s.reqOpenBk) {
 				case 0:
 					s.dmsg = `There is no books open to close.`
 					s.vmsg = `There is no books open to close.`
@@ -713,19 +727,23 @@ func (s *sessCtx) orchestrateRequest() error {
 					s.closeBook()
 				}
 			}
-			_, err := s.pushState() //TODO: do I need to do this..
-			if err != nil {
-				return err
-			}
 			return nil
 		}
-		if s.request == "book" {
+		if s.request == "book" { // open book
 			//
 			// open book requested
 			//
-			s.displayData = s.reqOpenBk
+			// if _, ok := s.displayData.(BookT); ok { // this requires a BookT screen. Decided not to use it and use header text instead
+			// 	// assigned during setState() - no more to do so return
+			// 	fmt.Println("Request Book: displayData already assigned return")
+			// 	return nil
+			// }
+			//
+			// use existing screen (displayData) and update header with the following messages
+			//
+			s.tryOpenBk = true
 			if len(lastState.BkId) > 0 {
-				// some book was open previously
+				// a book is currently been accessed
 				switch {
 				case lastState.BkId == s.reqBkId:
 					// open currenly opened book. reqBkId was sourced using bookNameLookup()
@@ -743,25 +761,29 @@ func (s *sessCtx) orchestrateRequest() error {
 						// no active recipe
 						s.dmsg = "Opened " + s.reqBkName + " by " + s.authors + ". "
 						s.vmsg = "Opened " + s.reqBkName + " by " + s.authors + ". "
-						s.openBook()
-
+						err = s.openBook()
+						if err != nil {
+							return err
+						}
 					} else if lastState.activeRecipe() {
 						s.dmsg = "You are actively browsing a recipe from book, " + lastState.BkName + ". Do you still want to open " + s.reqBkName + "?"
 						s.vmsg = "You are actively browsing a recipe from book, " + lastState.BkName + ". Do you still want to open " + s.reqBkName + "?"
 						s.questionId = 21
 					}
 				}
+				//s.ingrdList, s.recipeList, s.object, s.showObjMenu = "", nil, "", false
+				return nil
 			} else {
-				s.openBook()
+				// no book is currently been accessed
+				err = s.openBook()
+				if err != nil {
+					return err
+				}
 				s.dmsg = "Opened " + s.reqBkName + " by " + s.authors + ". "
 				s.vmsg = "Opened " + s.reqBkName + " by " + s.authors + ". "
 			}
-
-			s.ingrdList, s.recipeList, s.object, s.showObjMenu = "", nil, "", false
-			_, err = s.pushState()
-			if err != nil {
-				return err
-			}
+			//s.ingrdList, s.recipeList, s.object, s.showObjMenu = "", nil, "", false
+			return nil
 		}
 		if s.request == "recipe" { // "open recipe" intent
 			//
@@ -857,6 +879,17 @@ func (s *sessCtx) orchestrateRequest() error {
 	}
 	//
 	return nil
+}
+
+func (s *sessCtx) initialiseRequest_() bool {
+	fmt.Println(s.request)
+	switch s.request {
+	case "book", "close", "recipe", "select", "search", "list", "yesno", "version", "resume", "dimension", "scale":
+		s.curReqType = initialiseRequest
+		return true
+	default:
+		return false
+	}
 }
 
 type InputEvent struct {
@@ -983,23 +1016,60 @@ func handler(request InputEvent) (RespEvent, error) {
 		}
 		//sessctx.noGetRecRequired, sessctx.reset = true, true
 		sessctx.reset = true
-	case "start":
-		sessctx.curReqType = 0 //TODO: what to put here...if anything
 	case "startWithEmail":
 		sessctx.email = request.QueryStringParameters["email"]
 		sessctx.request = "start"
-		sessctx.curReqType = 0 //TODO: what to put here...if anything
-	case "book", "recipe", "select", "search", "list", "yesno", "version", "back", "resume", "dimension", "scale":
-		sessctx.curReqType = initialiseRequest
+	case "dimension":
+		var i int
+		i, err = strconv.Atoi(request.QueryStringParameters["dim"])
+		if err != nil {
+			err = fmt.Errorf("%s: %s", "Error in converting int of dimension request \n\n", err.Error())
+		} else {
+			sessctx.dimension = i
+		}
+	case "back":
+		// used back button on display device. Note: back will ignore orachestrateRequest and go straight to displayGen()
+		sessctx.back = true
+		fmt.Println("** Back button hit")
+		err = sessctx.popState()
+		if err != nil {
+			fmt.Println("Error returned by popState..")
+		}
+	case container_, task_:
+		//  "object" request is required only for VUI, as all requests are be random by nature.
+		//  GUI requests, on the other hand, are controlled by this app making the following request redundant.
+		sessctx.object = sessctx.request
+		sessctx.curReqType = objectRequest
+		sessctx.request = "next"
+		fmt.Printf("s.parts  %#v\n", sessctx.parts)
+		// if sessctx.request == task_ {
+		// 	if len(sessctx.parts) > 0 && len(sessctx.part) == 0 {
+		// 		sessctx.dispPartMenu = true
+		// 		sessctx.noGetRecRequired = true
+		// 	}
+		// 	//s.getInstructions()
+		// }
+	case "next", "prev", "goto", "repeat", "modify":
+		sessctx.curReqType = instructionRequest
+		switch sessctx.request {
+		case "goto":
+			var i int
+			i, err = strconv.Atoi(request.QueryStringParameters["goId"])
+			if err != nil {
+				err = fmt.Errorf("%s: %s", "Error in converting int of goto request ", err.Error())
+			} else {
+				sessctx.gotoRecId = i
+			}
+		}
+	}
+
+	if sessctx.initialiseRequest_() && !sessctx.back {
+		fmt.Println("here in initialiseRequest..")
 		switch sessctx.request {
 		case "book": // user reponse "open book" "close book"
 			// book id and name  populated in this section
-			if len(pathItem) > 1 && pathItem[1] == "close" {
-				sessctx.request = "book/close"
-			} else { // open
-				sessctx.reqBkId = request.QueryStringParameters["bkid"]
-				err = sessctx.bookNameLookup()
-			}
+			sessctx.reqBkId = request.QueryStringParameters["bkid"]
+			err = sessctx.bookNameLookup()
 		case "version":
 			sessctx.reqVersion = request.QueryStringParameters["ver"]
 		case "list":
@@ -1049,57 +1119,18 @@ func handler(request InputEvent) (RespEvent, error) {
 				// emulate select ingredient from objMenu, like "select", this will force update to screen
 				//sessctx.selId = 1
 			}
-
-		case "dimension":
-			var i int
-			i, err = strconv.Atoi(request.QueryStringParameters["dim"])
-			if err != nil {
-				err = fmt.Errorf("%s: %s", "Error in converting int of dimension request \n\n", err.Error())
-			} else {
-				sessctx.dimension = i
-			}
-
-		case "back":
-			// used back button on display device. Note: back will ignore orachestrateRequest and go straight to displayGen()
-			sessctx.back = true
-			err = sessctx.popState()
-			//
-		}
-	//
-	case container_, task_:
-		//  "object" request is required only for VUI, as all requests are be random by nature.
-		//  GUI requests, on the other hand, are controlled by this app making the following request redundant.
-		sessctx.object = sessctx.request
-		sessctx.curReqType = objectRequest
-		sessctx.request = "next"
-		fmt.Printf("s.parts  %#v\n", sessctx.parts)
-		// if sessctx.request == task_ {
-		// 	if len(sessctx.parts) > 0 && len(sessctx.part) == 0 {
-		// 		sessctx.dispPartMenu = true
-		// 		sessctx.noGetRecRequired = true
-		// 	}
-		// 	//s.getInstructions()
-		// }
-	case "next", "prev", "goto", "repeat", "modify":
-		sessctx.curReqType = instructionRequest
-		switch sessctx.request {
-		case "goto":
-			var i int
-			i, err = strconv.Atoi(request.QueryStringParameters["goId"])
-			if err != nil {
-				err = fmt.Errorf("%s: %s", "Error in converting int of goto request ", err.Error())
-			} else {
-				sessctx.gotoRecId = i
-			}
 		}
 	}
+	fmt.Println(" here before err...", err)
 	if err != nil {
+		fmt.Println(" Error .", err.Error())
 		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata, Error: err.Error()}, nil
 	}
 	//
 	// validate the request and populate session context with appropriate metadata associated with request
 	//
 	if !sessctx.back {
+		fmt.Println(" about to enter orachestrate...")
 		err = sessctx.orchestrateRequest()
 		if err != nil {
 			return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata, Error: err.Error()}, nil
@@ -1108,7 +1139,14 @@ func handler(request InputEvent) (RespEvent, error) {
 	//
 	// package the response data RespEvent (an APL aware "display" structure) and return
 	//
+	fmt.Println("==justR before displayData.GenDisplay ===")
+	if sessctx.displayData == nil {
+		fmt.Println("== ERROR before displayData.GenDisplay ===")
+		err = fmt.Errorf("displayData is nil")
+		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata, Error: err.Error()}, nil
+	}
 	var resp RespEvent
+	fmt.Println("=========== displayData.GenDisplay =============")
 	resp = sessctx.displayData.GenDisplay(sessctx)
 	return resp, nil
 }
