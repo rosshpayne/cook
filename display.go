@@ -524,10 +524,14 @@ func (c ContainerS) GenDisplay(s *sessCtx) RespEvent {
 	fmt.Printf("in GenDisplay for containers: %#v\n", c)
 	hdr := s.reqRName
 	subh := "Containers and Utensils"
-	hint := ""
+	hint := `hint: "go back" `
 	var list []DisplayItem
 	for _, v := range c {
-		di := DisplayItem{Text: v}
+		di := DisplayItem{Title: v}
+		// add blank line to separate footer *
+		if len(v) > 1 && v[1] == '*' {
+			list = append(list, DisplayItem{Title: " "})
+		}
 		list = append(list, di)
 	}
 	type_ := "Ingredient"
