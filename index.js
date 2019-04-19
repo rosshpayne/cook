@@ -31,9 +31,6 @@ const LaunchRequestHandler = {
   },
   
   handle(handlerInput) {
-    // var speechText = "Hi. To find a recipe, simply search for a keyword by saying 'search keyword or recipe name' where keyword is any ingredient or ingredients related to the recipe ";
-    // var displayText =  "Hi. To find a recipe, simply search for a keyword by saying 'search keyword or recipe name' where keyword is any ingredient or ingredients related to the recipe ";
-
     const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
     const accessToken = handlerInput.requestEnvelope.context.System.apiAccessToken;
     const accessEndpoint = handlerInput.requestEnvelope.context.System.apiEndpoint;
@@ -537,9 +534,8 @@ const BookIntentHandler = {
     
     return promise.then((body) => {
         var  resp = JSON.parse(body);
-        console.log(resp);
         return handleResponse(handlerInput, resp);
-      }).catch((err) => { console.log("this is in error", err, err.stack);  } );
+      }).catch(function (err) { console.log(err, err.stack);  } );
     
   },
 };
@@ -552,7 +548,7 @@ const CloseBookIntentHandler = {
   },
   handle(handlerInput) {
     var uid="uid="+handlerInput.requestEnvelope.session.user.userId;
-    invokeParams.Payload = '{ "Path" : "book/close" ,"Param" : "'+uid+'" }';
+    invokeParams.Payload = '{ "Path" : "close" ,"Param" : "'+uid+'" }';
 
     var promise= new Promise((resolve, reject) => {
           lambda.invoke(invokeParams, function(err, data) {
@@ -565,22 +561,10 @@ const CloseBookIntentHandler = {
     
     return promise.then((body) => {
         var  resp = JSON.parse(body);
-        if (resp.Type === "header") {
-          const display = require('APL/header.js');
-          return  handlerInput.responseBuilder
-                            .speak(resp.Verbal)
-                            .reprompt(resp.Verbal)
-                            .addDirective(display(resp.Header,resp.SubHdr,  resp.List) )
-                            .getResponse(); 
-        } else if (resp.Type === "Select") {
-          const select = require('APL/select.js');
-          return  handlerInput.responseBuilder
-                            .speak(resp.Verbal)
-                            .reprompt(resp.Verbal)
-                            .addDirective(select(resp.BackBtn, resp.Header,resp.SubHdr, resp.List))
-                            .getResponse(); 
-        }
-        }).catch(function (err) { console.log(err, err.stack);  } );
+        console.log(resp);
+        return handleResponse(handlerInput, resp);
+      }).catch(function (err) { console.log(err, err.stack);  } );
+    
   },
 };
 
@@ -648,8 +632,6 @@ const BackIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'backIntent';
   },
   handle(handlerInput) {
-    //const select = require('APL/select.js');
-    //const ingredient = require('APL/ingredients.js');
     const uid='uid='+handlerInput.requestEnvelope.session.user.userId   ; 
     invokeParams.Payload = '{ "Path" : "back" ,"Param" : "'+uid+'" }';
 
@@ -1056,12 +1038,19 @@ const ErrorHandler = {
 
 function handleResponse (handlerInput , resp) {
         if (resp.Type === "Ingredient") {
-          const ingredient = require('APL/ingredients.js');
+          const ingrd = require('APL/'+resp.Type+'.js');
           return  handlerInput.responseBuilder
-                            .speak(resp.Verbal)
-                            .reprompt(resp.Verbal)
-                            .addDirective(ingredient(resp.BackBtn, resp.Header,resp.SubHdr, resp.List))
+                            .speak(resp.Text)
+                            .reprompt(resp.Text)
+                            .addDirective(ingrd(resp.BackBtn, resp.Header,resp.SubHdr, resp.List, resp.Hint))
                             .getResponse();
+        } else if (resp.Type === "start") {
+          const start = require('APL/start.js');
+          return  handlerInput.responseBuilder
+                          .speak(resp.Verbal)
+                          .reprompt(resp.Text)
+                          .addDirective(start(resp.BackBtn, resp.Header, resp.SubHdr, resp.Text, resp.List, resp.Hint))
+                          .getResponse();
         } else if (resp.Type === "PartList") {
           const search = require('APL/PartList.js');
           return  handlerInput.responseBuilder
@@ -1101,13 +1090,20 @@ function handleResponse (handlerInput , resp) {
                             .reprompt(resp.Verbal)
                             .addDirective(select(resp.BackBtn, resp.Header,resp.SubHdr, resp.List))
                             .getResponse();     
-        } else if (resp.Type === "Search") {
-          const search = require('APL/search.js');
+        } else if (resp.Type === "Search" || resp.Type === "SearchErr") {
+          const search = require('APL/' + resp.Type + '.js');
           return  handlerInput.responseBuilder
                           .speak(resp.Verbal)
                           .reprompt(resp.Text)
-                          .addDirective(search(resp.BackBtn, resp.Header, resp.SubHdr, resp.List))
+                          .addDirective(search(resp.BackBtn, resp.Header, resp.SubHdr, resp.List, resp.Hint, resp.Error))
                           .getResponse();
+        // } else if (resp.Type === "OpenBook") {
+        //   const display = require('APL/OpenBook.js');
+        //   return  handlerInput.responseBuilder
+        //                     .speak(resp.Verbal)
+        //                     .reprompt(resp.Verbal)
+        //                     .addDirective(display(resp.Header, resp.SubHdr , resp.Text, resp.Hint ) )
+        //                     .getResponse();
         } else {
            const search = require('APL/search.js');
            return  handlerInput.responseBuilder

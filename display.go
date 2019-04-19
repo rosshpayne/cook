@@ -444,7 +444,6 @@ func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 		fmt.Println("s.bkids ", len(s.bkids))
 		// s.bkids is the latest book register value
 		// w.Bkids is the cached value and hence maybe out-of-date
-		ob := strings.Split(string(s.reqOpenBk), "|")
 		w.Bkids = s.bkids
 		//
 		for i, v := range s.bkids {
@@ -454,9 +453,6 @@ func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 				panic(err)
 			}
 			msg := s.reqBkName + "  by " + s.authors
-			if s.reqBkId == ob[0] {
-				msg += "  (now open and searcheable)"
-			}
 			if i < 2 {
 				openBk = `"open book ` + s.reqBkName + `"`
 			}
@@ -487,11 +483,18 @@ func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 	if len(s.reqOpenBk) > 0 {
 		bk := strings.Split(string(s.reqOpenBk), "|")
 		title = bk[1] + " is now open. Searches will be restricted to this book"
+		ob := strings.Split(string(s.reqOpenBk), "|")
+		for i, v := range w.Bkids {
+			if v == ob[0] {
+				w.Display[i].Title += "  (opened and searcheable)"
+			}
+		}
 		list = w.Display
 		hint = `hint: "close book" ` + srch
 
 	} else if len(s.CloseBkName) > 0 {
 		title = s.CloseBkName + " is now closed. Searches will be across all your books"
+		fmt.Printf("close book. List = %#v\n", w.Display)
 		list = w.Display
 		hint = `hint: "open book" ` + srch
 
@@ -547,13 +550,10 @@ func (p PartS) GenDisplay(s *sessCtx) RespEvent {
 		k    int
 	)
 
-	if len(s.passErr) > 0 {
-		hdr = s.passErr
-	} else {
-		hdr = s.reqRName
-		sf := strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
-		subh = `Recipe is divided into parts. Select first option to follow complete recipe  (Scale: ` + sf + ")"
-	}
+	hdr = s.reqRName
+	sf := strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
+	subh = `Recipe is divided into parts. Select first option to follow complete recipe  (Scale: ` + sf + ")"
+
 	list := make([]DisplayItem, 1)
 	list[0] = DisplayItem{Id: "1", Title: CompleteRecipe_}
 	for _, v := range p {
@@ -679,19 +679,16 @@ func (o ObjMenu) GenDisplay(s *sessCtx) RespEvent {
 		noScale bool
 	)
 	fmt.Println("GenDisplay:  ObjMenu")
-	if len(s.passErr) > 0 {
-		hdr = s.passErr
-	} else {
-		if len(s.reqOpenBk) > 0 {
-			op = "Opened "
-		}
-		hdr = s.reqRName
-		subh = op + "Book:  " + s.reqBkName + "  Authors: " + s.authors
-		//	if global.GetScale() < 1.0 {
-		sf := strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
-		subh += "  (Scale: " + sf + " )"
-		//	}
+	if s.passErr {
+		fmt.Printf("with Error\n")
 	}
+
+	hdr = s.reqRName
+	subh = op + "Book:  " + s.reqBkName + "  Authors: " + s.authors
+	//	if global.GetScale() < 1.0 {
+	sf := strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
+	subh += "  (Scale: " + sf + " )"
+	//	}
 	//
 	// if back button pressed then s.menuL is assigned via state pop(). menuL is empty, at this point, during normal forward processing.
 	//
@@ -748,9 +745,18 @@ func (o ObjMenu) GenDisplay(s *sessCtx) RespEvent {
 			return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
 		}
 	}
+	type_ := "Search"
+	if s.passErr {
+		type_ += "Err"
+	}
 	hint = `hint: "select one", "select two", "go back"`
+	if len(s.reqOpenBk) > 0 {
+		hint += `,"close book"`
+	}
+	fmt.Println("Screen: ", type_)
+
 	//return RespEvent{Type: "Select", BackBtn: backBtn, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: list}
-	return RespEvent{Type: "Search", BackBtn: backBtn, Header: hdr, SubHdr: subh, Text: s.vmsg, Hint: hint, Verbal: s.dmsg, List: list}
+	return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr, SubHdr: subh, Text: s.vmsg, Hint: hint, Verbal: s.vmsg, List: list, Error: s.dmsg}
 
 }
 

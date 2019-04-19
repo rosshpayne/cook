@@ -33,7 +33,7 @@ type sessCtx struct {
 	//param     string // InputEvent.Param
 	state     stateStack
 	lastState *stateRec // state attribute from state dynamo item - contains state history
-	passErr   string
+	passErr   bool      // error in logic or operation. display() functions uses this flag to present error to display.
 	//
 	userId      string   // sourced from request. Used as PKey to Sessions table
 	bkids       []string // registered books to user
@@ -120,9 +120,9 @@ type sessCtx struct {
 
 const scaleThreshold float64 = 0.9
 
-func (s *sessCtx) closeBook() {
+func (s *sessCtx) closeBook() error {
 	fmt.Println("closeBook()")
-	s.openBkChange = true
+	//s.openBkChange = true
 	s.CloseBkName = s.reqBkName
 	s.reqBkId, s.reqBkName, s.reqRId, s.reqRName = "", "", "", ""
 	s.reqOpenBk, s.authorS, s.authors = "", nil, ""
@@ -130,13 +130,31 @@ func (s *sessCtx) closeBook() {
 	//s.displayData = s.reqOpenBk
 	//s.newSession = true
 	s.cThread, s.oThread = 0, 0
-
+	//
+	// remove state history, back to start request
+	//
+	s.state = s.state[0:2]
+	err := s.popState()
+	if err != nil {
+		return err
+	}
+	s.reqOpenBk = ""
+	s.back = true // condition used in display()
+	err = s.updateState()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *sessCtx) openBook() error {
 
 	s.tryOpenBk = false
 	s.openBkChange = true
+	err := s.bookNameLookup()
+	if err != nil {
+		return err
+	}
 	s.reqOpenBk = BookT(s.reqBkId + "|" + s.reqBkName + "|" + s.authors)
 	s.eol, s.peol = 0, 0
 	s.reqRName, s.reqRId = "", ""
@@ -426,7 +444,8 @@ func (s *sessCtx) orchestrateRequest() error {
 			if !s.reScale {
 				// select id only checked for genuine selection which doesn't happen if request is scale.
 				if s.selId > len(s.recipeList) || s.selId < 1 {
-					s.passErr = "selection is not within range"
+					s.passErr = true
+					s.dmsg = "selection is not within range"
 					return nil
 				}
 
@@ -470,7 +489,8 @@ func (s *sessCtx) orchestrateRequest() error {
 				// check select id is within menu range. For reScale there is no menu listing in its current state.
 				if s.selId > len(s.menuL) {
 					//s.setDisplay(lastState)
-					s.passErr = "selection is not within range"
+					s.dmsg = "selection is not within range"
+					s.passErr = true
 					return nil
 				}
 				s.object = objectS[s.menuL[s.selId-1]]
@@ -596,7 +616,8 @@ func (s *sessCtx) orchestrateRequest() error {
 		case ctxPartMenu:
 			if s.selId > len(s.parts)+1 || s.selId < 1 {
 				//s.setDisplay(lastState)
-				s.passErr = "selection is not within range"
+				s.passErr = true
+				s.dmsg = "selection is not within range"
 				return nil
 			}
 			s.part = ""
@@ -710,25 +731,6 @@ func (s *sessCtx) orchestrateRequest() error {
 
 			return nil
 		}
-		if s.request == "close" {
-			if len(s.object) > 0 && s.eol != s.recId[objectMap[s.object]] {
-				s.dmsg = fmt.Sprintf("You currently have recipe %s open. Do you still want to close the book?", lastState.RName)
-				s.vmsg = fmt.Sprintf("You currently have recipe %s open. Do you still want to close the book?", lastState.RName)
-				s.questionId = 20
-			} else {
-				switch len(s.reqOpenBk) {
-				case 0:
-					s.dmsg = `There is no books open to close.`
-					s.vmsg = `There is no books open to close.`
-				default:
-					//
-					s.dmsg = s.reqBkName + ` is now closed. Any searches will be across all books`
-					s.vmsg = s.reqBkName + ` is now closed. Any searches will be across all books`
-					s.closeBook()
-				}
-			}
-			return nil
-		}
 		if s.request == "book" { // open book
 			//
 			// open book requested
@@ -742,6 +744,7 @@ func (s *sessCtx) orchestrateRequest() error {
 			// use existing screen (displayData) and update header with the following messages
 			//
 			s.tryOpenBk = true
+			//
 			if len(lastState.BkId) > 0 {
 				// a book is currently been accessed
 				switch {
@@ -753,8 +756,12 @@ func (s *sessCtx) orchestrateRequest() error {
 						s.questionId = 21
 					}
 					if len(lastState.OpenBk) > 0 {
-						s.dmsg = s.reqBkName + " is already open"
-						s.vmsg = s.reqBkName + " is already open"
+						s.passErr = true
+						s.dmsg = `*** Please close ` + lastState.BkName + ` before opening another book, by saying "close book", otherwise just continue.`
+						s.vmsg = s.dmsg[4:]
+						if lastState.Request != "start" {
+							s.vmsg = s.vmsg + " Closing will also cancel what you are doing at the moment."
+						}
 					}
 				case lastState.BkId != s.reqBkId:
 					if len(lastState.RName) == 0 {
@@ -783,6 +790,28 @@ func (s *sessCtx) orchestrateRequest() error {
 				s.vmsg = "Opened " + s.reqBkName + " by " + s.authors + ". "
 			}
 			//s.ingrdList, s.recipeList, s.object, s.showObjMenu = "", nil, "", false
+			return nil
+		}
+		if s.request == "close" {
+			if len(s.object) > 0 && s.eol != s.recId[objectMap[s.object]] {
+				s.dmsg = fmt.Sprintf("You currently have recipe %s open. Do you still want to close the book?", lastState.RName)
+				s.vmsg = fmt.Sprintf("You currently have recipe %s open. Do you still want to close the book?", lastState.RName)
+				s.questionId = 20
+			} else {
+				switch len(s.reqOpenBk) {
+				case 0:
+					s.dmsg = `There is no books open to close.`
+					s.vmsg = `There is no books open to close.`
+				default:
+					//
+					s.dmsg = s.reqBkName + ` is now closed. All searches will be across all books`
+					s.vmsg = s.reqBkName + ` is now closed. All searches will be across all books`
+					err := s.closeBook()
+					if err != nil {
+						return err
+					}
+				}
+			}
 			return nil
 		}
 		if s.request == "recipe" { // "open recipe" intent
@@ -882,7 +911,6 @@ func (s *sessCtx) orchestrateRequest() error {
 }
 
 func (s *sessCtx) initialiseRequest_() bool {
-	fmt.Println(s.request)
 	switch s.request {
 	case "book", "close", "recipe", "select", "search", "list", "yesno", "version", "resume", "dimension", "scale":
 		s.curReqType = initialiseRequest
@@ -941,6 +969,7 @@ func handler(request InputEvent) (RespEvent, error) {
 		//path:        request.Path,
 		//param:       request.Param,
 	}
+
 	//
 	// Three request types:
 	//   * initialiseRequest - all requests associated with listing recipe related data
@@ -1064,12 +1093,11 @@ func handler(request InputEvent) (RespEvent, error) {
 	}
 
 	if sessctx.initialiseRequest_() && !sessctx.back {
-		fmt.Println("here in initialiseRequest..")
 		switch sessctx.request {
 		case "book": // user reponse "open book" "close book"
 			// book id and name  populated in this section
 			sessctx.reqBkId = request.QueryStringParameters["bkid"]
-			err = sessctx.bookNameLookup()
+			//err = sessctx.bookNameLookup()
 		case "version":
 			sessctx.reqVersion = request.QueryStringParameters["ver"]
 		case "list":
@@ -1121,16 +1149,15 @@ func handler(request InputEvent) (RespEvent, error) {
 			}
 		}
 	}
-	fmt.Println(" here before err...", err)
+
 	if err != nil {
-		fmt.Println(" Error .", err.Error())
+		//TODO: create an ERROR screen APL
 		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata, Error: err.Error()}, nil
 	}
 	//
 	// validate the request and populate session context with appropriate metadata associated with request
 	//
 	if !sessctx.back {
-		fmt.Println(" about to enter orachestrate...")
 		err = sessctx.orchestrateRequest()
 		if err != nil {
 			return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata, Error: err.Error()}, nil
@@ -1139,10 +1166,7 @@ func handler(request InputEvent) (RespEvent, error) {
 	//
 	// package the response data RespEvent (an APL aware "display" structure) and return
 	//
-	fmt.Println("==justR before displayData.GenDisplay ===")
 	if sessctx.displayData == nil {
-		fmt.Println("== ERROR before displayData.GenDisplay ===")
-		err = fmt.Errorf("displayData is nil")
 		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata, Error: err.Error()}, nil
 	}
 	var resp RespEvent

@@ -535,8 +535,13 @@ func (s *sessCtx) updateState() error {
 		// don't record book open/close requests. Contents of reqOpenBk tells us about this request.
 		s.request = s.lastreq
 	}
-	atribute = fmt.Sprintf("state[%d].Request", len(s.state)-1)
-	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.request))
+	if len(s.CloseBkName) > 0 {
+		atribute = fmt.Sprintf("state[%d].OpenBk", len(s.state)-1)
+		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.reqOpenBk))
+	}
+	// do not change Request value after it has been inserted.
+	// atribute = fmt.Sprintf("state[%d].Request", len(s.state)-1)
+	// updateC = updateC.Set(expression.Name(atribute), expression.Value(s.request))
 	//
 	expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
 	pkey := pKey{Uid: s.userId}
@@ -767,8 +772,9 @@ func (s *sessCtx) popState() error {
 	// 	s.displayData = w
 	// }
 	if sr.Request == "start" {
-		fmt.Println("displayData = Welcome")
+		fmt.Printf("displayData = Welcome = %#v\n", *(sr.Welcome))
 		s.displayData = sr.Welcome
+
 	}
 	// switch s.display.Type {
 	// case WELCOME:
