@@ -464,6 +464,11 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 	return &sr, nil
 }
 
+type srecT struct {
+	Uid string     `json:"Uid"`
+	Sr  []stateRec `json:state"`
+}
+
 func (s *sessCtx) updateState() error {
 
 	type pKey struct {
@@ -485,6 +490,11 @@ func (s *sessCtx) updateState() error {
 		// this case for new session. No UserId in session table so no state.
 		panic(fmt.Errorf("s.state not set in UpdateState()"))
 	}
+	// for close book op only - shrink state slice down to 1
+	// if len(s.CloseBkName) > 0 { . // errors with ValidationException: Invalid UpdateExpression: Two document paths overlap with each other; must remove or rewrite one of these paths; path one: [state], path two: [state, [0], MenuL]
+	// 	State := s.state[:]
+	// 	updateC = expression.Set(expression.Name("state"), expression.Value(State))
+	// }
 	if len(s.menuL) > 0 {
 		atribute = fmt.Sprintf("state[%d].MenuL", len(s.state)-1)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.menuL))
@@ -514,6 +524,7 @@ func (s *sessCtx) updateState() error {
 	if s.openBkChange {
 		atribute = fmt.Sprintf("state[%d].OpenBk", len(s.state)-1)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.reqOpenBk))
+		// when Bkids change
 		atribute = fmt.Sprintf("state[%d].Welc", len(s.state)-1)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(*(s.welcome)))
 	}
@@ -579,6 +590,20 @@ func (s *sessCtx) updateState() error {
 		}
 		return err
 	}
+	//
+	// following used in close book op - avoids extra dynamo access to fetch Welcome data
+	//
+	// if s.request == "start" {
+	// 	x2 := srecT{}
+	// 	err = dynamodbattribute.UnmarshalMap(result.Attributes, &x2)
+	// 	if err != nil {
+	// 		return fmt.Errorf("Error: %s %s", "in UnmarshalMap in updateState ", err.Error())
+	// 	}
+	// 	fmt.Printf("displayData = Welcome = %#v\n", *(x2.Sr[0].Welcome))
+	// 	s.welcome = x2.Sr[0].Welcome
+	// 	s.displayData = x2.Sr[0].Welcome
+
+	// }
 	fmt.Println("finish updateState in sessions.go")
 	return nil
 }
@@ -773,6 +798,7 @@ func (s *sessCtx) popState() error {
 	// }
 	if sr.Request == "start" {
 		fmt.Printf("displayData = Welcome = %#v\n", *(sr.Welcome))
+		s.welcome = sr.Welcome // used in close book op
 		s.displayData = sr.Welcome
 
 	}

@@ -121,29 +121,37 @@ type sessCtx struct {
 const scaleThreshold float64 = 0.9
 
 func (s *sessCtx) closeBook() error {
+	//
+	// close books sends user back to first screen/dialog - a reset in essense
+	//
 	fmt.Println("closeBook()")
 	//s.openBkChange = true
 	s.CloseBkName = s.reqBkName
-	s.reqBkId, s.reqBkName, s.reqRId, s.reqRName = "", "", "", ""
-	s.reqOpenBk, s.authorS, s.authors = "", nil, ""
-	s.eol, s.peol = 0, 0
-	//s.displayData = s.reqOpenBk
-	//s.newSession = true
-	s.cThread, s.oThread = 0, 0
 	//
 	// remove state history, back to start request
 	//
-	s.state = s.state[0:2]
-	err := s.popState()
-	if err != nil {
-		return err
+	if len(s.state) > 1 {
+		s.state = s.state[0:2]
+		err := s.popState()
+		if err != nil {
+			return err
+		}
 	}
+	//
+	//  now lets clear some state attributes in the remaining state
+	//
 	s.reqOpenBk = ""
+	s.reqBkId, s.reqBkName, s.reqRId, s.reqRName = "", "", "", ""
+	s.reqOpenBk, s.authorS, s.authors = "", nil, ""
+	s.eol, s.peol = 0, 0
 	s.back = true // condition used in display()
-	err = s.updateState()
+	err := s.updateState()
 	if err != nil {
 		return err
 	}
+	//
+	s.welcome = s.state[0].Welcome
+	s.displayData = s.welcome
 	return nil
 }
 

@@ -141,7 +141,7 @@ func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 	}
 	if footnote {
 		b.WriteString(" ")
-		b.WriteString("* lower value applies when you wash the container immediately after use, so it can then be reused")
+		b.WriteString("* lower value applies when you wash the container immediately after use, to maximise reuse")
 	}
 	output_ = append(output_, b.String())
 	// store number of records in recipe table

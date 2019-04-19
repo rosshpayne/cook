@@ -478,11 +478,15 @@ func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 		list = w.Display
 	}
 	//
-	hdr = "Welcome to Your EburyPress Cook Books on Alexa"
+	hdr = "Welcome to your EburyPress Cook books on Alexa"
 	srch := `, "search ingredient(s)", "search keyword(s)", "search recipe-name", "search any-part-of-recipe-name" e.g. "search pasta", "search tarragon", "search chocolate cake"`
 	if len(s.reqOpenBk) > 0 {
 		bk := strings.Split(string(s.reqOpenBk), "|")
-		title = bk[1] + " is now open. Searches will be restricted to this book"
+		if s.back {
+			title = bk[1] + " is open. Searches will be restricted to this book"
+		} else {
+			title = bk[1] + " is now open. Searches will be restricted to this book"
+		}
 		ob := strings.Split(string(s.reqOpenBk), "|")
 		for i, v := range w.Bkids {
 			if v == ob[0] {
@@ -673,7 +677,6 @@ func (o ObjMenu) GenDisplay(s *sessCtx) RespEvent {
 	var (
 		hdr     string
 		subh    string
-		op      string
 		hint    string
 		backBtn bool
 		noScale bool
@@ -684,7 +687,11 @@ func (o ObjMenu) GenDisplay(s *sessCtx) RespEvent {
 	}
 
 	hdr = s.reqRName
-	subh = op + "Book:  " + s.reqBkName + "  Authors: " + s.authors
+	if len(s.reqOpenBk) > 0 {
+		subh = "Opened book: " + s.reqBkName + "  Authors: " + s.authors
+	} else {
+		subh = "Book:  " + s.reqBkName + "  Authors: " + s.authors
+	}
 	//	if global.GetScale() < 1.0 {
 	sf := strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
 	subh += "  (Scale: " + sf + " )"
