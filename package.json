@@ -1,7 +1,7 @@
 {
-  "name": "skill-sample-nodejs-fact-i18n",
+  "name": "skill-sample-nodejs-eburyPress",
   "version": "2.0.0",
-  "description": "I18n version of fact skill.",
+  "description": "EBuryPressApp",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

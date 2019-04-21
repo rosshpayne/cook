@@ -192,6 +192,22 @@ func (s *sessCtx) setState(ls *stateRec) {
 	if len(s.reqVersion) == 0 {
 		s.reqVersion = ls.Ver
 	}
+	// new part
+	if s.selId == 0 && ls.SelId > 0 {
+		s.selId = ls.SelId
+	}
+	if len(s.object) == 0 && len(ls.Obj) > 0 {
+		s.object = ls.Obj
+	}
+	if s.selCtx == 0 && ls.SelCtx > 0 {
+		s.selCtx = ls.SelCtx
+	}
+	if len(ls.MenuL) > 0 {
+		s.menuL = ls.MenuL
+	}
+	if len(ls.Ingredients) > 0 {
+		s.ingrdList = ls.Ingredients
+	}
 	//
 	// open book
 	//
@@ -248,30 +264,14 @@ func (s *sessCtx) setState(ls *stateRec) {
 		s.displayData = s.recipeList
 	}
 	//
+	// if s.request == "search" {
+	// 	switch ls.request {
+	// 	case "start" :
+	// 		s.displayData=
+	// 	case
+	// 	}
+	// }
 	fmt.Println("in SetState: selId = ", s.selId)
-	if s.selId > 0 {
-		switch {
-		case ls.SelCtx == 0 && len(s.reqRName) == 0 && (ls.Request == "search" || ls.Request == "recipe"):
-			s.selCtx = ctxRecipeMenu
-			fmt.Println("in SetState: selCtx = ctxRecipeMenu")
-			//s.displayData = objMenu
-			//s.dispObjectMenu = true
-		case (ls.SelCtx == 0 && ls.ShowObjMenu) || (ls.SelCtx == ctxRecipeMenu && len(s.reqRName) > 0):
-			s.selCtx = ctxObjectMenu
-			fmt.Println("in SetState: selCtx = ctxObjectMenu")
-		case s.request == "select" && len(ls.Parts) > 0 && len(ls.Part) == 0:
-			s.selCtx = ctxPartMenu
-			fmt.Println("in SetState: selCtx = ctxPartMenu")
-		case ls.SelCtx == ctxObjectMenu && s.request == "scale" && len(ls.Ingredients) > 0:
-			s.selCtx = ctxObjectMenu
-			s.ingrdList = ls.Ingredients
-			fmt.Println("in setState: s.selCtx = ", s.selCtx)
-		case ls.SelCtx == ctxObjectMenu && len(ls.Ingredients) > 0:
-			s.selCtx = ctxObjectMenu
-			s.ingrdList = ls.Ingredients
-			fmt.Println("in setState: s.selCtx = ", s.selCtx)
-		}
-	}
 	//
 	// gen primary key - used for most dyamo accesses
 	//
@@ -297,6 +297,7 @@ func (s *sessCtx) setState(ls *stateRec) {
 	s.showObjMenu = ls.ShowObjMenu
 	if s.showObjMenu && len(ls.Ingredients) == 0 && len(ls.RecipeList) == 0 {
 		fmt.Println("in setSession: displaying object menu is set")
+		s.showObjMenu = true
 		s.displayData = objMenu
 	}
 	if len(ls.MenuL) > 0 {
@@ -315,7 +316,7 @@ func (s *sessCtx) setState(ls *stateRec) {
 	if s.displayData != nil {
 		fmt.Println("** setState: s.displayData is set")
 	}
-	if (s.request == "start" || s.request == "book" || s.request == "close") && s.displayData == nil {
+	if (s.request == "start" || s.request == "book" || s.request == "close" || s.request == "search") && s.displayData == nil {
 		var err error
 		// if this is a genuine start with no previous state
 		fmt.Printf("in setState:  welcome display %#v ", ls.Welcome)
@@ -327,7 +328,44 @@ func (s *sessCtx) setState(ls *stateRec) {
 		}
 	}
 	//
-	return
+}
+
+func (s *sessCtx) incrementState(ls *stateRec) {
+	fmt.Println("in incrementState: selId = ", s.selId)
+	if s.selId > 0 {
+		switch {
+		case ls.SelCtx == 0 && len(s.reqRName) == 0 && (ls.Request == "search" || ls.Request == "recipe"):
+			s.selCtx = ctxRecipeMenu
+			fmt.Println("in SetState: selCtx = ctxRecipeMenu")
+			//s.displayData = objMenu
+			//s.dispObjectMenu = true
+		case ls.Obj == "container":
+			fmt.Println(" container so set selCTx, SelId")
+			s.selCtx = ls.SelCtx
+			s.selId = ls.SelId
+			s.object = ls.Obj
+		case (ls.SelCtx == 0 && ls.ShowObjMenu) || (ls.SelCtx == ctxRecipeMenu && len(s.reqRName) > 0):
+			s.selCtx = ctxObjectMenu
+			fmt.Println("in SetState: selCtx = ctxObjectMenu")
+		case s.request == "select" && len(ls.Parts) > 0 && len(ls.Part) == 0:
+			s.selCtx = ctxPartMenu
+			fmt.Println("in SetState: selCtx = ctxPartMenu")
+		case ls.SelCtx == ctxObjectMenu && s.request == "scale" && len(ls.Ingredients) > 0:
+			s.selCtx = ctxObjectMenu
+			s.ingrdList = ls.Ingredients
+			fmt.Println("in setState: s.selCtx = ", s.selCtx)
+		case ls.SelCtx == ctxObjectMenu && len(ls.Ingredients) > 0:
+			s.selCtx = ctxObjectMenu
+			s.ingrdList = ls.Ingredients
+			fmt.Println("in setState: s.selCtx = ", s.selCtx)
+
+		}
+		fmt.Println("selCtx = ", s.selCtx)
+		fmt.Println("selId = ", s.selId)
+		fmt.Println("object = ", s.object)
+
+	}
+
 }
 
 func (s *sessCtx) pushState() (*stateRec, error) {
@@ -341,6 +379,7 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 		updateC expression.UpdateBuilder
 	)
 	fmt.Println("Entered pushState..")
+
 	// copy statevfrom session context
 	//sr.Path = s.path
 	//sr.Param = s.param
@@ -772,7 +811,7 @@ func (s *sessCtx) popState() error {
 	// }
 	// if sr.Request == "book/close" && len(sr.OpenBk) > 0 {
 	// 	s.displayData = s.reqOpenBk
-	// }
+	//
 	if len(sr.MenuL) > 0 {
 		s.menuL = sr.MenuL
 	}

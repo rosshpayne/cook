@@ -511,19 +511,16 @@ func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 		}
 		hint = "hint: " + openBk + " " + srch
 	}
-
-	if s.tryOpenBk {
-		hdr = s.dmsg
-		s.tryOpenBk = false
+	type_ := "Start"
+	if s.passErr {
+		type_ += "Err"
 	}
-
-	type_ := "start"
 	if len(w.request) > 0 {
 		type_ = w.request // nb: email - as in get me email. index.js handles it.
 		hint = `hint: ` + openBk + " " + srch
 	}
 
-	return RespEvent{Type: type_, BackBtn: false, Header: hdr, SubHdr: subh, Hint: hint, Text: title, List: list}
+	return RespEvent{Type: type_, BackBtn: false, Header: hdr, SubHdr: subh, Hint: hint, Text: title, List: list, Error: s.dmsg}
 }
 
 func (c ContainerS) GenDisplay(s *sessCtx) RespEvent {
@@ -531,7 +528,10 @@ func (c ContainerS) GenDisplay(s *sessCtx) RespEvent {
 	fmt.Printf("in GenDisplay for containers: %#v\n", c)
 	hdr := s.reqRName
 	subh := "Containers and Utensils"
-	hint := `hint: "go back" `
+	hint := `hint: "go back", "reset" `
+	if len(s.reqOpenBk) > 0 {
+		hint += `, "close book" `
+	}
 	var list []DisplayItem
 	for _, v := range c {
 		di := DisplayItem{Title: v}
@@ -542,7 +542,10 @@ func (c ContainerS) GenDisplay(s *sessCtx) RespEvent {
 		list = append(list, di)
 	}
 	type_ := "Ingredient"
-	return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Hint: hint, List: list}
+	if s.passErr {
+		type_ += "Err"
+	}
+	return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Hint: hint, List: list, Error: s.dmsg}
 }
 
 func (p PartS) GenDisplay(s *sessCtx) RespEvent {
@@ -553,7 +556,7 @@ func (p PartS) GenDisplay(s *sessCtx) RespEvent {
 		hint string
 		k    int
 	)
-
+	fmt.Printf("in GenDisplay for PartS: %#v\n", p)
 	hdr = s.reqRName
 	sf := strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
 	subh = `Recipe is divided into parts. Select first option to follow complete recipe  (Scale: ` + sf + ")"
@@ -574,8 +577,12 @@ func (p PartS) GenDisplay(s *sessCtx) RespEvent {
 		}
 		k++
 	}
+	type_ := "PartList"
+	if s.passErr {
+		type_ += "Err"
+	}
 	hint = "hint: select 1, scale recipe 55 percent"
-	return RespEvent{Type: "PartList", BackBtn: true, Header: hdr, SubHdr: subh, Hint: hint, Height: 90, Text: s.vmsg, Verbal: s.dmsg, List: list}
+	return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Hint: hint, Height: 90, Verbal: s.vmsg, List: list, Error: s.dmsg}
 
 }
 
@@ -586,7 +593,7 @@ func (i IngredientT) GenDisplay(s *sessCtx) RespEvent {
 		subhdr string
 		hint   string
 	)
-
+	fmt.Printf("in GenDisplay for Ingredient: %#v\n", i)
 	for _, v := range strings.Split(string(i), "\n") {
 		item := DisplayItem{Title: v}
 		list = append(list, item)
@@ -594,7 +601,11 @@ func (i IngredientT) GenDisplay(s *sessCtx) RespEvent {
 	sf := strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
 	subhdr = "Ingredients       (Scale: " + sf + " )"
 	hint = "hint:  scale recipe 75 percent"
-	return RespEvent{Type: "Ingredient", BackBtn: true, Header: s.reqRName, SubHdr: subhdr, List: list, Hint: hint}
+	type_ := "Ingredient"
+	if s.passErr {
+		type_ += "Err"
+	}
+	return RespEvent{Type: type_, BackBtn: true, Header: s.reqRName, SubHdr: subhdr, List: list, Hint: hint, Error: s.dmsg}
 
 }
 
@@ -604,45 +615,13 @@ func (r RecipeListT) GenDisplay(s *sessCtx) RespEvent {
 		list    []DisplayItem
 		op      string
 		hdr     string
-		subh    string
 		type_   string
 		hint    string
 		backBtn bool
 	)
+	fmt.Printf("in GenDisplay for RecipeList: %#v\n", r)
 	if len(s.reqOpenBk) > 0 {
 		op = "Opened "
-	}
-	//
-	// No recipes found
-	//
-	if len(r) == 0 {
-		// empty list as a result of no-data-found in search
-		words := strings.Split(s.reqSearch, " ")
-		if len(s.reqOpenBk) > 0 {
-			if len(words) == 1 {
-				hdr = fmt.Sprintf(`No recipes found in opened book "%s" for keyword: %s`, s.reqBkName, s.reqSearch)
-				subh = "Either close the book or try multiple keywords e.g search orange chocolate tart"
-			} else {
-				hdr = fmt.Sprintf(`No recipes found in opened book "%s" for keywords: %s`, s.reqBkName, s.reqSearch)
-				subh = "Either close the book to search the entire libary or try altenative keywords"
-			}
-		} else {
-			words := strings.Split(s.reqSearch, " ")
-			if len(words) == 1 {
-				hdr = fmt.Sprintf(`No recipes found for keyword: %s`, s.reqSearch)
-				subh = "Try multiple keywords e.g search orange chocolate tart"
-			} else {
-				hdr = fmt.Sprintf(`No recipes found for keywords: %s`, s.reqSearch)
-				subh = "Change the order of the keywords or try alternative keywords"
-			}
-		}
-		type_ = "header"
-		backBtn = true
-		if len(s.state) < 2 {
-			backBtn = false
-		}
-		hint = "hint: select three "
-		return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr, SubHdr: subh, Hint: hint, Text: s.vmsg, Verbal: s.dmsg, List: nil}
 	}
 	//
 	// mutli-choice recipes
@@ -665,12 +644,16 @@ func (r RecipeListT) GenDisplay(s *sessCtx) RespEvent {
 		list = append(list, item)
 	}
 	type_ = "Search"
+	if s.passErr {
+		type_ += "Err"
+	}
+	hdr = "Search results"
 	backBtn = true
 	if len(s.state) < 2 {
 		backBtn = false
 	}
 	hint = "hint: select three "
-	return RespEvent{Type: type_, BackBtn: backBtn, Header: "Search results: " + s.reqSearch, Hint: hint, Text: s.vmsg, Verbal: s.dmsg, List: list}
+	return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr + s.reqSearch, Hint: hint, Text: s.vmsg, Verbal: s.dmsg, List: list, Error: s.dmsg}
 }
 
 func (o ObjMenu) GenDisplay(s *sessCtx) RespEvent {
@@ -681,6 +664,7 @@ func (o ObjMenu) GenDisplay(s *sessCtx) RespEvent {
 		backBtn bool
 		noScale bool
 	)
+
 	fmt.Println("GenDisplay:  ObjMenu")
 	if s.passErr {
 		fmt.Printf("with Error\n")
@@ -762,7 +746,6 @@ func (o ObjMenu) GenDisplay(s *sessCtx) RespEvent {
 	}
 	fmt.Println("Screen: ", type_)
 
-	//return RespEvent{Type: "Select", BackBtn: backBtn, Header: hdr, SubHdr: subh, Text: s.vmsg, Verbal: s.dmsg, List: list}
 	return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr, SubHdr: subh, Text: s.vmsg, Hint: hint, Verbal: s.vmsg, List: list, Error: s.dmsg}
 
 }
@@ -821,6 +804,7 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 		text string
 		list []DisplayItem
 	)
+	fmt.Printf("in GenDisplay for DispContainerT: %#v\n", *c)
 	if c == nil {
 		panic("in GenDisplay(): DispContainerT instance is nil ")
 	}

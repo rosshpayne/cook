@@ -115,7 +115,7 @@ type sessCtx struct {
 	//
 	reqOpenBk    BookT // BkId|BkName|authors
 	openBkChange bool
-	tryOpenBk    bool
+	//	tryOpenBk    bool
 }
 
 const scaleThreshold float64 = 0.9
@@ -128,6 +128,17 @@ func (s *sessCtx) closeBook() error {
 	//s.openBkChange = true
 	s.CloseBkName = s.reqBkName
 	//
+	err := s.restart()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *sessCtx) restart() error {
+
+	fmt.Println("restart...") //
 	// remove state history, back to start request
 	//
 	if len(s.state) > 1 {
@@ -140,11 +151,14 @@ func (s *sessCtx) closeBook() error {
 	//
 	//  now lets clear some state attributes in the remaining state
 	//
-	s.reqOpenBk = ""
-	s.reqBkId, s.reqBkName, s.reqRId, s.reqRName = "", "", "", ""
-	s.reqOpenBk, s.authorS, s.authors = "", nil, ""
-	s.eol, s.peol = 0, 0
+	if s.request == "close" {
+		s.reqOpenBk = ""
+		s.reqBkId, s.reqBkName, s.reqRId, s.reqRName = "", "", "", ""
+		s.reqOpenBk, s.authorS, s.authors = "", nil, ""
+		s.eol, s.peol = 0, 0
+	}
 	s.back = true // condition used in display()
+	//
 	err := s.updateState()
 	if err != nil {
 		return err
@@ -152,12 +166,13 @@ func (s *sessCtx) closeBook() error {
 	//
 	s.welcome = s.state[0].Welcome
 	s.displayData = s.welcome
+
 	return nil
 }
 
 func (s *sessCtx) openBook() error {
 
-	s.tryOpenBk = false
+	//s.tryOpenBk = false
 	s.openBkChange = true
 	err := s.bookNameLookup()
 	if err != nil {
@@ -199,6 +214,25 @@ func (s *sessCtx) clearForSearch(lastState *stateRec) {
 	s.cThread, s.oThread = 0, 0
 }
 
+func incrementRequest(r string) bool {
+	switch r {
+	case "restart", "book", "close", "search":
+		return false
+	default:
+		return true
+	}
+}
+func init() {
+	objectMap = make(objectMapT, 4)
+	for i, v := range []string{ingredient_, task_, container_, CtrMsr_, recipe_} {
+		objectMap[v] = i
+	}
+	objectS = make([]string, 4)
+	for i, v := range []string{ingredient_, container_, CtrMsr_, task_} {
+		objectS[i] = v
+	}
+}
+
 const (
 	// objects to which future requests apply - s.object values
 	ingredient_     string = "ingredient"
@@ -230,17 +264,6 @@ var objectMap objectMapT
 
 var objectS []string
 
-func init() {
-	objectMap = make(objectMapT, 4)
-	for i, v := range []string{ingredient_, task_, container_, CtrMsr_, recipe_} {
-		objectMap[v] = i
-	}
-	objectS = make([]string, 4)
-	for i, v := range []string{ingredient_, container_, CtrMsr_, task_} {
-		objectS[i] = v
-	}
-}
-
 // type alexaDialog interface {
 // 	Alexa() dialog
 // }
@@ -258,14 +281,27 @@ func (s *sessCtx) orchestrateRequest() error {
 	// ******************************** 	initialise state		****************************************
 	//
 	// fetch state from last session
+	//
 	lastState, err := s.getState()
 	if err != nil {
 		return err
 	}
 	// set current state based on last session
 	s.setState(lastState)
+
+	if incrementRequest(s.request) {
+		s.incrementState(lastState)
+	}
 	//
 	// ******************************** process responses to request  ****************************************
+	//
+	if s.request == "restart" {
+		err := s.restart()
+		if err != nil {
+			return err
+		}
+		return nil
+	}
 	//
 	// alexa launch request
 	//
@@ -315,6 +351,7 @@ func (s *sessCtx) orchestrateRequest() error {
 			// 	return nil
 		}
 	}
+
 	if s.request == "dimension" {
 		if s.dimension == 0 {
 			return fmt.Errorf("Dimension must be greater than zero")
@@ -366,13 +403,13 @@ func (s *sessCtx) orchestrateRequest() error {
 		// 	// s.reqSearch = lastState.Search
 		// 	// s.curReqType = initialiseRequest
 		// }
+		global.SetScale(s.scalef)
 		if s.showObjMenu {
 			s.displayData = objMenu
-			global.SetScale(s.scalef)
 			s.updateState()
 			return nil
 		}
-		global.SetScale(s.scalef)
+
 	}
 	//
 	// yes/no response. May assign new book
@@ -439,6 +476,156 @@ func (s *sessCtx) orchestrateRequest() error {
 		}
 		return nil
 	}
+	if s.request == "book" { // open book
+		//
+		// open book requested
+		//
+		// if _, ok := s.displayData.(BookT); ok { // this requires a BookT screen. Decided not to use it and use header text instead
+		// 	// assigned during setState() - no more to do so return
+		// 	fmt.Println("Request Book: displayData already assigned return")
+		// 	return nil
+		// }
+		//
+		// use existing screen (displayData) and update header with the following messages
+		//
+		//s.tryOpenBk = true
+		fmt.Println("orachestrate for request book...")
+		//
+		if len(lastState.BkId) > 0 {
+			fmt.Println("Book Processing...BkId, reqBkId  ", lastState.BkId, s.reqBkId)
+			fmt.Println("Book Processing...Request , request ", lastState.Request, s.request)
+
+			// a book is currently been accessed
+			switch {
+			case lastState.Request != "start":
+				s.passErr = true
+				s.dmsg = `You must be at the start to open a book. Please say "restart" and then open your book from there. Otherwise continue.`
+				s.vmsg = `You must be at the start to open a book. Please say "restart" and then open your book from there. Note this will cancel what you are doing.`
+
+			case lastState.BkId == s.reqBkId:
+				// open currenly opened book. reqBkId was sourced using bookNameLookup()
+				if lastState.activeRecipe() && len(lastState.OpenBk) == 0 {
+					s.dmsg = "You are actively browsing a recipe from this book. Do you still want to open " + s.reqBkName + "?"
+					s.vmsg = "You are actively browsing a recipe from this book. Do you still want to open " + s.reqBkName + "?"
+					s.questionId = 21
+				}
+				if len(lastState.OpenBk) > 0 {
+					s.passErr = true
+					s.dmsg = `*** Please close ` + lastState.BkName + ` before opening another book, by saying "close book", otherwise just continue.`
+					s.vmsg = s.dmsg[4:]
+					if lastState.Request != "start" {
+						s.vmsg = s.vmsg + " Closing will also cancel what you are doing at the moment."
+					}
+				}
+
+			case lastState.BkId != s.reqBkId:
+				if len(lastState.RName) == 0 {
+					// no active recipe
+					s.dmsg = "Opened " + s.reqBkName + " by " + s.authors + ". "
+					s.vmsg = "Opened " + s.reqBkName + " by " + s.authors + ". "
+					err = s.openBook()
+					if err != nil {
+						return err
+					}
+				} else if lastState.activeRecipe() {
+					s.dmsg = "You are actively browsing a recipe from book, " + lastState.BkName + ". Do you still want to open " + s.reqBkName + "?"
+					s.vmsg = "You are actively browsing a recipe from book, " + lastState.BkName + ". Do you still want to open " + s.reqBkName + "?"
+					s.questionId = 21
+				}
+			}
+		} else {
+			// no book is currently been accessed
+			err = s.openBook()
+			if err != nil {
+				return err
+			}
+			s.dmsg = "Opened " + s.reqBkName + " by " + s.authors + ". "
+			s.vmsg = "Opened " + s.reqBkName + " by " + s.authors + ". "
+		}
+		fmt.Println("Book msg: ", s.dmsg)
+		//s.ingrdList, s.recipeList, s.object, s.showObjMenu = "", nil, "", false
+		//return nil
+	}
+	if s.request == "close" {
+		if len(s.object) > 0 && s.eol != s.recId[objectMap[s.object]] {
+			s.dmsg = fmt.Sprintf("You currently have recipe %s open. Do you still want to close the book?", lastState.RName)
+			s.vmsg = fmt.Sprintf("You currently have recipe %s open. Do you still want to close the book?", lastState.RName)
+			s.questionId = 20
+		} else {
+			switch len(s.reqOpenBk) {
+			case 0:
+				s.dmsg = `There is no books open to close.`
+				s.vmsg = `There is no books open to close.`
+			default:
+				//
+				s.dmsg = s.reqBkName + ` is now closed. All searches will be across all books`
+				s.vmsg = s.reqBkName + ` is now closed. All searches will be across all books`
+				err := s.closeBook()
+				if err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+	//
+	//
+	//
+	if s.request == "search" {
+
+		s.clearForSearch(lastState)
+
+		fmt.Println("Search.....")
+		fmt.Println("Before BookId, RecipeId ", s.reqBkId, s.reqRId)
+		fmt.Printf("..about to call keywordSearch with [%s]\n", s.reqSearch)
+
+		err := s.keywordSearch()
+		if err != nil {
+			return err
+		}
+		s.eol, s.reset, s.object = 0, true, ""
+		s.showObjMenu = false
+		fmt.Println("after search: BookId, RecipeId ", s.reqBkId, s.reqRId)
+		s.pkey = s.reqBkId + "-" + s.reqRId
+		if len(s.recipeList) == 0 && len(s.reqRId) > 0 {
+			// found single recipe.
+			s.displayData = objMenu
+			s.showObjMenu = true
+			fmt.Printf("recipe found [%s]\n", s.reqRName)
+
+			_, err = s.pushState()
+			if err != nil {
+				return err
+			}
+		} else if len(s.recipeList) > 0 {
+			// found multiple recipes
+			s.curReqType = 0
+			s.displayData = s.recipeList
+			fmt.Printf("recipe List found [%#v]\n", s.recipeList)
+
+			_, err = s.pushState()
+			if err != nil {
+				return err
+			}
+		} else {
+			// no recipe found
+			//	s.displayData = s.recipeList
+			s.passErr = true
+			if len(s.reqOpenBk) > 0 {
+				s.dmsg = `*** No recipe found in ` + s.reqBkName + ` matching "` + s.reqSearch + `". `
+			} else {
+				s.dmsg = `*** No recipe found in any of your books matching "` + s.reqSearch + `". `
+			}
+			words := strings.Split(s.reqSearch, " ")
+			if len(words) == 1 {
+				s.dmsg += "Try multiple keywords e.g search orange chocolate tart. "
+			} else {
+				s.dmsg += "Change the order of the keywords or try alternative keywords. "
+			}
+			s.dmsg += "Otherwise continue."
+		}
+		return nil
+	}
 	//
 	// respond to select from displayed items
 	//
@@ -488,7 +675,7 @@ func (s *sessCtx) orchestrateRequest() error {
 		case ctxObjectMenu:
 			s.pkey = s.reqBkId + "-" + s.reqRId
 			//	select from: list ingredient, list utensils, list containers, start cooking
-			fmt.Println("selId: ", s.selId)
+			fmt.Println("** selId: ", s.selId)
 			// if s.reScale {
 			// 	// current operation is a rescale - which only applies to ingredients so set Ingredient
 			// 	s.object = ingredient_
@@ -504,8 +691,6 @@ func (s *sessCtx) orchestrateRequest() error {
 				s.object = objectS[s.menuL[s.selId-1]]
 			}
 			fmt.Println("SElected: ", s.object)
-			// menuL has done its job. Now zero it.
-			s.menuL = nil
 			// clear recipeList which is not necessary in this state. Held in previous state.
 			s.recipeList = nil
 			// object chosen, nothing more to select for the time being
@@ -523,12 +708,14 @@ func (s *sessCtx) orchestrateRequest() error {
 					s.displayData = s.parts
 					s.curReqType = 0
 					//
-					if s.reScale {
-						s.updateState()
-					} else {
-						_, err = s.pushState()
-						if err != nil {
-							return err
+					if s.request == "select" {
+						if s.reScale {
+							s.updateState()
+						} else {
+							_, err = s.pushState()
+							if err != nil {
+								return err
+							}
 						}
 					}
 					return nil
@@ -539,9 +726,11 @@ func (s *sessCtx) orchestrateRequest() error {
 						return err
 					}
 					//
-					_, err = s.pushState()
-					if err != nil {
-						return err
+					if s.request == "select" {
+						_, err = s.pushState()
+						if err != nil {
+							return err
+						}
 					}
 					// now complete the request by morphing request to a "next" operation
 					s.reset = true
@@ -575,15 +764,17 @@ func (s *sessCtx) orchestrateRequest() error {
 				s.showObjMenu = false
 				s.curReqType = 0
 
-				if s.reScale { // change in scale from last session
-					fmt.Println("in ingredient List: update state not pushState")
-					s.updateState()
-				} else {
-					fmt.Println("in ingredient List: pushState")
-					_, err = s.pushState()
-				}
-				if err != nil {
-					return err
+				if s.request == "select" {
+					if s.reScale { // change in scale from last session
+						fmt.Println("in ingredient List: update state not pushState")
+						s.updateState()
+					} else {
+						fmt.Println("in ingredient List: pushState")
+						_, err = s.pushState()
+					}
+					if err != nil {
+						return err
+					}
 				}
 				//	}
 				return nil
@@ -599,10 +790,11 @@ func (s *sessCtx) orchestrateRequest() error {
 				}
 				s.showObjMenu = false
 				s.curReqType = 0
-				fmt.Println("Here in container.. about to pushState")
-				_, err = s.pushState()
-				if err != nil {
-					return err
+				if s.request == "select" {
+					_, err = s.pushState()
+					if err != nil {
+						return err
+					}
 				}
 				return nil
 
@@ -641,9 +833,11 @@ func (s *sessCtx) orchestrateRequest() error {
 			if err != nil {
 				return err
 			}
-			_, err = s.pushState()
-			if err != nil {
-				return err
+			if s.request == "select" {
+				_, err = s.pushState()
+				if err != nil {
+					return err
+				}
 			}
 			// now complete the request by morphing request to a next operation
 			s.request = "select-next"
@@ -684,50 +878,7 @@ func (s *sessCtx) orchestrateRequest() error {
 			}
 			return nil
 		}
-		if s.request == "search" {
 
-			s.clearForSearch(lastState)
-
-			fmt.Println("Search.....")
-			fmt.Println("Before BookId, RecipeId ", s.reqBkId, s.reqRId)
-			fmt.Printf("..about to call keywordSearch with [%s]\n", s.reqSearch)
-
-			err := s.keywordSearch()
-			if err != nil {
-				return err
-			}
-			s.eol, s.reset, s.object = 0, true, ""
-			s.showObjMenu = false
-			fmt.Println("after search: BookId, RecipeId ", s.reqBkId, s.reqRId)
-			s.pkey = s.reqBkId + "-" + s.reqRId
-			if len(s.recipeList) == 0 && len(s.reqRId) > 0 {
-				// found single recipe.
-				s.displayData = objMenu
-				s.showObjMenu = true
-				fmt.Printf("recipe found [%s]\n", s.reqRName)
-
-				_, err = s.pushState()
-				if err != nil {
-					return err
-				}
-			} else if len(s.recipeList) > 0 {
-				// found multiple recipes
-				s.curReqType = 0
-				s.displayData = s.recipeList
-				fmt.Printf("recipe List found [%#v]\n", s.recipeList)
-
-				_, err = s.pushState()
-				if err != nil {
-					return err
-				}
-			} else {
-				// no recipe found
-				s.displayData = s.recipeList
-				fmt.Printf("No recipe found for search keywords \n", s.reqSearch)
-			}
-
-			return nil
-		}
 		//TODO: is showList required?
 		if s.showList {
 			if len(s.recipeList) > 0 {
@@ -739,89 +890,7 @@ func (s *sessCtx) orchestrateRequest() error {
 
 			return nil
 		}
-		if s.request == "book" { // open book
-			//
-			// open book requested
-			//
-			// if _, ok := s.displayData.(BookT); ok { // this requires a BookT screen. Decided not to use it and use header text instead
-			// 	// assigned during setState() - no more to do so return
-			// 	fmt.Println("Request Book: displayData already assigned return")
-			// 	return nil
-			// }
-			//
-			// use existing screen (displayData) and update header with the following messages
-			//
-			s.tryOpenBk = true
-			//
-			if len(lastState.BkId) > 0 {
-				// a book is currently been accessed
-				switch {
-				case lastState.BkId == s.reqBkId:
-					// open currenly opened book. reqBkId was sourced using bookNameLookup()
-					if lastState.activeRecipe() && len(lastState.OpenBk) == 0 {
-						s.dmsg = "You are actively browsing a recipe from this book. Do you still want to open " + s.reqBkName + "?"
-						s.vmsg = "You are actively browsing a recipe from this book. Do you still want to open " + s.reqBkName + "?"
-						s.questionId = 21
-					}
-					if len(lastState.OpenBk) > 0 {
-						s.passErr = true
-						s.dmsg = `*** Please close ` + lastState.BkName + ` before opening another book, by saying "close book", otherwise just continue.`
-						s.vmsg = s.dmsg[4:]
-						if lastState.Request != "start" {
-							s.vmsg = s.vmsg + " Closing will also cancel what you are doing at the moment."
-						}
-					}
-				case lastState.BkId != s.reqBkId:
-					if len(lastState.RName) == 0 {
-						// no active recipe
-						s.dmsg = "Opened " + s.reqBkName + " by " + s.authors + ". "
-						s.vmsg = "Opened " + s.reqBkName + " by " + s.authors + ". "
-						err = s.openBook()
-						if err != nil {
-							return err
-						}
-					} else if lastState.activeRecipe() {
-						s.dmsg = "You are actively browsing a recipe from book, " + lastState.BkName + ". Do you still want to open " + s.reqBkName + "?"
-						s.vmsg = "You are actively browsing a recipe from book, " + lastState.BkName + ". Do you still want to open " + s.reqBkName + "?"
-						s.questionId = 21
-					}
-				}
-				//s.ingrdList, s.recipeList, s.object, s.showObjMenu = "", nil, "", false
-				return nil
-			} else {
-				// no book is currently been accessed
-				err = s.openBook()
-				if err != nil {
-					return err
-				}
-				s.dmsg = "Opened " + s.reqBkName + " by " + s.authors + ". "
-				s.vmsg = "Opened " + s.reqBkName + " by " + s.authors + ". "
-			}
-			//s.ingrdList, s.recipeList, s.object, s.showObjMenu = "", nil, "", false
-			return nil
-		}
-		if s.request == "close" {
-			if len(s.object) > 0 && s.eol != s.recId[objectMap[s.object]] {
-				s.dmsg = fmt.Sprintf("You currently have recipe %s open. Do you still want to close the book?", lastState.RName)
-				s.vmsg = fmt.Sprintf("You currently have recipe %s open. Do you still want to close the book?", lastState.RName)
-				s.questionId = 20
-			} else {
-				switch len(s.reqOpenBk) {
-				case 0:
-					s.dmsg = `There is no books open to close.`
-					s.vmsg = `There is no books open to close.`
-				default:
-					//
-					s.dmsg = s.reqBkName + ` is now closed. All searches will be across all books`
-					s.vmsg = s.reqBkName + ` is now closed. All searches will be across all books`
-					err := s.closeBook()
-					if err != nil {
-						return err
-					}
-				}
-			}
-			return nil
-		}
+
 		if s.request == "recipe" { // "open recipe" intent
 			//
 			// recipe requested.       Note bookName(Id) can be empty which will force Recipe query to search across all books
@@ -1159,6 +1228,7 @@ func handler(request InputEvent) (RespEvent, error) {
 	}
 
 	if err != nil {
+		fmt.Println("::::::: error :::::::")
 		//TODO: create an ERROR screen APL
 		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata, Error: err.Error()}, nil
 	}

@@ -448,7 +448,33 @@ const GetEmailIntentHandler = {
   },
 };
 
+const RestartIntentHandler = {
+  canHandle(handlerInput) {
+    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+      && handlerInput.requestEnvelope.request.intent.name === 'RestartIntent';
+  },
+  handle(handlerInput) {
 
+    const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
+    invokeParams.Payload = '{ "Path" : "restart" ,"Param" : "'+uid+'" }';
+    
+    var promise= new Promise((resolve, reject) => {
+          lambda.invoke(invokeParams, function(err, data) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(data.Payload);  }
+          });
+        });    
+        
+    return promise.then((body) => {
+        var  resp = JSON.parse(body);
+        console.log(resp);
+        return handleResponse(handlerInput, resp);
+      }).catch(function (err) { console.log(err, err.stack);  } );
+    
+  },
+};
 
 
 const ScaleIntentHandler = {
@@ -576,9 +602,11 @@ const SearchIntentHandler = {
   },
   handle(handlerInput) {
     const querystring = require('querystring');
-    //TODO is querystring necessary here as I believe AWS may escape it.
-   // const srch='&srch='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.ingrdcat.resolutions.resolutionsPerAuthority[0].values[0].value.name);
-    const srch='&srch='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.ingrdcat.value);
+    let srch='&srch='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.ingrdcat.value);
+     console.log("srch=[" + srch + "]");
+    if (srch === "&srch=undefined") {
+      srch='&srch='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.opentext.value);
+    }
     const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
     invokeParams.Payload = '{ "Path" : "search" ,"Param" : "'+uid+srch+'" }';
 
@@ -1037,22 +1065,22 @@ const ErrorHandler = {
 
 
 function handleResponse (handlerInput , resp) {
-        if (resp.Type === "Ingredient") {
-          const ingrd = require('APL/'+resp.Type+'.js');
+        if (resp.Type === "Ingredient" || resp.Type === "IngredientErr") {
+          const ingrd = require('APL/' + resp.Type + '.js');
           return  handlerInput.responseBuilder
                             .speak(resp.Text)
                             .reprompt(resp.Text)
-                            .addDirective(ingrd(resp.BackBtn, resp.Header,resp.SubHdr, resp.List, resp.Hint))
+                            .addDirective(ingrd(resp.BackBtn, resp.Header,resp.SubHdr, resp.List, resp.Hint, resp.Error))
                             .getResponse();
-        } else if (resp.Type === "start") {
-          const start = require('APL/start.js');
+        } else if (resp.Type === "Start" || resp.Type === "StartErr") {
+          const start = require('APL/' + resp.Type + '.js');
           return  handlerInput.responseBuilder
                           .speak(resp.Verbal)
                           .reprompt(resp.Text)
-                          .addDirective(start(resp.BackBtn, resp.Header, resp.SubHdr, resp.Text, resp.List, resp.Hint))
+                          .addDirective(start(resp.BackBtn, resp.Header, resp.SubHdr, resp.Text, resp.List, resp.Hint, resp.Error))
                           .getResponse();
         } else if (resp.Type === "PartList") {
-          const search = require('APL/PartList.js');
+          const search = require('APL/' + resp.Type + '.js');
           return  handlerInput.responseBuilder
                           .speak(resp.Verbal)
                           .reprompt(resp.Text)
@@ -1105,7 +1133,7 @@ function handleResponse (handlerInput , resp) {
         //                     .addDirective(display(resp.Header, resp.SubHdr , resp.Text, resp.Hint ) )
         //                     .getResponse();
         } else {
-           const search = require('APL/search.js');
+           const search = require('APL/Search.js');
            return  handlerInput.responseBuilder
                           .speak(resp.Verbal)
                           .reprompt(resp.Text)
@@ -1126,6 +1154,7 @@ exports.handler = skillBuilder
     BookIntentHandler,
     BackIntentHandler,
     CloseBookIntentHandler,
+    RestartIntentHandler,
     RecipeIntentHandler,
     VersionIntentHandler,
     TaskIntentHandler,

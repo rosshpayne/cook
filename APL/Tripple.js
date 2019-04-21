@@ -1,6 +1,6 @@
 
 
-module.exports = (header, subhdr, dataA, dataB, dataC, verbal, text ) => { return {
+module.exports = (header, subhdr, dataA, dataB, dataC, verbal, text, hint ) => { return {
     type: 'Alexa.Presentation.APL.RenderDocument',
     token: 'cook-tripple-screen',
     document: {
@@ -116,7 +116,7 @@ module.exports = (header, subhdr, dataA, dataB, dataC, verbal, text ) => { retur
               },
               {
                 type: "AlexaFooter",
-                hintText: "hint text goes here.."
+                hintText: hint
               }
           ]
       }
