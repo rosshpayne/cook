@@ -45,6 +45,22 @@ module.exports = (bkbtn, header, subhdr, title, data, hint) => { return {
               headerNavigationAction: "backButton"
               },
               {
+              type: "Container",
+              direction: "column",
+              spacing: 4,
+              alignItems: "left",
+              height: "20vh",
+              justifyContent: "center",
+              items: [
+                      {
+                      type: "Text",
+                      text: title ,
+                      fontSize: "21dp",
+                      style: "textStylePrimary1"
+                      }
+                      ] 
+              },
+              {
               type: "Sequence",
               scrollDirection: "vertical",
               data: "${payload.listdata.properties.data}",
@@ -52,7 +68,7 @@ module.exports = (bkbtn, header, subhdr, title, data, hint) => { return {
               grow: 1,
               shrink: 1,
               width: "100vw",
-              height: "100vh",
+              height: "80vh",
               item: {
                     type: "Text",
                     text: "  ${data.Title}",

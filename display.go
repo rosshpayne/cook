@@ -506,7 +506,6 @@ func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 		if len(w.Bkids) > 1 {
 			title = "Listed below are the books registered to this device."
 		} else {
-			hdr = "Welcome to EburyPress books. "
 			title = "You have the following book registered to this device. Searches will be across all the books unless you open one"
 		}
 		hint = "hint: " + openBk + " " + srch
@@ -615,6 +614,7 @@ func (r RecipeListT) GenDisplay(s *sessCtx) RespEvent {
 		list    []DisplayItem
 		op      string
 		hdr     string
+		subhdr  string
 		type_   string
 		hint    string
 		backBtn bool
@@ -647,13 +647,19 @@ func (r RecipeListT) GenDisplay(s *sessCtx) RespEvent {
 	if s.passErr {
 		type_ += "Err"
 	}
-	hdr = "Search results"
+	hdr = "Search results for: " + s.reqSearch
+	if len(s.reqOpenBk) > 0 {
+		bk := strings.Split(string(s.reqOpenBk), "|")
+		subhdr = "Open book: " + bk[1]
+	} else {
+		subhdr = "Searched across all your books"
+	}
 	backBtn = true
 	if len(s.state) < 2 {
 		backBtn = false
 	}
 	hint = "hint: select three "
-	return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr + s.reqSearch, Hint: hint, Text: s.vmsg, Verbal: s.dmsg, List: list, Error: s.dmsg}
+	return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr, SubHdr: subhdr, Hint: hint, Text: s.vmsg, Verbal: s.dmsg, List: list, Error: s.dmsg}
 }
 
 func (o ObjMenu) GenDisplay(s *sessCtx) RespEvent {

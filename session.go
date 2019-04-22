@@ -208,6 +208,9 @@ func (s *sessCtx) setState(ls *stateRec) {
 	if len(ls.Ingredients) > 0 {
 		s.ingrdList = ls.Ingredients
 	}
+	if len(s.reqSearch) == 0 && len(ls.Search) > 0 {
+		s.reqSearch = ls.Search
+	}
 	//
 	// open book
 	//
@@ -567,6 +570,18 @@ func (s *sessCtx) updateState() error {
 		atribute = fmt.Sprintf("state[%d].Welc", len(s.state)-1)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(*(s.welcome)))
 	}
+	// if s.request == "close" {
+	// 	atribute = fmt.Sprintf("state[%d].OpenBk", len(s.state)-1)
+	// 	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.reqOpenBk))
+	// 	atribute = fmt.Sprintf("state[%d].BkName", len(s.state)-1)
+	// 	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.reqBkName))
+	// 	atribute = fmt.Sprintf("state[%d].RId", len(s.state)-1)
+	// 	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.reqRId))
+	// 	atribute = fmt.Sprintf("state[%d].BkId", len(s.state)-1)
+	// 	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.reqBkId))
+	// 	atribute = fmt.Sprintf("state[%d].RName", len(s.state)-1)
+	// 	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.reqRName))
+	// }
 	if len(s.state[len(s.state)-1].InstructionData) > 0 {
 		atribute = fmt.Sprintf("state[%d].I[%d].id", len(s.state)-1, s.cThread)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId[objectMap[task_]]))

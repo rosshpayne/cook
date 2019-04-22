@@ -23,6 +23,21 @@ import (
 
 // Session Context - assigned from request and Session table.
 //  also contains state information relevant to current session and not the next session.
+type mRecipeT struct {
+	Id       int
+	IngrdCat string
+	RName    string
+	RId      string
+	BkName   string
+	BkId     string
+	Authors  string
+	Quantity string
+	Serves   string
+	//
+	Part string
+}
+
+type mRecipeM map[mRecipeT]bool
 
 type sessCtx struct {
 	err        error
@@ -66,6 +81,7 @@ type sessCtx struct {
 	recIdNotExists bool // determines whether to create []RecId set attribute in Session  table
 	//noGetRecRequired bool        // a mutliple record request e.g. ingredients listing
 	recipeList RecipeListT // multi-choice select. Recipe name and ingredient searches can result in mutliple records being returned. Results are saved.
+	recipeMap  mRecipeM
 	//
 	selCtx selectCtxT // select context either recipe or other (i.e. object)k,
 	selId  int        // value selected by user of index in itemList
@@ -139,6 +155,7 @@ func (s *sessCtx) closeBook() error {
 func (s *sessCtx) restart() error {
 
 	fmt.Println("restart...") //
+	curRequest := s.request
 	// remove state history, back to start request
 	//
 	if len(s.state) > 1 {
@@ -151,8 +168,7 @@ func (s *sessCtx) restart() error {
 	//
 	//  now lets clear some state attributes in the remaining state
 	//
-	if s.request == "close" {
-		s.reqOpenBk = ""
+	if curRequest == "close" {
 		s.reqBkId, s.reqBkName, s.reqRId, s.reqRName = "", "", "", ""
 		s.reqOpenBk, s.authorS, s.authors = "", nil, ""
 		s.eol, s.peol = 0, 0
@@ -164,6 +180,7 @@ func (s *sessCtx) restart() error {
 		return err
 	}
 	//
+
 	s.welcome = s.state[0].Welcome
 	s.displayData = s.welcome
 
@@ -550,12 +567,14 @@ func (s *sessCtx) orchestrateRequest() error {
 		if len(s.object) > 0 && s.eol != s.recId[objectMap[s.object]] {
 			s.dmsg = fmt.Sprintf("You currently have recipe %s open. Do you still want to close the book?", lastState.RName)
 			s.vmsg = fmt.Sprintf("You currently have recipe %s open. Do you still want to close the book?", lastState.RName)
+			fmt.Println("in close: ", s.dmsg)
 			s.questionId = 20
 		} else {
 			switch len(s.reqOpenBk) {
 			case 0:
 				s.dmsg = `There is no books open to close.`
 				s.vmsg = `There is no books open to close.`
+				fmt.Println("in close: ", s.dmsg)
 			default:
 				//
 				s.dmsg = s.reqBkName + ` is now closed. All searches will be across all books`
@@ -564,6 +583,7 @@ func (s *sessCtx) orchestrateRequest() error {
 				if err != nil {
 					return err
 				}
+				fmt.Println("in close: ", s.dmsg)
 			}
 		}
 		return nil
@@ -571,18 +591,52 @@ func (s *sessCtx) orchestrateRequest() error {
 	//
 	//
 	//
+	search := func(srch string) error {
+		fmt.Println("search for: ", srch)
+		err := s.keywordSearch(srch)
+		if err != nil {
+			return err
+		}
+		if srch[len(srch)-1] == 's' {
+			srch = srch[:len(srch)-1]
+		} else {
+			srch = srch + "s"
+		}
+		fmt.Println(" search for: ", srch)
+		err = s.keywordSearch(srch)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
 	if s.request == "search" {
 
 		s.clearForSearch(lastState)
 
-		fmt.Println("Search.....")
+		fmt.Println("Search.....", s.reqSearch)
 		fmt.Println("Before BookId, RecipeId ", s.reqBkId, s.reqRId)
-		fmt.Printf("..about to call keywordSearch with [%s]\n", s.reqSearch)
-
-		err := s.keywordSearch()
+		s.recipeList = nil
+		// remove superflous stuff
+		//s.recipeMap = make(mRecipeM)
+		srch := s.reqSearch
+		// full search for recipe name
+		err := s.keywordSearch(srch)
 		if err != nil {
 			return err
 		}
+		if len(s.recipeList) == 0 {
+			// remove filler words
+			for _, v := range []string{" of ", " with ", " the ", " has ", " and ", " recipe "} {
+				srch = strings.Replace(srch, v, " ", -1)
+			}
+			// remove double spaces
+			srch = strings.Replace(srch, "  ", " ", -1)
+			search(srch)
+		}
+		// for k, _ := range s.recipeMap {
+		// 	s.recipeList = append(s.recipeList, k)
+		// }
+		//
 		s.eol, s.reset, s.object = 0, true, ""
 		s.showObjMenu = false
 		fmt.Println("after search: BookId, RecipeId ", s.reqBkId, s.reqRId)
@@ -623,6 +677,30 @@ func (s *sessCtx) orchestrateRequest() error {
 				s.dmsg += "Change the order of the keywords or try alternative keywords. "
 			}
 			s.dmsg += "Otherwise continue."
+		}
+		return nil
+	}
+	//
+	if s.request == "resume" {
+		if s.cThread == 0 || s.object != "task" || s.reqRId == "0" {
+			s.err = fmt.Errorf("There is nothing to resume")
+			return nil
+		}
+		if t, ok := s.displayData.(Threads); ok {
+			if s.oThread == -1 {
+				s.err = fmt.Errorf("All is completed. There is nothing to resume")
+				return nil
+			}
+			if t[s.oThread].Id == len(t[s.oThread].Instructions) {
+				s.err = fmt.Errorf("All is completed. There is nothing to resume")
+				return nil
+			}
+			x := s.cThread
+			s.cThread = s.oThread
+			s.oThread = x
+			s.recId[objectMap[s.object]] = t[s.cThread].Id
+		} else {
+			s.err = fmt.Errorf("There is nothing to resume")
 		}
 		return nil
 	}
@@ -853,75 +931,51 @@ func (s *sessCtx) orchestrateRequest() error {
 	//	  similarly, RecipeName will always co-exist with RecipeId in the session table by the end of this section
 	//
 
-	if s.curReqType == initialiseRequest || s.initialiseRequest_() {
-		//
-		if s.request == "resume" {
-			if s.cThread == 0 || s.object != "task" || s.reqRId == "0" {
-				s.err = fmt.Errorf("There is nothing to resume")
-				return nil
-			}
-			if t, ok := s.displayData.(Threads); ok {
-				if s.oThread == -1 {
-					s.err = fmt.Errorf("All is completed. There is nothing to resume")
-					return nil
-				}
-				if t[s.oThread].Id == len(t[s.oThread].Instructions) {
-					s.err = fmt.Errorf("All is completed. There is nothing to resume")
-					return nil
-				}
-				x := s.cThread
-				s.cThread = s.oThread
-				s.oThread = x
-				s.recId[objectMap[s.object]] = t[s.cThread].Id
-			} else {
-				s.err = fmt.Errorf("There is nothing to resume")
-			}
-			return nil
-		}
+	// if s.curReqType == initialiseRequest || s.initialiseRequest_() {
 
-		//TODO: is showList required?
-		if s.showList {
-			if len(s.recipeList) > 0 {
-				for i, v := range s.recipeList {
-					s.dmsg = s.dmsg + fmt.Sprintf("%d. Recipe [%s] in book [%s] by [%s] quantity %s\n", i+1, v.RName, v.BkName, v.Authors, v.Quantity)
-					s.vmsg = s.dmsg + fmt.Sprintf("%d. Recipe [%s] in book [%s] by [%s] quantity %s\n", i+1, v.RName, v.BkName, v.Authors, v.Quantity)
-				}
-			}
+	// 	//TODO: is showList required?
+	// 	if s.showList {
+	// 		if len(s.recipeList) > 0 {
+	// 			for i, v := range s.recipeList {
+	// 				s.dmsg = s.dmsg + fmt.Sprintf("%d. Recipe [%s] in book [%s] by [%s] quantity %s\n", i+1, v.RName, v.BkName, v.Authors, v.Quantity)
+	// 				s.vmsg = s.dmsg + fmt.Sprintf("%d. Recipe [%s] in book [%s] by [%s] quantity %s\n", i+1, v.RName, v.BkName, v.Authors, v.Quantity)
+	// 			}
+	// 		}
 
-			return nil
-		}
+	// 		return nil
+	// 	}
 
-		if s.request == "recipe" { // "open recipe" intent
-			//
-			// recipe requested.       Note bookName(Id) can be empty which will force Recipe query to search across all books
-			//
-			err := s.recipeNameSearch()
-			if err != nil {
-				return err
-			}
-			s.eol, s.reset = 0, true
-			_, err = s.pushState()
-			if err != nil {
-				return err
-			}
-			return nil
-		}
-	}
+	// 	if s.request == "recipe" { // "open recipe" intent
+	// 		//
+	// 		// recipe requested.       Note bookName(Id) can be empty which will force Recipe query to search across all books
+	// 		//
+	// 		err := s.recipeNameSearch()
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 		s.eol, s.reset = 0, true
+	// 		_, err = s.pushState()
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 		return nil
+	// 	}
+	// }
 	//
 	// request must set recipe id before proceeding to list an object
-	if s.curReqType == instructionRequest && len(lastState.RId) == 0 || s.curReqType == objectRequest && len(lastState.RId) == 0 {
-		s.dmsg = `You have not specified a recipe yet. Please say "recipe" followed by it\'s name`
-		s.vmsg = `You have not specified a recipe yet. Please say "recipe" followed by it\'s name`
+	// if s.curReqType == instructionRequest && len(lastState.RId) == 0 || s.curReqType == objectRequest && len(lastState.RId) == 0 {
+	// 	s.dmsg = `You have not specified a recipe yet. Please say "recipe" followed by it\'s name`
+	// 	s.vmsg = `You have not specified a recipe yet. Please say "recipe" followed by it\'s name`
 
-		return nil
-	}
-	//  if listing (next,prev,repeat,goto - curReqType object, listing) without object (container,ingredient,task,utensil) -
-	if s.curReqType == instructionRequest && len(s.object) == 0 {
-		s.dmsg = `You need to say what you want to list. Please say either "ingredients","start cooking","containers" or "utensils". Not hard really..`
-		s.vmsg = `You need to say what you want to list. Please say either "ingredients","start cooking","containers" or "utensils". Not hard really..`
+	// 	return nil
+	// }
+	// //  if listing (next,prev,repeat,goto - curReqType object, listing) without object (container,ingredient,task,utensil) -
+	// if s.curReqType == instructionRequest && len(s.object) == 0 {
+	// 	s.dmsg = `You need to say what you want to list. Please say either "ingredients","start cooking","containers" or "utensils". Not hard really..`
+	// 	s.vmsg = `You need to say what you want to list. Please say either "ingredients","start cooking","containers" or "utensils". Not hard really..`
 
-		return nil
-	}
+	// 	return nil
+	// }
 	//  if listing and not finished and object request changes object. Accept and zero or repeat last RecId for requested object.
 	// if len(s.object) > 0 {
 	// 	//if !s.finishedListing(s.recId[objectMap[s.object]], objectMap[s.object]) && (s.object != s.object) {

@@ -39,20 +39,6 @@ type ctRec struct {
 // 	return dialog{Verbal: ct.Verbal, Display: ct.Text, EOL: ct.EOL}
 // }
 
-type mRecipeT struct {
-	Id       int
-	IngrdCat string
-	RName    string
-	RId      string
-	BkName   string
-	BkId     string
-	Authors  string
-	Quantity string
-	Serves   string
-	//
-	Part string
-}
-
 type taskRecT struct {
 	PKey     string `json:"PKey"`  // R-[BkId]
 	SortK    int    `json:"SortK"` // monotonically increasing - task at which user is upto in recipe
@@ -860,7 +846,7 @@ func (s *sessCtx) recipeRSearch() (*RecipeT, error) {
 	return rec, nil
 }
 
-func (s *sessCtx) keywordSearch() error {
+func (s *sessCtx) keywordSearch(srch string) error {
 	//
 	// search for recipe by specifying ingredient and a category or sub-category.
 	// data must exist in this table for each recipe. Data is populated as part of the base activity processig.
@@ -884,7 +870,7 @@ func (s *sessCtx) keywordSearch() error {
 	fmt.Println("^^^^^^^^^^ entered keywordSearch ^^^^^^^^^^^^")
 	if len(s.reqOpenBk) > 0 {
 		// look for recipes in current book only
-		kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value(s.reqSearch))
+		kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value(srch))
 		kcond = kcond.And(expression.KeyBeginsWith(expression.Key("SortK"), s.reqBkId+"-"))
 		expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
 		if err != nil {
@@ -923,19 +909,19 @@ func (s *sessCtx) keywordSearch() error {
 		//		4c. for each userid inserts [userId,bkid] into dynamo.
 		// 5. on each recipe search, App consults dynamo to see what [bkid] are registered to [userId]
 		//
-
 		// for each book id for userId loop..(table: Ingredient: PKey: uId, SortK: BkId)
-		bkids, err := s.getUserBooks()
-		if err != nil {
-			return (fmt.Errorf("Error:  ", err.Error()))
-		}
+		bkids := s.state[0].Welcome.Bkids
+		//bkids, err := getUserBooks()
+		// if err != nil {
+		// 	return (fmt.Errorf("Error:  ", err.Error()))
+		// }
 		fmt.Println("Num books found: ", len(bkids))
 		//
 		// if more than four books maybe better to scan all book and merge with known books
 		//
 		for _, v := range bkids {
 			fmt.Println("About to search book: ", v)
-			kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value(s.reqSearch))
+			kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value(srch))
 			kcond = kcond.And(expression.KeyBeginsWith(expression.Key("SortK"), v+"-"))
 			expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
 			if err != nil {
@@ -960,7 +946,7 @@ func (s *sessCtx) keywordSearch() error {
 				return fmt.Errorf("Error: %s [%s] %s", "in Query in keywordSearch of ", s.reqBkId, err.Error())
 			}
 			if int(*(result.Count)) == 0 {
-				fmt.Println("No books found in Query..")
+				fmt.Println("** No recipes found in book ", v)
 				continue
 			}
 			recS_ := make([]searchRecT, int(*result.Count))
@@ -974,38 +960,19 @@ func (s *sessCtx) keywordSearch() error {
 	//
 	// result of seach within open book
 	//
-	switch len(recS) {
-	case 0:
-		if len(s.reqOpenBk) > 0 {
-			s.vmsg = fmt.Sprintf(`No recipes for "%s" were found in the currently opened book, %s. `, s.reqSearch, s.reqBkName)
-			s.dmsg = fmt.Sprintf(`No recipes for "%s" were found in the currently opened book, %s. `, s.reqSearch, s.reqBkName)
-		} else {
-			s.vmsg = fmt.Sprintf(`No recipes for "%s" were found `, s.reqSearch)
-			s.dmsg = fmt.Sprintf(`No recipes for "%s" were found `, s.reqSearch)
-		}
-	case 1:
-		if len(s.reqOpenBk) > 0 {
-			s.vmsg = "Found recipe, " + recS[0].RName
-			s.dmsg = "Found recipe, " + recS[0].RName
-		} else {
-			s.vmsg = "Found recipe, " + recS[0].RName + " in book " + recS[0].BkName + ` by authors ` + recS[0].Authors + ` contains the ingredient. You can list other ingredients or containers, utensils used in the recipe or list the prep tasks or you can start cooking`
-			s.dmsg = "Found recipe, " + recS[0].RName + " in book " + recS[0].BkName + ` by authors ` + recS[0].Authors + ` contains the ingredient. You can list other ingredients or containers, utensils used in the recipe or list the prep tasks or you can start cooking`
-		}
-		sortk := strings.Split(recS[0].SortK, "-")
-		s.reqRId, s.reqRName, s.reqBkId, s.reqBkName, s.serves = sortk[1], recS[0].RName, sortk[0], recS[0].BkName, recS[0].Serves
-		s.recipeRSearch() //TODO - think about add part data to search record
-		// set session ctx to display object menu (ingredient,containers,utensils) list
-	default:
-		//s.makeSelect = true
-		s.vmsg = fmt.Sprintf("Multiple %s recipes found. See display", s.reqSearch)
-		s.dmsg = fmt.Sprintf(`%s recipes. Please select one by saying "select [number-in-list]"\n`, s.reqSearch)
-		for i, v := range recS {
-			sortk := strings.Split(v.SortK, "-")
-			s.ddata += strconv.Itoa(i+1) + ": " + v.BkName + " by " + v.Authors + ". Quantity: " + v.Quantity + "\n"
-			rec := mRecipeT{Id: i + 1, RName: v.RName, RId: sortk[1], BkName: v.BkName, BkId: sortk[0], Authors: v.Authors, Quantity: v.Quantity, Serves: v.Serves}
-			s.recipeList = append(s.recipeList, rec)
-		}
+	// set session ctx to display object menu (ingredient,containers,utensils) list
+	//	default:
+	//s.makeSelect = true
+	//		s.vmsg = fmt.Sprintf("Multiple %s recipes found. See display", s.reqSearch)
+	//		s.dmsg = fmt.Sprintf(`%s recipes. Please select one by saying "select [number-in-list]"\n`, s.reqSearch)
+	for i, v := range recS {
+		sortk := strings.Split(v.SortK, "-")
+		s.ddata += strconv.Itoa(i+1) + ": " + v.BkName + " by " + v.Authors + ". Quantity: " + v.Quantity + "\n"
+		rec := mRecipeT{Id: i + 1, RName: v.RName, RId: sortk[1], BkName: v.BkName, BkId: sortk[0], Authors: v.Authors, Quantity: v.Quantity, Serves: v.Serves}
+		//s.recipeMap[rec] = true
+		s.recipeList = append(s.recipeList, rec)
 	}
+	//	}
 	return nil
 }
 
