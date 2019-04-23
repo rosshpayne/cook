@@ -263,7 +263,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 	//
 	SectA := func(thread int) []DisplayItem {
 		var rows int
-		lines := 3
+		lines := 1
 		list := make([]DisplayItem, lines)
 		for k, n, ir := lines-1, t[thread].Id-1, t[thread].Instructions; n > 0 && rows < lines; rows++ {
 			list[k] = DisplayItem{Title: ir[n-1].Text}
@@ -304,9 +304,9 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 				break
 			}
 		}
-		if rows == lines {
-			list[rows-1] = DisplayItem{Title: "more.."}
-		}
+		// if rows == lines {
+		// 	list[rows-1] = DisplayItem{Title: "more.."}
+		// }
 
 		return list
 	}
@@ -321,7 +321,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		tc := s.cThread
 		listA := SectA(tc)
 		listB := SectB(tc)
-		listC := SectC(tc, 2, false)
+		listC := SectC(tc, 3, false)
 		//
 		rec := &t[s.cThread].Instructions[id-1]
 		// eol = strconv.Itoa(rec.EOL)
@@ -335,6 +335,15 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		// 	type_ += "L" // larger text bounding box
 		// }
 		speak := "<speak>" + rec.Verbal + "</speak>"
+		var height int
+		switch {
+		case len(s.dmsg) > 120:
+			height = 20
+		case len(s.dmsg) > 180:
+			height = 25
+		case len(s.dmsg) > 220:
+			height = 32
+		}
 
 		s.menuL = nil
 		err := s.updateState()
@@ -342,7 +351,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 			return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
 		}
 		hint = "hint:  next, previous, say again"
-		return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Hint: hint, Text: rec.Text, Verbal: speak, ListA: listA, ListB: listB, ListC: listC}
+		return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Hint: hint, Text: rec.Text, Height: height, Verbal: speak, ListA: listA, ListB: listB, ListC: listC}
 
 	default:
 		// two threads with 3 sections in each. should always display threads 1 and 2 in that order, never thread 0

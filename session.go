@@ -553,12 +553,9 @@ func (s *sessCtx) updateState() error {
 			// break when listed Ingredients are not current one
 			break
 		}
-		fmt.Println("About to update ScaleF..2 . i ", i)
 		if len(s.state[i].RecipeList) > 0 || s.state[i].Request == "start" {
 			break
 		}
-		fmt.Println("About to update ScaleF..3 . i ", i)
-		atribute = fmt.Sprintf("state[%d].ScaleF", i)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(scale))
 	}
 	atribute = fmt.Sprintf("state[%d].RecId", len(s.state)-1)
@@ -570,18 +567,6 @@ func (s *sessCtx) updateState() error {
 		atribute = fmt.Sprintf("state[%d].Welc", len(s.state)-1)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(*(s.welcome)))
 	}
-	// if s.request == "close" {
-	// 	atribute = fmt.Sprintf("state[%d].OpenBk", len(s.state)-1)
-	// 	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.reqOpenBk))
-	// 	atribute = fmt.Sprintf("state[%d].BkName", len(s.state)-1)
-	// 	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.reqBkName))
-	// 	atribute = fmt.Sprintf("state[%d].RId", len(s.state)-1)
-	// 	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.reqRId))
-	// 	atribute = fmt.Sprintf("state[%d].BkId", len(s.state)-1)
-	// 	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.reqBkId))
-	// 	atribute = fmt.Sprintf("state[%d].RName", len(s.state)-1)
-	// 	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.reqRName))
-	// }
 	if len(s.state[len(s.state)-1].InstructionData) > 0 {
 		atribute = fmt.Sprintf("state[%d].I[%d].id", len(s.state)-1, s.cThread)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId[objectMap[task_]]))
@@ -664,8 +649,8 @@ func (s *sessCtx) updateState() error {
 
 func (s *sessCtx) popState() error {
 	//
-	// removes last entry in state attribute of session item.
-	//  populates session context with state data from the new last entry
+	// removes top entry in state attribute of dynamo session item.
+	//  populates session context with state data from the new top entry
 	//  (which was the penultimate entry before deletion)
 	//
 	// NB: must exit with s.displayData assigned - as this will route to GenDisplay to produce response.
@@ -690,7 +675,7 @@ func (s *sessCtx) popState() error {
 		//
 		State = s.state[:len(s.state)-1]
 		s.state = State[:]
-		fmt.Println("pop: len(s.state", len(s.state))
+		//
 		t := time.Now()
 		t.Add(time.Hour * 24 * 1)
 		updateC = expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
@@ -762,7 +747,6 @@ func (s *sessCtx) popState() error {
 	s.ddata = sr.DData
 	s.authors = sr.Authors
 	//
-	fmt.Println("here . 2")
 	if len(sr.OpenBk) > 0 {
 		bk := strings.Split(string(sr.OpenBk), "|")
 		fmt.Printf("popstate: open bk %#v\n", bk)
@@ -770,7 +754,6 @@ func (s *sessCtx) popState() error {
 		s.authorS = strings.Split(s.authors, ",")
 		s.reqOpenBk = sr.OpenBk
 	}
-	fmt.Println("here . 3 ")
 	//
 	s.ingrdList = sr.Ingredients
 	//

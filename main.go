@@ -160,7 +160,7 @@ func (s *sessCtx) restart() error {
 	//
 	if len(s.state) > 1 {
 		s.state = s.state[0:2]
-		err := s.popState()
+		err := s.popState() // will set request to "start" assigned from stateRec[0].Request.
 		if err != nil {
 			return err
 		}
@@ -180,7 +180,6 @@ func (s *sessCtx) restart() error {
 		return err
 	}
 	//
-
 	s.welcome = s.state[0].Welcome
 	s.displayData = s.welcome
 
@@ -704,6 +703,44 @@ func (s *sessCtx) orchestrateRequest() error {
 		}
 		return nil
 	}
+	if s.curReqType == instructionRequest {
+		// object is same as last call
+		s.object = s.object
+	}
+	//
+	//  cooking instructions navigation commands
+	//
+	switch s.request {
+	case "goto":
+		fmt.Printf("gotoRecId = %d  %d\n", s.gotoRecId, lastState.EOL)
+		s.objRecId = s.gotoRecId
+		s.recId[objectMap[s.object]] = s.gotoRecId
+		return nil
+	case "repeat":
+		// return - no need to pushState as nothing has changed.  Select current recId.
+		s.objRecId = s.recId[objectMap[s.object]]
+		s.dmsg, s.vmsg, s.ddata = lastState.Dmsg, lastState.Vmsg, lastState.DData
+		return nil
+	case "prev":
+		if len(s.object) == 0 {
+			return fmt.Errorf("Error: no object defined for previous in orchestrateRequest")
+		}
+		s.objRecId = s.recId[objectMap[s.object]] - 1
+		s.recId[objectMap[s.object]] -= 1
+		return nil
+	case "next", "select-next", "start-next":
+		if len(s.recId) == 0 {
+			s.recId = [4]int{}
+		}
+		//
+		if len(s.object) == 0 {
+			return fmt.Errorf("Error: no object defined for next in orchestrateRequest")
+		}
+		// recId contains last processed instruction. So must add one to get current instruction.
+		s.objRecId = s.recId[objectMap[s.object]] + 1
+		s.recId[objectMap[s.object]] += 1
+		return nil
+	}
 	//
 	// respond to select from displayed items
 	//
@@ -1005,38 +1042,7 @@ func (s *sessCtx) orchestrateRequest() error {
 	//  If listing and not finished and object request  has changed (task, ingredient, container, utensil) reset RecId
 	// change in operation does not not need to be taken into account as this is part of the initialisation phase
 	// copy object from last session
-	if s.curReqType == instructionRequest {
-		// object is same as last call
-		s.object = s.object
-	}
-	switch s.request {
-	case "goto":
-		fmt.Printf("gotoRecId = %d  %d\n", s.gotoRecId, lastState.EOL)
-		s.objRecId = s.gotoRecId
-		s.recId[objectMap[s.object]] = s.gotoRecId
-	case "repeat":
-		// return - no need to pushState as nothing has changed.  Select current recId.
-		s.objRecId = s.recId[objectMap[s.object]]
-		s.dmsg, s.vmsg, s.ddata = lastState.Dmsg, lastState.Vmsg, lastState.DData
-		return nil
-	case "prev":
-		if len(s.object) == 0 {
-			return fmt.Errorf("Error: no object defined for previous in orchestrateRequest")
-		}
-		s.objRecId = s.recId[objectMap[s.object]] - 1
-		s.recId[objectMap[s.object]] -= 1
-	case "next", "select-next", "start-next":
-		if len(s.recId) == 0 {
-			s.recId = [4]int{}
-		}
-		//
-		if len(s.object) == 0 {
-			return fmt.Errorf("Error: no object defined for next in orchestrateRequest")
-		}
-		// recId contains last processed instruction. So must add one to get current instruction.
-		s.objRecId = s.recId[objectMap[s.object]] + 1
-		s.recId[objectMap[s.object]] += 1
-	}
+
 	//
 	return nil
 }

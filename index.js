@@ -602,11 +602,12 @@ const SearchIntentHandler = {
   },
   handle(handlerInput) {
     const querystring = require('querystring');
-    let srch='&srch='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.ingrdcat.value);
-     console.log("srch=[" + srch + "]");
-    if (srch === "&srch=undefined") {
-      srch='&srch='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.opentext.value);
-    }
+    //let srch='&srch='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.ingrdcat.value);
+     
+    //if (srch === "&srch=undefined") {
+    const  srch='&srch='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.opentext.value);
+    //}
+    console.log("srch=[" + srch + "]");
     const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
     invokeParams.Payload = '{ "Path" : "search" ,"Param" : "'+uid+srch+'" }';
 
@@ -1091,7 +1092,7 @@ function handleResponse (handlerInput , resp) {
           const speakcmd = require('APL/speakcmd.js');
           return  handlerInput.responseBuilder
                             .reprompt(resp.Verbal)
-                            .addDirective(tripple(resp.Header,resp.SubHdr, resp.ListA, resp.ListB, resp.ListC, resp.Verbal, resp.Text))
+                            .addDirective(tripple(resp.Header,resp.SubHdr, resp.ListA, resp.ListB, resp.ListC, resp.Verbal, resp.Text, resp.Height + "vh"))
                             .addDirective(speakcmd())
                             .getResponse();  
       // } else if (resp.Type === "Tripple2") { 

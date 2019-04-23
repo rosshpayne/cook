@@ -1,6 +1,6 @@
 
 
-module.exports = (header, subhdr, dataA, dataB, dataC, verbal, text, hint ) => { return {
+module.exports = (header, subhdr, dataA, dataB, dataC, verbal, text, hint, height ) => { return {
     type: 'Alexa.Presentation.APL.RenderDocument',
     token: 'cook-tripple-screen',
     document: {
@@ -57,7 +57,7 @@ module.exports = (header, subhdr, dataA, dataB, dataC, verbal, text, hint ) => {
                         type: "Container",
                         direction: "column",
                         data: "${payload.listdata.properties.dataA}",
-                        spacing: 4,
+                        spacing: 0,
                         height: "12vh",
                         alignItems: "left",
                         justifyContent: "end",
@@ -67,21 +67,19 @@ module.exports = (header, subhdr, dataA, dataB, dataC, verbal, text, hint ) => {
                                           shrink: "1",
                                           grow: "1",
                                           text: "${data.Title}",
-                                          fontSize: "14dp"
+                                          fontSize: "20dp"
                                           }
                                           ] 
                         },
                         {
                         type: "Frame",
-                        borderColor: "blue",
                         borderWidth: 2,
-                        height: "14vh",  
+                        height: height,  
                         item: {
                               type: "Container",
                               direction: "column",
-                              spacing: 4,
+                              spacing: 20,
                               alignItems: "left",
-                              height: "14vh",
                               justifyContent: "center",
                               items: [
                                       {
@@ -89,7 +87,7 @@ module.exports = (header, subhdr, dataA, dataB, dataC, verbal, text, hint ) => {
                                       id: "Rinstruction",
                                       text: "  ${payload.listdata.properties.text}",
                                       speech: "${payload.listdata.properties.verbal}",
-                                      fontSize: "21dp",
+                                      fontSize: "37dp",
                                       style: "textStylePrimary1"
                                       }
                                      ] 
@@ -99,8 +97,8 @@ module.exports = (header, subhdr, dataA, dataB, dataC, verbal, text, hint ) => {
                         type: "Container",
                         direction: "column",
                         data: "${payload.listdata.properties.dataC}",
-                        spacing: 4,
-                        height: "30vh",
+                        spacing: 20,
+                        height: "40vh",
                         alignItems: "left",
                         items: [
                                           {
@@ -108,7 +106,7 @@ module.exports = (header, subhdr, dataA, dataB, dataC, verbal, text, hint ) => {
                                           text: "${data.Title}",
                                           grow: 1,
                                           shrink: 1,
-                                          fontSize: "14dp"
+                                          fontSize: "20dp"
                                           }
                                           ] 
                         }
