@@ -1087,24 +1087,22 @@ function handleResponse (handlerInput , resp) {
                           .reprompt(resp.Text)
                           .addDirective(search(resp.BackBtn, resp.Header, resp.SubHdr, resp.Height, resp.List))
                           .getResponse();
-       } else if (resp.Type.indexOf("Tripple") === 0) { //resp.Type === "Tripple") { 
-          const tripple = require('APL/'+resp.Type+'.js'); //const tripple = require('APL/tripple3.js');
+       } else if (resp.Type ==="Tripple" ) { 
+          const tripple = require('APL/'+resp.Type+'.js'); 
           const speakcmd = require('APL/speakcmd.js');
           return  handlerInput.responseBuilder
                             .reprompt(resp.Verbal)
-                            .addDirective(tripple(resp.Header,resp.SubHdr, resp.ListA, resp.ListB, resp.ListC, resp.Verbal, resp.Text, resp.Height + "vh"))
+                            .addDirective(tripple(resp.Header,resp.SubHdr, resp.ListA, resp.ListB, resp.ListC, resp.Verbal, resp.Text, resp.Hint, resp.Height))
                             .addDirective(speakcmd())
                             .getResponse();  
-      // } else if (resp.Type === "Tripple2") { 
-      //     const tripple = require('APL/tripple2.js');
-      //     const speakcmd = require('APL/speakcmd.js');
-      //     return  handlerInput.responseBuilder
-      //                       .speak("here in tripple")
-      //                       .reprompt(resp.Verbal)
-      //                       .addDirective(tripple(resp.Header,resp.SubHdr, resp.ListA, resp.ListB, resp.ListC, resp.Verbal, resp.Text))
-      //                       .addDirective(speakcmd())
-      //                       .getResponse(); 
-       } else if (resp.Type.indexOf("threaded") === 0 ) { 
+       } else if (resp.Type === "TrippleErr") { 
+          const tripple = require('APL/'+resp.Type+'.js'); 
+          return  handlerInput.responseBuilder
+                            .speak(resp.Error) 
+                            .reprompt(resp.Error)
+                            .addDirective(tripple(resp.Header,resp.SubHdr, resp.ListA, resp.ListB, resp.ListC, resp.Verbal, resp.Text, resp.Hint, resp.Height, resp.Error ))
+                            .getResponse(); 
+       } else if (resp.Type === "threaded" ) { 
           const tripple = require('APL/'+resp.Type+'.js');
           const speakcmd = require('APL/speakcmd.js');
           return  handlerInput.responseBuilder

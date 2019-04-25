@@ -409,23 +409,20 @@ func (s *sessCtx) orchestrateRequest() error {
 		fmt.Println("lastState.selCtx (now s.selCtx) = ", lastState.SelCtx)
 		s.object = lastState.Obj
 		//
-		// only save when in the appropriate state
+		// error if state/screen does not permit to change scale
 		//
-		// if s.request == "search" {
-		// 	s.displayData = s.recipeList
-		// 	fmt.Println("scaling will Search for ", s.reqSearch)
-
-		// 	return nil
-		// 	// s.reqSearch = lastState.Search
-		// 	// s.curReqType = initialiseRequest
-		// }
-		global.SetScale(s.scalef)
-		if s.showObjMenu {
-			s.displayData = objMenu
-			s.updateState()
+		switch s.displayData.(type) {
+		case Threads:
+			s.passErr = true
+			s.dmsg = ` *** Alert :  you cannot scale a recipe while following instructions. Say "go back" or "restart" and scale from there.`
+		default:
+			global.SetScale(s.scalef)
+			if s.showObjMenu {
+				s.displayData = objMenu
+				s.updateState()
+			}
 			return nil
 		}
-
 	}
 	//
 	// yes/no response. May assign new book
@@ -961,89 +958,6 @@ func (s *sessCtx) orchestrateRequest() error {
 		}
 	}
 	//
-	// note:
-	// 1. ALL conditional paths return  and most update Sessions. Any pushStates do not change RecId as current state is initialiseRequest.
-	//
-	// 2. BookName will always co-exist with BookId in session table by the end of this section
-	//	  similarly, RecipeName will always co-exist with RecipeId in the session table by the end of this section
-	//
-
-	// if s.curReqType == initialiseRequest || s.initialiseRequest_() {
-
-	// 	//TODO: is showList required?
-	// 	if s.showList {
-	// 		if len(s.recipeList) > 0 {
-	// 			for i, v := range s.recipeList {
-	// 				s.dmsg = s.dmsg + fmt.Sprintf("%d. Recipe [%s] in book [%s] by [%s] quantity %s\n", i+1, v.RName, v.BkName, v.Authors, v.Quantity)
-	// 				s.vmsg = s.dmsg + fmt.Sprintf("%d. Recipe [%s] in book [%s] by [%s] quantity %s\n", i+1, v.RName, v.BkName, v.Authors, v.Quantity)
-	// 			}
-	// 		}
-
-	// 		return nil
-	// 	}
-
-	// 	if s.request == "recipe" { // "open recipe" intent
-	// 		//
-	// 		// recipe requested.       Note bookName(Id) can be empty which will force Recipe query to search across all books
-	// 		//
-	// 		err := s.recipeNameSearch()
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 		s.eol, s.reset = 0, true
-	// 		_, err = s.pushState()
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 		return nil
-	// 	}
-	// }
-	//
-	// request must set recipe id before proceeding to list an object
-	// if s.curReqType == instructionRequest && len(lastState.RId) == 0 || s.curReqType == objectRequest && len(lastState.RId) == 0 {
-	// 	s.dmsg = `You have not specified a recipe yet. Please say "recipe" followed by it\'s name`
-	// 	s.vmsg = `You have not specified a recipe yet. Please say "recipe" followed by it\'s name`
-
-	// 	return nil
-	// }
-	// //  if listing (next,prev,repeat,goto - curReqType object, listing) without object (container,ingredient,task,utensil) -
-	// if s.curReqType == instructionRequest && len(s.object) == 0 {
-	// 	s.dmsg = `You need to say what you want to list. Please say either "ingredients","start cooking","containers" or "utensils". Not hard really..`
-	// 	s.vmsg = `You need to say what you want to list. Please say either "ingredients","start cooking","containers" or "utensils". Not hard really..`
-
-	// 	return nil
-	// }
-	//  if listing and not finished and object request changes object. Accept and zero or repeat last RecId for requested object.
-	// if len(s.object) > 0 {
-	// 	//if !s.finishedListing(s.recId[objectMap[s.object]], objectMap[s.object]) && (s.object != s.object) {
-	// 	fmt.Println(s.object)
-	// 	if len(s.recId) > 0 {
-	// 		if s.eol != s.recId[objectMap[s.object]] && (s.object != s.object) {
-	// 			// show last listed entry otherwise list first entry
-	// 			switch s.recId[objectMap[s.object]] {
-	// 			case 0: // not listed before or been reset after previously completing list
-	// 				s.objRecId = 1 // show first entry
-	// 			default: // in the process of listing
-	// 				s.objRecId = s.recId[objectMap[s.object]] // repeat last shown entry
-	// 			}
-	// 		}
-	// 	}
-	// }
-	// // if object specified and different from last one
-	// if len(s.object) > 0 && len(s.recId) > 0 && (s.object != s.object) {
-	// 	// show last listed entry otherwise list first entry
-	// 	switch s.recId[objectMap[s.object]] {
-	// 	case 0: // not listed before or been reset after previously completing list
-	// 		s.objRecId = 1 // show first entry
-	// 	default: // in the process of listing
-	// 		s.objRecId = s.recId[objectMap[s.object]] // repeat last shown entry
-	// 	}
-	// }
-	//  If listing and not finished and object request  has changed (task, ingredient, container, utensil) reset RecId
-	// change in operation does not not need to be taken into account as this is part of the initialisation phase
-	// copy object from last session
-
-	//
 	return nil
 }
 
@@ -1141,7 +1055,7 @@ func handler(request InputEvent) (RespEvent, error) {
 		case "load":
 			//scaleF = 1.0
 
-			fmt.Println("Aboutto loadBaeRecipe()")
+			fmt.Println("Aboutto loadBaseRecipe()")
 			err = sessctx.loadBaseRecipe()
 			if err != nil {
 				fmt.Println("Error in loadBaseRecipe: ", err.Error())
@@ -1175,13 +1089,13 @@ func handler(request InputEvent) (RespEvent, error) {
 			panic(err)
 		}
 		return RespEvent{}, nil
-	case "genSlotValues":
-		err = sessctx.generateSlotEntries()
-		if err != nil {
-			break
-		}
-		//sessctx.noGetRecRequired, sessctx.reset = true, true
-		sessctx.reset = true
+	// case "genSlotValues":
+	// 	err = sessctx.generateSlotEntries()
+	// 	if err != nil {
+	// 		break
+	// 	}
+	// 	//sessctx.noGetRecRequired, sessctx.reset = true, true
+	// 	sessctx.reset = true
 	case "startWithEmail":
 		sessctx.email = request.QueryStringParameters["email"]
 		sessctx.request = "start"
@@ -1322,13 +1236,15 @@ func main() {
 	// p1 := InputEvent{Path: os.Args[1], Param: "uid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + "&srch=" + os.Args[2]}
 	// //
 	//
-	// var err error
+	//	var err error
+	//	var scaleF float64
 	// p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
 	// uid := `amzn1.ask.account.AFTQJDFZKJIDFN6GRQFTSILWMGO2BHFRTP55PK6KT42XY22GR4BABOP4Y663SUNVBWYABLLQCHEK22MZVUVR7HXVRO247IQZ5KSVNLMDBRDRYEINWGRB6N2U7J2BBWEOEKLY2HKQ6VQTTLGKT2JCH4VOE5A7XPFDI4VMNJW63YP4XCMYGIA5IU4VJGNHI2AAU33Q5J2TJIXP3DI`
-	// p2 := InputEvent{Path: "addUser", Param: "uid=" + uid + "&bkids=20,21"}
+	// // p2 := InputEvent{Path: "addUser", Param: "uid=" + uid + "&bkids=20,21"}
+	// p2 := InputEvent{Path: os.Args[1], Param: "sid=" + uid + "&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
 
 	// if len(os.Args) < 5 {
-	//scaleF = 1.0
+	// 	scaleF = 1.0
 	// } else {
 	// 	scaleF, err = strconv.ParseFloat(os.Args[4], 64)
 	// 	if err != nil {

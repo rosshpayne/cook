@@ -47,9 +47,9 @@ type InstructionS []InstructionT
 
 type ThreadT struct {
 	Instructions InstructionS `json:"I"`
-	Id           int          `json:"id"` // active record in Instructions starting at 1
-	Thread       int          `json:"thread"`
-	EOL          int          `json:"eol"` // total instructions across all threads
+	Id           int          `json:"id"`     // active record in Instructions starting at 1
+	Thread       int          `json:"thread"` // thread id
+	EOL          int          `json:"eol"`    // total instructions across all threads
 }
 
 type Threads []ThreadT
@@ -97,7 +97,7 @@ type RespEvent struct {
 	SubHdr   string        `json:"SubHdr"`
 	Text     string        `json:"Text"`
 	Verbal   string        `json:"Verbal"`
-	Height   int           `json:"Height"`
+	Height   string        `json:"Height"`
 	Error    string        `json:"Error"`
 	Hint     string        `json:"Hint"`
 	List     []DisplayItem `json:"List"` // recipe data: id|Title1|subTitle1|SubTitle2|Text
@@ -165,7 +165,6 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 	switch {
 
 	case id < 1 && len(t) == 1:
-		passErr = "Reached first instruction in current thread"
 		id = 1
 		s.recId[objectMap[s.object]] = 1
 
@@ -234,6 +233,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 	} else {
 		hdr = s.reqRName
 	}
+	//
 	if len(s.part) > 0 {
 		if s.part == CompleteRecipe_ {
 			p = strings.Split(s.part, "|")
@@ -254,9 +254,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		sf := strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
 		subh = "Cooking Instructions  -  " + strconv.Itoa(id) + " of " + strconv.Itoa(eol) + "   (Fixed Scale: " + sf + ")"
 	}
-	if s.reScale {
-		hdr = " *** Alert :  you cannot scale a recipe while following instructions."
-	}
+
 	fmt.Println("switch on thread: ", t[s.cThread].Thread)
 	//
 	// local funcs
@@ -313,12 +311,14 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 	//
 	// is there an other thread means there are two active threads that need to be displayed on a Echo Show.
 	//
+	fmt.Println("oThread: ", s.oThread)
 	switch s.oThread {
 	case 0, -1:
 		//
 		// only one thread, split instructions across three sections - used by echo Show only
 		//
 		tc := s.cThread
+		fmt.Println("tc=", tc)
 		listA := SectA(tc)
 		listB := SectB(tc)
 		listC := SectC(tc, 3, false)
@@ -330,28 +330,40 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		// pid = strconv.Itoa(rec.PID)
 		//s.eol, s.peol, s.part, s.pid = rec.EOL, rec.PEOL, part, rec.PID
 		s.part = part
-		type_ := "Tripple"
-		// if len(t[s.cThread].Instructions[id-1].Text) > 80 {
-		// 	type_ += "L" // larger text bounding box
-		// }
-		speak := "<speak>" + rec.Verbal + "</speak>"
-		var height int
-		switch {
-		case len(s.dmsg) > 120:
-			height = 20
-		case len(s.dmsg) > 180:
-			height = 25
-		case len(s.dmsg) > 220:
-			height = 32
-		}
 
-		s.menuL = nil
-		err := s.updateState()
-		if err != nil {
-			return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
+		speak := "<speak>" + rec.Verbal + "</speak>"
+		var height string
+		fmt.Println(len(rec.Verbal), " ", rec.Verbal)
+		l := rec.Verbal
+		switch {
+		case len(l) < 65:
+			height = "15vh"
+		case len(l) < 120:
+			height = "25vh"
+		case len(l) < 180:
+			height = "35vh"
+		default:
+			height = "45vh"
 		}
-		hint = "hint:  next, previous, say again"
-		return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Hint: hint, Text: rec.Text, Height: height, Verbal: speak, ListA: listA, ListB: listB, ListC: listC}
+		fmt.Println("height: ", height)
+		//
+		s.menuL = nil
+		//
+		// alert if inappropriate verbal interaction
+		//
+		type_ := "Tripple"
+		if s.passErr {
+			type_ += "Err"
+		} else {
+			err := s.updateState()
+			if err != nil {
+				return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
+			}
+		}
+		hint = `hint:  "next", "previous", "repeat", "go back", "restart"`
+		fmt.Println("hint: ", hint)
+
+		return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Hint: hint, Text: rec.Text, Height: height, Verbal: speak, ListA: listA, ListB: listB, ListC: listC, Error: s.dmsg}
 
 	default:
 		// two threads with 3 sections in each. should always display threads 1 and 2 in that order, never thread 0
@@ -401,10 +413,6 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		//s.eol, s.peol, s.part, s.pid = rec.EOL, rec.PEOL, part, rec.PID
 		s.part = part
 		fmt.Println("4 cThread, id = ", s.cThread, id)
-
-		// if len(rec.Text) > 80 {
-		// 	type_ += "L" // TODO: create ThreadedL script
-		// }
 		speak := "<speak>" + rec.Verbal + "</speak>"
 
 		s.menuL = nil
@@ -442,10 +450,24 @@ func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 		list   []DisplayItem
 	)
 	//
+	OpenBkName := func() string {
+		var bkname string
+		for i, v := range w.Display {
+			fmt.Println("OpenBkName: ", v.Title)
+			if i < 2 {
+				bkname = v.Title[:strings.Index(v.Title, " by ")]
+				continue
+			}
+			break
+		}
+		return `"open book ` + bkname + `"`
+	}
+
 	fmt.Println("GenDisplay:  WelcomeT")
 	if w == nil {
 		panic(fmt.Errorf("WelcomeT: w not assigned"))
 	}
+
 	if len(w.Display) == 0 || (len(w.Bkids) != len(s.bkids) && s.back == false) || s.openBkChange {
 		fmt.Println(" push or update.... len(s.state) = ", len(s.state))
 		fmt.Println(" openBkChange.. ", s.openBkChange)
@@ -455,16 +477,16 @@ func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 		// w.Bkids is the cached value and hence maybe out-of-date
 		w.Bkids = s.bkids
 		//
-		for i, v := range s.bkids {
+		for _, v := range s.bkids {
 			s.reqBkId = v
 			err := s.bookNameLookup()
 			if err != nil {
 				panic(err)
 			}
 			msg := s.reqBkName + "  by " + s.authors
-			if i < 2 {
-				openBk = `"open book ` + s.reqBkName + `"`
-			}
+			// if i < 2 {
+			// 	openBk = `"open book ` + s.reqBkName + `"`
+			// }
 			list = append(list, DisplayItem{Title: msg})
 		}
 		w.Display = list
@@ -489,6 +511,7 @@ func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 	//
 	hdr = "Welcome to your EburyPress Cook books on Alexa"
 	srch := `, "search ingredient(s)", "search keyword(s)", "search recipe-name", "search any-part-of-recipe-name" e.g. "search pasta", "search tarragon", "search chocolate cake"`
+
 	if len(s.reqOpenBk) > 0 {
 		bk := strings.Split(string(s.reqOpenBk), "|")
 		if s.back {
@@ -503,13 +526,13 @@ func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 			}
 		}
 		list = w.Display
-		hint = `hint: "close book" ` + srch
+		hint = `hint: "close book"` + srch
 
 	} else if len(s.CloseBkName) > 0 {
 		title = s.CloseBkName + " is now closed. Searches will be across all your books"
 		fmt.Printf("close book. List = %#v\n", w.Display)
 		list = w.Display
-		hint = `hint: "open book" ` + srch
+		hint = `hint: ` + OpenBkName() + srch
 
 	} else if len(w.Bkids) > 0 || s.back {
 		if len(w.Bkids) > 1 {
@@ -517,7 +540,10 @@ func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 		} else {
 			title = "You have the following book registered to this device. Searches will be across all the books unless you open one"
 		}
-		hint = "hint: " + openBk + " " + srch
+		hint = "hint: " + OpenBkName() + srch
+	}
+	if len(hint) == 0 {
+		hint = "hint: " + OpenBkName() + srch
 	}
 	type_ := "Start"
 	if s.passErr {
@@ -525,7 +551,9 @@ func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 	}
 	if len(w.request) > 0 {
 		type_ = w.request // nb: email - as in get me email. index.js handles it.
-		hint = `hint: ` + openBk + " " + srch
+		if len(openBk) == 0 {
+			hint = `hint: ` + OpenBkName() + srch
+		}
 	}
 
 	return RespEvent{Type: type_, BackBtn: false, Header: hdr, SubHdr: subh, Hint: hint, Text: title, List: list, Error: s.dmsg}
@@ -590,7 +618,7 @@ func (p PartS) GenDisplay(s *sessCtx) RespEvent {
 		type_ += "Err"
 	}
 	hint = "hint: select 1, scale recipe 55 percent"
-	return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Hint: hint, Height: 90, Verbal: s.vmsg, List: list, Error: s.dmsg}
+	return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Hint: hint, Height: "90", Verbal: s.vmsg, List: list, Error: s.dmsg}
 
 }
 
@@ -831,7 +859,7 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 		}
 		c.UDimension = strconv.Itoa(s.dimension)
 		global.SetScale(float64(s.dimension*s.dimension) / float64(cdim*cdim))
-		// persist  new data
+		// persist  new scaleF
 		err = s.updateState()
 		if err != nil {
 			return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
@@ -861,9 +889,9 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 			suggdim = strconv.Itoa(odim - 2)
 		}
 		if len(c.UDimension) > 0 {
-			list[6] = DisplayItem{Title: `To change your container? Say 'size [newsize]' e.g. size ` + suggdim}
+			list[6] = DisplayItem{Title: `To change your container? Say 'size [newsize]' e.g. "size ` + suggdim + `"`}
 		} else {
-			list[6] = DisplayItem{Title: `What is the size of your container? Say 'size [newsize]' e.g. size ` + suggdim}
+			list[6] = DisplayItem{Title: `What is the size of your container? Say 'size [newsize]' e.g. "size ` + suggdim + `"`}
 		}
 		list[7] = DisplayItem{Title: `Note: must be less than the recipe container size`}
 
@@ -889,7 +917,7 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 		if suggdim == c.UDimension {
 			suggdim = strconv.Itoa(odim - 2)
 		}
-		list[6] = DisplayItem{Title: `To change your container size, say 'size [newsize]' e.g. size ` + suggdim}
+		list[6] = DisplayItem{Title: `To change your container size, say 'size [newsize]' e.g. "size ` + suggdim + `"`}
 		list[7] = DisplayItem{Title: `Note: must be less than the original recipe container size `}
 
 	} else {
@@ -909,8 +937,12 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 			panic(fmt.Errorf("in GenDisplay for container: cannot covert container dimension to int [%s]", err.Error()))
 		}
 		suggdim := strconv.Itoa(odim - 3)
-		list[5] = DisplayItem{Title: `What is the size of your container? Say 'size [newsize]' e.g. size ` + suggdim}
+		list[5] = DisplayItem{Title: `What is the size of your container? Say 'size [newsize]' e.g. "size ` + suggdim + `"`}
 		list[6] = DisplayItem{Title: `Note: your container size must be less than the recipe container size displayed above`}
+	}
+	_, err := s.pushState()
+	if err != nil {
+		return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
 	}
 	type_ := "Ingredient"
 	backBtn := true

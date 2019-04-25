@@ -3,7 +3,7 @@ package main
 import (
 	_ "encoding/json"
 	"fmt"
-	"os"
+	_ "os"
 	"strconv"
 	"strings"
 	_ "time"
@@ -297,6 +297,7 @@ func (s *sessCtx) getScaleContainer() (Container, error) {
 	// return a single scale container (containers that determine quantity of ingredients)
 	//  if more than one scale container first one is returned.
 	// PKey = C-[BkId]-[RId]
+	s.pkey = s.reqBkId + "-" + s.reqRId
 	fmt.Println("in getScaleContainer - Pkey: ", s.pkey)
 	keyC := expression.KeyEqual(expression.Key("PKey"), expression.Value("C-"+s.pkey))
 	fcond := expression.Equal(expression.Name("scale"), expression.Value(true))
@@ -646,7 +647,7 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 	//
 	// must refresh Alexa slot entries on each new index build
 	//
-	err = s.generateSlotEntries()
+	//err = s.generateSlotEntries() // nolonger use slots to handle recipe indexing.
 	return err
 
 }
@@ -976,93 +977,93 @@ func (s *sessCtx) keywordSearch(srch string) error {
 	return nil
 }
 
-func (s *sessCtx) generateSlotEntries() error {
-	//
-	type Index struct {
-		PKey string `json:"PKey"`
-	}
-	type SrchKeyS Index
-	proj := expression.NamesList(expression.Name("PKey"))
-	expr, err := expression.NewBuilder().WithProjection(proj).Build()
-	if err != nil {
-		return fmt.Errorf("%s", "Error in expression build in generateSlotEntries - "+err.Error())
-	}
-	// Build the query input parameters
-	params := &dynamodb.ScanInput{
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-		ProjectionExpression:      expr.Projection(),
-		TableName:                 aws.String("Ingredient"),
-	}
-	result, err := s.dynamodbSvc.Scan(params)
-	if err != nil {
-		return fmt.Errorf("%s", "Error in scan of generateSlotEntries - "+err.Error())
-	}
-	srchKeys := make(map[string]bool)
-	skey := make([]Index, int(*result.Count))
-	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &skey)
-	if err != nil {
-		return fmt.Errorf("%s", "Error in UnmarshalMap of unit table: "+err.Error())
-	}
-	//
-	f, err := os.OpenFile("slot.entries", os.O_RDWR|os.O_CREATE, 0755)
-	if err != nil {
-		panic(err)
-	}
-	//
-	write := func(PKey string) error {
-		if !srchKeys[PKey] {
-			var str string
-			srchKeys[PKey] = true
-			w := strings.Fields(PKey)
-			switch len(w) {
-			case 1:
-				if PKey[len(PKey)-1] != 's' {
-					str = PKey + ",," + PKey + "s" + "\n"
-				}
-			case 2:
-				str = PKey + ",," + w[1] + " " + w[0] + "\n"
-			case 3:
-				str = PKey + ",," + w[1] + " " + w[0] + " " + w[2] + "\n"
-			case 4:
-				str = PKey + ",," + w[1] + " " + w[0] + " " + w[2] + " " + w[3] + "\n"
-			default:
-				str = PKey + ",," + "\n"
-			}
-			_, err := f.Write([]byte(str))
-			if err != nil {
-				return fmt.Errorf("Write error in generateSlotEntries - %s", err.Error())
-			}
-		}
-		return nil
-	}
-	//
-	for _, v := range skey {
-		if len(v.PKey) > 2 && v.PKey[:2] != "C-" {
-			write(v.PKey)
-		}
-	}
-	skey = nil
-	//
-	//  merge s.indexRecs.PKey entries to skey and printout new slot entries to file slot.entries
-	//
-	for _, v := range s.indexRecs {
-		if len(v.PKey) > 0 {
-			err = write(v.PKey)
-			if err != nil {
-				return err
-			}
-		} else {
-			fmt.Println("indexRecs contains zero entry [", v.PKey, "]")
-		}
+// func (s *sessCtx) generateSlotEntries() error {
+// 	//
+// 	type Index struct {
+// 		PKey string `json:"PKey"`
+// 	}
+// 	type SrchKeyS Index
+// 	proj := expression.NamesList(expression.Name("PKey"))
+// 	expr, err := expression.NewBuilder().WithProjection(proj).Build()
+// 	if err != nil {
+// 		return fmt.Errorf("%s", "Error in expression build in generateSlotEntries - "+err.Error())
+// 	}
+// 	// Build the query input parameters
+// 	params := &dynamodb.ScanInput{
+// 		ExpressionAttributeNames:  expr.Names(),
+// 		ExpressionAttributeValues: expr.Values(),
+// 		ProjectionExpression:      expr.Projection(),
+// 		TableName:                 aws.String("Ingredient"),
+// 	}
+// 	result, err := s.dynamodbSvc.Scan(params)
+// 	if err != nil {
+// 		return fmt.Errorf("%s", "Error in scan of generateSlotEntries - "+err.Error())
+// 	}
+// 	srchKeys := make(map[string]bool)
+// 	skey := make([]Index, int(*result.Count))
+// 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &skey)
+// 	if err != nil {
+// 		return fmt.Errorf("%s", "Error in UnmarshalMap of unit table: "+err.Error())
+// 	}
+// 	//
+// 	f, err := os.OpenFile("slot.entries", os.O_RDWR|os.O_CREATE, 0755)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	//
+// 	write := func(PKey string) error {
+// 		if !srchKeys[PKey] {
+// 			var str string
+// 			srchKeys[PKey] = true
+// 			w := strings.Fields(PKey)
+// 			switch len(w) {
+// 			case 1:
+// 				if PKey[len(PKey)-1] != 's' {
+// 					str = PKey + ",," + PKey + "s" + "\n"
+// 				}
+// 			case 2:
+// 				str = PKey + ",," + w[1] + " " + w[0] + "\n"
+// 			case 3:
+// 				str = PKey + ",," + w[1] + " " + w[0] + " " + w[2] + "\n"
+// 			case 4:
+// 				str = PKey + ",," + w[1] + " " + w[0] + " " + w[2] + " " + w[3] + "\n"
+// 			default:
+// 				str = PKey + ",," + "\n"
+// 			}
+// 			_, err := f.Write([]byte(str))
+// 			if err != nil {
+// 				return fmt.Errorf("Write error in generateSlotEntries - %s", err.Error())
+// 			}
+// 		}
+// 		return nil
+// 	}
+// 	//
+// 	for _, v := range skey {
+// 		if len(v.PKey) > 2 && v.PKey[:2] != "C-" {
+// 			write(v.PKey)
+// 		}
+// 	}
+// 	skey = nil
+// 	//
+// 	//  merge s.indexRecs.PKey entries to skey and printout new slot entries to file slot.entries
+// 	//
+// 	for _, v := range s.indexRecs {
+// 		if len(v.PKey) > 0 {
+// 			err = write(v.PKey)
+// 			if err != nil {
+// 				return err
+// 			}
+// 		} else {
+// 			fmt.Println("indexRecs contains zero entry [", v.PKey, "]")
+// 		}
 
-	}
-	if err := f.Close(); err != nil {
-		panic(err)
-	}
-	skey = nil
-	return nil
-}
+// 	}
+// 	if err := f.Close(); err != nil {
+// 		panic(err)
+// 	}
+// 	skey = nil
+// 	return nil
+// }
 
 func (s *sessCtx) recipeNameSearch() error {
 	//

@@ -69,7 +69,7 @@ type stateRec struct {
 	ShowObjMenu     bool
 	MenuL           menuList
 	//
-	Dispctr DispContainerT `json:"Dctr"`
+	Dispctr *DispContainerT `json:"Dctr"`
 	ScaleF  float64
 	//
 	//Display apldisplayT `json:"AplD"` // Welcome display - contains registered
@@ -193,9 +193,9 @@ func (s *sessCtx) setState(ls *stateRec) {
 		s.reqVersion = ls.Ver
 	}
 	// new part
-	if s.selId == 0 && ls.SelId > 0 {
-		s.selId = ls.SelId
-	}
+	// if s.selId == 0 && ls.SelId > 0 {
+	// 	s.selId = ls.SelId
+	// }
 	if len(s.object) == 0 && len(ls.Obj) > 0 {
 		s.object = ls.Obj
 	}
@@ -306,7 +306,8 @@ func (s *sessCtx) setState(ls *stateRec) {
 	if len(ls.MenuL) > 0 {
 		s.menuL = ls.MenuL
 	}
-	s.dispCtr = &ls.Dispctr
+	//s.dispCtr = &ls.Dispctr
+	s.dispCtr = ls.Dispctr
 	if ls.ScaleF == 0 {
 		global.SetScale(1.0)
 	} else {
@@ -439,7 +440,8 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 		sr.MenuL = s.menuL
 	}
 	if s.dispCtr != nil {
-		sr.Dispctr = *(s.dispCtr)
+		//sr.Dispctr = *(s.dispCtr)
+		sr.Dispctr = s.dispCtr
 	}
 	sr.ScaleF = global.GetScale()
 	//
@@ -543,7 +545,7 @@ func (s *sessCtx) updateState() error {
 	}
 	if s.dispCtr != nil {
 		atribute = fmt.Sprintf("state[%d].Dctr", len(s.state)-1)
-		updateC = updateC.Set(expression.Name(atribute), expression.Value(*(s.dispCtr)))
+		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.dispCtr))
 	}
 	fmt.Println("About to update ScaleF..")
 	// if scale changes then history must change to new value upto but not including last ingredients display or end of state list.
@@ -556,8 +558,11 @@ func (s *sessCtx) updateState() error {
 		if len(s.state[i].RecipeList) > 0 || s.state[i].Request == "start" {
 			break
 		}
+		atribute = fmt.Sprintf("state[%d].ScaleF", i)
+		fmt.Println(atribute, scale)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(scale))
 	}
+	fmt.Println("about to update RecId ..", len(s.state)-1, s.recId)
 	atribute = fmt.Sprintf("state[%d].RecId", len(s.state)-1)
 	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
 	if s.openBkChange {
@@ -575,16 +580,16 @@ func (s *sessCtx) updateState() error {
 		atribute = fmt.Sprintf("state[%d].ingrd", len(s.state)-1)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.ingrdList))
 	}
-	atribute = fmt.Sprintf("state[%d].CThrd", len(s.state)-1)
-	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.cThread))
-	atribute = fmt.Sprintf("state[%d].OThrd", len(s.state)-1)
-	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.oThread))
-	atribute = fmt.Sprintf("state[%d].DT", len(s.state)-1)
-	updateC = updateC.Set(expression.Name(atribute), expression.Value(time.Now().Format("Jan 2 15:04:05")))
 	if s.request == "book" || s.request == "close" {
 		// don't record book open/close requests. Contents of reqOpenBk tells us about this request.
 		s.request = s.lastreq
 	}
+	atribute = fmt.Sprintf("state[%d].DT", len(s.state)-1)
+	updateC = updateC.Set(expression.Name(atribute), expression.Value(time.Now().Format("Jan 2 15:04:05")))
+	atribute = fmt.Sprintf("state[%d].CThrd", len(s.state)-1)
+	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.cThread))
+	atribute = fmt.Sprintf("state[%d].OThrd", len(s.state)-1)
+	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.oThread))
 	if len(s.CloseBkName) > 0 {
 		atribute = fmt.Sprintf("state[%d].OpenBk", len(s.state)-1)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.reqOpenBk))
@@ -813,7 +818,8 @@ func (s *sessCtx) popState() error {
 	if len(sr.MenuL) > 0 {
 		s.menuL = sr.MenuL
 	}
-	s.dispCtr = &sr.Dispctr
+	//s.dispCtr = &sr.Dispctr
+	s.dispCtr = sr.Dispctr
 	if sr.ScaleF == 0 {
 		global.SetScale(1.0)
 	} else {
