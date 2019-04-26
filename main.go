@@ -120,9 +120,9 @@ type sessCtx struct {
 	//
 	menuL     menuList
 	dispCtr   *DispContainerT
-	dimension int
+	dimension int // size of user container in scaling mode
 	scalef    float64
-	reScale   bool
+	reScale   bool // true in scaling mode
 	//
 	//display *apldisplayT
 	welcome *WelcomeT
@@ -232,7 +232,7 @@ func (s *sessCtx) clearForSearch(lastState *stateRec) {
 
 func incrementRequest(r string) bool {
 	switch r {
-	case "restart", "book", "close", "search":
+	case "restart", "book", "close", "search", "start", "dimension":
 		return false
 	default:
 		return true
@@ -372,8 +372,11 @@ func (s *sessCtx) orchestrateRequest() error {
 		if s.dimension == 0 {
 			return fmt.Errorf("Dimension must be greater than zero")
 		}
-		if s.dispCtr == nil {
-			return fmt.Errorf("Dimension cannot be set until you have entered adjust menu option")
+		if s.object != "scaleContainer" {
+			s.passErr = true
+			s.dmsg = "** Alert: cannot size a container from this context"
+			fmt.Println(s.dmsg)
+			return nil
 		}
 		c := s.dispCtr
 		cdim, err := strconv.Atoi(c.Dimension)
@@ -587,25 +590,27 @@ func (s *sessCtx) orchestrateRequest() error {
 	//
 	//
 	//
-	search := func(srch string) error {
-		fmt.Println("search for: ", srch)
-		err := s.keywordSearch(srch)
-		if err != nil {
-			return err
-		}
-		if srch[len(srch)-1] == 's' {
-			srch = srch[:len(srch)-1]
-		} else {
-			srch = srch + "s"
-		}
-		fmt.Println(" search for: ", srch)
-		err = s.keywordSearch(srch)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
+
 	if s.request == "search" {
+
+		search := func(srch string) error {
+			fmt.Println("search for: ", srch)
+			err := s.keywordSearch(srch)
+			if err != nil {
+				return err
+			}
+			if srch[len(srch)-1] == 's' {
+				srch = srch[:len(srch)-1]
+			} else {
+				srch = srch + "s"
+			}
+			fmt.Println(" search for: ", srch)
+			err = s.keywordSearch(srch)
+			if err != nil {
+				return err
+			}
+			return nil
+		}
 
 		s.clearForSearch(lastState)
 
@@ -641,6 +646,7 @@ func (s *sessCtx) orchestrateRequest() error {
 			// found single recipe.
 			s.displayData = objMenu
 			s.showObjMenu = true
+			s.selId = 0
 			fmt.Printf("recipe found [%s]\n", s.reqRName)
 
 			_, err = s.pushState()
@@ -741,7 +747,7 @@ func (s *sessCtx) orchestrateRequest() error {
 	//
 	// respond to select from displayed items
 	//
-	if s.selId > 0 {
+	if (s.request == "select" || s.request == "start") && s.selId > 0 {
 		// selId is the response from Alexa on the index (ordinal value) of the selected display item
 		fmt.Println("SELCTX is : ", s.selCtx)
 
@@ -768,6 +774,7 @@ func (s *sessCtx) orchestrateRequest() error {
 				}
 			}
 			s.displayData = objMenu
+			s.selId = 0
 			s.showObjMenu = true
 			s.recipeList = nil
 
@@ -855,28 +862,26 @@ func (s *sessCtx) orchestrateRequest() error {
 			case ingredient_:
 				fmt.Println("Here in ingredient_.. about to read activity table and generated ingredient string")
 				s.dispCtr = nil
-				if s.reqVersion != "" {
-					s.pkey += "-" + s.reqVersion
-				}
-				r, err := s.recipeRSearch()
-				if err != nil {
-					return err
-				}
-				// set unit formating mode
-				global.Set_WriteCtx(global.UPrint)
-				as, err := s.loadActivities()
-				if err != nil {
-					return err
-				}
-				// generate ingredient listing
-				s.ingrdList = IngredientT(as.String(r))
-				s.displayData = s.ingrdList
-				//
-				s.reset = true
-				s.showObjMenu = false
-				s.curReqType = 0
+				switch s.request {
+				case "select":
+					if s.reqVersion != "" {
+						s.pkey += "-" + s.reqVersion
+					}
+					r, err := s.recipeRSearch()
+					if err != nil {
+						return err
+					}
+					// set unit formating mode
+					global.Set_WriteCtx(global.UPrint)
+					as, err := s.loadActivities()
+					if err != nil {
+						return err
+					}
+					// generate ingredient listing
 
-				if s.request == "select" {
+					s.ingrdList = IngredientT(as.String(r))
+					s.displayData = s.ingrdList
+
 					if s.reScale { // change in scale from last session
 						fmt.Println("in ingredient List: update state not pushState")
 						s.updateState()
@@ -887,8 +892,15 @@ func (s *sessCtx) orchestrateRequest() error {
 					if err != nil {
 						return err
 					}
+
+				case "start":
+					s.ingrdList = IngredientT(s.ingrdList)
 				}
-				//	}
+				//
+				s.reset = true
+				s.showObjMenu = false
+				s.curReqType = 0
+				//
 				return nil
 
 			case container_:
@@ -911,7 +923,9 @@ func (s *sessCtx) orchestrateRequest() error {
 				return nil
 
 			case CtrMsr_:
-				s.displayData = s.dispCtr
+				// displayData assigned in setState()
+				fmt.Printf("CtrMsr - %#v\n", *(s.dispCtr))
+				//s.displayData = s.dispCtr
 
 				// s.reset = true
 				// s.showObjMenu = false
@@ -1219,7 +1233,8 @@ func handler(request InputEvent) (RespEvent, error) {
 	// package the response data RespEvent (an APL aware "display" structure) and return
 	//
 	if sessctx.displayData == nil {
-		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata, Error: err.Error()}, nil
+		sessctx.dmsg = "displayData not set"
+		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata}, nil
 	}
 	var resp RespEvent
 	fmt.Println("=========== displayData.GenDisplay =============")

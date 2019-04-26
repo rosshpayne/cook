@@ -54,8 +54,8 @@ type stateRec struct {
 	//
 	// select
 	//
-	SelCtx selectCtxT // select a recipe or other which is (ingred, task, container, utensil)
-	SelId  int        // select choice
+	SelCtx selectCtxT // select a recipe or other which is (ingred, task, container, utensil) in that order.
+	SelId  int        // menu choice as supplied from Alexa APL - starts at 1 and goes to max selection choice. Hence selId = 0 for no choice
 	//
 	// Recipe Part related data
 	//
@@ -69,8 +69,9 @@ type stateRec struct {
 	ShowObjMenu     bool
 	MenuL           menuList
 	//
-	Dispctr *DispContainerT `json:"Dctr"`
-	ScaleF  float64
+	Dispctr   *DispContainerT `json:"Dctr"`
+	Dimension int             `json:"Dim"`
+	ScaleF    float64         `json:"SF"`
 	//
 	//Display apldisplayT `json:"AplD"` // Welcome display - contains registered
 	Welcome *WelcomeT `json:"Welc"`
@@ -192,10 +193,23 @@ func (s *sessCtx) setState(ls *stateRec) {
 	if len(s.reqVersion) == 0 {
 		s.reqVersion = ls.Ver
 	}
-	// new part
-	// if s.selId == 0 && ls.SelId > 0 {
-	// 	s.selId = ls.SelId
-	// }
+	if s.dimension == 0 && ls.Dimension > 0 {
+		s.dimension = ls.Dimension
+	}
+	//
+	//  alexa launch
+	//
+	if s.request == "start" {
+		if s.selId == 0 && ls.SelId > 0 {
+			s.selId = ls.SelId
+		}
+		if ls.ShowObjMenu {
+			s.showObjMenu = true
+			s.displayData = objMenu
+			s.selId = 0
+		}
+	}
+	//
 	if len(s.object) == 0 && len(ls.Obj) > 0 {
 		s.object = ls.Obj
 	}
@@ -297,30 +311,53 @@ func (s *sessCtx) setState(ls *stateRec) {
 			s.reset = true
 		}
 	}
-	s.showObjMenu = ls.ShowObjMenu
-	if s.showObjMenu && len(ls.Ingredients) == 0 && len(ls.RecipeList) == 0 {
+	//s.showObjMenu = ls.ShowObjMenu
+	if s.showObjMenu { // && len(ls.Ingredients) == 0 && len(ls.RecipeList) == 0 {
 		fmt.Println("in setSession: displaying object menu is set")
 		s.showObjMenu = true
 		s.displayData = objMenu
+		s.selId = 0
+		s.selCtx = 0
 	}
 	if len(ls.MenuL) > 0 {
 		s.menuL = ls.MenuL
 	}
 	//s.dispCtr = &ls.Dispctr
-	s.dispCtr = ls.Dispctr
+	if ls.Dispctr != nil {
+		s.dispCtr = ls.Dispctr
+		s.displayData = s.dispCtr
+	}
 	if ls.ScaleF == 0 {
 		global.SetScale(1.0)
 	} else {
 		global.SetScale(ls.ScaleF)
 	}
-	//
-	// must exist with displayData set
+	if s.scalef == 0 && global.GetScale() > 0.0 {
+		s.scalef = global.GetScale()
+	}
 	//
 	// initial request is always start but above logic checks for current state to sets displayData accordingly
 	if s.displayData != nil {
 		fmt.Println("** setState: s.displayData is set")
 	}
-	if (s.request == "start" || s.request == "book" || s.request == "close" || s.request == "search") && s.displayData == nil {
+	//
+	if s.selId > 0 {
+		switch {
+		case ls.SelCtx == 0 && len(s.reqRName) == 0 && (ls.Request == "search" || ls.Request == "recipe"):
+			s.selCtx = ctxRecipeMenu
+			fmt.Println("in SetState: selCtx = ctxRecipeMenu")
+			//s.displayData = objMenu
+			//s.dispObjectMenu = true
+
+		case ls.Obj == "container":
+			fmt.Println(" container so set selCTx, SelId")
+			s.selCtx = ls.SelCtx
+			s.selId = ls.SelId
+			s.object = ls.Obj
+		}
+	}
+	//
+	if ((s.request == "start" && s.selCtx == 0) || (s.request == "book" || s.request == "close" || s.request == "search")) && s.displayData == nil {
 		var err error
 		// if this is a genuine start with no previous state
 		fmt.Printf("in setState:  welcome display %#v ", ls.Welcome)
@@ -335,22 +372,13 @@ func (s *sessCtx) setState(ls *stateRec) {
 }
 
 func (s *sessCtx) incrementState(ls *stateRec) {
+	//
+	//  moves "select context" (selCtx) forward based on last session state
+	//
 	fmt.Println("in incrementState: selId = ", s.selId)
 	if s.selId > 0 {
 		switch {
-		case ls.SelCtx == 0 && len(s.reqRName) == 0 && (ls.Request == "search" || ls.Request == "recipe"):
-			s.selCtx = ctxRecipeMenu
-			fmt.Println("in SetState: selCtx = ctxRecipeMenu")
-			//s.displayData = objMenu
-			//s.dispObjectMenu = true
-		case ls.Obj == "container":
-			fmt.Println(" container so set selCTx, SelId")
-			s.selCtx = ls.SelCtx
-			s.selId = ls.SelId
-			s.object = ls.Obj
-		case (ls.SelCtx == 0 && ls.ShowObjMenu) || (ls.SelCtx == ctxRecipeMenu && len(s.reqRName) > 0):
-			s.selCtx = ctxObjectMenu
-			fmt.Println("in SetState: selCtx = ctxObjectMenu")
+
 		case s.request == "select" && len(ls.Parts) > 0 && len(ls.Part) == 0:
 			s.selCtx = ctxPartMenu
 			fmt.Println("in SetState: selCtx = ctxPartMenu")
@@ -362,7 +390,9 @@ func (s *sessCtx) incrementState(ls *stateRec) {
 			s.selCtx = ctxObjectMenu
 			s.ingrdList = ls.Ingredients
 			fmt.Println("in setState: s.selCtx = ", s.selCtx)
-
+		case ls.SelCtx == ctxRecipeMenu && len(s.reqRName) > 0:
+			s.selCtx = ctxObjectMenu
+			fmt.Println("in SetState: selCtx = ctxObjectMenu")
 		}
 		fmt.Println("selCtx = ", s.selCtx)
 		fmt.Println("selId = ", s.selId)
@@ -558,9 +588,11 @@ func (s *sessCtx) updateState() error {
 		if len(s.state[i].RecipeList) > 0 || s.state[i].Request == "start" {
 			break
 		}
-		atribute = fmt.Sprintf("state[%d].ScaleF", i)
+		atribute = fmt.Sprintf("state[%d].SF", i)
 		fmt.Println(atribute, scale)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(scale))
+		atribute = fmt.Sprintf("state[%d].Dim", i)
+		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.dimension))
 	}
 	fmt.Println("about to update RecId ..", len(s.state)-1, s.recId)
 	atribute = fmt.Sprintf("state[%d].RecId", len(s.state)-1)
@@ -674,12 +706,14 @@ func (s *sessCtx) popState() error {
 	if len(s.state) == 0 {
 		s.getState()
 	}
+	fmt.Println(" state size: ", len(s.state))
 	if len(s.state) > 1 {
 		//
 		// pop state and persist to dynamo
 		//
 		State = s.state[:len(s.state)-1]
 		s.state = State[:]
+		fmt.Println("about to save state size: ", len(s.state))
 		//
 		t := time.Now()
 		t.Add(time.Hour * 24 * 1)
@@ -688,6 +722,7 @@ func (s *sessCtx) popState() error {
 		updateC = updateC.Set(expression.Name("state"), expression.Value(State))
 		expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
 		//
+		fmt.Println("using s.userid: ", s.userId)
 		pkey := pKey{Uid: s.userId}
 		av, err := dynamodbattribute.MarshalMap(&pkey)
 
@@ -699,9 +734,10 @@ func (s *sessCtx) popState() error {
 			ExpressionAttributeValues: expr.Values(),
 			ReturnValues:              aws.String("UPDATED_NEW"),
 		}
+		fmt.Println("Dyamo UpdateItem1: ")
 		_, err = s.dynamodbSvc.UpdateItem(input)
 		if err != nil {
-			fmt.Println("Dyamo error in popstate 1: ", err)
+			fmt.Println("Dyamo error in popstate 1: ", err.Error())
 			if aerr, ok := err.(awserr.Error); ok {
 				switch aerr.Code() {
 				case dynamodb.ErrCodeProvisionedThroughputExceededException:
@@ -718,11 +754,12 @@ func (s *sessCtx) popState() error {
 				// Message from an error.
 				fmt.Println(err.Error())
 			}
-			fmt.Println("Dyamo error in popstate 2: ", err)
+			fmt.Println("Dyamo error in popstate 2: ", err.Error())
 			return err
 		}
 		// pop last entry from session context state
 		//s.state = s.state[:len(s.state)-1]
+		fmt.Println("Successfully updateItem")
 		sr = State.pop()
 	} else {
 		sr = s.state.pop() //[len(s.state)-1]
@@ -795,6 +832,9 @@ func (s *sessCtx) popState() error {
 	if len(sr.InstructionData) > 0 {
 		fmt.Println("displayData = InstructionData")
 		s.displayData = sr.InstructionData
+	}
+	if s.dimension == 0 && sr.Dimension > 0 {
+		s.dimension = sr.Dimension
 	}
 	if len(sr.Ingredients) > 0 {
 		fmt.Println("displayData = Ingredients")

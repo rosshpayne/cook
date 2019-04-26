@@ -851,21 +851,39 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 	if c == nil {
 		panic("in GenDisplay(): DispContainerT instance is nil ")
 	}
-	if s.dimension > 0 {
+	if s.dimension > 0 || len(c.UDimension) > 0 {
+		//
+		// if s.request == "start" {
+		// 	_, err := s.pushState()
+		// 	if err != nil {
+		// 		return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
+		// 	}
+		// }
 		// response to user size request
 		cdim, err := strconv.Atoi(c.Dimension)
 		if err != nil {
 			panic(err.Error())
 		}
-		c.UDimension = strconv.Itoa(s.dimension)
-		global.SetScale(float64(s.dimension*s.dimension) / float64(cdim*cdim))
+		if s.dimension > 0 {
+			c.UDimension = strconv.Itoa(s.dimension)
+			global.SetScale(float64(s.dimension*s.dimension) / float64(cdim*cdim))
+		}
 		// persist  new scaleF
-		err = s.updateState()
-		if err != nil {
-			return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
+		switch s.request {
+		case "select":
+			_, err := s.pushState()
+			if err != nil {
+				return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
+			}
+		case "dimension":
+			err = s.updateState()
+			if err != nil {
+				return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
+			}
 		}
 		sf = strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
-		hdr = "1 Your container"
+		fmt.Println("s.scalef, global.GetScale() = ", s.scalef, global.GetScale())
+		hdr = "Your container"
 		subh = "Scale Factor:  " + sf
 		text = "All quantities will be adjusted to your container size: "
 		list = make([]DisplayItem, 8)
@@ -889,41 +907,41 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 			suggdim = strconv.Itoa(odim - 2)
 		}
 		if len(c.UDimension) > 0 {
-			list[6] = DisplayItem{Title: `To change your container? Say 'size [newsize]' e.g. "size ` + suggdim + `"`}
+			list[6] = DisplayItem{Title: `To change your container "size [integer]" e.g. "size ` + suggdim + `"`}
 		} else {
-			list[6] = DisplayItem{Title: `What is the size of your container? Say 'size [newsize]' e.g. "size ` + suggdim + `"`}
+			list[6] = DisplayItem{Title: `What is the size of your container? Say "size [integer]" e.g. "size ` + suggdim + `"`}
 		}
-		list[7] = DisplayItem{Title: `Note: must be less than the recipe container size`}
+		list[7] = DisplayItem{Title: `Note: the size must be an whole number and be less than the original container size`}
 
-	} else if len(c.UDimension) > 0 {
-		// info screen where user has specified resize. Can resize again.
-		sf = strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
-		hdr = "2 Your container"
-		subh = "Scale Factor:  " + sf
-		text = "All quantities will be adjusted to your container size: "
-		list = make([]DisplayItem, 8)
-		list[0] = DisplayItem{Title: text}
-		list[1] = DisplayItem{Title: " "}
-		list[2] = DisplayItem{Title: "Type:       " + c.Type_}
-		list[3] = DisplayItem{Title: "Original container Size: " + c.Dimension + " " + c.Unit}
-		list[4] = DisplayItem{Title: "Your container Size: " + c.UDimension + " " + c.Unit}
-		list[5] = DisplayItem{Title: " "}
-		// suggested resize
-		odim, err := strconv.Atoi(c.Dimension)
-		if err != nil {
-			panic(fmt.Errorf("in GenDisplay for container: cannot covert container dimension to int [%s]", err.Error()))
-		}
-		suggdim := strconv.Itoa(odim - 3)
-		if suggdim == c.UDimension {
-			suggdim = strconv.Itoa(odim - 2)
-		}
-		list[6] = DisplayItem{Title: `To change your container size, say 'size [newsize]' e.g. "size ` + suggdim + `"`}
-		list[7] = DisplayItem{Title: `Note: must be less than the original recipe container size `}
+		// } else if len(c.UDimension) > 0 {
+		// 	// info screen where user has specified resize. Can resize again.
+		// 	sf = strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
+		// 	hdr = "Your container"
+		// 	subh = "Scale Factor:  " + sf
+		// 	text = "All quantities will be adjusted to your container size: "
+		// 	list = make([]DisplayItem, 8)
+		// 	list[0] = DisplayItem{Title: text}
+		// 	list[1] = DisplayItem{Title: " "}
+		// 	list[2] = DisplayItem{Title: "Type:       " + c.Type_}
+		// 	list[3] = DisplayItem{Title: "Original container Size: " + c.Dimension + " " + c.Unit}
+		// 	list[4] = DisplayItem{Title: "Your container Size: " + c.UDimension + " " + c.Unit}
+		// 	list[5] = DisplayItem{Title: " "}
+		// 	// suggested resize
+		// 	odim, err := strconv.Atoi(c.Dimension)
+		// 	if err != nil {
+		// 		panic(fmt.Errorf("in GenDisplay for container: cannot covert container dimension to int [%s]", err.Error()))
+		// 	}
+		// 	suggdim := strconv.Itoa(odim - 3)
+		// 	if suggdim == c.UDimension {
+		// 		suggdim = strconv.Itoa(odim - 2)
+		// 	}
+		// 	list[6] = DisplayItem{Title: `To change your container size, say 'size [newsize]' e.g. "size ` + suggdim + `"`}
+		// 	list[7] = DisplayItem{Title: `Note: must be less than the original recipe container size `}
 
 	} else {
 		// info screen where user has NOT specified resize yet. Can resize if necessary
 		sf = strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
-		hdr = "3 Specify the size of your container"
+		hdr = "Specify the size of your container"
 		subh = "Scale Factor:  " + sf
 		text = "Quantities are based on the following container specification: "
 		list = make([]DisplayItem, 7)
@@ -939,11 +957,15 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 		suggdim := strconv.Itoa(odim - 3)
 		list[5] = DisplayItem{Title: `What is the size of your container? Say 'size [newsize]' e.g. "size ` + suggdim + `"`}
 		list[6] = DisplayItem{Title: `Note: your container size must be less than the recipe container size displayed above`}
+		if s.request != "start" {
+			_, err := s.pushState()
+			if err != nil {
+				return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
+			}
+		}
 	}
-	_, err := s.pushState()
-	if err != nil {
-		return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
-	}
+	// create new state - must do this so when back button is hit we can pop this state otherwise we loose objMenu state
+	//  alternatively we cou ld updateState to indicate this state - but that invovles a write so we may as well create a new state.
 	type_ := "Ingredient"
 	backBtn := true
 	if len(s.state) < 2 {
