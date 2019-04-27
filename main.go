@@ -423,6 +423,7 @@ func (s *sessCtx) orchestrateRequest() error {
 		case Threads:
 			s.passErr = true
 			s.dmsg = ` *** Alert :  you cannot scale a recipe while following instructions. Say "go back" or "restart" and scale from there.`
+			return nil
 		default:
 			global.SetScale(s.scalef)
 			if s.showObjMenu {

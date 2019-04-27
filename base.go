@@ -718,7 +718,13 @@ func (s *sessCtx) loadBaseRecipe() error {
 						str = strings.ToUpper(string(s)) + str[1:]
 					case voice:
 						global.Set_WriteCtx(global.USay) // package variable to deterine String() formating
-						str = pt.Verbal
+						if len(pt.Verbal) == 0 {
+							pt.verbal = pt.text
+							continue
+						} else {
+							str = pt.Verbal
+						}
+
 						//TODO: why use expandTags here..
 					}
 					// if no {} then print and return to top of the loop
