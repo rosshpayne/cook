@@ -316,14 +316,12 @@ func (s *sessCtx) setState(ls *stateRec) {
 		fmt.Println("in setSession: displaying object menu is set")
 		s.showObjMenu = true
 		s.displayData = objMenu
-		s.selId = 0
-		s.selCtx = 0
 	}
 	if len(ls.MenuL) > 0 {
 		s.menuL = ls.MenuL
 	}
 	//s.dispCtr = &ls.Dispctr
-	if ls.Dispctr != nil {
+	if ls.Dispctr != nil && !s.showObjMenu {
 		s.dispCtr = ls.Dispctr
 		s.displayData = s.dispCtr
 	}

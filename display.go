@@ -852,13 +852,6 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 		panic("in GenDisplay(): DispContainerT instance is nil ")
 	}
 	if s.dimension > 0 || len(c.UDimension) > 0 {
-		//
-		// if s.request == "start" {
-		// 	_, err := s.pushState()
-		// 	if err != nil {
-		// 		return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
-		// 	}
-		// }
 		// response to user size request
 		cdim, err := strconv.Atoi(c.Dimension)
 		if err != nil {
@@ -912,31 +905,6 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 			list[6] = DisplayItem{Title: `What is the size of your container? Say "size [integer]" e.g. "size ` + suggdim + `"`}
 		}
 		list[7] = DisplayItem{Title: `Note: the size must be an whole number and be less than the original container size`}
-
-		// } else if len(c.UDimension) > 0 {
-		// 	// info screen where user has specified resize. Can resize again.
-		// 	sf = strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
-		// 	hdr = "Your container"
-		// 	subh = "Scale Factor:  " + sf
-		// 	text = "All quantities will be adjusted to your container size: "
-		// 	list = make([]DisplayItem, 8)
-		// 	list[0] = DisplayItem{Title: text}
-		// 	list[1] = DisplayItem{Title: " "}
-		// 	list[2] = DisplayItem{Title: "Type:       " + c.Type_}
-		// 	list[3] = DisplayItem{Title: "Original container Size: " + c.Dimension + " " + c.Unit}
-		// 	list[4] = DisplayItem{Title: "Your container Size: " + c.UDimension + " " + c.Unit}
-		// 	list[5] = DisplayItem{Title: " "}
-		// 	// suggested resize
-		// 	odim, err := strconv.Atoi(c.Dimension)
-		// 	if err != nil {
-		// 		panic(fmt.Errorf("in GenDisplay for container: cannot covert container dimension to int [%s]", err.Error()))
-		// 	}
-		// 	suggdim := strconv.Itoa(odim - 3)
-		// 	if suggdim == c.UDimension {
-		// 		suggdim = strconv.Itoa(odim - 2)
-		// 	}
-		// 	list[6] = DisplayItem{Title: `To change your container size, say 'size [newsize]' e.g. "size ` + suggdim + `"`}
-		// 	list[7] = DisplayItem{Title: `Note: must be less than the original recipe container size `}
 
 	} else {
 		// info screen where user has NOT specified resize yet. Can resize if necessary

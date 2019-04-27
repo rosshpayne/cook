@@ -232,7 +232,7 @@ func (s *sessCtx) clearForSearch(lastState *stateRec) {
 
 func incrementRequest(r string) bool {
 	switch r {
-	case "restart", "book", "close", "search", "start", "dimension":
+	case "restart", "book", "close", "search", "start", "dimension", "scale":
 		return false
 	default:
 		return true
@@ -325,11 +325,12 @@ func (s *sessCtx) orchestrateRequest() error {
 		fmt.Println("start...")
 		switch wx := s.displayData.(type) {
 		case Threads:
-			fmt.Println("Threads..")
+			fmt.Println("displayData: Threads")
 			// redirect request
 			s.request = "start-next"
+
 		case *WelcomeT:
-			fmt.Println("Welcome..")
+			fmt.Println("displayData: *WelcomeT")
 			// no previous session - check if userId is registered
 			// check for row U-[userId] in ingredients table. This item contains books registered to userId
 			//  if no data then user is not registered and therefore ineligble to use app
@@ -365,6 +366,10 @@ func (s *sessCtx) orchestrateRequest() error {
 			// 		panic("error: displayData is nil - setState should have assigned it a value but didnot")
 			// 	}
 			// 	return nil
+
+		case ObjMenu:
+			fmt.Println("displayData: ObjMenu")
+			return nil
 		}
 	}
 
@@ -424,7 +429,7 @@ func (s *sessCtx) orchestrateRequest() error {
 				s.displayData = objMenu
 				s.updateState()
 			}
-			return nil
+			//return nil - needs to use selId & selCtx to regen instructions
 		}
 	}
 	//
@@ -925,16 +930,6 @@ func (s *sessCtx) orchestrateRequest() error {
 			case CtrMsr_:
 				// displayData assigned in setState()
 				fmt.Printf("CtrMsr - %#v\n", *(s.dispCtr))
-				//s.displayData = s.dispCtr
-
-				// s.reset = true
-				// s.showObjMenu = false
-				// s.curReqType = 0
-
-				// _, err = s.pushState()
-				// if err != nil {
-				// 	return err
-				// }
 				return nil
 			}
 

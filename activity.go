@@ -482,8 +482,11 @@ func (m *MeasureT) String() string {
 		if err != nil {
 			panic(fmt.Errorf("Error: cannot covert Quantity [%s] to int in *MeasureT.String()", s))
 		}
+		fmt.Println("i=", i)
 		qty := float64(i) * 10 * global.GetScale()
+		fmt.Println("qty=", qty)
 		qty = roundTo5(qty) / 10
+		fmt.Println("qty=", qty)
 		if qty < 1 {
 			if qty > 0.875 {
 				s = "1.0"
@@ -551,7 +554,8 @@ func (m *MeasureT) String() string {
 			}
 			return mn.FormatString()
 		}
-		s := scaleInt(m.Quantity)
+		//s := scaleInt(m.Quantity)
+		s := scaleFloat(m.Quantity)
 		mn := &MeasureT{Quantity: s, Size: m.Size, Num: m.Num}
 		return mn.FormatString()
 	}
@@ -565,6 +569,7 @@ func (m *MeasureT) String() string {
 	if len(m.Quantity) > 0 && len(m.Unit) > 0 {
 		//
 		if strings.IndexByte(m.Quantity, '/') > 0 {
+			// return from here..
 			s := scaleFraction(m.Quantity)
 			if s == c_pinchof {
 				mn := &MeasureT{Quantity: s, Size: m.Size, Num: m.Num}
