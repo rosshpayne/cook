@@ -379,7 +379,7 @@ func (s *sessCtx) orchestrateRequest() error {
 	if s.request == "list" {
 		//s.request = "select"
 		if len(lastState.RecipeList) > 0 || len(s.state) == 1 {
-			fmt.Println("Cannot list from this screen - must choose a recipe first")
+			fmt.Println("Cannot list from this context - must choose a recipe first")
 			s.passErr = true
 		} else {
 			if lastState.ShowObjMenu != true {
@@ -391,16 +391,20 @@ func (s *sessCtx) orchestrateRequest() error {
 			s.displayData = nil
 			s.request = "select"
 			s.selCtx = 2
+			fmt.Println("s.action: ", s.action)
 			switch s.action {
-			case "ingredients":
+			case "ingredients", "ingredient":
 				s.selId = 1
-			case "containers":
+			case "containers", "container":
 				s.selId = 2
-			case "instructions", "start cooking", "steps":
+			case "instructions", "instruction", "start cooking", "steps", "step":
 				s.selId = len(s.menuL)
+			default:
+				fmt.Println("Invalid action ", s.action)
+				s.passErr = true
+				s.dmsg = `Invalid list action. Valid actions are "ingredient","container","instruction"`
 			}
 		}
-
 	}
 	if s.request == "dimension" {
 		if s.dimension == 0 {
@@ -466,6 +470,7 @@ func (s *sessCtx) orchestrateRequest() error {
 	// yes/no response. May assign new book
 	//
 	fmt.Println("yesno: ", s.yesno)
+	fmt.Println("selCtx: ", s.selCtx)
 	fmt.Println("selId: ", s.selId)
 	fmt.Println("Qid: ", lastState.Qid)
 

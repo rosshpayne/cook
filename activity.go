@@ -474,6 +474,7 @@ func (m *MeasureT) String() string {
 		} else {
 			return c_pinchof
 		}
+		fmt.Println("scaleFloat: ", ff, f)
 		return strconv.FormatFloat(ff+f, 'g', -1, 64)
 	}
 
@@ -596,6 +597,7 @@ func (m *MeasureT) String() string {
 		}
 		// *1000 as we are to change to smaller unit
 		qty = f * global.GetScale()
+		fmt.Println("qty: ", qty)
 		if m.Unit == "l" || m.Unit == "cm" || m.Unit == "kg" {
 			var unit string
 			qty *= 1000
@@ -619,6 +621,7 @@ func (m *MeasureT) String() string {
 		}
 		qty = roundTo5(qty)
 		fint, frac := math.Modf(qty)
+		fmt.Println("fint, frac: ", fint, frac)
 		if m.Unit != "g" {
 			if frac > .825 {
 				fint += 1.0
@@ -631,7 +634,7 @@ func (m *MeasureT) String() string {
 			} else if frac > .175 {
 				part = " 1/4"
 				//part = ".25"
-			} else if frac > .75 {
+			} else if frac > .075 {
 				part = " 1/8"
 				//part = ".125"
 			} else {
@@ -639,7 +642,7 @@ func (m *MeasureT) String() string {
 			}
 		}
 		ff := strconv.FormatFloat(fint, 'g', -1, 64)
-		if qty < 5 {
+		if qty < 10 {
 			if fint == 0 {
 				mn := &MeasureT{Quantity: part, Unit: m.Unit, Size: m.Size, Num: m.Num}
 				return mn.FormatString()
