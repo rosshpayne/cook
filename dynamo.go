@@ -829,8 +829,7 @@ func (s *sessCtx) recipeRSearch() (*RecipeT, error) {
 		}
 	}
 	s.dmsg = s.reqRName + " in " + s.reqBkName + " by " + s.authors
-	s.vmsg = "sFound " + s.reqRName + " in " + s.reqBkName + " by " + s.authors
-	s.vmsg += `What would you like to list?. Say "list containers" or "List Ingredients" or "start Cooking" or "cancel"`
+	s.vmsg = s.reqRName
 	s.recipe = rec
 	//fmt.Printf("assign Recipe Parts: %d, %#v\n\n", len(rec.Part), rec.Part)
 	s.parts = rec.Part

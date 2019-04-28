@@ -117,6 +117,7 @@ type sessCtx struct {
 	//
 	cThread int // current thread
 	oThread int // other active thread
+	//instrId     // instruction id
 	//
 	menuL     menuList
 	dispCtr   *DispContainerT
@@ -132,6 +133,7 @@ type sessCtx struct {
 	reqOpenBk    BookT // BkId|BkName|authors
 	openBkChange bool
 	//	tryOpenBk    bool
+	action string // list actions: ingredients, containers, instructions
 }
 
 const scaleThreshold float64 = 0.9
@@ -232,7 +234,7 @@ func (s *sessCtx) clearForSearch(lastState *stateRec) {
 
 func incrementRequest(r string) bool {
 	switch r {
-	case "restart", "book", "close", "search", "start", "dimension", "scale":
+	case "restart", "book", "close", "search", "start", "dimension", "scale", "list":
 		return false
 	default:
 		return true
@@ -368,11 +370,38 @@ func (s *sessCtx) orchestrateRequest() error {
 			// 	return nil
 
 		case ObjMenu:
+			// displayData assigned in setState()
 			fmt.Println("displayData: ObjMenu")
 			return nil
 		}
 	}
 
+	if s.request == "list" {
+		//s.request = "select"
+		if len(lastState.RecipeList) > 0 || len(s.state) == 1 {
+			fmt.Println("Cannot list from this screen - must choose a recipe first")
+			s.passErr = true
+		} else {
+			if lastState.ShowObjMenu != true {
+				err := s.popState() // will set request to "start" assigned from stateRec[0].Request.
+				if err != nil {
+					return err
+				}
+			}
+			s.displayData = nil
+			s.request = "select"
+			s.selCtx = 2
+			switch s.action {
+			case "ingredients":
+				s.selId = 1
+			case "containers":
+				s.selId = 2
+			case "instructions", "start cooking", "steps":
+				s.selId = len(s.menuL)
+			}
+		}
+
+	}
 	if s.request == "dimension" {
 		if s.dimension == 0 {
 			return fmt.Errorf("Dimension must be greater than zero")
@@ -899,7 +928,7 @@ func (s *sessCtx) orchestrateRequest() error {
 						return err
 					}
 
-				case "start":
+				case "start", "list":
 					s.ingrdList = IngredientT(s.ingrdList)
 				}
 				//
@@ -1151,6 +1180,8 @@ func handler(request InputEvent) (RespEvent, error) {
 				sessctx.gotoRecId = i
 			}
 		}
+	case "list":
+		sessctx.action = request.QueryStringParameters["action"]
 	}
 
 	if sessctx.initialiseRequest_() && !sessctx.back {
@@ -1262,12 +1293,12 @@ func main() {
 	// 		panic(err)
 	// 	}
 	// }
-	// global.Set_WriteCtx(global.UDisplay)
-	// p, _ := handler(p2)
-	// if len(p.Error) > 0 {
-	// 	fmt.Printf("%#v\n", p.Error)
-	// } else {
-	// 	fmt.Printf("output:   %s\n", p.Text)
-	// 	fmt.Printf("output:   %s\n", p.Verbal)
-	// }
+	// 	global.Set_WriteCtx(global.UDisplay)
+	// 	p, _ := handler(p2)
+	// 	if len(p.Error) > 0 {
+	// 		fmt.Printf("%#v\n", p.Error)
+	// 	} else {
+	// 		fmt.Printf("output:   %s\n", p.Text)
+	// 		fmt.Printf("output:   %s\n", p.Verbal)
+	// 	}
 }

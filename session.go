@@ -63,6 +63,7 @@ type stateRec struct {
 	Part    string `json:"Part"`
 	CThread int    `json:"CThrd"` // current thread
 	OThread int    `json:"OThrd"` // other active thread - only two threads currently catered for. seems unlikely there would be more.
+	//InstId  int    `json:"Iid"`   // instruction index - copy of Id in InstructionData
 	//
 	//InstructionData InstructionS `json:"I"`
 	InstructionData Threads `json:"I"`
@@ -215,9 +216,6 @@ func (s *sessCtx) setState(ls *stateRec) {
 	}
 	if s.selCtx == 0 && ls.SelCtx > 0 {
 		s.selCtx = ls.SelCtx
-	}
-	if len(ls.MenuL) > 0 {
-		s.menuL = ls.MenuL
 	}
 	if len(ls.Ingredients) > 0 {
 		s.ingrdList = ls.Ingredients
@@ -587,14 +585,31 @@ func (s *sessCtx) updateState() error {
 			break
 		}
 		atribute = fmt.Sprintf("state[%d].SF", i)
-		fmt.Println(atribute, scale)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(scale))
+		fmt.Println(atribute, scale)
+	}
+	for i := len(s.state) - 1; i > len(s.state)-3 && i > 0; i-- {
+
+		if len(s.state[i].RecipeList) > 0 || s.state[i].Request == "start" {
+			break
+		}
+		fmt.Println("About to update Dim, RecId, Thrds  upto objMenu ", i)
+		//
 		atribute = fmt.Sprintf("state[%d].Dim", i)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.dimension))
+		//
+		atribute = fmt.Sprintf("state[%d].RecId", i)
+		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
+		//
+		atribute = fmt.Sprintf("state[%d].CThrd", i)
+		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.cThread))
+		atribute = fmt.Sprintf("state[%d].OThrd", i)
+		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.oThread))
+		//
 	}
-	fmt.Println("about to update RecId ..", len(s.state)-1, s.recId)
-	atribute = fmt.Sprintf("state[%d].RecId", len(s.state)-1)
-	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
+	//	fmt.Println("about to update RecId ..", len(s.state)-1, s.recId)
+	// atribute = fmt.Sprintf("state[%d].RecId", len(s.state)-1)
+	// updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
 	if s.openBkChange {
 		atribute = fmt.Sprintf("state[%d].OpenBk", len(s.state)-1)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.reqOpenBk))
@@ -616,10 +631,7 @@ func (s *sessCtx) updateState() error {
 	}
 	atribute = fmt.Sprintf("state[%d].DT", len(s.state)-1)
 	updateC = updateC.Set(expression.Name(atribute), expression.Value(time.Now().Format("Jan 2 15:04:05")))
-	atribute = fmt.Sprintf("state[%d].CThrd", len(s.state)-1)
-	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.cThread))
-	atribute = fmt.Sprintf("state[%d].OThrd", len(s.state)-1)
-	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.oThread))
+
 	if len(s.CloseBkName) > 0 {
 		atribute = fmt.Sprintf("state[%d].OpenBk", len(s.state)-1)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.reqOpenBk))
