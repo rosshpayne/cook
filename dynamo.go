@@ -292,7 +292,7 @@ type containerT struct {
 	Text   string `json:"txt"`
 }
 
-func (s *sessCtx) getScaleContainer() (Container, error) {
+func (s *sessCtx) getScaleContainer() (*Container, error) {
 
 	// return a single scale container (containers that determine quantity of ingredients)
 	//  if more than one scale container first one is returned.
@@ -339,15 +339,15 @@ func (s *sessCtx) getScaleContainer() (Container, error) {
 	}
 	if len(result.Items) == 0 {
 		fmt.Println("in getScaleContainer - no records found.")
-		return Container{}, nil
+		return nil, nil
 	}
 	recS := make([]Container, int(*result.Count))
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &recS)
 	if err != nil {
-		return Container{}, fmt.Errorf("Error: %s [%s] err", "in UnmarshalListMaps of getScaleContainer ", s.reqRName, err.Error())
+		return nil, fmt.Errorf("Error: %s [%s] err", "in UnmarshalListMaps of getScaleContainer ", s.reqRName, err.Error())
 	}
 	fmt.Printf("in getScaleContainer - recS  %#v\n", recS[0])
-	return recS[0], nil
+	return &recS[0], nil
 }
 
 type indexRecipeT struct {

@@ -275,6 +275,7 @@ const EventHandler = {
     const event = args[0];
     //const ordinal = args[1];
     //const data = args[2];
+    // value passed from APL when user presses selectable container
     const selid='&sId='+args[1];
 
     switch (event) {
@@ -476,6 +477,66 @@ const RestartIntentHandler = {
   },
 };
 
+const ResizeIntentHandler = {
+  canHandle(handlerInput) {
+    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+      && handlerInput.requestEnvelope.request.intent.name === 'ResizeIntent';
+  },
+  handle(handlerInput) {
+    const querystring = require('querystring');
+    const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
+    const size='&size='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.integer.resolutions.resolutionsPerAuthority[0].values[0].value.id);
+
+    invokeParams.Payload = '{ "Path" : "resize" ,"Param" : "'+uid+size+'" }';
+    
+    var promise= new Promise((resolve, reject) => {
+          lambda.invoke(invokeParams, function(err, data) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(data.Payload);  }
+          });
+        });    
+        
+    return promise.then((body) => {
+        var  resp = JSON.parse(body);
+        console.log(resp);
+        return handleResponse(handlerInput, resp);
+      }).catch(function (err) { console.log(err, err.stack);  } );
+    
+  },
+};
+
+
+const ListIntentHandler = {
+  canHandle(handlerInput) {
+    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+      && handlerInput.requestEnvelope.request.intent.name === 'ListIntent';
+  },
+  handle(handlerInput) {
+    const querystring = require('querystring');
+    const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
+    const act='&action='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.actionString.resolutions.resolutionsPerAuthority[0].values[0].value.name);
+
+   invokeParams.Payload = '{ "Path" : "list" ,"Param" : "'+uid+act+'" }';
+    
+    var promise= new Promise((resolve, reject) => {
+          lambda.invoke(invokeParams, function(err, data) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(data.Payload);  }
+          });
+        });    
+        
+    return promise.then((body) => {
+        var  resp = JSON.parse(body);
+        console.log(resp);
+        return handleResponse(handlerInput, resp);
+      }).catch(function (err) { console.log(err, err.stack);  } );
+    
+  },
+};
 
 const ScaleIntentHandler = {
   canHandle(handlerInput) {
@@ -510,34 +571,6 @@ const ScaleIntentHandler = {
   },
 };
 
-const DimensionIntentHandler = {
-  canHandle(handlerInput) {
-    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
-      && handlerInput.requestEnvelope.request.intent.name === 'DimensionIntent';
-  },
-  handle(handlerInput) {
-    const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
-    const dim='&dim='+handlerInput.requestEnvelope.request.intent.slots.size.resolutions.resolutionsPerAuthority[0].values[0].value.id;
-    //                  handlerInput.requestEnvelope.request.intent.slots.YesNo.resolutions.resolutionsPerAuthority[0].values[0].value.id;
-    invokeParams.Payload = '{ "Path" : "dimension" ,"Param" : "'+uid+dim+'" }';
-    
-    var promise= new Promise((resolve, reject) => {
-          lambda.invoke(invokeParams, function(err, data) {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(data.Payload);  }
-          });
-        });    
-        
-    return promise.then((body) => {
-        var  resp = JSON.parse(body);
-        console.log(resp);
-        return handleResponse(handlerInput, resp);
-      }).catch((err) => { console.log("this is in error", err, err.stack);  } );
-    
-  },
-};
 
 const BookIntentHandler = {
   canHandle(handlerInput) {
@@ -1064,12 +1097,18 @@ const ErrorHandler = {
   },
 };
 
-
 function handleResponse (handlerInput , resp) {
-        if (resp.Type === "Ingredient" || resp.Type === "IngredientErr") {
+        if (resp.Type === "Ingredient" ) {
           const ingrd = require('APL/' + resp.Type + '.js');
           return  handlerInput.responseBuilder
                             .speak(resp.Text)
+                            .reprompt(resp.Text)
+                            .addDirective(ingrd(resp.BackBtn, resp.Header,resp.SubHdr, resp.List, resp.Hint, resp.Error))
+                            .getResponse();
+        } else if ( resp.Type === "IngredientErr") {
+          const ingrd = require('APL/' + resp.Type + '.js');
+          return  handlerInput.responseBuilder
+                            .speak(resp.Error)
                             .reprompt(resp.Text)
                             .addDirective(ingrd(resp.BackBtn, resp.Header,resp.SubHdr, resp.List, resp.Hint, resp.Error))
                             .getResponse();
@@ -1154,6 +1193,7 @@ exports.handler = skillBuilder
     BackIntentHandler,
     CloseBookIntentHandler,
     RestartIntentHandler,
+    ResizeIntentHandler,
     RecipeIntentHandler,
     VersionIntentHandler,
     TaskIntentHandler,
@@ -1161,8 +1201,8 @@ exports.handler = skillBuilder
     YesNoIntentHandler,
     GotoIntentHandler,
     SelectIntentHandler,
-    DimensionIntentHandler,
     ScaleIntentHandler,
+    ListIntentHandler,
     SearchIntentHandler,
     PrevIntentHandler,
     RepeatIntentHandler,

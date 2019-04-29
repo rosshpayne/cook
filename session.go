@@ -70,9 +70,9 @@ type stateRec struct {
 	ShowObjMenu     bool
 	MenuL           menuList
 	//
-	Dispctr   *DispContainerT `json:"Dctr"`
-	Dimension int             `json:"Dim"`
-	ScaleF    float64         `json:"SF"`
+	DispCtr *DispContainerT `json:"Dctr"`
+	CtSize  int             `json:"Dim"`
+	ScaleF  float64         `json:"SF"`
 	//
 	//Display apldisplayT `json:"AplD"` // Welcome display - contains registered
 	Welcome *WelcomeT `json:"Welc"`
@@ -194,8 +194,8 @@ func (s *sessCtx) setState(ls *stateRec) {
 	if len(s.reqVersion) == 0 {
 		s.reqVersion = ls.Ver
 	}
-	if s.dimension == 0 && ls.Dimension > 0 {
-		s.dimension = ls.Dimension
+	if s.ctSize == 0 && ls.CtSize > 0 {
+		s.ctSize = ls.CtSize
 	}
 	//
 	//  alexa launch
@@ -318,10 +318,22 @@ func (s *sessCtx) setState(ls *stateRec) {
 	if len(ls.MenuL) > 0 {
 		s.menuL = ls.MenuL
 	}
-	//s.dispCtr = &ls.Dispctr
-	if ls.Dispctr != nil && !s.showObjMenu {
-		s.dispCtr = ls.Dispctr
-		s.displayData = s.dispCtr
+	//s.dispCtr = &ls.DispCtr
+	if ls.DispCtr == nil {
+		fmt.Printf("getState: ls.DispCtr is nil\n")
+	} else {
+		fmt.Printf("getState: ls.DispCtr %#v\n", *(ls.DispCtr))
+	}
+	if ls.DispCtr != nil { //&& !s.showObjMenu {
+		s.dispCtr = ls.DispCtr
+		if s.displayData == nil {
+			s.displayData = s.dispCtr
+		}
+	}
+	if s.dispCtr == nil {
+		fmt.Printf("getState: s.dispCtr is nil\n")
+	} else {
+		fmt.Printf("getState: s.dispCtr %#v\n", *(s.dispCtr))
 	}
 	if ls.ScaleF == 0 {
 		global.SetScale(1.0)
@@ -353,7 +365,7 @@ func (s *sessCtx) setState(ls *stateRec) {
 		}
 	}
 	//
-	if ((s.request == "start" && s.selCtx == 0) || (s.request == "book" || s.request == "close" || s.request == "search")) && s.displayData == nil {
+	if (((s.request == "start" || s.request == "list") && s.selCtx == 0) || (s.request == "book" || s.request == "close" || s.request == "search")) && s.displayData == nil {
 		var err error
 		// if this is a genuine start with no previous state
 		fmt.Printf("in setState:  welcome display %#v ", ls.Welcome)
@@ -465,9 +477,14 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 	if len(s.menuL) > 0 {
 		sr.MenuL = s.menuL
 	}
+	if s.dispCtr == nil {
+		fmt.Printf("pushState: s.dispCtr is nil\n")
+	} else {
+		fmt.Printf("pushState: s.dispCtr %#v\n", s.dispCtr)
+	}
 	if s.dispCtr != nil {
-		//sr.Dispctr = *(s.dispCtr)
-		sr.Dispctr = s.dispCtr
+		//sr.DispCtr = *(s.dispCtr)
+		sr.DispCtr = s.dispCtr
 	}
 	sr.ScaleF = global.GetScale()
 	//
@@ -569,10 +586,6 @@ func (s *sessCtx) updateState() error {
 		atribute = fmt.Sprintf("state[%d].MenuL", len(s.state)-1)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.menuL))
 	}
-	if s.dispCtr != nil {
-		atribute = fmt.Sprintf("state[%d].Dctr", len(s.state)-1)
-		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.dispCtr))
-	}
 	fmt.Println("About to update ScaleF..")
 	// if scale changes then history must change to new value upto but not including last ingredients display or end of state list.
 	for scale, i := global.GetScale(), len(s.state)-1; i > len(s.state)-3 && i > 0; i-- {
@@ -596,7 +609,10 @@ func (s *sessCtx) updateState() error {
 		fmt.Println("About to update Dim, RecId, Thrds  upto objMenu ", i)
 		//
 		atribute = fmt.Sprintf("state[%d].Dim", i)
-		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.dimension))
+		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.ctSize))
+		//
+		atribute = fmt.Sprintf("state[%d].Dctr", i)
+		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.dispCtr))
 		//
 		atribute = fmt.Sprintf("state[%d].RecId", i)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
@@ -843,8 +859,8 @@ func (s *sessCtx) popState() error {
 		fmt.Println("displayData = InstructionData")
 		s.displayData = sr.InstructionData
 	}
-	if s.dimension == 0 && sr.Dimension > 0 {
-		s.dimension = sr.Dimension
+	if s.ctSize == 0 && sr.CtSize > 0 {
+		s.ctSize = sr.CtSize
 	}
 	if len(sr.Ingredients) > 0 {
 		fmt.Println("displayData = Ingredients")
@@ -868,8 +884,8 @@ func (s *sessCtx) popState() error {
 	if len(sr.MenuL) > 0 {
 		s.menuL = sr.MenuL
 	}
-	//s.dispCtr = &sr.Dispctr
-	s.dispCtr = sr.Dispctr
+	//s.dispCtr = &sr.DispCtr
+	s.dispCtr = sr.DispCtr
 	if sr.ScaleF == 0 {
 		global.SetScale(1.0)
 	} else {

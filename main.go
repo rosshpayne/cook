@@ -119,11 +119,11 @@ type sessCtx struct {
 	oThread int // other active thread
 	//instrId     // instruction id
 	//
-	menuL     menuList
-	dispCtr   *DispContainerT
-	dimension int // size of user container in scaling mode
-	scalef    float64
-	reScale   bool // true in scaling mode
+	menuL   menuList
+	dispCtr *DispContainerT
+	//dimension int // size of user container in scaling mode
+	scalef  float64
+	reScale bool // true in scaling mode
 	//
 	//display *apldisplayT
 	welcome *WelcomeT
@@ -134,6 +134,7 @@ type sessCtx struct {
 	openBkChange bool
 	//	tryOpenBk    bool
 	action string // list actions: ingredients, containers, instructions
+	ctSize int    // resize a container
 }
 
 const scaleThreshold float64 = 0.9
@@ -234,7 +235,7 @@ func (s *sessCtx) clearForSearch(lastState *stateRec) {
 
 func incrementRequest(r string) bool {
 	switch r {
-	case "restart", "book", "close", "search", "start", "dimension", "scale", "list":
+	case "restart", "book", "close", "search", "start", "resize", "scale", "list":
 		return false
 	default:
 		return true
@@ -377,57 +378,70 @@ func (s *sessCtx) orchestrateRequest() error {
 	}
 
 	if s.request == "list" {
-		//s.request = "select"
+		//
 		if len(lastState.RecipeList) > 0 || len(s.state) == 1 {
 			fmt.Println("Cannot list from this context - must choose a recipe first")
+			s.dmsg = `*** Alert: Cannot list from this context -  choose a recipe first. Say "find recipe" or "restart" or "open book"`
 			s.passErr = true
-		} else {
-			if lastState.ShowObjMenu != true {
-				err := s.popState() // will set request to "start" assigned from stateRec[0].Request.
-				if err != nil {
-					return err
-				}
+			// displayData set in setState()
+			return nil
+		}
+		if lastState.ShowObjMenu != true {
+			err := s.popState() // will set request to "start" assigned from stateRec[0].Request.
+			if err != nil {
+				return err
 			}
-			s.displayData = nil
-			s.request = "select"
-			s.selCtx = 2
-			fmt.Println("s.action: ", s.action)
-			switch s.action {
-			case "ingredients", "ingredient":
-				s.selId = 1
-			case "containers", "container":
-				s.selId = 2
-			case "instructions", "instruction", "start cooking", "steps", "step":
-				s.selId = len(s.menuL)
+		}
+		s.displayData = nil
+		s.request = "select"
+		s.selCtx = 2
+		fmt.Println("s.action: ", s.action)
+		switch s.action {
+		case "ingredients", "ingredient":
+			s.selId = 1
+		case "containers", "container":
+			s.selId = 2
+		case "size":
+			if s.displayData == nil {
+				s.displayData = s.dispCtr
+			}
+			switch len(s.menuL) {
+			case 4:
+				s.selId = 3
 			default:
-				fmt.Println("Invalid action ", s.action)
+				fmt.Println("*** Resizing the container is not available for this recipe")
+				s.dmsg = `*** Alert: Resizing the container is not available for this recipe`
 				s.passErr = true
-				s.dmsg = `Invalid list action. Valid actions are "ingredient","container","instruction"`
 			}
+		case "instructions", "instruction", "start cooking", "steps", "step":
+			s.selId = len(s.menuL)
+		default:
+			fmt.Println("Invalid action ", s.action)
+			s.passErr = true
+			s.dmsg = `Invalid list action. Valid actions are "ingredient","container","instruction"`
 		}
 	}
-	if s.request == "dimension" {
-		if s.dimension == 0 {
-			return fmt.Errorf("Dimension must be greater than zero")
-		}
+
+	if s.request == "resize" { // user enters "size [integer]"
+		//
+		// user sepecified size of container e.g "size 23"
 		if s.object != "scaleContainer" {
+			fmt.Println("Cannot change container size from this context - must choose a recipe first")
+			s.dmsg = `*** Alert: Cannot change container size from this context -  Say "list resize" and then "resize"`
 			s.passErr = true
-			s.dmsg = "** Alert: cannot size a container from this context"
-			fmt.Println(s.dmsg)
-			return nil
+			// user lastState selCtx & selId to complete processing
 		}
 		c := s.dispCtr
 		cdim, err := strconv.Atoi(c.Dimension)
-		fmt.Println("Dimension: cdim = ", cdim)
-		fmt.Println("user entered dimension = ", s.dimension)
 		if err != nil {
 			panic(err.Error())
 		}
-		if float64(s.dimension)/float64(cdim) < 0.6 {
-			return fmt.Errorf("Dimension cannot be less than 60% of recommended container size")
+		fmt.Println("Dimension: cdim = ", cdim)
+		fmt.Println("user entered dimension = ", s.ctSize)
+		if float64(s.ctSize)/float64(cdim) < 0.6 {
+			return fmt.Errorf("Resize cannot be less than 60% of original container size")
 		}
 		s.displayData = s.dispCtr
-
 		s.reset = true
 		s.showObjMenu = false
 		s.curReqType = 0
@@ -858,7 +872,7 @@ func (s *sessCtx) orchestrateRequest() error {
 
 			//  "lets start cooking" selected
 			case task_:
-				s.dispCtr = nil
+				//s.dispCtr = nil - must not nullify as instructions does an updateState that will nullify all dispCtr
 				//s.selClear = true //TODO: what if they back at this point we have cleared sel.
 				fmt.Printf("s.parts  %#v [%s] \n", s.parts, s.part)
 				s.showObjMenu = false
@@ -965,6 +979,7 @@ func (s *sessCtx) orchestrateRequest() error {
 			case CtrMsr_:
 				// displayData assigned in setState()
 				fmt.Printf("CtrMsr - %#v\n", *(s.dispCtr))
+				s.displayData = s.dispCtr
 				return nil
 			}
 
@@ -1007,7 +1022,7 @@ func (s *sessCtx) orchestrateRequest() error {
 
 func (s *sessCtx) initialiseRequest_() bool {
 	switch s.request {
-	case "book", "close", "recipe", "select", "search", "list", "yesno", "version", "resume", "dimension", "scale":
+	case "book", "close", "recipe", "select", "search", "list", "yesno", "version", "resume", "resize", "scale":
 		s.curReqType = initialiseRequest
 		return true
 	default:
@@ -1143,14 +1158,7 @@ func handler(request InputEvent) (RespEvent, error) {
 	case "startWithEmail":
 		sessctx.email = request.QueryStringParameters["email"]
 		sessctx.request = "start"
-	case "dimension":
-		var i int
-		i, err = strconv.Atoi(request.QueryStringParameters["dim"])
-		if err != nil {
-			err = fmt.Errorf("%s: %s", "Error in converting int of dimension request \n\n", err.Error())
-		} else {
-			sessctx.dimension = i
-		}
+
 	case "back":
 		// used back button on display device. Note: back will ignore orachestrateRequest and go straight to displayGen()
 		sessctx.back = true
@@ -1187,6 +1195,16 @@ func handler(request InputEvent) (RespEvent, error) {
 		}
 	case "list":
 		sessctx.action = request.QueryStringParameters["action"]
+
+	case "resize": // specify size of your container
+		var i int
+		i, err = strconv.Atoi(request.QueryStringParameters["size"])
+		if err != nil {
+			err = fmt.Errorf("%s: %s", "Error in converting int of dimension request \n\n", err.Error())
+		} else {
+			sessctx.ctSize = i
+		}
+
 	}
 
 	if sessctx.initialiseRequest_() && !sessctx.back {

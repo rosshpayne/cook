@@ -62,10 +62,10 @@ type ObjMenuT struct {
 type ObjMenu []ObjMenuT
 
 var objMenu ObjMenu = []ObjMenuT{
-	ObjMenuT{0, "Ingredients"},
-	ObjMenuT{1, "Containers and utensils"},
-	ObjMenuT{2, "Modify container size"},
-	ObjMenuT{3, `Start cooking...`},
+	ObjMenuT{0, `Ingredients `},
+	ObjMenuT{1, `Containers `},
+	ObjMenuT{2, `Size Container`},
+	ObjMenuT{3, `Instructions`},
 }
 
 // instance of below type saved to state data in dynamo
@@ -360,7 +360,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 				return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
 			}
 		}
-		hint = `hint:  "next", "previous", "repeat", "go back", "restart"`
+		hint = `hint:  "next", "previous", "repeat", "list ingredients", "list containers", "go back", "restart" `
 		fmt.Println("hint: ", hint)
 
 		return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Hint: hint, Text: rec.Text, Height: height, Verbal: speak, ListA: listA, ListB: listB, ListC: listC, Error: s.dmsg}
@@ -783,7 +783,7 @@ func (o ObjMenu) GenDisplay(s *sessCtx) RespEvent {
 	if s.passErr {
 		type_ += "Err"
 	}
-	hint = `hint: "select one", "select two", "go back"`
+	hint = `hint: "list ingredients", "list containers", "list instructions", "size container" or "select one", "select two" etc`
 	if len(s.reqOpenBk) > 0 {
 		hint += `,"close book"`
 	}
@@ -851,15 +851,15 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 	if c == nil {
 		panic("in GenDisplay(): DispContainerT instance is nil ")
 	}
-	if s.dimension > 0 || len(c.UDimension) > 0 {
+	if s.ctSize > 0 || len(c.UDimension) > 0 {
 		// response to user size request
 		cdim, err := strconv.Atoi(c.Dimension)
 		if err != nil {
 			panic(err.Error())
 		}
-		if s.dimension > 0 {
-			c.UDimension = strconv.Itoa(s.dimension)
-			global.SetScale(float64(s.dimension*s.dimension) / float64(cdim*cdim))
+		if s.ctSize > 0 {
+			c.UDimension = strconv.Itoa(s.ctSize)
+			global.SetScale(float64(s.ctSize*s.ctSize) / float64(cdim*cdim))
 		}
 		// persist  new scaleF
 		switch s.request {
@@ -868,7 +868,7 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 			if err != nil {
 				return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
 			}
-		case "dimension":
+		case "resize":
 			err = s.updateState()
 			if err != nil {
 				return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
