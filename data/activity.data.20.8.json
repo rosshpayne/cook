@@ -268,6 +268,9 @@
                                   "say" : { "S" : "set a timer for {timeu} and give the contents a stir"},
                                   "time" : { "N" : "35" },
                                   "unit" : { "S" : "min" },
+                                  "timer" : { "M" : { "set" : {"BOOL" : true } ,
+                                                      "name" :  {"S": "Check Rice is cooked" }
+                                  },
                                   "useD" : { "M" : { "type" : {"S": "oven" }}} }
                                 },
                                 { "M" : { 
@@ -275,6 +278,9 @@
                                   "say" : { "S" : "set a timer for {timeu} to check the rice is cooked. It should be cooked through but still hold its shape and most of the milk should be absorbed"},
                                   "time" : { "N" : "35" },
                                   "unit" : { "S" : "min" },
+                                  "timer" : { "M" : { "BOOL" : true } ,
+                                                      "Name" : {"S": "Check Rice is cooked" }
+                                  },
                                   "useD" : { "M" : { "type" : {"S": "oven" }}} }
                                 },
                                 { "M" : { 
@@ -310,6 +316,9 @@
                                   "say" : { "S" : "Let the bowl contents cool completely. This will take approximately {timeu}. Set a timer if you like " },
                                   "time" : { "N" : "20" },
                                   "unit" : { "S" : "min" },
+                                  "timer" : { "M" : { "set" : {"BOOL" : true } ,
+                                                      "name" :  {"S": "Check ingredients haved cooled" }
+                                  },
                                   "useC" : { "SS" : ["bowl"] }}
                                 },
                                  { "M" : { 
@@ -515,7 +524,11 @@
                                   "txt" : { "S" : "Set alarm for {time} to {tplus} {unit} to check rice is cooked. Say 'resume' to come back to this point" },
                                   "say" : { "S" : "Set alarm for {time} to {tplus} {unit} to check rice is cooked. Say 'resume' to come back to this point" },
                                   "time" : { "N" : "30" },
-                                  "unit" : { "S" : "sec" },
+                                  "tplus" : { "N" : "35" },
+                                  "unit" : { "S" : "min" },
+                                  "timer" : { "M" : { "set" : {"BOOL" : true } ,
+                                                      "name" :  {"S": "Check Rice is cooked" }
+                                  },
                                   "useD" : { "M" : { "type" : {"S": "oven" }}}
                                     }
                                 },

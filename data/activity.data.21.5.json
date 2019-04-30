@@ -36,7 +36,7 @@
                 "PKey" : { "S": "R-21" },
                 "SortK" : { "N": "5"},
                 "RName" : { "S": "Rigatoni with Cavolo Nero and New Olive Oil"},
-                "Index" : { "SS" : ["vegetarian","cavolo-nero pasta"] },
+                "Index" : { "SS" : ["vegetarian","pasta"] },
                 "Srv" : { "S": "4-5"}
             }
         }

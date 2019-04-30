@@ -297,7 +297,7 @@
                                                "set"  : { "S" : "Gas Mark 7"}
                                                  }
                                             },
-                                "timer" : { "M" :  { "set" : { "BOOL" : true }}}
+                                "timer" : { "L" : [ { "M" :  { "set" : { "BOOL" : true }}} ] }
                                 }},
                                  { "M" :  {
                                   "txt" : { "S" : "place {measure} of {ingrd} or {altIngrd} into {addToC}"   },
@@ -460,7 +460,7 @@
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
                                   "useC" : { "SS" : [ "tray"] },
-                                  "timer" : { "M" :  { "set" : { "BOOL" : true }}},
+                                  "timer" : { "L" : [ { "M" :  { "set" : { "BOOL" : true }}} ] }
                                   "useC" : { "SS" : [ "tray"] }
                                     }
                                 },
@@ -627,8 +627,11 @@
                                   "tplus" : { "N" : "1" },
                                   "unit" : { "S" : "hr" },
                                   "addToC" : { "SS" : [ "chocpan"] },
-                                  "timer" : { "M" :  { "set" : { "BOOL" : true }}}
-                                    }
+                                  "timer" : { "L" : [ { "M" :  { "set" : { "BOOL" : true },
+                                                                 "ask" : { "BOOL" : true }
+                                                                }
+                                                        } ] }
+                                            }
                                 }
                                 ]
                 }

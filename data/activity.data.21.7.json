@@ -36,7 +36,7 @@
                 "PKey" : { "S": "R-21" },
                 "SortK" : { "N": "7"},
                 "RName" : { "S": "Dover Sole with Capers and Marjoram"},
-                "Index" : { "SS" : ["fish", "dover sole", "marjoram"] },
+                "Index" : { "SS" : ["fish"] },
                 "Srv" :  { "S": "4"}
             }
         }

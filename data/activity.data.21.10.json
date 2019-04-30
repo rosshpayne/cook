@@ -6,11 +6,13 @@
                   "PKey" : { "S": "C-21-10" },
                   "SortK" : { "S": "MeatP" },
                   "type" : { "S": "Pan" },
-                  "label" : { "S": "Pan" },
+                  "label" : { "S": "sausepan" },
+                  "slabel" : {"S": "pan" },
+                  "requ" : {"S" : "with a lid"},
                   "measure" : { "M" : { "size" : { "S" : "large"}} },
                   "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
                   "contents" : { "S": "pork" },
-                  "purpose": { "S": "browning" }
+                  "purpose": { "S": "browning and cooking" }
                   }
             }
          }
@@ -45,7 +47,7 @@
                                 { "M" : { 
                                   "txt" : { "S" : "Generously season the pork with sea salt" },
                                   "say" : { "S" : "Generously season the pork with sea salt" },
-                                  "time" : { "N" : "2" },
+                                  "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" }
                                 }}
@@ -69,8 +71,18 @@
                 },
                 "task" : { "L" : [
                                 { "M" : {
-                                  "txt" : { "S" : "In a {addtoc} with a lid, heat the {ingrd} over a medium-high heat and brown the meat on all sides. Remove the meat and put to one side." },
-                                  "say" : { "S" : "In a {addtoc} with a lid, heat the {ingrd} over a medium-high heat and brown the meat on all sides. Remove the meat and put to one side. " },
+                                  "txt" : { "S" : "In a {addtoc}, heat {ameasure} of {ingrd} over a medium-high heat" },
+                                  "say" : { "S" : "In a {addtoc}, heat {ameasure} of {ingrd} over a medium-high heat" },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "MeatP"] },
+                                  "label" : {"S" : "brown meat"}
+                                  }
+                                },
+                                { "M" : {
+                                  "txt" : { "S" : "Using the same pan, brown the meat on all sides. When browned, remove the meat and put to one side." },
+                                  "say" : { "S" : "Using the same pan, brown the meat on all sides.<break time='500ms'/>When browned, remove the meat and put to one side."},
                                   "time" : { "N" : "5" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -97,13 +109,20 @@
                 },
                 "task" : { "L" : [
                                 { "M" : {
-                                  "txt" : { "S" : "Pour the {ingrd} into the pan. Bring to the boil and reduce the liquid by half." },
-                                  "say" : { "S" : "Pour the {ingrd} into the pan. Bring to the boil and reduce the liquid by half." },
-                                  "time" : { "N" : "5" },
+                                  "txt" : { "S" : "Pour {measure} of {ingrd} into the pan." },
+                                  "say" : { "S" : "Pour {measure} of{ ingrd}<break time='100ms'/> into the pan." },
+                                  "time" : { "N" : "30" },
                                   "tplus" : { "N" : "0" },
-                                  "unit" : { "S" : "min" },
-                                  "addToC" : { "SS" : [ "MeatP"] },
-                                  "label" : {"S" : "pasta workspace"}
+                                  "unit" : { "S" : "sec" },
+                                  "addToC" : { "SS" : [ "MeatP"] }
+                                    }
+                                },
+                                   { "M" : {
+                                  "txt" : { "S" : "Bring to the boil and reduce the liquid by half." },
+                                  "say" : { "S" : "Bring to the boil <break time='200ms'/> and reduce the liquid by half." },
+                                  "time" : { "N" : "3" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" }
                                     }
                                 }
                                 ]
@@ -124,10 +143,24 @@
                                       "unit" : { "S" : "ml" } 
                 }
                 },
-               "prep" : { "L" : [ 
+               "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Add {ameasure} of {label} and a {measure} of water into the pan."},
-                                  "say" : { "S" : "Add {ameasure} of {label} and a {measure} of water into the pan." },
+                                  "txt" : { "S" : "Add {ameasure} of {label} to the pan."},
+                                  "say" : { "S" : "Add {ameasure} of {label} <break time='100ms'/>to the pan." },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "MeatP"] },
+                                  "measure" : { "M" : { 
+                                      "qty" : { "S" : "100" } ,
+                                      "unit" : { "S" : "ml" } 
+                                    }}
+                                  }
+                                },
+                                 
+                                { "M" :  {
+                                  "txt" : { "S" : "Add {measure} of water."},
+                                  "say" : { "S" : "Add {measure} <break time='50ms'/>of water." },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -227,6 +260,7 @@
                                 { "M" :  {
                                   "txt" : { "S" : "simmer very gently for {timeu}, turning the meat two or three times during the cooking. If the juices seem to be drying up, add a litle more wine or water" },
                                   "say" : { "S" : "simmer very gently for {timeu}, turning the meat two or three times during the cooking. If the juices seem to be drying up, add a litle more wine or water" },
+                                  "alert" : { "N" : "3" },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "hr" },
@@ -234,8 +268,8 @@
                                   }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "When the meat is cooked, soft when prodded, remove the pan from the heat and let the {ingrd.10} relax for {timeu}. " },
-                                  "say" : { "S" : "When the meat is cooked, soft when prodded, remove the pan from the heat and let the {ingrd.10} relax for {timeu} " },
+                                  "txt" : { "S" : "When the meat is cooked, it will be soft when prodded, remove the pan from the heat and let the {ingrd.10} relax for {timeu}. " },
+                                  "say" : { "S" : "When the meat is cooked, it will be soft when prodded, remove the pan from the heat and let the {ingrd.10} relax for {timeu} " },
                                   "time" : { "N" : "5" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
