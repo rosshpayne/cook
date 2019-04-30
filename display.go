@@ -855,7 +855,8 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 		// response to user size request
 		cdim, err := strconv.Atoi(c.Dimension)
 		if err != nil {
-			panic(err.Error())
+			s.passErr = true
+			s.dmsg = err.Error()
 		}
 		if s.ctSize > 0 {
 			c.UDimension = strconv.Itoa(s.ctSize)
@@ -866,12 +867,14 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 		case "select":
 			_, err := s.pushState()
 			if err != nil {
-				return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
+				s.passErr = true
+				s.dmsg = err.Error()
 			}
 		case "resize":
 			err = s.updateState()
 			if err != nil {
-				return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
+				s.passErr = true
+				s.dmsg = err.Error()
 			}
 		}
 		sf = strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
@@ -925,19 +928,24 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 		suggdim := strconv.Itoa(odim - 3)
 		list[5] = DisplayItem{Title: `What is the size of your container? Say 'size [newsize]' e.g. "size ` + suggdim + `"`}
 		list[6] = DisplayItem{Title: `Note: your container size must be less than the recipe container size displayed above`}
-		if s.request != "start" {
+		if s.request != "start" && !s.passErr {
 			_, err := s.pushState()
 			if err != nil {
-				return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
+				s.passErr = true
+				s.dmsg = err.Error()
 			}
 		}
 	}
 	// create new state - must do this so when back button is hit we can pop this state otherwise we loose objMenu state
 	//  alternatively we cou ld updateState to indicate this state - but that invovles a write so we may as well create a new state.
 	type_ := "Ingredient"
+	if s.passErr {
+		type_ += "Err"
+	}
 	backBtn := true
 	if len(s.state) < 2 {
 		backBtn = false
 	}
-	return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr, SubHdr: subh, Hint: hint, List: list}
+	hint = `size [integer]`
+	return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr, SubHdr: subh, Hint: hint, List: list, Error: s.dmsg}
 }

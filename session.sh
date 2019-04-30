@@ -1,8 +1,8 @@
 aws dynamodb create-table \
     --table-name Sessions  \
     --attribute-definitions \
-        AttributeName=Sid,AttributeType=S \
+        AttributeName=Uid,AttributeType=S \
     --key-schema \
-        AttributeName=Sid,KeyType=HASH \
+        AttributeName=Uid,KeyType=HASH \
     --provisioned-throughput \
         ReadCapacityUnits=1,WriteCapacityUnits=1

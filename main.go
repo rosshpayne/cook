@@ -257,7 +257,7 @@ const (
 	ingredient_     string = "ingredient"
 	task_           string = "task"
 	container_      string = "container"
-	CtrMsr_         string = "scaleContainer"
+	CtrMsr_         string = "sizeContainer"
 	recipe_         string = "recipe" // list recipe in book
 	CompleteRecipe_ string = "Complete recipe"
 )
@@ -422,10 +422,10 @@ func (s *sessCtx) orchestrateRequest() error {
 		}
 	}
 
-	if s.request == "resize" { // user enters "size [integer]"
+	if s.request == "resize" { // user enters "size [integer]" only from container size screen
 		//
 		// user sepecified size of container e.g "size 23"
-		if s.object != "scaleContainer" {
+		if s.object != "sizeContainer" {
 			fmt.Println("Cannot change container size from this context - must choose a recipe first")
 			s.dmsg = `*** Alert: Cannot change container size from this context -  Say "list resize" and then "resize"`
 			s.passErr = true
@@ -472,6 +472,12 @@ func (s *sessCtx) orchestrateRequest() error {
 			s.dmsg = ` *** Alert :  you cannot scale a recipe while following instructions. Say "go back" or "restart" and scale from there.`
 			return nil
 		default:
+			if s.object == "sizeContainer" {
+				s.dmsg = ` *** Alert :  you should scale a recipe using the size of your container. Say "size [integer]" or "restart" or a "list" option.`
+				s.passErr = true
+				s.displayData = s.dispCtr
+				return nil
+			}
 			global.SetScale(s.scalef)
 			if s.showObjMenu {
 				s.displayData = objMenu
@@ -985,6 +991,7 @@ func (s *sessCtx) orchestrateRequest() error {
 
 		// recipe part menu
 		case ctxPartMenu:
+			s.dispCtr = nil
 			if s.selId > len(s.parts)+1 || s.selId < 1 {
 				//s.setDisplay(lastState)
 				s.passErr = true
