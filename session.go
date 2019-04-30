@@ -611,8 +611,10 @@ func (s *sessCtx) updateState() error {
 		atribute = fmt.Sprintf("state[%d].Dim", i)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.ctSize))
 		//
-		atribute = fmt.Sprintf("state[%d].Dctr", i)
-		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.dispCtr))
+		if s.dispCtr != nil {
+			atribute = fmt.Sprintf("state[%d].Dctr", i)
+			updateC = updateC.Set(expression.Name(atribute), expression.Value(s.dispCtr))
+		}
 		//
 		atribute = fmt.Sprintf("state[%d].RecId", i)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
