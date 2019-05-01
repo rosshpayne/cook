@@ -197,6 +197,7 @@ func (s *sessCtx) setState(ls *stateRec) {
 	if s.ctSize == 0 && ls.CtSize > 0 {
 		s.ctSize = ls.CtSize
 	}
+	s.showObjMenu = ls.ShowObjMenu
 	//
 	//  alexa launch
 	//
@@ -349,20 +350,24 @@ func (s *sessCtx) setState(ls *stateRec) {
 		fmt.Println("** setState: s.displayData is set")
 	}
 	//
+	if s.request != "select" {
+		s.selId = ls.SelId
+	}
 	if s.selId > 0 {
 		switch {
-		case ls.SelCtx == 0 && len(s.reqRName) == 0 && (ls.Request == "search" || ls.Request == "recipe"):
+		case ls.SelCtx == 0 && len(ls.Search) > 0 && ls.Request == "search":
 			s.selCtx = ctxRecipeMenu
 			fmt.Println("in SetState: selCtx = ctxRecipeMenu")
-			//s.displayData = objMenu
-			//s.dispObjectMenu = true
-
-		case ls.Obj == "container":
-			fmt.Println(" container so set selCTx, SelId")
-			s.selCtx = ls.SelCtx
-			s.selId = ls.SelId
-			s.object = ls.Obj
 		}
+		//s.displayData = objMenu
+		//s.dispObjectMenu = true
+
+		// 	case ls.Obj == "container":
+		// 		fmt.Println(" container so set selCTx, SelId")
+		// 		s.selCtx = ls.SelCtx
+		// 		s.selId = ls.SelId
+		// 		s.object = ls.Obj
+		// 	}
 	}
 	if ls.SelCtx == ctxPartMenu && len(ls.Part) == 0 {
 		// active Parts menu but no selection maade so display part menu
@@ -384,42 +389,42 @@ func (s *sessCtx) setState(ls *stateRec) {
 	//
 }
 
-func (s *sessCtx) incrSelectCtx(ls *stateRec) {
-	//
-	//  moves "select context" (selCtx) forward based on last session state
-	//
-	fmt.Println("in incrSelectCtx: selId = ", s.selId)
-	if s.selId > 0 {
-		fmt.Println("Before selCtx = ", s.selCtx)
-		fmt.Println("Before selId = ", s.selId)
-		fmt.Println("Before object = ", s.object)
-		switch {
+// func (s *sessCtx) incrSelectCtx(ls *stateRec) {
+// 	//
+// 	//  moves "select context" (selCtx) forward based on last session state
+// 	//
+// 	fmt.Println("in incrSelectCtx: selId = ", s.selId)
+// 	if s.selId > 0 {
+// 		fmt.Println("Before selCtx = ", s.selCtx)
+// 		fmt.Println("Before selId = ", s.selId)
+// 		fmt.Println("Before object = ", s.object)
+// 		switch {
 
-		// case s.request == "select" && len(ls.Parts) > 0 && len(ls.Part) == 0:
-		// 	s.selCtx = ctxPartMenu
-		// 	fmt.Println("in SetState: selCtx = ctxPartMenu")
-		// case s.request == "select" && s.selId == len(s.menuL):
-		// 	s.selCtx = ctxObjectMenu // if Part Menu is required that is determined in the selId item.
-		// 	fmt.Println("in SetState: selCtx = ctxPartMenu")
-		// case ls.SelCtx == ctxObjectMenu && s.request == "scale" && len(ls.Ingredients) > 0:
-		// 	s.selCtx = ctxObjectMenu
-		// 	s.ingrdList = ls.Ingredients
-		// 	fmt.Println("in setState: s.selCtx = ", s.selCtx)
-		// case ls.SelCtx == ctxObjectMenu && len(ls.Ingredients) > 0:
-		// 	s.selCtx = ctxObjectMenu
-		// 	s.ingrdList = ls.Ingredients
-		// 	fmt.Println("in setState: s.selCtx = ", s.selCtx)
-		case ls.SelCtx == ctxRecipeMenu && len(s.reqRName) > 0:
-			s.selCtx = ctxObjectMenu
-			fmt.Println("in SetState: selCtx = ctxObjectMenu")
-		}
-		fmt.Println("After selCtx = ", s.selCtx)
-		fmt.Println("After selId = ", s.selId)
-		fmt.Println("After object = ", s.object)
+// 		// case s.request == "select" && len(ls.Parts) > 0 && len(ls.Part) == 0:
+// 		// 	s.selCtx = ctxPartMenu
+// 		// 	fmt.Println("in SetState: selCtx = ctxPartMenu")
+// 		// case s.request == "select" && s.selId == len(s.menuL):
+// 		// 	s.selCtx = ctxObjectMenu // if Part Menu is required that is determined in the selId item.
+// 		// 	fmt.Println("in SetState: selCtx = ctxPartMenu")
+// 		// case ls.SelCtx == ctxObjectMenu && s.request == "scale" && len(ls.Ingredients) > 0:
+// 		// 	s.selCtx = ctxObjectMenu
+// 		// 	s.ingrdList = ls.Ingredients
+// 		// 	fmt.Println("in setState: s.selCtx = ", s.selCtx)
+// 		// case ls.SelCtx == ctxObjectMenu && len(ls.Ingredients) > 0:
+// 		// 	s.selCtx = ctxObjectMenu
+// 		// 	s.ingrdList = ls.Ingredients
+// 		// 	fmt.Println("in setState: s.selCtx = ", s.selCtx)
+// 		case ls.SelCtx == ctxRecipeMenu && len(s.reqRName) > 0:
+// 			s.selCtx = ctxObjectMenu
+// 			fmt.Println("in SetState: selCtx = ctxObjectMenu")
+// 		}
+// 		fmt.Println("After selCtx = ", s.selCtx)
+// 		fmt.Println("After selId = ", s.selId)
+// 		fmt.Println("After object = ", s.object)
 
-	}
+// 	}
 
-}
+// }
 
 func (s *sessCtx) pushState() (*stateRec, error) {
 	// equivalent to a push operation for a stack (state data in this case)
@@ -628,33 +633,7 @@ func (s *sessCtx) updateState() error {
 			break
 		}
 	}
-	//for i := len(s.state) - 1; i > len(s.state)-3 && i > 0 ; i-- {
-	// for i := len(s.state) - 1; i > 0; i-- {
-	// 	fmt.Println("About to update Dim, RecId, Thrds  upto objMenu ", i)
-	// 	//
-	// 	atribute = fmt.Sprintf("state[%d].Dim", i)
-	// 	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.ctSize))
-	// 	//
-	// 	if s.dispCtr != nil {
-	// 		atribute = fmt.Sprintf("state[%d].Dctr", i)
-	// 		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.dispCtr))
-	// 	}
-	// 	//
-	// 	atribute = fmt.Sprintf("state[%d].RecId", i)
-	// 	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
-	// 	//
-	// 	atribute = fmt.Sprintf("state[%d].CThrd", i)
-	// 	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.cThread))
-	// 	atribute = fmt.Sprintf("state[%d].OThrd", i)
-	// 	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.oThread))
-	// 	//
-	// 	if s.state[i].ShowObjMenu {
-	// 		break
-	// 	}
-	// }
-	//	fmt.Println("about to update RecId ..", len(s.state)-1, s.recId)
-	// atribute = fmt.Sprintf("state[%d].RecId", len(s.state)-1)
-	// updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
+	//
 	if s.openBkChange {
 		atribute = fmt.Sprintf("state[%d].OpenBk", len(s.state)-1)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.reqOpenBk))

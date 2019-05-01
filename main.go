@@ -43,8 +43,9 @@ type sessCtx struct {
 	err        error
 	newSession bool
 	//path      string // InputEvent.Path
-	request string // pathItem[0]: request from user e.g. select, next, prev,..
+	request string // pathItem[0] or redirected value
 	lastreq string // previous request
+	origreq string // pathItem[0] only
 	//param     string // InputEvent.Param
 	state     stateStack
 	lastState *stateRec // state attribute from state dynamo item - contains state history
@@ -391,11 +392,19 @@ func (s *sessCtx) orchestrateRequest() error {
 			// displayData set in setState()
 			return nil
 		}
+		fmt.Println("*** showobjMenu ", s.showObjMenu)
 		for showObjMenu := s.showObjMenu; !showObjMenu; showObjMenu = s.showObjMenu {
 			err := s.popState() // will set request to "start" assigned from stateRec[0].Request.
 			if err != nil {
 				return err
 			}
+			if s.request == "start" {
+				err = fmt.Errorf("Internal Error:  list request failed to popState() to objMenu")
+				break
+			}
+		}
+		if err != nil {
+			return err
 		}
 		s.displayData = nil
 		s.request = "select"
@@ -419,6 +428,8 @@ func (s *sessCtx) orchestrateRequest() error {
 				s.passErr = true
 			}
 		case "instructions", "instruction", "start cooking", "steps", "step":
+			s.selId = len(s.menuL)
+		case "parts":
 			s.selId = len(s.menuL)
 		default:
 			fmt.Println("Invalid action ", s.action)
@@ -462,12 +473,13 @@ func (s *sessCtx) orchestrateRequest() error {
 		//
 		//  define current state
 		//
-		s.request = lastState.Request
-		s.selId = lastState.SelId
-		fmt.Println("lastState.Request (now s.request) = ", lastState.Request)
-		s.selCtx = lastState.SelCtx
-		fmt.Println("lastState.selCtx (now s.selCtx) = ", lastState.SelCtx)
-		s.object = lastState.Obj
+		// s.request = lastState.Request
+		// fmt.Println("lastState.Request (now s.request) = ", lastState.Request) . /// should ALL be set in setState()
+		// s.selId = lastState.SelId
+		// fmt.Println("lastState.SelId (now s.request) = ", lastState.SelId)
+		// s.selCtx = lastState.SelCtx
+		// fmt.Println("lastState.selCtx (now s.selCtx) = ", lastState.SelCtx)
+		// s.object = lastState.Obj
 		//
 		// error if state/screen does not permit to change scale
 		//
@@ -487,7 +499,9 @@ func (s *sessCtx) orchestrateRequest() error {
 			if s.showObjMenu {
 				s.displayData = objMenu
 				s.updateState()
+				return nil
 			}
+			s.request = s.lastreq
 			//return nil - needs to use selId & selCtx to regen instructions
 		}
 	}
@@ -497,6 +511,8 @@ func (s *sessCtx) orchestrateRequest() error {
 	fmt.Println("yesno: ", s.yesno)
 	fmt.Println("selCtx: ", s.selCtx)
 	fmt.Println("selId: ", s.selId)
+	fmt.Println("showObjMenu: ", s.showObjMenu)
+	fmt.Println("request = ", s.request)
 	fmt.Println("Qid: ", lastState.Qid)
 
 	if lastState.Qid > 0 && (len(s.yesno) > 0 || (s.selId == 1 || s.selId == 2)) {
@@ -950,6 +966,7 @@ func (s *sessCtx) orchestrateRequest() error {
 
 					s.ingrdList = IngredientT(as.String(r))
 					s.displayData = s.ingrdList
+					s.showObjMenu = false
 
 					if s.reScale { // change in scale from last session
 						fmt.Println("in ingredient List: update state not pushState")
@@ -967,7 +984,6 @@ func (s *sessCtx) orchestrateRequest() error {
 				}
 				//
 				s.reset = true
-				s.showObjMenu = false
 				s.curReqType = 0
 				//
 				return nil
@@ -983,11 +999,13 @@ func (s *sessCtx) orchestrateRequest() error {
 				}
 				s.showObjMenu = false
 				s.curReqType = 0
-				if s.request == "select" {
+				if s.reScale {
+					err = s.updateState()
+				} else if s.request == "select" {
 					_, err = s.pushState()
-					if err != nil {
-						return err
-					}
+				}
+				if err != nil {
+					return err
 				}
 				return nil
 
@@ -1097,6 +1115,7 @@ func handler(request InputEvent) (RespEvent, error) {
 		userId:      request.QueryStringParameters["uid"], // empty when not called
 		dynamodbSvc: dynamodbService(),
 		request:     pathItem[0],
+		origreq:     pathItem[0],
 		//path:        request.Path,
 		//param:       request.Param,
 	}

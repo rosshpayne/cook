@@ -375,7 +375,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 					return v.Title
 				}
 			}
-			return "no-thread-foundik8,"
+			return "no-thread-found,"
 		}
 		tc := s.oThread
 		type_ := "threadedBottom"
@@ -565,7 +565,11 @@ func (c ContainerS) GenDisplay(s *sessCtx) RespEvent {
 	fmt.Printf("in GenDisplay for containers: %#v\n", c)
 	hdr := s.reqRName
 	subh := "Containers and Utensils"
-	hint := `hint: "go back", "reset" `
+	if global.GetScale() < 1 {
+		sf := strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
+		subh += "  (scale: " + sf + ")"
+	}
+	hint := `hint: "go back", "list ingredients", "list cooking instructions", "scale [integer]" `
 	if len(s.reqOpenBk) > 0 {
 		hint += `, "close book" `
 	}
