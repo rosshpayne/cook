@@ -364,6 +364,11 @@ func (s *sessCtx) setState(ls *stateRec) {
 			s.object = ls.Obj
 		}
 	}
+	if ls.SelCtx == ctxPartMenu && len(ls.Part) == 0 {
+		// active Parts menu but no selection maade so display part menu
+		s.parts = ls.Parts
+		s.displayData = ls.Parts
+	}
 	//
 	if (((s.request == "start" || s.request == "list") && s.selCtx == 0) || (s.request == "book" || s.request == "close" || s.request == "search")) && s.displayData == nil {
 		var err error
@@ -379,32 +384,38 @@ func (s *sessCtx) setState(ls *stateRec) {
 	//
 }
 
-func (s *sessCtx) incrementState(ls *stateRec) {
+func (s *sessCtx) incrSelectCtx(ls *stateRec) {
 	//
 	//  moves "select context" (selCtx) forward based on last session state
 	//
-	fmt.Println("in incrementState: selId = ", s.selId)
+	fmt.Println("in incrSelectCtx: selId = ", s.selId)
 	if s.selId > 0 {
+		fmt.Println("Before selCtx = ", s.selCtx)
+		fmt.Println("Before selId = ", s.selId)
+		fmt.Println("Before object = ", s.object)
 		switch {
 
-		case s.request == "select" && len(ls.Parts) > 0 && len(ls.Part) == 0:
-			s.selCtx = ctxPartMenu
-			fmt.Println("in SetState: selCtx = ctxPartMenu")
-		case ls.SelCtx == ctxObjectMenu && s.request == "scale" && len(ls.Ingredients) > 0:
-			s.selCtx = ctxObjectMenu
-			s.ingrdList = ls.Ingredients
-			fmt.Println("in setState: s.selCtx = ", s.selCtx)
-		case ls.SelCtx == ctxObjectMenu && len(ls.Ingredients) > 0:
-			s.selCtx = ctxObjectMenu
-			s.ingrdList = ls.Ingredients
-			fmt.Println("in setState: s.selCtx = ", s.selCtx)
+		// case s.request == "select" && len(ls.Parts) > 0 && len(ls.Part) == 0:
+		// 	s.selCtx = ctxPartMenu
+		// 	fmt.Println("in SetState: selCtx = ctxPartMenu")
+		// case s.request == "select" && s.selId == len(s.menuL):
+		// 	s.selCtx = ctxObjectMenu // if Part Menu is required that is determined in the selId item.
+		// 	fmt.Println("in SetState: selCtx = ctxPartMenu")
+		// case ls.SelCtx == ctxObjectMenu && s.request == "scale" && len(ls.Ingredients) > 0:
+		// 	s.selCtx = ctxObjectMenu
+		// 	s.ingrdList = ls.Ingredients
+		// 	fmt.Println("in setState: s.selCtx = ", s.selCtx)
+		// case ls.SelCtx == ctxObjectMenu && len(ls.Ingredients) > 0:
+		// 	s.selCtx = ctxObjectMenu
+		// 	s.ingrdList = ls.Ingredients
+		// 	fmt.Println("in setState: s.selCtx = ", s.selCtx)
 		case ls.SelCtx == ctxRecipeMenu && len(s.reqRName) > 0:
 			s.selCtx = ctxObjectMenu
 			fmt.Println("in SetState: selCtx = ctxObjectMenu")
 		}
-		fmt.Println("selCtx = ", s.selCtx)
-		fmt.Println("selId = ", s.selId)
-		fmt.Println("object = ", s.object)
+		fmt.Println("After selCtx = ", s.selCtx)
+		fmt.Println("After selId = ", s.selId)
+		fmt.Println("After object = ", s.object)
 
 	}
 
@@ -588,25 +599,14 @@ func (s *sessCtx) updateState() error {
 	}
 	fmt.Println("About to update ScaleF..")
 	// if scale changes then history must change to new value upto but not including last ingredients display or end of state list.
-	for scale, i := global.GetScale(), len(s.state)-1; i > len(s.state)-3 && i > 0; i-- {
+
+	// change state upto and including objMenu
+	for scale, i := global.GetScale(), len(s.state)-1; i > 0; i-- {
 		fmt.Println("About to update ScaleF..2   i ", i)
-		if s.state[i].ScaleF == scale || (len(s.state[i].Ingredients) > 0 && i < len(s.state)-1) {
-			// break when listed Ingredients are not current one
-			break
-		}
-		if len(s.state[i].RecipeList) > 0 || s.state[i].Request == "start" {
-			break
-		}
+
 		atribute = fmt.Sprintf("state[%d].SF", i)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(scale))
 		fmt.Println(atribute, scale)
-	}
-	for i := len(s.state) - 1; i > len(s.state)-3 && i > 0; i-- {
-
-		if len(s.state[i].RecipeList) > 0 || s.state[i].Request == "start" {
-			break
-		}
-		fmt.Println("About to update Dim, RecId, Thrds  upto objMenu ", i)
 		//
 		atribute = fmt.Sprintf("state[%d].Dim", i)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.ctSize))
@@ -624,7 +624,34 @@ func (s *sessCtx) updateState() error {
 		atribute = fmt.Sprintf("state[%d].OThrd", i)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.oThread))
 		//
+		if s.state[i].ShowObjMenu {
+			break
+		}
 	}
+	//for i := len(s.state) - 1; i > len(s.state)-3 && i > 0 ; i-- {
+	// for i := len(s.state) - 1; i > 0; i-- {
+	// 	fmt.Println("About to update Dim, RecId, Thrds  upto objMenu ", i)
+	// 	//
+	// 	atribute = fmt.Sprintf("state[%d].Dim", i)
+	// 	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.ctSize))
+	// 	//
+	// 	if s.dispCtr != nil {
+	// 		atribute = fmt.Sprintf("state[%d].Dctr", i)
+	// 		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.dispCtr))
+	// 	}
+	// 	//
+	// 	atribute = fmt.Sprintf("state[%d].RecId", i)
+	// 	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
+	// 	//
+	// 	atribute = fmt.Sprintf("state[%d].CThrd", i)
+	// 	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.cThread))
+	// 	atribute = fmt.Sprintf("state[%d].OThrd", i)
+	// 	updateC = updateC.Set(expression.Name(atribute), expression.Value(s.oThread))
+	// 	//
+	// 	if s.state[i].ShowObjMenu {
+	// 		break
+	// 	}
+	// }
 	//	fmt.Println("about to update RecId ..", len(s.state)-1, s.recId)
 	// atribute = fmt.Sprintf("state[%d].RecId", len(s.state)-1)
 	// updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
@@ -816,6 +843,7 @@ func (s *sessCtx) popState() error {
 	s.vmsg = sr.Vmsg
 	s.ddata = sr.DData
 	s.authors = sr.Authors
+	s.showObjMenu = sr.ShowObjMenu
 	//
 	if len(sr.OpenBk) > 0 {
 		bk := strings.Split(string(sr.OpenBk), "|")

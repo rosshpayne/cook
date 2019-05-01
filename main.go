@@ -139,6 +139,37 @@ type sessCtx struct {
 
 const scaleThreshold float64 = 0.9
 
+const (
+	// objects to which future requests apply - s.object values
+	ingredient_     string = "ingredient"
+	task_           string = "task"
+	container_      string = "container"
+	CtrMsr_         string = "sizeContainer"
+	recipe_         string = "recipe" // list recipe in book
+	CompleteRecipe_ string = "Complete recipe"
+)
+
+type selectCtxT int
+
+const (
+	ctxRecipeMenu selectCtxT = iota + 1
+	ctxObjectMenu
+	ctxPartMenu
+)
+
+const (
+	// user request grouped into three types
+	initialiseRequest = iota + 1
+	objectRequest
+	instructionRequest
+)
+
+type objectMapT map[string]int
+
+var objectMap objectMapT
+
+var objectS []string
+
 func (s *sessCtx) closeBook() error {
 	//
 	// close books sends user back to first screen/dialog - a reset in essense
@@ -233,7 +264,7 @@ func (s *sessCtx) clearForSearch(lastState *stateRec) {
 	s.cThread, s.oThread = 0, 0
 }
 
-func incrementRequest(r string) bool {
+func selectCtxRequired(r string) bool {
 	switch r {
 	case "restart", "book", "close", "search", "start", "resize", "scale", "list":
 		return false
@@ -251,37 +282,6 @@ func init() {
 		objectS[i] = v
 	}
 }
-
-const (
-	// objects to which future requests apply - s.object values
-	ingredient_     string = "ingredient"
-	task_           string = "task"
-	container_      string = "container"
-	CtrMsr_         string = "sizeContainer"
-	recipe_         string = "recipe" // list recipe in book
-	CompleteRecipe_ string = "Complete recipe"
-)
-
-type selectCtxT int
-
-const (
-	ctxRecipeMenu selectCtxT = iota + 1
-	ctxObjectMenu
-	ctxPartMenu
-)
-
-const (
-	// user request grouped into three types
-	initialiseRequest = iota + 1
-	objectRequest
-	instructionRequest
-)
-
-type objectMapT map[string]int
-
-var objectMap objectMapT
-
-var objectS []string
 
 // type alexaDialog interface {
 // 	Alexa() dialog
@@ -308,9 +308,9 @@ func (s *sessCtx) orchestrateRequest() error {
 	// set current state based on last session
 	s.setState(lastState)
 
-	if incrementRequest(s.request) {
-		s.incrementState(lastState)
-	}
+	// if selectCtxRequired(s.request) {
+	// 	s.incrSelectCtx(lastState)
+	// }
 	//
 	// ******************************** process responses to request  ****************************************
 	//
@@ -369,16 +369,21 @@ func (s *sessCtx) orchestrateRequest() error {
 			// 		panic("error: displayData is nil - setState should have assigned it a value but didnot")
 			// 	}
 			// 	return nil
-
 		case ObjMenu:
 			// displayData assigned in setState()
 			fmt.Println("displayData: ObjMenu")
 			return nil
+		case PartS:
+			if s.selId == 0 { // no selection yet made so display parts menu
+				return nil
+			}
+
 		}
 	}
 
 	if s.request == "list" {
 		//
+		fmt.Println(`"process  "list"`)
 		if len(lastState.RecipeList) > 0 || len(s.state) == 1 {
 			fmt.Println("Cannot list from this context - must choose a recipe first")
 			s.dmsg = `*** Alert: Cannot list from this context -  choose a recipe first. Say "find recipe" or "restart" or "open book"`
@@ -386,7 +391,7 @@ func (s *sessCtx) orchestrateRequest() error {
 			// displayData set in setState()
 			return nil
 		}
-		if lastState.ShowObjMenu != true {
+		for showObjMenu := s.showObjMenu; !showObjMenu; showObjMenu = s.showObjMenu {
 			err := s.popState() // will set request to "start" assigned from stateRec[0].Request.
 			if err != nil {
 				return err
@@ -837,10 +842,12 @@ func (s *sessCtx) orchestrateRequest() error {
 			s.selId = 0
 			s.showObjMenu = true
 			s.recipeList = nil
+			s.selCtx = ctxObjectMenu
 
 			s.reset = true
 			fmt.Println("ctxRecipeMenu: about to pushState")
 			if !s.reScale {
+
 				_, err = s.pushState()
 				if err != nil {
 					return err
@@ -885,6 +892,8 @@ func (s *sessCtx) orchestrateRequest() error {
 				if len(s.parts) > 0 && len(s.part) == 0 {
 					//s.dispPartMenu = true
 					s.displayData = s.parts
+					s.selCtx = ctxPartMenu
+					s.selId = 0
 					s.curReqType = 0
 					//
 					if s.request == "select" {
@@ -991,6 +1000,10 @@ func (s *sessCtx) orchestrateRequest() error {
 
 		// recipe part menu
 		case ctxPartMenu:
+			if s.selId == 0 { // no selection made so display menu
+				s.displayData = s.parts
+				return nil
+			}
 			s.dispCtr = nil
 			if s.selId > len(s.parts)+1 || s.selId < 1 {
 				//s.setDisplay(lastState)
@@ -999,9 +1012,10 @@ func (s *sessCtx) orchestrateRequest() error {
 				return nil
 			}
 			s.part = ""
-			if s.selId == 1 {
+			switch s.selId {
+			case 1:
 				s.part = CompleteRecipe_
-			} else {
+			default:
 				s.part = s.parts[s.selId-2].Title
 			}
 			fmt.Printf("selId  %d   parts   %#v\n", s.selId, s.part)

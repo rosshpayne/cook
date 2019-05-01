@@ -147,6 +147,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		//panic(fmt.Errorf("Error: in getInstruction, recipe part index [%s] not found in s.parts ", index))
 		return ""
 	}
+	fmt.Println("GenDisplay:  Threads")
 	if len(t) == 0 {
 		s.err = fmt.Errorf("Error: internal, instructions has not been cached")
 	}
@@ -735,7 +736,7 @@ func (o ObjMenu) GenDisplay(s *sessCtx) RespEvent {
 			return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
 		}
 		size := 4
-		if len(ct.Cid) == 0 {
+		if ct == nil {
 			// recipe has no scalable container
 			fmt.Println("*** no scalable container found.....")
 			noScale = true
