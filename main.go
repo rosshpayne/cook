@@ -265,14 +265,14 @@ func (s *sessCtx) clearForSearch(lastState *stateRec) {
 	s.cThread, s.oThread = 0, 0
 }
 
-func selectCtxRequired(r string) bool {
-	switch r {
-	case "restart", "book", "close", "search", "start", "resize", "scale", "list":
-		return false
-	default:
-		return true
-	}
-}
+// func selectCtxRequired(r string) bool {
+// 	switch r {
+// 	case "restart", "book", "close", "search", "start", "resize", "scale", "list":
+// 		return false
+// 	default:
+// 		return true
+// 	}
+// }
 func init() {
 	objectMap = make(objectMapT, 4)
 	for i, v := range []string{ingredient_, task_, container_, CtrMsr_, recipe_} {
@@ -723,30 +723,10 @@ func (s *sessCtx) orchestrateRequest() error {
 		s.showObjMenu = false
 		fmt.Println("after search: BookId, RecipeId ", s.reqBkId, s.reqRId)
 		s.pkey = s.reqBkId + "-" + s.reqRId
-		if len(s.recipeList) == 0 && len(s.reqRId) > 0 {
-			// found single recipe.
-			s.displayData = objMenu
-			s.showObjMenu = true
-			s.selId = 0
-			fmt.Printf("recipe found [%s]\n", s.reqRName)
+		switch len(s.recipeList) {
 
-			_, err = s.pushState()
-			if err != nil {
-				return err
-			}
-		} else if len(s.recipeList) > 0 {
-			// found multiple recipes
-			s.curReqType = 0
-			s.displayData = s.recipeList
-			fmt.Printf("recipe List found [%#v]\n", s.recipeList)
-
-			_, err = s.pushState()
-			if err != nil {
-				return err
-			}
-		} else {
-			// no recipe found
-			//	s.displayData = s.recipeList
+		case 0:
+			// nothing found
 			s.passErr = true
 			if len(s.reqOpenBk) > 0 {
 				s.dmsg = `*** No recipe found in ` + s.reqBkName + ` matching "` + s.reqSearch + `". `
@@ -760,8 +740,41 @@ func (s *sessCtx) orchestrateRequest() error {
 				s.dmsg += "Change the order of the keywords or try alternative keywords. "
 			}
 			s.dmsg += "Otherwise continue."
+			return nil
+
+		case 1:
+			// one recipe found
+			fmt.Printf("recipe found [%s]\n", s.reqRName)
+			fmt.Println("redirect to ctxRecipeMenu processing")
+			// s.displayData = objMenu
+			// s.showObjMenu = true
+			// s.selId = 0
+			// p := s.recipeList[0]
+			// s.reqRId, s.reqRName, s.reqBkId, s.reqBkName = p.RId, p.RName, p.BkId, p.BkName
+			// s.authors = p.Authors
+			// s.recipeList = nil
+			// redirect
+			s.request = "select"
+			s.selCtx = ctxRecipeMenu
+			s.selId = 1
+			// _, err = s.pushState()
+			// if err != nil {
+			// 	return err
+			// }
+
+		default:
+			// many recipes found
+			s.curReqType = 0
+			s.displayData = s.recipeList
+			s.selCtx = ctxRecipeMenu
+			s.selId = 0
+			fmt.Printf("recipe List found [%#v]\n", s.recipeList)
+			_, err = s.pushState()
+			if err != nil {
+				return err
+			}
+			return nil
 		}
-		return nil
 	}
 	//
 	if s.request == "resume" {
@@ -845,8 +858,8 @@ func (s *sessCtx) orchestrateRequest() error {
 
 				p := s.recipeList[s.selId-1]
 				s.reqRId, s.reqRName, s.reqBkId, s.reqBkName = p.RId, p.RName, p.BkId, p.BkName
-				s.dmsg = fmt.Sprintf(`Now that you have selected [%s] recipe would you like to list ingredients, cooking instructions, utensils or containers or cancel`, s.reqRName)
-				s.vmsg = fmt.Sprintf(`Now that you have selected {%s] recipe would you like to list ingredients, cooking instructions, utensils or containers or cancel`, s.reqRName)
+				// s.dmsg = fmt.Sprintf(`Now that you have selected [%s] recipe would you like to list ingredients, cooking instructions, utensils or containers or cancel`, s.reqRName)
+				// s.vmsg = fmt.Sprintf(`Now that you have selected {%s] recipe would you like to list ingredients, cooking instructions, utensils or containers or cancel`, s.reqRName)
 				// chosen recipe, so set select context to object (ingredient, utensil, container, tas			s.selCtx = ctxObjectMenu
 				//
 				_, err := s.recipeRSearch()
@@ -861,9 +874,8 @@ func (s *sessCtx) orchestrateRequest() error {
 			s.selCtx = ctxObjectMenu
 
 			s.reset = true
-			fmt.Println("ctxRecipeMenu: about to pushState")
 			if !s.reScale {
-
+				fmt.Println("ctxRecipeMenu: about to pushState")
 				_, err = s.pushState()
 				if err != nil {
 					return err

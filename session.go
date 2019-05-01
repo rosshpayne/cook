@@ -353,22 +353,22 @@ func (s *sessCtx) setState(ls *stateRec) {
 	if s.request != "select" {
 		s.selId = ls.SelId
 	}
-	if s.selId > 0 {
-		switch {
-		case ls.SelCtx == 0 && len(ls.Search) > 0 && ls.Request == "search":
-			s.selCtx = ctxRecipeMenu
-			fmt.Println("in SetState: selCtx = ctxRecipeMenu")
-		}
-		//s.displayData = objMenu
-		//s.dispObjectMenu = true
+	// if s.selId > 0 {
+	// 	switch {
+	// 	case ls.SelCtx == 0 && len(ls.Search) > 0 && ls.Request == "search":
+	// 		s.selCtx = ctxRecipeMenu
+	// 		fmt.Println("in SetState: selCtx = ctxRecipeMenu")
+	// 	}
+	// 	//s.displayData = objMenu
+	// 	//s.dispObjectMenu = true
 
-		// 	case ls.Obj == "container":
-		// 		fmt.Println(" container so set selCTx, SelId")
-		// 		s.selCtx = ls.SelCtx
-		// 		s.selId = ls.SelId
-		// 		s.object = ls.Obj
-		// 	}
-	}
+	// 	// 	case ls.Obj == "container":
+	// 	// 		fmt.Println(" container so set selCTx, SelId")
+	// 	// 		s.selCtx = ls.SelCtx
+	// 	// 		s.selId = ls.SelId
+	// 	// 		s.object = ls.Obj
+	// 	// 	}
+	//}
 	if ls.SelCtx == ctxPartMenu && len(ls.Part) == 0 {
 		// active Parts menu but no selection maade so display part menu
 		s.parts = ls.Parts
