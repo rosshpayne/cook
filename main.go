@@ -392,7 +392,6 @@ func (s *sessCtx) orchestrateRequest() error {
 			// displayData set in setState()
 			return nil
 		}
-		fmt.Println("*** showobjMenu ", s.showObjMenu)
 		for showObjMenu := s.showObjMenu; !showObjMenu; showObjMenu = s.showObjMenu {
 			err := s.popState() // will set request to "start" assigned from stateRec[0].Request.
 			if err != nil {
@@ -744,23 +743,10 @@ func (s *sessCtx) orchestrateRequest() error {
 
 		case 1:
 			// one recipe found
-			fmt.Printf("recipe found [%s]\n", s.reqRName)
-			fmt.Println("redirect to ctxRecipeMenu processing")
-			// s.displayData = objMenu
-			// s.showObjMenu = true
-			// s.selId = 0
-			// p := s.recipeList[0]
-			// s.reqRId, s.reqRName, s.reqBkId, s.reqBkName = p.RId, p.RName, p.BkId, p.BkName
-			// s.authors = p.Authors
-			// s.recipeList = nil
-			// redirect
+			fmt.Println("redirect to ctxRecipeMenu for processing")
 			s.request = "select"
 			s.selCtx = ctxRecipeMenu
 			s.selId = 1
-			// _, err = s.pushState()
-			// if err != nil {
-			// 	return err
-			// }
 
 		default:
 			// many recipes found
@@ -1022,7 +1008,7 @@ func (s *sessCtx) orchestrateRequest() error {
 				return nil
 
 			case CtrMsr_:
-				// displayData assigned in setState()
+				//do not set s.showObjMenu = false, as dispCtr.GenDisplay() performs updateState() rather than pushState()
 				fmt.Printf("CtrMsr - %#v\n", *(s.dispCtr))
 				s.displayData = s.dispCtr
 				return nil
