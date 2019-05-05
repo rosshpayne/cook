@@ -124,8 +124,7 @@ const (
 func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 
 	var (
-		passErr string
-		p       []string
+		p []string
 		//eol     int
 		peol int
 		part string
@@ -149,7 +148,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 	}
 	fmt.Println("GenDisplay:  Threads")
 	if len(t) == 0 {
-		s.err = fmt.Errorf("Error: internal, instructions has not been cached")
+		s.derr = "Error: internal, instructions has not been cached"
 	}
 	//
 	// check id within limits
@@ -176,7 +175,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 
 	case id > len(t[s.cThread].Instructions) && len(t) == 1:
 		// single threaded recipe
-		passErr = "Reached last instruction"
+		s.derr = "Reached last instruction"
 		id = len(t[s.cThread].Instructions)
 		s.recId[objectMap[s.object]] = id
 
@@ -184,12 +183,12 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		// last thread in multiple threaded recipe so check if all previous threads completed.
 		if t[s.cThread-1].Id == len(t[s.cThread-1].Instructions) {
 			// previous thead completed. Have reached end
-			passErr = "Recipe completed"
+			s.derr = "Recipe completed"
 			id = len(t[s.cThread].Instructions)
 			s.recId[objectMap[s.object]] = id
 		} else {
 			// hint at unfinished thread. Must explicit go to it -not here.
-			passErr = "You must resume previous thread and complete it"
+			s.derr = "You must resume previous thread and complete it"
 			id = len(t[s.cThread].Instructions)
 			s.recId[objectMap[s.object]] = id
 		}
@@ -211,7 +210,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		s.recId[objectMap[s.object]] = id
 		if t[s.cThread].Id == len(t[s.cThread].Instructions) {
 			// previous thead completed. Have reached end
-			passErr = "Recipe completed"
+			s.derr = "Recipe completed"
 			id = len(t[s.cThread].Instructions)
 			s.recId[objectMap[s.object]] = id
 		}
@@ -224,13 +223,8 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 	//
 	// generate display
 	//
-	if len(passErr) > 0 || s.err != nil {
-		if s.err != nil {
-			hdr = "** Error **   " + s.err.Error()
-		} else {
-			hdr = "** Alert **   " + passErr
-		}
-		hdr = "** Alert **   " + passErr
+	if len(s.derr) > 0 {
+		hdr = "** Alert **   " + s.derr
 	} else {
 		hdr = s.reqRName
 	}
@@ -353,7 +347,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		// alert if inappropriate verbal interaction
 		//
 		type_ := "Tripple"
-		if s.passErr {
+		if len(s.derr) > 0 {
 			type_ += "Err"
 		} else {
 			err := s.updateState()
@@ -364,7 +358,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		hint = `hint:  "next", "previous", "repeat", "list ingredients", "list containers", "go back", "restart" `
 		fmt.Println("hint: ", hint)
 
-		return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Hint: hint, Text: rec.Text, Height: height, Verbal: speak, ListA: listA, ListB: listB, ListC: listC, Error: s.dmsg}
+		return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Hint: hint, Text: rec.Text, Height: height, Verbal: speak, ListA: listA, ListB: listB, ListC: listC, Error: s.derr}
 
 	default:
 		// two threads with 3 sections in each. should always display threads 1 and 2 in that order, never thread 0
@@ -547,7 +541,7 @@ func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 		hint = "hint: " + OpenBkName() + srch
 	}
 	type_ := "Start"
-	if s.passErr {
+	if len(s.derr) > 0 {
 		type_ += "Err"
 	}
 	if len(w.request) > 0 {
@@ -557,7 +551,7 @@ func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 		}
 	}
 
-	return RespEvent{Type: type_, BackBtn: false, Header: hdr, SubHdr: subh, Hint: hint, Text: title, List: list, Error: s.dmsg}
+	return RespEvent{Type: type_, BackBtn: false, Header: hdr, SubHdr: subh, Hint: hint, Text: title, List: list, Error: s.derr}
 }
 
 func (c ContainerS) GenDisplay(s *sessCtx) RespEvent {
@@ -583,10 +577,10 @@ func (c ContainerS) GenDisplay(s *sessCtx) RespEvent {
 		list = append(list, di)
 	}
 	type_ := "Ingredient"
-	if s.passErr {
+	if len(s.derr) > 0 {
 		type_ += "Err"
 	}
-	return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Hint: hint, List: list, Error: s.dmsg}
+	return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Hint: hint, List: list, Error: s.derr}
 }
 
 func (p PartS) GenDisplay(s *sessCtx) RespEvent {
@@ -619,11 +613,11 @@ func (p PartS) GenDisplay(s *sessCtx) RespEvent {
 		k++
 	}
 	type_ := "PartList"
-	if s.passErr {
+	if len(s.derr) > 0 {
 		type_ += "Err"
 	}
 	hint = "hint: select 1, scale recipe 55 percent"
-	return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Hint: hint, Height: "90", Verbal: s.vmsg, List: list, Error: s.dmsg}
+	return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Hint: hint, Height: "90", Verbal: s.vmsg, List: list, Error: s.derr}
 
 }
 
@@ -643,10 +637,10 @@ func (i IngredientT) GenDisplay(s *sessCtx) RespEvent {
 	subhdr = "Ingredients       (Scale: " + sf + " )"
 	hint = "hint:  scale recipe 75 percent"
 	type_ := "Ingredient"
-	if s.passErr {
+	if len(s.derr) > 0 {
 		type_ += "Err"
 	}
-	return RespEvent{Type: type_, BackBtn: true, Header: s.reqRName, SubHdr: subhdr, List: list, Hint: hint, Error: s.dmsg}
+	return RespEvent{Type: type_, BackBtn: true, Header: s.reqRName, SubHdr: subhdr, List: list, Hint: hint, Error: s.derr}
 
 }
 
@@ -686,7 +680,7 @@ func (r RecipeListT) GenDisplay(s *sessCtx) RespEvent {
 		list = append(list, item)
 	}
 	type_ = "Search"
-	if s.passErr {
+	if len(s.derr) > 0 {
 		type_ += "Err"
 	}
 	hdr = "Search results for: " + s.reqSearch
@@ -701,7 +695,7 @@ func (r RecipeListT) GenDisplay(s *sessCtx) RespEvent {
 		backBtn = false
 	}
 	hint = "hint: select three "
-	return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr, SubHdr: subhdr, Hint: hint, Text: s.vmsg, Verbal: s.dmsg, List: list, Error: s.dmsg}
+	return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr, SubHdr: subhdr, Hint: hint, Text: s.vmsg, Verbal: s.dmsg, List: list, Error: s.derr}
 }
 
 func (o ObjMenu) GenDisplay(s *sessCtx) RespEvent {
@@ -714,7 +708,7 @@ func (o ObjMenu) GenDisplay(s *sessCtx) RespEvent {
 	)
 
 	fmt.Println("GenDisplay:  ObjMenu")
-	if s.passErr {
+	if len(s.derr) > 0 {
 		fmt.Printf("with Error\n")
 	}
 
@@ -785,7 +779,7 @@ func (o ObjMenu) GenDisplay(s *sessCtx) RespEvent {
 		}
 	}
 	type_ := "Search"
-	if s.passErr {
+	if len(s.derr) > 0 {
 		type_ += "Err"
 	}
 	hint = `hint: "list ingredients", "list containers", "list instructions", "size container" or "select one", "select two" etc`
@@ -794,7 +788,7 @@ func (o ObjMenu) GenDisplay(s *sessCtx) RespEvent {
 	}
 	fmt.Println("Screen: ", type_)
 
-	return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr, SubHdr: subh, Text: s.vmsg, Hint: hint, Verbal: s.vmsg, List: list, Error: s.dmsg}
+	return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr, SubHdr: subh, Text: s.vmsg, Hint: hint, Verbal: s.vmsg, List: list, Error: s.derr}
 
 }
 
@@ -860,8 +854,7 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 		// response to user size request
 		cdim, err := strconv.Atoi(c.Dimension)
 		if err != nil {
-			s.passErr = true
-			s.dmsg = err.Error()
+			s.derr = err.Error()
 		}
 		if s.ctSize > 0 {
 			c.UDimension = strconv.Itoa(s.ctSize)
@@ -872,14 +865,12 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 		case "select":
 			_, err := s.pushState()
 			if err != nil {
-				s.passErr = true
-				s.dmsg = err.Error()
+				s.derr = err.Error()
 			}
 		case "resize":
 			err = s.updateState()
 			if err != nil {
-				s.passErr = true
-				s.dmsg = err.Error()
+				s.derr = err.Error()
 			}
 		}
 		sf = strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
@@ -933,18 +924,17 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 		suggdim := strconv.Itoa(odim - 3)
 		list[5] = DisplayItem{Title: `What is the size of your container? Say 'size [newsize]' e.g. "size ` + suggdim + `"`}
 		list[6] = DisplayItem{Title: `Note: your container size must be less than the recipe container size displayed above`}
-		if s.request != "start" && !s.passErr {
+		if s.request != "start" && len(s.derr) > 0 {
 			_, err := s.pushState()
 			if err != nil {
-				s.passErr = true
-				s.dmsg = err.Error()
+				s.derr = err.Error()
 			}
 		}
 	}
 	// create new state - must do this so when back button is hit we can pop this state otherwise we loose objMenu state
 	//  alternatively we cou ld updateState to indicate this state - but that invovles a write so we may as well create a new state.
 	type_ := "Ingredient"
-	if s.passErr {
+	if len(s.derr) > 0 {
 		type_ += "Err"
 	}
 	backBtn := true
@@ -952,5 +942,5 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 		backBtn = false
 	}
 	hint = `size [integer]`
-	return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr, SubHdr: subh, Hint: hint, List: list, Error: s.dmsg}
+	return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr, SubHdr: subh, Hint: hint, List: list, Error: s.derr}
 }

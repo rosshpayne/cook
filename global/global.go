@@ -1,8 +1,8 @@
 package global
 
-import (
-	"fmt"
-)
+// import (
+// 	"fmt"
+// )
 
 type WriteContextT int
 
@@ -26,7 +26,6 @@ func WriteCtx() WriteContextT {
 }
 
 func SetScale(s float64) {
-	fmt.Println("** set Scale ", s)
 	scaleF = s
 }
 

@@ -40,16 +40,15 @@ type mRecipeT struct {
 type mRecipeM map[mRecipeT]bool
 
 type sessCtx struct {
-	err        error
+	//	err        error
 	newSession bool
 	//path      string // InputEvent.Path
 	request string // pathItem[0] or redirected value
-	lastreq string // previous request
-	origreq string // pathItem[0] only
+	lastreq string // previous request (not current one)
+	origreq string // original pathItem[0] before redirect if used
 	//param     string // InputEvent.Param
 	state     stateStack
 	lastState *stateRec // state attribute from state dynamo item - contains state history
-	passErr   bool      // error in logic or operation. display() functions uses this flag to present error to display.
 	//
 	userId      string   // sourced from request. Used as PKey to Sessions table
 	bkids       []string // registered books to user
@@ -96,12 +95,13 @@ type sessCtx struct {
 	displaySubHdr string // passed to alexa display
 	activityS     Activities
 	dmsg          string // display msg
+	derr          string // display error
 	vmsg          string // verbal msg
 	ddata         string
 	yesno         string
 	//
 	displayData Displayer
-	//instructions []InstructionT // cached instructions for complete or part based recipe
+	//instructions []InstructionT // cached instructions for complete or part based recipe/
 	// Recipe Part data
 	eol   int    // sourced from Sessions table
 	peol  int    // End-of-List-for-part
@@ -387,11 +387,13 @@ func (s *sessCtx) orchestrateRequest() error {
 		fmt.Println(`"process  "list"`)
 		if len(lastState.RecipeList) > 0 || len(s.state) == 1 {
 			fmt.Println("Cannot list from this context - must choose a recipe first")
-			s.dmsg = `*** Alert: Cannot list from this context -  choose a recipe first. Say "find recipe" or "restart" or "open book"`
-			s.passErr = true
+			s.derr = `*** Alert: Cannot list from this context -  choose a recipe first. Say "find recipe" or "restart" or "open book"`
 			// displayData set in setState()
 			return nil
 		}
+		//
+		// rollup to objMenu
+		//
 		for showObjMenu := s.showObjMenu; !showObjMenu; showObjMenu = s.showObjMenu {
 			err := s.popState() // will set request to "start" assigned from stateRec[0].Request.
 			if err != nil {
@@ -406,8 +408,9 @@ func (s *sessCtx) orchestrateRequest() error {
 			return err
 		}
 		s.displayData = nil
+		// redirect list request to select
 		s.request = "select"
-		s.selCtx = 2
+		s.selCtx = ctxObjectMenu // 2
 		fmt.Println("s.action: ", s.action)
 		switch s.action {
 		case "ingredients", "ingredient":
@@ -423,17 +426,42 @@ func (s *sessCtx) orchestrateRequest() error {
 				s.selId = 3
 			default:
 				fmt.Println("*** Resizing the container is not available for this recipe")
-				s.dmsg = `*** Alert: Resizing the container is not available for this recipe`
-				s.passErr = true
+				s.derr = `*** Alert: Resizing the container is not available for this recipe`
 			}
 		case "instructions", "instruction", "start cooking", "steps", "step":
 			s.selId = len(s.menuL)
+			// if part menu is available then find appropriate selId based on s.part and set selCtx to part menu
+			// 0 index is CompleteRecipe_
+			if len(s.parts) > 0 {
+				s.selCtx = ctxPartMenu
+				// find item in Part Menu for s.part
+				s.selId = 0
+				if len(s.part) > 0 {
+					if s.part == CompleteRecipe_ {
+						s.selId = 1
+					} else {
+						s.selId = 1
+						for i, prtName := 1, s.parts[0].Title; prtName != s.part && i < len(s.parts); i++ {
+							prtName = s.parts[i].Title
+							s.selId = i + 1
+						}
+						s.selId++ // select id starts at 1
+					}
+				}
+			}
 		case "parts":
-			s.selId = len(s.menuL)
+			if len(s.parts) > 0 {
+				s.selId = len(s.menuL)
+			} else {
+				// no parts
+				s.derr = `*** Alert:  Recipe is not divided into parts. Say "list instructions" to start cooking`
+				s.request = s.lastreq
+				s.selCtx = lastState.SelCtx
+				s.selId = lastState.SelId
+			}
 		default:
 			fmt.Println("Invalid action ", s.action)
-			s.passErr = true
-			s.dmsg = `Invalid list action. Valid actions are "ingredient","container","instruction"`
+			s.derr = `Invalid list action. Valid actions are "ingredient","container","instructions", "parts"`
 		}
 	}
 
@@ -442,8 +470,7 @@ func (s *sessCtx) orchestrateRequest() error {
 		// user sepecified size of container e.g "size 23"
 		if s.object != "sizeContainer" {
 			fmt.Println("Cannot change container size from this context - must choose a recipe first")
-			s.dmsg = `*** Alert: Cannot change container size from this context -  Say "list resize" and then "resize"`
-			s.passErr = true
+			s.derr = `*** Alert: Cannot change container size from this context -  Say "list resize" and then "resize"`
 			// user lastState selCtx & selId to complete processing
 		}
 		c := s.dispCtr
@@ -484,13 +511,11 @@ func (s *sessCtx) orchestrateRequest() error {
 		//
 		switch s.displayData.(type) {
 		case Threads:
-			s.passErr = true
-			s.dmsg = ` *** Alert :  you cannot scale a recipe while following instructions. Say "go back" or "restart" and scale from there.`
+			s.derr = ` *** Alert :  you cannot scale a recipe while following instructions. Say "go back" or "restart" and scale from there.`
 			return nil
 		default:
 			if s.object == "sizeContainer" {
-				s.dmsg = ` *** Alert :  you should scale a recipe using the size of your container. Say "size [integer]" or "restart" or a "list" option.`
-				s.passErr = true
+				s.derr = ` *** Alert :  you should scale a recipe using the size of your container. Say "size [integer]" or "restart" or a "list" option.`
 				s.displayData = s.dispCtr
 				return nil
 			}
@@ -594,7 +619,6 @@ func (s *sessCtx) orchestrateRequest() error {
 			// a book is currently been accessed
 			switch {
 			case lastState.Request != "start":
-				s.passErr = true
 				s.dmsg = `You must be at the start to open a book. Please say "restart" and then open your book from there. Otherwise continue.`
 				s.vmsg = `You must be at the start to open a book. Please say "restart" and then open your book from there. Note this will cancel what you are doing.`
 
@@ -606,7 +630,6 @@ func (s *sessCtx) orchestrateRequest() error {
 					s.questionId = 21
 				}
 				if len(lastState.OpenBk) > 0 {
-					s.passErr = true
 					s.dmsg = `*** Please close ` + lastState.BkName + ` before opening another book, by saying "close book", otherwise just continue.`
 					s.vmsg = s.dmsg[4:]
 					if lastState.Request != "start" {
@@ -726,19 +749,18 @@ func (s *sessCtx) orchestrateRequest() error {
 
 		case 0:
 			// nothing found
-			s.passErr = true
 			if len(s.reqOpenBk) > 0 {
-				s.dmsg = `*** No recipe found in ` + s.reqBkName + ` matching "` + s.reqSearch + `". `
+				s.derr = `*** No recipe found in ` + s.reqBkName + ` matching "` + s.reqSearch + `". `
 			} else {
-				s.dmsg = `*** No recipe found in any of your books matching "` + s.reqSearch + `". `
+				s.derr = `*** No recipe found in any of your books matching "` + s.reqSearch + `". `
 			}
 			words := strings.Split(s.reqSearch, " ")
 			if len(words) == 1 {
-				s.dmsg += "Try multiple keywords e.g search orange chocolate tart. "
+				s.derr += "Try multiple keywords e.g search orange chocolate tart. "
 			} else {
-				s.dmsg += "Change the order of the keywords or try alternative keywords. "
+				s.derr += "Change the order of the keywords or try alternative keywords. "
 			}
-			s.dmsg += "Otherwise continue."
+			s.derr += "Otherwise continue."
 			return nil
 
 		case 1:
@@ -765,16 +787,16 @@ func (s *sessCtx) orchestrateRequest() error {
 	//
 	if s.request == "resume" {
 		if s.cThread == 0 || s.object != "task" || s.reqRId == "0" {
-			s.err = fmt.Errorf("There is nothing to resume")
+			s.derr = "There is nothing to resume"
 			return nil
 		}
 		if t, ok := s.displayData.(Threads); ok {
 			if s.oThread == -1 {
-				s.err = fmt.Errorf("All is completed. There is nothing to resume")
+				s.derr = "All is completed. There is nothing to resume"
 				return nil
 			}
 			if t[s.oThread].Id == len(t[s.oThread].Instructions) {
-				s.err = fmt.Errorf("All is completed. There is nothing to resume")
+				s.derr = "All is completed. There is nothing to resume"
 				return nil
 			}
 			x := s.cThread
@@ -782,7 +804,7 @@ func (s *sessCtx) orchestrateRequest() error {
 			s.oThread = x
 			s.recId[objectMap[s.object]] = t[s.cThread].Id
 		} else {
-			s.err = fmt.Errorf("There is nothing to resume")
+			s.derr = "There is nothing to resume"
 		}
 		return nil
 	}
@@ -837,8 +859,7 @@ func (s *sessCtx) orchestrateRequest() error {
 			if !s.reScale {
 				// select id only checked for genuine selection which doesn't happen if request is scale.
 				if s.selId > len(s.recipeList) || s.selId < 1 {
-					s.passErr = true
-					s.dmsg = "selection is not within range"
+					s.derr = "selection is not within range"
 					return nil
 				}
 
@@ -884,8 +905,7 @@ func (s *sessCtx) orchestrateRequest() error {
 				// check select id is within menu range. For reScale there is no menu listing in its current state.
 				if s.selId > len(s.menuL) {
 					//s.setDisplay(lastState)
-					s.dmsg = "selection is not within range"
-					s.passErr = true
+					s.derr = "selection is not within range"
 					return nil
 				}
 				s.object = objectS[s.menuL[s.selId-1]]
@@ -903,7 +923,7 @@ func (s *sessCtx) orchestrateRequest() error {
 				//s.selClear = true //TODO: what if they back at this point we have cleared sel.
 				fmt.Printf("s.parts  %#v [%s] \n", s.parts, s.part)
 				s.showObjMenu = false
-				if len(s.parts) > 0 && len(s.part) == 0 {
+				if (len(s.parts) > 0 && len(s.part) == 0) || (s.origreq == "list" && s.action == "parts") {
 					//s.dispPartMenu = true
 					s.displayData = s.parts
 					s.selCtx = ctxPartMenu
@@ -922,7 +942,7 @@ func (s *sessCtx) orchestrateRequest() error {
 					}
 					return nil
 				} else {
-					// go straight to instructions
+					// go straight to instruction
 					s.displayData, err = s.cacheInstructions()
 					if err != nil {
 						return err
@@ -1023,8 +1043,7 @@ func (s *sessCtx) orchestrateRequest() error {
 			s.dispCtr = nil
 			if s.selId > len(s.parts)+1 || s.selId < 1 {
 				//s.setDisplay(lastState)
-				s.passErr = true
-				s.dmsg = "selection is not within range"
+				s.derr = "selection is not within range"
 				return nil
 			}
 			s.part = ""

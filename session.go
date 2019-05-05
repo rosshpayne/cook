@@ -251,10 +251,7 @@ func (s *sessCtx) setState(ls *stateRec) {
 	if len(s.part) == 0 {
 		s.part = ls.Part
 	}
-	if len(s.parts) == 0 && len(ls.Parts) > 0 {
-		s.parts = ls.Parts
-		s.displayData = ls.Parts
-	}
+
 	if len(ls.InstructionData) > 0 {
 		dd := ls.InstructionData
 		// if s.peol == 0 && len(dd) > 0 && dd[ls.CThread].Id > 0 {
@@ -369,8 +366,14 @@ func (s *sessCtx) setState(ls *stateRec) {
 	// 	// 		s.object = ls.Obj
 	// 	// 	}
 	//}
+	if len(s.parts) == 0 && len(ls.Parts) > 0 {
+		s.part = ls.Part
+		s.parts = ls.Parts
+		//s.displayData = ls.Parts
+	}
 	if ls.SelCtx == ctxPartMenu && len(ls.Part) == 0 {
 		// active Parts menu but no selection maade so display part menu
+		s.part = ls.Part
 		s.parts = ls.Parts
 		s.displayData = ls.Parts
 	}
@@ -629,6 +632,10 @@ func (s *sessCtx) updateState() error {
 		atribute = fmt.Sprintf("state[%d].OThrd", i)
 		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.oThread))
 		//
+		if len(s.part) > 0 {
+			atribute = fmt.Sprintf("state[%d].Part", i)
+			updateC = updateC.Set(expression.Name(atribute), expression.Value(s.part))
+		}
 		if s.state[i].ShowObjMenu {
 			break
 		}
