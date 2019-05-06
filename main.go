@@ -1046,12 +1046,17 @@ func (s *sessCtx) orchestrateRequest() error {
 				s.derr = "selection is not within range"
 				return nil
 			}
-			s.part = ""
+			curPart := s.part
+			//s.part = ""
 			switch s.selId {
 			case 1:
 				s.part = CompleteRecipe_
 			default:
 				s.part = s.parts[s.selId-2].Title
+			}
+			// zero index into instructions if part changed
+			if s.part != curPart {
+				s.recId[objectMap[task_]] = 0
 			}
 			fmt.Printf("selId  %d   parts   %#v\n", s.selId, s.part)
 			s.reset = true
