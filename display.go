@@ -924,7 +924,7 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 		suggdim := strconv.Itoa(odim - 3)
 		list[5] = DisplayItem{Title: `What is the size of your container? Say 'size [newsize]' e.g. "size ` + suggdim + `"`}
 		list[6] = DisplayItem{Title: `Note: your container size must be less than the recipe container size displayed above`}
-		if s.request != "start" && len(s.derr) > 0 {
+		if s.request != "start" {
 			_, err := s.pushState()
 			if err != nil {
 				s.derr = err.Error()

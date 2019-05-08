@@ -7,6 +7,7 @@
                   "SortK" : { "S": "CakeTin" },
                   "type" : { "S": "Cake Tin " },
                   "label" : { "S": "Cake Tin" },
+                  "scale" : { "BOOL" : true },
                   "measure" : { "M" : { "shape" : { "S" : "round" },
                                         "dim": {"S" : "30" },
                                         "height" : { "S" : "5" },

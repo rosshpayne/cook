@@ -923,7 +923,7 @@ func (s *sessCtx) orchestrateRequest() error {
 				//s.selClear = true //TODO: what if they back at this point we have cleared sel.
 				fmt.Printf("s.parts  %#v [%s] \n", s.parts, s.part)
 				s.showObjMenu = false
-				if (len(s.parts) > 0 && len(s.part) == 0) || (s.origreq == "list" && s.action == "parts") {
+				if len(s.parts) > 0 || (s.origreq == "list" && s.action == "parts") {
 					//s.dispPartMenu = true
 					s.displayData = s.parts
 					s.selCtx = ctxPartMenu
@@ -1030,6 +1030,7 @@ func (s *sessCtx) orchestrateRequest() error {
 			case CtrMsr_:
 				//do not set s.showObjMenu = false, as dispCtr.GenDisplay() performs updateState() rather than pushState()
 				fmt.Printf("CtrMsr - %#v\n", *(s.dispCtr))
+				s.showObjMenu = false
 				s.displayData = s.dispCtr
 				return nil
 			}

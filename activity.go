@@ -369,7 +369,9 @@ func (m *MeasureCT) String() string {
 
 func (m *MeasureT) String() string {
 
-	if global.GetScale() > scaleThreshold || m.NoScale {
+	var scaleFactor float64 = global.GetScale()
+
+	if scaleFactor > scaleThreshold || m.NoScale {
 		return m.FormatString()
 	}
 	//
@@ -428,7 +430,7 @@ func (m *MeasureT) String() string {
 			}
 			f += n
 		}
-		f *= global.GetScale()
+		f *= scaleFactor
 		fint, frac := math.Modf(f)
 		if frac > 0.875 {
 			fint += 1
@@ -458,7 +460,7 @@ func (m *MeasureT) String() string {
 		if err != nil {
 			panic(fmt.Errorf("Error: cannot covert Quantity [%s] to float64 in *MeasureT.String()", s))
 		}
-		qty := f * global.GetScale()
+		qty := f * scaleFactor
 		ff, frac := math.Modf(qty)
 		if frac > 0.875 {
 			ff += 1
@@ -484,7 +486,7 @@ func (m *MeasureT) String() string {
 			panic(fmt.Errorf("Error: cannot covert Quantity [%s] to int in *MeasureT.String()", s))
 		}
 		fmt.Println("i=", i)
-		qty := float64(i) * 10 * global.GetScale()
+		qty := float64(i) * 10 * scaleFactor
 		fmt.Println("qty=", qty)
 		qty = roundTo5(qty) / 10
 		fmt.Println("qty=", qty)
@@ -596,7 +598,7 @@ func (m *MeasureT) String() string {
 			}
 		}
 		// *1000 as we are to change to smaller unit
-		qty = f * global.GetScale()
+		qty = f * scaleFactor
 		fmt.Println("qty: ", qty)
 		if m.Unit == "l" || m.Unit == "cm" || m.Unit == "kg" {
 			var unit string
