@@ -954,6 +954,8 @@ func (s *sessCtx) loadBaseRecipe() error {
 								context = time
 								fmt.Fprintf(&b, "%d", pt.Tplus+pt.Time)
 							}
+						default:
+							b.WriteString(strings.ToLower(str[topen : tclose_+1]))
 						}
 						tclose += 1
 						topen = strings.IndexByte(str[tclose:], '{')

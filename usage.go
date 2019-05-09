@@ -716,7 +716,7 @@ func expandLiteralTags(str string) string {
 	)
 
 	resetScale := func() func() {
-		savedScale = global.GetScale() //scaleF
+		savedScale = global.GetScale() 
 		global.SetScale(1)
 		return func() { global.SetScale(savedScale) }
 	}

@@ -325,15 +325,31 @@ func (m *MeasureCT) Shape_() string {
 	return ""
 }
 
-func (m *MeasureCT) Dimension_() string {
+func (m *MeasureCT) CTDimension_() string {
 	var b strings.Builder
 	if m == nil {
 		panic(fmt.Errorf("%s", "Measure is nil in method String() of Container"))
 	}
-	if len(m.Dimension) > 0 {
-		b.WriteString(m.Dimension)
-		b.WriteString(" ")
-		b.WriteString(m.Unit)
+
+	if global.WriteCtx() == global.USay {
+		if len(m.Dimension) > 0 {
+
+			b.WriteString(m.Dimension)
+			//	b.WriteString(m.Unit)
+			if len(m.Height) > 0 {
+				b.WriteString(" by " + m.Height)
+			}
+			b.WriteString(UnitMap[m.Unit].String())
+		}
+	} else {
+		if len(m.Dimension) > 0 {
+
+			b.WriteString(m.Dimension)
+			if len(m.Height) > 0 {
+				b.WriteString("x" + m.Height)
+			}
+			b.WriteString(UnitMap[m.Unit].String())
+		}
 	}
 	return b.String()
 }
@@ -347,16 +363,10 @@ func (m *MeasureCT) String() string {
 		b.WriteString(m.Shape + " ")
 	}
 	if len(m.Dimension) > 0 {
-		b.WriteString(m.Dimension)
-	}
-	if len(m.Height) > 0 {
-		b.WriteString("x" + m.Height)
+		b.WriteString(m.CTDimension_())
 	}
 	if len(m.Quantity) > 0 {
 		b.WriteString(m.Quantity)
-	}
-	if len(m.Unit) > 0 {
-		b.WriteString(m.Unit)
 	}
 	if len(m.Size) > 0 {
 		b.WriteString(m.Size)
@@ -481,33 +491,63 @@ func (m *MeasureT) String() string {
 	}
 
 	scaleInt := func(s string) string {
-		i, err := strconv.Atoi(s)
+		f, err := strconv.ParseFloat(s, 64)
 		if err != nil {
-			panic(fmt.Errorf("Error: cannot covert Quantity [%s] to int in *MeasureT.String()", s))
+			panic(fmt.Errorf("Error: cannot covert Quantity [%s] to float64 in *MeasureT.String()", s))
 		}
-		fmt.Println("i=", i)
-		qty := float64(i) * 10 * scaleFactor
-		fmt.Println("qty=", qty)
-		qty = roundTo5(qty) / 10
-		fmt.Println("qty=", qty)
-		if qty < 1 {
-			if qty > 0.875 {
-				s = "1.0"
-			} else if qty > 0.625 {
-				s = "3/4"
-			} else if qty > 0.375 {
-				s = "1/2"
-			} else if qty > 0.1875 {
-				s = "1/4"
-			} else if qty > 0.075 {
-				s = "1/8"
+		qty := f * scaleFactor
+		ff, frac := math.Modf(qty)
+		s = ""
+		if ff < 10 {
+			if frac > 0.875 {
+				ff += 1
+				f = 0.0
+			} else if frac > 0.625 {
+				s = " 3/4"
+			} else if frac > 0.375 {
+				s = " 1/2"
+			} else if frac > 0.1875 {
+				s = " 1/4"
+			} else if frac > 0.075 {
+				s = " 1/8"
 			} else {
-				s = c_pinchof
+				if ff < 1 {
+					return c_pinchof
+				}
 			}
-			return s
 		}
-		return strconv.FormatFloat(qty, 'g', -1, 64)
+		fmt.Println("scaleFloat: ", ff, f)
+		return strconv.FormatFloat(ff, 'g', -1, 64) + s
 	}
+
+	// scaleInt := func(s string) string {
+	// 	i, err := strconv.Atoi(s)
+	// 	if err != nil {
+	// 		panic(fmt.Errorf("Error: cannot covert Quantity [%s] to int in *MeasureT.String()", s))
+	// 	}
+	// 	fmt.Println("scaleInt i=", i)
+	// 	qty := float64(i) * 10 * scaleFactor
+	// 	fmt.Println("qty=", qty)
+	// 	qty = roundTo5(qty) / 10
+	// 	fmt.Println("qty=", qty)
+	// 	if qty < 1 {
+	// 		if qty > 0.875 {
+	// 			s = "1.0"
+	// 		} else if qty > 0.625 {
+	// 			s = "3/4"
+	// 		} else if qty > 0.375 {
+	// 			s = "1/2"
+	// 		} else if qty > 0.1875 {
+	// 			s = "1/4"
+	// 		} else if qty > 0.075 {
+	// 			s = "1/8"
+	// 		} else {
+	// 			s = c_pinchof
+	// 		}
+	// 		return s
+	// 	}
+	// 	return strconv.FormatFloat(qty, 'g', -1, 64)
+	// }
 	// if len(m.Quantity) > 0 && len(m.Size) > 0 {
 	// 	return m.Quantity + " " + m.Size
 	// }
@@ -534,6 +574,7 @@ func (m *MeasureT) String() string {
 			return mn.FormatString()
 		}
 		s := scaleInt(m.Num)
+		//s := scaleFraction(m.Num)
 		mn := &MeasureT{Size: m.Size, Num: s, Unit: m.Unit}
 		return mn.FormatString()
 	}
@@ -557,8 +598,8 @@ func (m *MeasureT) String() string {
 			}
 			return mn.FormatString()
 		}
-		//s := scaleInt(m.Quantity)
-		s := scaleFloat(m.Quantity)
+		s := scaleInt(m.Quantity)
+		//s := scaleFloat(m.Quantity)
 		mn := &MeasureT{Quantity: s, Size: m.Size, Num: m.Num}
 		return mn.FormatString()
 	}

@@ -850,6 +850,7 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 	if c == nil {
 		panic("in GenDisplay(): DispContainerT instance is nil ")
 	}
+
 	if s.ctSize > 0 || len(c.UDimension) > 0 {
 		// response to user size request
 		cdim, err := strconv.Atoi(c.Dimension)
@@ -859,6 +860,12 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 		if s.ctSize > 0 {
 			c.UDimension = strconv.Itoa(s.ctSize)
 			global.SetScale(float64(s.ctSize*s.ctSize) / float64(cdim*cdim))
+		} else if len(c.UDimension) > 0 {
+			udim, err := strconv.Atoi(c.UDimension)
+			if err != nil {
+				s.derr = err.Error()
+			}
+			global.SetScale(float64(udim*udim) / float64(cdim*cdim))
 		}
 		// persist  new scaleF
 		switch s.request {

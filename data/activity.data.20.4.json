@@ -296,8 +296,8 @@
                 },
                "task" : { "L" : [ 
                                 {"M" : { 
-                                  "txt" : { "S" : "Cut {measure} of {ingrd} into {m:3|cm||} slices and place in a {addToC} " },
-                                  "say" : { "S" : "Cut {measure} of {ingrd} into {m:3|cm||} slices and place in a {addToC} " },
+                                  "txt" : { "S" : "Cut {measure} of {ingrd} into {l:3|cm||} slices and place in a {addToC} " },
+                                  "say" : { "S" : "Cut {measure} of {ingrd} into {l:3|cm||} slices and place in a {addToC} " },
                                   "time" : { "N" : "5" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -327,8 +327,8 @@
                 },
                 "task" : { "L" : [ 
                                 {"M" : { 
-                                  "txt" : { "S" : "hull and slice {measure} of {ingrd} into {m:0.5|cm||} thickslices and place in {addToC} " },
-                                  "say" : { "S" : "hull and slice {measure} of {ingrd} into  {m:0.5|cm||} thickslices and place in {addToC} " },
+                                  "txt" : { "S" : "hull and slice {measure} of {ingrd} into {l:0.5|cm||} thickslices and place in {addToC} " },
+                                  "say" : { "S" : "hull and slice {measure} of {ingrd} into  {l:0.5|cm||} thickslices and place in {addToC} " },
                                   "time" : { "N" : "10" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },

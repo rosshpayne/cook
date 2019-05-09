@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"log"
 	"net/url"
-	_ "os"
+	"os"
 	"strconv"
 	"strings"
 
 	"github.com/cook/global"
 
-	"github.com/aws/aws-lambda-go/lambda"
+	_ "github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -470,25 +470,26 @@ func (s *sessCtx) orchestrateRequest() error {
 		// user sepecified size of container e.g "size 23"
 		if s.object != "sizeContainer" {
 			fmt.Println("Cannot change container size from this context - must choose a recipe first")
-			s.derr = `*** Alert: Cannot change container size from this context -  Say "list resize" and then "resize"`
+			s.derr = `*** Alert: Cannot change container size from this context -  Say "list size" and then "size [integer]" to size your container`
 			// user lastState selCtx & selId to complete processing
+		} else {
+			c := s.dispCtr
+			cdim, err := strconv.Atoi(c.Dimension)
+			if err != nil {
+				panic(err.Error())
+			}
+			fmt.Println("Dimension: cdim = ", cdim)
+			fmt.Println("user entered dimension = ", s.ctSize)
+			if float64(s.ctSize)/float64(cdim) < 0.6 {
+				return fmt.Errorf("Resize cannot be less than 60% of original container size")
+			}
+			s.displayData = s.dispCtr
+			s.reset = true
+			s.showObjMenu = false
+			s.curReqType = 0
+			// NB. updateState is executed from dispCtr.GenDisplay()
+			return nil
 		}
-		c := s.dispCtr
-		cdim, err := strconv.Atoi(c.Dimension)
-		if err != nil {
-			panic(err.Error())
-		}
-		fmt.Println("Dimension: cdim = ", cdim)
-		fmt.Println("user entered dimension = ", s.ctSize)
-		if float64(s.ctSize)/float64(cdim) < 0.6 {
-			return fmt.Errorf("Resize cannot be less than 60% of original container size")
-		}
-		s.displayData = s.dispCtr
-		s.reset = true
-		s.showObjMenu = false
-		s.curReqType = 0
-		// NB. updateState is executed from dispCtr.GenDisplay()
-		return nil
 	}
 	//
 	// check if scale requested and state is listing ingredients, otherwise ignore
@@ -1357,7 +1358,7 @@ func handler(request InputEvent) (RespEvent, error) {
 
 func main() {
 
-	lambda.Start(handler)
+	//lambda.Start(handler)
 
 	//p1 := InputEvent{Path: os.Args[1], Param: "uid=asdf-asdf-asdf-asdf-asdf-987654&rcp=Take-home Chocolate Cake"}
 	//var i float64 = 1.0
@@ -1367,9 +1368,9 @@ func main() {
 	//	var err error
 	//	var scaleF float64
 	// p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
-	// uid := `amzn1.ask.account.AFTQJDFZKJIDFN6GRQFTSILWMGO2BHFRTP55PK6KT42XY22GR4BABOP4Y663SUNVBWYABLLQCHEK22MZVUVR7HXVRO247IQZ5KSVNLMDBRDRYEINWGRB6N2U7J2BBWEOEKLY2HKQ6VQTTLGKT2JCH4VOE5A7XPFDI4VMNJW63YP4XCMYGIA5IU4VJGNHI2AAU33Q5J2TJIXP3DI`
-	// // p2 := InputEvent{Path: "addUser", Param: "uid=" + uid + "&bkids=20,21"}
-	// p2 := InputEvent{Path: os.Args[1], Param: "sid=" + uid + "&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
+	uid := `amzn1.ask.account.AFTQJDFZKJIDFN6GRQFTSILWMGO2BHFRTP55PK6KT42XY22GR4BABOP4Y663SUNVBWYABLLQCHEK22MZVUVR7HXVRO247IQZ5KSVNLMDBRDRYEINWGRB6N2U7J2BBWEOEKLY2HKQ6VQTTLGKT2JCH4VOE5A7XPFDI4VMNJW63YP4XCMYGIA5IU4VJGNHI2AAU33Q5J2TJIXP3DI`
+	// p2 := InputEvent{Path: "addUser", Param: "uid=" + uid + "&bkids=20,21"}
+	p2 := InputEvent{Path: os.Args[1], Param: "sid=" + uid + "&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
 
 	// if len(os.Args) < 5 {
 	// 	scaleF = 1.0
@@ -1379,12 +1380,12 @@ func main() {
 	// 		panic(err)
 	// 	}
 	// }
-	// 	global.Set_WriteCtx(global.UDisplay)
-	// 	p, _ := handler(p2)
-	// 	if len(p.Error) > 0 {
-	// 		fmt.Printf("%#v\n", p.Error)
-	// 	} else {
-	// 		fmt.Printf("output:   %s\n", p.Text)
-	// 		fmt.Printf("output:   %s\n", p.Verbal)
-	// 	}
+	global.Set_WriteCtx(global.UDisplay)
+	p, _ := handler(p2)
+	if len(p.Error) > 0 {
+		fmt.Printf("%#v\n", p.Error)
+	} else {
+		fmt.Printf("output:   %s\n", p.Text)
+		fmt.Printf("output:   %s\n", p.Verbal)
+	}
 }
