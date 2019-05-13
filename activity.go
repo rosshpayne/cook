@@ -256,7 +256,8 @@ func (d *DeviceT) String() string {
 		if len(t) > 1 {
 			// for an oven device, a/b means <a><unit> fan/ <b><unit> nofan / setting
 			if global.WriteCtx() == global.USay {
-				s = t[0] + UnitMap[d.Unit].String() + " or " + t[1] + UnitMap[d.Unit].String() + " fan forced"
+				//s = t[0] + UnitMap[d.Unit].String() + " or " + t[1] + UnitMap[d.Unit].String() + " fan forced"
+				s = t[0] + UnitMap[d.Unit].String() + ", or " + t[1] + " fan forced"
 			} else {
 				s = t[0] + UnitMap[d.Unit].String() + "/" + t[1] + UnitMap[d.Unit].String() + " Fan"
 			}
@@ -320,7 +321,11 @@ func (m *MeasureCT) Shape_() string {
 		panic(fmt.Errorf("%s", "Measure is nil in method String() of Container"))
 	}
 	if len(m.Shape) > 0 {
-		return m.Shape
+		if global.WriteCtx() == global.USay {
+			return m.Shape + ","
+		} else {
+			return m.Shape
+		}
 	}
 	return ""
 }
@@ -360,7 +365,7 @@ func (m *MeasureCT) String() string {
 		panic(fmt.Errorf("%s", "Measure is nil in method String() of Container"))
 	}
 	if len(m.Shape) > 0 {
-		b.WriteString(m.Shape + " ")
+		b.WriteString(m.Shape_() + " ")
 	}
 	if len(m.Dimension) > 0 {
 		b.WriteString(m.CTDimension_())

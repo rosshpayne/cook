@@ -1,6 +1,6 @@
 
 
-module.exports = (bkbtn, header, subhdr, data, hint) => { return {
+module.exports = (bkbtn, header, subhdr, data, verbal, hint) => { return {
     type: 'Alexa.Presentation.APL.RenderDocument',
     token: 'splash-screen',
     document: {
@@ -40,7 +40,7 @@ module.exports = (bkbtn, header, subhdr, data, hint) => { return {
               type: "AlexaHeader",
               headerTitle: header,
               headerSubtitle: subhdr,
-              headerBackgroundColor: "blue",
+              headerBackgroundColor: "green",
               headerBackButton: bkbtn,
               headerNavigationAction: "backButton"
               },
@@ -63,6 +63,13 @@ module.exports = (bkbtn, header, subhdr, data, hint) => { return {
                   }
               },
               {
+              type: "Text",
+              id: "Rinstruction",
+              speech: "${payload.listdata.properties.verbal}",
+              fontSize: "37dp",
+              style: "textStylePrimary1"
+              },
+              {
                 type: "AlexaFooter",
                 hintText: hint
               }
@@ -74,8 +81,20 @@ module.exports = (bkbtn, header, subhdr, data, hint) => { return {
       listdata :    {        
             type: "object",
             properties: { 
-              data
-            }
+              data,
+              verbal
+            },
+            transformers: [{
+                inputPath: "verbal",
+                outputPath: "verbalOut",
+                transformer: "ssmlToSpeech"
+                },
+                {
+                inputPath: "verbal",
+                outputPath: "text",
+                transformer: "ssmlToText"
+                }
+                ]
       }
     }
   };

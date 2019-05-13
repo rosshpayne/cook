@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"log"
 	"net/url"
-	"os"
+	_ "os"
 	"strconv"
 	"strings"
 
 	"github.com/cook/global"
 
-	_ "github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -148,6 +148,7 @@ const (
 	CtrMsr_         string = "sizeContainer"
 	recipe_         string = "recipe" // list recipe in book
 	CompleteRecipe_ string = "Complete recipe"
+	part_           string = "part"
 )
 
 type selectCtxT int
@@ -850,7 +851,7 @@ func (s *sessCtx) orchestrateRequest() error {
 	//
 	// respond to select from displayed items
 	//
-	if (s.request == "select" || s.request == "start") && s.selId > 0 {
+	if s.request == "select" || s.request == "start" { //&& s.selId > 0 {
 		// selId is the response from Alexa on the index (ordinal value) of the selected display item
 		fmt.Println("SELCTX is : ", s.selCtx)
 
@@ -924,7 +925,7 @@ func (s *sessCtx) orchestrateRequest() error {
 				//s.selClear = true //TODO: what if they back at this point we have cleared sel.
 				fmt.Printf("s.parts  %#v [%s] \n", s.parts, s.part)
 				s.showObjMenu = false
-				if len(s.parts) > 0 || (s.origreq == "list" && s.action == "parts") {
+				if (len(s.parts) > 0 && s.origreq == "select") || (s.origreq == "list" && s.action == "parts") {
 					//s.dispPartMenu = true
 					s.displayData = s.parts
 					s.selCtx = ctxPartMenu
@@ -1050,6 +1051,7 @@ func (s *sessCtx) orchestrateRequest() error {
 			}
 			curPart := s.part
 			//s.part = ""
+			s.object = task_
 			switch s.selId {
 			case 1:
 				s.part = CompleteRecipe_
@@ -1058,7 +1060,7 @@ func (s *sessCtx) orchestrateRequest() error {
 			}
 			// zero index into instructions if part changed
 			if s.part != curPart {
-				s.recId[objectMap[task_]] = 0
+				s.recId[objectMap[s.object]] = 0
 			}
 			fmt.Printf("selId  %d   parts   %#v\n", s.selId, s.part)
 			s.reset = true
@@ -1076,7 +1078,6 @@ func (s *sessCtx) orchestrateRequest() error {
 			// now complete the request by morphing request to a next operation
 			s.request = "select-next"
 			s.curReqType = instructionRequest
-			s.object = "task"
 		}
 	}
 	//
@@ -1358,7 +1359,7 @@ func handler(request InputEvent) (RespEvent, error) {
 
 func main() {
 
-	//lambda.Start(handler)
+	lambda.Start(handler)
 
 	//p1 := InputEvent{Path: os.Args[1], Param: "uid=asdf-asdf-asdf-asdf-asdf-987654&rcp=Take-home Chocolate Cake"}
 	//var i float64 = 1.0
@@ -1368,9 +1369,10 @@ func main() {
 	//	var err error
 	//	var scaleF float64
 	// p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
-	uid := `amzn1.ask.account.AFTQJDFZKJIDFN6GRQFTSILWMGO2BHFRTP55PK6KT42XY22GR4BABOP4Y663SUNVBWYABLLQCHEK22MZVUVR7HXVRO247IQZ5KSVNLMDBRDRYEINWGRB6N2U7J2BBWEOEKLY2HKQ6VQTTLGKT2JCH4VOE5A7XPFDI4VMNJW63YP4XCMYGIA5IU4VJGNHI2AAU33Q5J2TJIXP3DI`
-	// p2 := InputEvent{Path: "addUser", Param: "uid=" + uid + "&bkids=20,21"}
-	p2 := InputEvent{Path: os.Args[1], Param: "sid=" + uid + "&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
+
+	// uid := `amzn1.ask.account.AFTQJDFZKJIDFN6GRQFTSILWMGO2BHFRTP55PK6KT42XY22GR4BABOP4Y663SUNVBWYABLLQCHEK22MZVUVR7HXVRO247IQZ5KSVNLMDBRDRYEINWGRB6N2U7J2BBWEOEKLY2HKQ6VQTTLGKT2JCH4VOE5A7XPFDI4VMNJW63YP4XCMYGIA5IU4VJGNHI2AAU33Q5J2TJIXP3DI`
+	// // p2 := InputEvent{Path: "addUser", Param: "uid=" + uid + "&bkids=20,21"}
+	// p2 := InputEvent{Path: os.Args[1], Param: "sid=" + uid + "&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
 
 	// if len(os.Args) < 5 {
 	// 	scaleF = 1.0
@@ -1380,12 +1382,13 @@ func main() {
 	// 		panic(err)
 	// 	}
 	// }
-	global.Set_WriteCtx(global.UDisplay)
-	p, _ := handler(p2)
-	if len(p.Error) > 0 {
-		fmt.Printf("%#v\n", p.Error)
-	} else {
-		fmt.Printf("output:   %s\n", p.Text)
-		fmt.Printf("output:   %s\n", p.Verbal)
-	}
+
+	// global.Set_WriteCtx(global.UDisplay)
+	// p, _ := handler(p2)
+	// if len(p.Error) > 0 {
+	// 	fmt.Printf("%#v\n", p.Error)
+	// } else {
+	// 	fmt.Printf("output:   %s\n", p.Text)
+	// 	fmt.Printf("output:   %s\n", p.Verbal)
+	// }
 }

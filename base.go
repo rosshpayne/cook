@@ -81,7 +81,7 @@ func (s *sessCtx) loadBaseRecipe() error {
 		return fmt.Errorf("Error: in readBaseRecipeForContainers Query - %s", err.Error())
 	}
 	if int(*result.Count) == 0 {
-		return fmt.Errorf("No data found for reqRId %s in processBaseRecipe for Activity - ", s.pkey)
+		return fmt.Errorf("No data found for reqRId %s in loadBaseRecipe for Activity - ", s.pkey)
 	} else {
 		fmt.Println(" count: ", int(*result.Count))
 	}
@@ -89,7 +89,7 @@ func (s *sessCtx) loadBaseRecipe() error {
 	ActivityS := make(Activities, int(*result.Count))
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &ActivityS)
 	if err != nil {
-		return fmt.Errorf("** Error during UnmarshalListOfMaps in processBaseRecipe - %s", err.Error())
+		return fmt.Errorf("** Error during UnmarshalListOfMaps in loadBaseRecipe - %s", err.Error())
 	}
 	if len(ActivityS) != int(*result.Count) {
 		fmt.Println(" num ACtivity records: ", len(ActivityS))
@@ -724,8 +724,6 @@ func (s *sessCtx) loadBaseRecipe() error {
 						} else {
 							str = pt.Verbal
 						}
-
-						//TODO: why use expandTags here..
 					}
 					// if no {} then print and return to top of the loop
 					t1 := strings.IndexByte(str, '{')
@@ -764,12 +762,12 @@ func (s *sessCtx) loadBaseRecipe() error {
 						if tdot := strings.IndexByte(str[topen+1:tclose], '.'); tdot > 0 {
 							// dot notation used. Breakdown object being referenced.
 							s := strings.SplitN(strings.ToLower(str[topen+1:tclose]), ".", 2)
-							el, el2 = s[0], s[1]
+							el, el2 = s[0], strings.TrimSpace(s[1])
 							// reference to attribute in noncurrent activity e.g. {ingrd.30}
 							p_ := p
 							if el == "ingrd" {
 								if p, ok = ActivityM[str[topen+1+tdot+1:tclose]]; !ok {
-									return fmt.Errorf("Error: in processBaseRecipe. Reference to non-existent activity in [%d]\n", p_.AId)
+									return fmt.Errorf("Error: in loadBaseRecipe. Reference to non-existent activity in [%d]\n", p_.AId)
 								}
 								tclose_ -= len(str[topen+1+tdot+1:tclose]) + 1
 							}
@@ -802,20 +800,28 @@ func (s *sessCtx) loadBaseRecipe() error {
 							fmt.Fprintf(&b, "%s", p.QualiferIngrd)
 						case "usec", "addtoc":
 							var c *Container
-
+							idx := 0
+							if len(el2) == 1 { // 0,1,2,3..
+								var err error
+								idx, err = strconv.Atoi(el2)
+								if err != nil {
+									panic(fmt.Errorf(`Error: addtoC/useC not suitable in AId [%d] [%s]`, p.AId, el+el2))
+								}
+							}
 							if el == "usec" {
 								if len(pt.useCp) == 0 {
 									panic(fmt.Errorf(`Error: useC not suitable in AId [%d] [%s]`, p.AId, str))
 								}
-								c = pt.useCp[0]
+
+								c = pt.useCp[idx]
 							} else {
 								if len(pt.addToCp) == 0 {
 									panic(fmt.Errorf(`Error: addtoC not suitable in AId [%d] [%s]`, p.AId, str))
 								}
-								c = pt.addToCp[0]
+								c = pt.addToCp[idx]
 							}
 							// useC.form
-							if len(el2) > 0 {
+							if len(el2) > 1 {
 								switch el2 {
 								case "form": // depreciated - only alt used now. Still here to support existing
 									b.WriteString(c.String())
@@ -825,8 +831,16 @@ func (s *sessCtx) loadBaseRecipe() error {
 									panic(fmt.Errorf(`Error: useC or addtoC tag not followed by "form" or "type" type in AId [%d] [%s]`, p.AId, str))
 								}
 							} else {
-								//	b.WriteString(strings.ToLower(c.Label))
-								b.WriteString(c.String())
+								if c.Scale {
+									typ := c.Type
+									m := c.Measure
+									if len(c.Label) > 0 {
+										typ = c.Label
+									}
+									fmt.Fprintf(&b, "%s", "{c:"+typ+"|"+m.Quantity+"|"+m.Size+"|"+m.Shape+"|"+m.Dimension+"|"+m.Height+"|"+m.Unit+"}")
+								} else {
+									b.WriteString(c.String())
+								}
 							}
 						case "measure":
 							context = measure
@@ -835,15 +849,15 @@ func (s *sessCtx) loadBaseRecipe() error {
 							if pt.Measure != nil {
 								//fmt.Fprintf(&b, "%s", pt.Measure.String())
 								m := pt.Measure
-								fmt.Fprintf(&b, "%s", "{"+m.Quantity+"|"+m.Unit+"|"+m.Size+"|"+m.Num+"}")
+								fmt.Fprintf(&b, "%s", "{m:"+m.Quantity+"|"+m.Unit+"|"+m.Size+"|"+m.Num+"}")
 								break
 							}
 							// is it the activity measure
 							if p.Measure == nil {
-								return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
+								return fmt.Errorf("in loadBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
 							}
 							m := p.Measure
-							fmt.Fprintf(&b, "%s", "{"+m.Quantity+"|"+m.Unit+"|"+m.Size+"|"+m.Num+"}")
+							fmt.Fprintf(&b, "%s", "{m:"+m.Quantity+"|"+m.Unit+"|"+m.Size+"|"+m.Num+"}")
 							//
 							//fmt.Fprintf(&b, "%s", p.Measure.String(formatonly))
 						case "actmeasure", "ameasure", "imeasure": // ameasure, imeasure - activity/ingredient measure as opposed to measure attached to task/instruction
@@ -852,31 +866,31 @@ func (s *sessCtx) loadBaseRecipe() error {
 							// is it the activity measure
 							if p.Measure != nil {
 								m := p.Measure
-								fmt.Fprintf(&b, "%s", "{"+m.Quantity+"|"+m.Unit+"|"+m.Size+"|"+m.Num+"}")
+								fmt.Fprintf(&b, "%s", "{m:"+m.Quantity+"|"+m.Unit+"|"+m.Size+"|"+m.Num+"}")
 								//fmt.Fprintf(&b, "%s", p.Measure.String())
 							}
 						case "qty":
 							context = measure
 							if p.Measure == nil {
-								return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
+								return fmt.Errorf("in loadBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
 							}
 							m := p.Measure
 							fmt.Fprintf(&b, "%s", "{"+m.Quantity+"|||}")
 							//fmt.Fprintf(&b, "%s", p.Measure.String())
 						case "size":
 							if p.Measure == nil {
-								return fmt.Errorf("in processBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
+								return fmt.Errorf("in loadBaseRecipe. Ingredient measure not defined for Activity [%d]\n", p.AId)
 							}
 							fmt.Fprintf(&b, "%s", p.Measure.Size)
 						case "used":
 							if pt.UseDevice == nil {
-								return fmt.Errorf("in processBaseRecipe. UseDevice attribute not defined for Activity [%d]\n", p.AId)
+								return fmt.Errorf("in loadBaseRecipe. UseDevice attribute not defined for Activity [%d]\n", p.AId)
 							}
 							fmt.Fprintf(&b, "%s", strings.ToLower(pt.UseDevice.Type))
 							context = device
 						case "alternate", "devicealt":
 							if pt.UseDevice == nil {
-								return fmt.Errorf("in processBaseRecipe. UseDevice attribute not defined for Activity [%d]\n", p.AId)
+								return fmt.Errorf("in loadBaseRecipe. UseDevice attribute not defined for Activity [%d]\n", p.AId)
 							}
 							fmt.Fprintf(&b, "%s", strings.ToLower(pt.UseDevice.Alternate))
 							context = device
@@ -884,7 +898,7 @@ func (s *sessCtx) loadBaseRecipe() error {
 							fmt.Fprintf(&b, "%s", strings.ToLower(p.QualMeasure))
 						case "temp":
 							if pt.UseDevice == nil {
-								return fmt.Errorf("in processBaseRecipe. UseDevice attribute not defined for Activity [%d]\n", p.AId)
+								return fmt.Errorf("in loadBaseRecipe. UseDevice attribute not defined for Activity [%d]\n", p.AId)
 							}
 							context = device
 							fmt.Fprintf(&b, "%s", pt.UseDevice.String())
@@ -900,28 +914,28 @@ func (s *sessCtx) loadBaseRecipe() error {
 							switch context {
 							case measure:
 								if p.Measure == nil {
-									return fmt.Errorf("in processBaseRecipe. Measure not defined for Activity [%d]\n", p.AId)
+									return fmt.Errorf("in loadBaseRecipe. Measure not defined for Activity [%d]\n", p.AId)
 								}
 								m := p.Measure
 								if !(strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0 || m.Quantity == "1") {
 									plural = true
 								}
 								if len(p.Measure.Unit) == 0 {
-									return fmt.Errorf("in processBaseRecipe. Unit for time, [%s], not defined for Measure in Activity [%d]\n", pt.Unit, p.AId)
+									return fmt.Errorf("in loadBaseRecipe. Unit for time, [%s], not defined for Measure in Activity [%d]\n", pt.Unit, p.AId)
 								}
 								if u, ok = UnitMap[p.Measure.Unit]; !ok {
-									return fmt.Errorf("in processBaseRecipe. Unit for measure, [%s], not defined in unitM for Activity [%d]\n", p.Measure.Unit, p.AId)
+									return fmt.Errorf("in loadBaseRecipe. Unit for measure, [%s], not defined in unitM for Activity [%d]\n", p.Measure.Unit, p.AId)
 								}
 							case time:
 								if pt.Time > 0 {
 									plural = true
 								}
 								if len(pt.Unit) > 0 && len(pt.Unit) == 1 {
-									return fmt.Errorf("in processBaseRecipe. Unit for time, [%s], not defined for Activity [%d]\n", pt.Unit, p.AId)
+									return fmt.Errorf("in loadBaseRecipe. Unit for time, [%s], not defined for Activity [%d]\n", pt.Unit, p.AId)
 								}
 								if len(pt.Unit) > 0 {
 									if u, ok = UnitMap[pt.Unit]; !ok {
-										return fmt.Errorf("in processBaseRecipe. Unit for time, [%s], not defined in unitM for Activity [%d]\n", pt.Unit, p.AId)
+										return fmt.Errorf("in loadBaseRecipe. Unit for time, [%s], not defined in unitM for Activity [%d]\n", pt.Unit, p.AId)
 									}
 								}
 							}
@@ -945,16 +959,23 @@ func (s *sessCtx) loadBaseRecipe() error {
 								fmt.Fprintf(&b, "%s", strings.ToLower(p.Ingredient))
 							}
 						case "timeu":
-							fmt.Fprintf(&b, "%d%s", pt.Time, UnitMap[pt.Unit].String(pt))
+							fmt.Fprintf(&b, "%d", pt.Time)
+							if pt.Tplus > 0 {
+								context = time
+								fmt.Fprintf(&b, " to %d ", pt.Tplus+pt.Time)
+							}
+							fmt.Fprintf(&b, "%s", UnitMap[pt.Unit].String(pt))
 						case "time":
 							context = time
 							fmt.Fprintf(&b, "%d", pt.Time)
+
 						case "tplus":
 							{
 								context = time
 								fmt.Fprintf(&b, "%d", pt.Tplus+pt.Time)
 							}
 						default:
+							// pass literal measures straight through
 							b.WriteString(strings.ToLower(str[topen : tclose_+1]))
 						}
 						tclose += 1
@@ -985,11 +1006,11 @@ func (s *sessCtx) loadBaseRecipe() error {
 	//
 	ptS, err := ActivityS.generateAndSaveTasks(s)
 	if err != nil {
-		return fmt.Errorf("Error in generateAndSaveTasks in processBaseRecipe - %s", err.Error())
+		return fmt.Errorf("Error in generateAndSaveTasks in loadBaseRecipe - %s", err.Error())
 	}
 	err = s.generateAndSaveIndex(LabelM, IngredientM)
 	if err != nil {
-		return fmt.Errorf("Error in generateAndSaveIndex in processBaseRecipe  - %s", err.Error())
+		return fmt.Errorf("Error in generateAndSaveIndex in loadBaseRecipe  - %s", err.Error())
 	}
 	//
 	// Post processing of Containers

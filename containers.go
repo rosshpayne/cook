@@ -23,6 +23,7 @@ type Container struct {
 	Coord       [2]float32 `json:"coord"`
 	Contains    string     `json:"contents"`
 	Requirement string     `json:"requ"` // any requirements that the container must have e..g "have a lid"
+	Scale       bool       `json:"scale"`
 	// two instances of this container
 	Label      string     `json:"label"`  // name used in graphics system and String() which generates name using "label requirement"
 	Slabel     string     `json:"slabel"` // short name

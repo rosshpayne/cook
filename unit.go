@@ -22,7 +22,7 @@ type Unit struct {
 var UnitMap map[string]*Unit // populated in getActivity()
 
 var unitS []*Unit = []*Unit{
-	&Unit{Slabel: "g", Llabel: "gram", Print: "s", Say: "l", Display: "s"},
+	&Unit{Slabel: "g", Llabel: "gram", Print: "s", Say: "l", Display: "s", Plural: "s"},
 	&Unit{Slabel: "kg", Llabel: "kilogram", Print: "s", Say: "l", Display: "s"},
 	&Unit{Slabel: "tbsp", Llabel: "tablespoon", Print: "s", Say: "l", Display: "s"},
 	&Unit{Slabel: "tsp", Llabel: "teespoon", Print: "s", Say: "l", Display: "l"},

@@ -141,18 +141,28 @@ const LaunchRequestHandler = {
 };
 
 
-const XYZIntentHandler = {
+const TestIntentHandler = {
   canHandle(handlerInput) {
     return handlerInput.requestEnvelope.request.type === 'IntentRequest'
-      && handlerInput.requestEnvelope.request.intent.name === 'XYZIntent';
+      && handlerInput.requestEnvelope.request.intent.name === 'TestIntent';
   },
   handle(handlerInput) {
     //const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
-    const accessToken = handlerInput.requestEnvelope.context.System.apiAccessToken;
-    const accessEndpoint = handlerInput.requestEnvelope.context.System.apiEndpoint;
-    //function setTimer(expireSec, msg, accessToken, accessEndpoint, handlerInput){
-    console.log("In TimerInternHandler accessEndpoint ",accessEndpoint);
-    setTimer(300,"Test timer today", accessToken,accessEndpoint,handlerInput);
+    // const accessToken = handlerInput.requestEnvelope.context.System.apiAccessToken;
+    // const accessEndpoint = handlerInput.requestEnvelope.context.System.apiEndpoint;
+    // //function setTimer(expireSec, msg, accessToken, accessEndpoint, handlerInput){
+    //console.log("In TimerInternHandler accessEndpoint ",accessEndpoint);
+    //setTimer(300,"Test timer today", accessToken,accessEndpoint,handlerInput);
+              const tripple = require('APL/TestSpeak.js'); 
+          const speakcmd = require('APL/testspeakcmd.js');
+          const Text = "Separate 6 eggs.  Whites into a {addtoc.0}, and yolks, into a";
+           const Verbal = "<speak>Sepperate 6 eggs.  Whites into a large bowl, and yolks, into a small bowl</speak>";
+           
+          return  handlerInput.responseBuilder
+                            .reprompt(Verbal)
+                            .addDirective(tripple("header","subhrd", Verbal,Text))
+                            .addDirective(speakcmd())
+                            .getResponse(); 
   },
 };
 
@@ -486,7 +496,9 @@ const ResizeIntentHandler = {
     const querystring = require('querystring');
     const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
     const size='&size='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.integer.resolutions.resolutionsPerAuthority[0].values[0].value.id);
-
+  //  const size2='&size='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.object.resolutions.resolutionsPerAuthority[0].values[0].value.id);
+    console.log("size: "+ size);
+  //    console.log("size2: "+ size2);
     invokeParams.Payload = '{ "Path" : "resize" ,"Param" : "'+uid+size+'" }';
     
     var promise= new Promise((resolve, reject) => {
@@ -1099,34 +1111,42 @@ const ErrorHandler = {
 
 function handleResponse (handlerInput , resp) {
         if (resp.Type === "Ingredient" ) {
-          const ingrd = require('APL/' + resp.Type + '.js');
+          const ingrd = require('APL/' + resp.Type + '2.js');
+          const speakcmd = require('APL/speakcmd.js');
           return  handlerInput.responseBuilder
                             .speak(resp.Text)
                             .reprompt(resp.Text)
-                            .addDirective(ingrd(resp.BackBtn, resp.Header,resp.SubHdr, resp.List, resp.Hint, resp.Error))
+                            .addDirective(ingrd(resp.BackBtn, resp.Header,resp.SubHdr, resp.List, " ", resp.Hint))
+                            .addDirective(speakcmd())
                             .getResponse();
         } else if ( resp.Type === "IngredientErr") {
           const ingrd = require('APL/' + resp.Type + '.js');
+          const speakcmd = require('APL/speakcmd.js');
           return  handlerInput.responseBuilder
                             .speak(resp.Error)
                             .reprompt(resp.Text)
-                            .addDirective(ingrd(resp.BackBtn, resp.Header,resp.SubHdr, resp.List, resp.Hint, resp.Error))
+                            .addDirective(ingrd(resp.BackBtn, resp.Header,resp.SubHdr, resp.List, " ", resp.Hint, resp.Error))
+                            .addDirective(speakcmd())
                             .getResponse();
         } else if (resp.Type === "Start" || resp.Type === "StartErr") {
-          const start = require('APL/' + resp.Type + '.js');
+          const start = require('APL/' + resp.Type + '2.js');
+          const speakcmd = require('APL/speakcmd.js');
           return  handlerInput.responseBuilder
                           .speak(resp.Verbal)
                           .reprompt(resp.Text)
-                          .addDirective(start(resp.BackBtn, resp.Header, resp.SubHdr, resp.Text, resp.List, resp.Hint, resp.Error))
+                          .addDirective(start(resp.BackBtn, resp.Header, resp.SubHdr, resp.Text, resp.List, "a", resp.Hint, resp.Error))
+                          .addDirective(speakcmd())
                           .getResponse();
         } else if (resp.Type === "PartList") {
           const search = require('APL/' + resp.Type + '.js');
           return  handlerInput.responseBuilder
                           .speak(resp.Verbal)
                           .reprompt(resp.Text)
-                          .addDirective(search(resp.BackBtn, resp.Header, resp.SubHdr, resp.Height, resp.List))
+                          .addDirective(search(resp.BackBtn, resp.Header, resp.SubHdr, resp.Height, resp.List, resp.Hint, resp.Error))
                           .getResponse();
        } else if (resp.Type ==="Tripple" ) { 
+         console.log("T: ", resp.Text)
+          console.log("V: ",resp.Verbal)
           const tripple = require('APL/'+resp.Type+'.js'); 
           const speakcmd = require('APL/speakcmd.js');
           return  handlerInput.responseBuilder
@@ -1157,11 +1177,13 @@ function handleResponse (handlerInput , resp) {
                             .addDirective(select(resp.BackBtn, resp.Header,resp.SubHdr, resp.List))
                             .getResponse();     
         } else if (resp.Type === "Search" || resp.Type === "SearchErr") {
-          const search = require('APL/' + resp.Type + '.js');
+          const search = require('APL/' + resp.Type + '2.js');
+           const speakcmd = require('APL/speakcmd.js');
           return  handlerInput.responseBuilder
                           .speak(resp.Verbal)
                           .reprompt(resp.Text)
                           .addDirective(search(resp.BackBtn, resp.Header, resp.SubHdr, resp.List, resp.Hint, resp.Error))
+                          .addDirective(speakcmd())
                           .getResponse();
         // } else if (resp.Type === "OpenBook") {
         //   const display = require('APL/OpenBook.js');
@@ -1209,7 +1231,7 @@ exports.handler = skillBuilder
     ContainerIntentHandler,
     HelpIntentHandler,
     CancelAndStopIntentHandler,
-    XYZIntentHandler,
+    TestIntentHandler,
     SessionEndedRequestHandler,
     EventHandler
   )

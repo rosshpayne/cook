@@ -127,8 +127,8 @@
                 },
                 "task" : { "L" : [             
                                 {"M" : { 
-                                  "txt" : { "S" : "Spread the {ingrd} in a small baking tin and toast in the oven for about {time} {unit} or until their skins are loosened" },
-                                  "say" : { "S" : "Spread the {ingrd} in a small baking tin and toast in the oven for about {time} {unit} or until their skins are loosened" },
+                                  "txt" : { "S" : "Spread the {ingrd} into a {addtoc}, and toast in the oven for about {time} {unit} or until their skins are loosened" },
+                                  "say" : { "S" : "Spread the {ingrd} into a {addtoc}, and toast in the oven for about {time} {unit}, or until their skins are loosened" },
                                   "time" : { "N" : "10" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -136,8 +136,8 @@
                                   "label" : {"S" : "Bake nuts"}}
                                 },
                                 {"M" : { 
-                                  "txt" : { "S" : "Tip the hot nuts into a tea towl and rub to remove the skins." },
-                                  "say" : { "S" : "Tip the hot nuts into a tea towl and rub to remove the skins." },
+                                  "txt" : { "S" : "Tip the hot nuts into a {used} and rub to remove the skins." },
+                                  "say" : { "S" : "Tip the hot nuts into a {used}, and rub to remove the skins." },
                                   "time" : { "N" : "3" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -148,8 +148,8 @@
                                   }
                                 },
                                 {"M" : { 
-                                  "txt" : { "S" : "Coarsely chop the {label} using a {useD} or {deviceAlt}." },
-                                  "say" : { "S" : "Coarsely chop the nuts using a {useD} or {alternate}." },
+                                  "txt" : { "S" : "Coarsely chop the nuts using a {useD} ideally, or {deviceAlt}." },
+                                  "say" : { "S" : "Coarsely chop the nuts, using a {useD}, ideally, or {alternate}." },
                                   "time" : { "N" : "5" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -184,7 +184,7 @@
                "prep" : { "L" : [
                                 { "M" : {
                                   "txt" : { "S" : "Dice {measure} of {quali} {ingrd} into {l:2|cm||} pieces and allow to come to room temperature" },
-                                  "say" : { "S" : "Dice {measure} of {quali} {ingrd} into {l:2|cm||} pieces, and allow to come to room temperature" },
+                                  "say" : { "S" : "Dice {measure} of {quali} {ingrd}, into {l:2|cm||} pieces, and allow to come to room temperature" },
                                   "time" : { "N" : "15" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -213,8 +213,8 @@
                 },
                 "prep" : { "L" : [
                                 { "M" : {
-                                  "txt" : { "S" : "measure {measure} of {ingrd} into {addToC} and set aside" },
-                                  "say" : { "S" : "measure {measure} of {ingrd} into {addToC} and set aside" },
+                                  "txt" : { "S" : "measure {measure} of {ingrd} into a {addToC} and set aside" },
+                                  "say" : { "S" : "measure, {measure} of {ingrd}, into a {addToC}, and set aside" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -224,8 +224,8 @@
                 },
                 "task" : { "L" : [
                                 { "M" : {
-                                  "txt" : { "S" : "Beat the {ingrd.30} and {ingrd} in an electric mixer until pale and light" },
-                                  "say" : { "S" : "Beat the {ingrd.30} and {ingrd} in an electric mixer until pale and light"  },
+                                  "txt" : { "S" : "Beat the {ingrd.30} and {ingrd} in an {used} until pale and light" },
+                                  "say" : { "S" : "Beat the {ingrd.30} and {ingrd}, in an {used}, until pale and light"  },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -255,26 +255,35 @@
                 },
                "prep" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Separate eggs." },
-                                  "say" : { "S" : "Separate eggs" },
+                                  "txt" : { "S" : "Separate {measure} eggs. Whites into a {addtoc.0} and yolks into a {addtoc.1}" },
+                                  "say" : { "S" : "Sepperate {measure} eggs.  Whites into a {addtoc.0}, and yolks, into a {addtoc.1}" },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
                                   "ingrdS" : { "SS" : ["egg yolks","egg whites"] },
-                                  "addToC" : { "SS" : [ "EggWhites", "SAB-M" ] }
+                                  "addToC" : { "SS" : [ "MixerBowl", "SAB-S" ] }
                                   }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "Whisk egg whites to form stiff peaks." },
-                                  "say" : { "S" : "Whisk egg whites to form stiff peaks." },
+                                  "txt" : { "S" : "Use the {used} to whisk the egg whites so they form stiff peaks." },
+                                  "say" : { "S" : "Use the {used} to whisk the egg whites, so they form stiff peaks." },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
                                   "useD" : { "M" : { "type" : {"S": "electric mixer" },
                                                     "purpose" : { "S" : "to whisk egg whites" }
                                   } },
-                                  "useC" : { "SS" : [ "EggWhites"] }  }
-                                } 
+                                  "useC" : { "SS" : [ "MixerBowl"] }  }
+                                } ,
+                                { "M" :  {
+                                  "txt" : { "S" : "Transfer the egg whites to a {addtoc} and then clean the bowl" },
+                                  "say" : { "S" : "Transfer the egg whites to a {addtoc}, and then clean the bowl" },
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "sourceC" : { "SS" : [ "MixerBowl"] },
+                                  "addToC" : { "SS" : [ "EggWhites" ] }}
+                                }
                                 ]
                 },
                "task" : { "L" : [
@@ -310,8 +319,8 @@
                 },
                "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "in a separte {addToC}, beat the {ingrd} lightly with a fork. " },
-                                  "say" : { "S" : "in a separte {addToC}, beat the {ingrd} lightly with a fork. " },
+                                  "txt" : { "S" : "in a separte {addToC}, beat the {ingrd} lightly with a fork." },
+                                  "say" : { "S" : "in a separate {addToC}, beat the {ingrd} lightly with a fork." },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -343,7 +352,7 @@
                "prep" : { "L" : [ 
                                 { "M" :  {
                                   "txt" : { "S" : "finely grate the {qualm} {measure} {ingrd} and set aside" },
-                                  "say" : { "S" : "finely grate the {qualm} {measure} {ingrd} and set aside" },
+                                  "say" : { "S" : "finely grate the {qualm} {measure} {ingrd}, and set aside" },
                                   "time" : { "N" : "3" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -354,8 +363,8 @@
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Add the {quali} {ingrd} and chopped {ingrd.20} " },
-                                  "say" : { "S" : "Add the {quali} {ingrd} and chopped {ingrd.20}" },
+                                  "txt" : { "S" : "Add the {quali} {ingrd} and chopped {ingrd.20} to the {ingrd.60} and fold in" },
+                                  "say" : { "S" : "Add the {quali} {ingrd}, and chopped {ingrd.20} to the {ingrd.60} and fold in" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -364,8 +373,8 @@
                                   }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "Fold the egg yolk and butter mixture into the ricotta." },
-                                  "say" : { "S" : "Fold the egg yolk and butter mixture into the ricotta." },
+                                  "txt" : { "S" : "now fold in the egg and butter mixture to the ricotta." },
+                                  "say" : { "S" : "now fold in the egg, and butter mixture, to the ricotta." },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -407,20 +416,20 @@
                                   }}
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "Sift {measure} of {quali} {ingrd} and set aside" },
-                                  "say" : { "S" : "Sift {measure} of {quali} {ingrd} and set aside" },
+                                  "txt" : { "S" : "Sift {measure} of {quali} {ingrd} into a {addtoc} and set aside" },
+                                  "say" : { "S" : "Sift {measure} of {quali} {ingrd} into a {addtoc}, and set aside" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
-                                  "sourceC" : { "SS" : [ "SAB-S" ] }
+                                  "addToC" : { "SS" : [ "SAB-S" ] }
                                   }
                                 }
                                 ]
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Fold in the {ingrd}" },
-                                  "say" : { "S" : "Fold in the {ingrd}" },
+                                  "txt" : { "S" : "now fold in the {ingrd}" },
+                                  "say" : { "S" : "now fold in the {ingrd}" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -429,8 +438,8 @@
                                   }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "Fold in the egg whites" },
-                                  "say" : { "S" : "Fold in the egg whites"  },
+                                  "txt" : { "S" : "and finally, fold in the whisked egg whites" },
+                                  "say" : { "S" : "and finally, fold in the whisked, egg whites"  },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -439,13 +448,20 @@
                                   }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "Transfer the cake mixture to the prepared cake tin and place in oven to bake for {time} {unit}. A reminder, the temperature should be {device.oven.temp}" },
-                                  "say" : { "S" : "Transfer the cake mixture to the prepared cake tin and place in oven to bake for {time} {unit}. A reminder, the temperature should be {device.oven.temp}"  },
-                                  "time" : { "N" : "35" },
-                                  "tplus" : { "N" : "0" },
+                                  "txt" : { "S" : "Transfer the cake mixture to the prepared cake tin and place in oven to bake for {timeu}. Reminder, the temperature should be {device.oven.temp}" },
+                                  "say" : { "S" : "Transfer the cake mixture to the prepared cake tin, and place in oven to bake for {timeu}. Reminder, the temperature should be {device.oven.temp}"  },
+                                  "time" : { "N" : "30" },
+                                  "tplus" : { "N" : "5" },
                                   "unit" : { "S" : "min" },
                                   "addToC" : { "SS" : [ "CakeTin"] },
                                   "sourceC" : { "SS" : ["RicoBowl"] }
+                                  }
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" : "Set timer for {time} {unit} and get back to me then " },
+                                  "say" : { "S" : "set timer for {time} {unit} and get back to me then " },
+                                  "time" : { "N" : "30" },
+                                  "unit" : { "S" : "min" }
                                   }
                                 }
                                 ]
@@ -470,8 +486,8 @@
                 },
                "task" : { "L" : [
                                 { "M" :  {
-                                  "txt" : { "S" : "Once cooked, transfer the cake from the tin to a {addtoc} and leave for {time} {unit}. " },
-                                  "say" : { "S" : "Once cooked, transfer the cake from the tin to a {addtoc} and leave for {time} {unit}." },
+                                  "txt" : { "S" : "Once cooked transfer the cake from the tin to a large plate and leave for {timeu}. " },
+                                  "say" : { "S" : "Once cooked, transfer the cake from the tin, to a large plate , and leave for {timeu}." },
                                   "time" : { "N" : "5" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -479,8 +495,8 @@
                                   }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "While the cake is cooling, finely grate {measure} of {quali} {ingrd} onto a {csize} plate" },
-                                  "say" : { "S" : "While the cake is cooling, finely grate {measure} of {quali} {ingrd} onto a {csize} plate" },
+                                  "txt" : { "S" : "While the cake is cooling, finely grate {measure} of {quali} {ingrd} onto a {addtoc}" },
+                                  "say" : { "S" : "While the cake is cooling, finely grate {measure} of {quali} {ingrd}, onto a {addtoc}" },
                                   "time" : { "N" : "3" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -488,8 +504,8 @@
                                   }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "After the five minute cooling period, use a {useD} to scatter the {ingrd} over the cake. It will immediately start to melt and form a hard coating once cooled." },
-                                  "say" : { "S" : "After the five minute cooling period, use a {useD} to scatter the {ingrd} over the cake. It will immediately start to melt and form a hard coating once cooled." },
+                                  "txt" : { "S" : "After a five minute cooling period, use a {useD} to scatter the {ingrd} over the cake. It will immediately start to melt and form a hard coating once cooled." },
+                                  "say" : { "S" : "After a five minute cooling period, use a {useD} to scatter the {ingrd} over the cake. It will immediately start to melt and form a hard coating once cooled." },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },

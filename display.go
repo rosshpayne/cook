@@ -505,7 +505,7 @@ func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 	}
 	//
 	hdr = "Welcome to your EburyPress Cook books on Alexa"
-	srch := `, "search ingredient(s)", "search keyword(s)", "search recipe-name", "search any-part-of-recipe-name" e.g. "search pasta", "search tarragon", "search chocolate cake"`
+	srch := `, "search [ingredient,..]", "search [keyword,..]", "search [recipe-name]", "search [any-part-of-recipe-name]" e.g. "search tart", "search tarragon", "search chocolate cake"`
 
 	if len(s.reqOpenBk) > 0 {
 		bk := strings.Split(string(s.reqOpenBk), "|")

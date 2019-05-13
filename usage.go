@@ -659,6 +659,7 @@ func expandScalableTags(str string) string {
 		nm     *MeasureT
 	)
 
+	fmt.Println("** expandScalableTags")
 	for tclose, topen = 0, strings.IndexByte(str, '{'); topen != -1; {
 		b.WriteString(str[tclose:topen])
 		nextclose := strings.IndexByte(str[topen:], '}')
@@ -674,6 +675,7 @@ func expandScalableTags(str string) string {
 		tclose += strings.IndexByte(str[tclose:], '}')
 		//
 		tag := strings.Split(strings.ToLower(str[topen+1:tclose]), ":")
+		fmt.Println("tag: ", strings.ToLower(str[topen+1:tclose]))
 		switch tag[0] {
 		case "m", "t":
 			//literal tags, pass through
@@ -716,7 +718,7 @@ func expandLiteralTags(str string) string {
 	)
 
 	resetScale := func() func() {
-		savedScale = global.GetScale() 
+		savedScale = global.GetScale()
 		global.SetScale(1)
 		return func() { global.SetScale(savedScale) }
 	}

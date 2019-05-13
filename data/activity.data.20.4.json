@@ -327,8 +327,8 @@
                 },
                 "task" : { "L" : [ 
                                 {"M" : { 
-                                  "txt" : { "S" : "hull and slice {measure} of {ingrd} into {l:0.5|cm||} thickslices and place in {addToC} " },
-                                  "say" : { "S" : "hull and slice {measure} of {ingrd} into  {l:0.5|cm||} thickslices and place in {addToC} " },
+                                  "txt" : { "S" : "hull and slice {measure} of {ingrd} into {l:1/2|cm||} thickslices and place in {addToC} " },
+                                  "say" : { "S" : "hull and slice {measure} of {ingrd} into  {l:1/2|cm||} thickslices and place in {addToC} " },
                                   "time" : { "N" : "10" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -619,7 +619,7 @@
                 "prep" : { "L" : [ 
                                 {"M" : { 
                                   "txt" : { "S" : "cut {measure} of {ingrd} into pieces and set aside to come to room temperature" },
-                                  "say" : { "S" : "cut {measure} of {ingrd} into pieces and set aside to come to room temperature" },
+                                  "say" : { "S" : "cut {measure} of {ingrd} into pieces, and set aside to come to room temperature" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
