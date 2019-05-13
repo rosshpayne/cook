@@ -172,9 +172,9 @@ func (s *sessCtx) cacheInstructions(sId ...int) (Threads, error) {
 			for _, v := range ptR {
 				if v.Thread == threads[t].Thread {
 					global.Set_WriteCtx(global.USay)
-					vmsg := expandScalableTags(expandLiteralTags(v.Verbal))
+					vmsg := expandLiteralTags(v.Verbal, s)
 					global.Set_WriteCtx(global.UDisplay)
-					dmsg := expandScalableTags(expandLiteralTags(v.Text))
+					dmsg := expandLiteralTags(v.Text, s)
 					instruct := InstructionT{Text: dmsg, Verbal: vmsg, Thread: v.Thread, Division: v.Division, MergeThrd: v.MergeThrd}
 					threads[t].Instructions = append(threads[t].Instructions, instruct)
 				}
@@ -215,17 +215,17 @@ func (s *sessCtx) cacheInstructions(sId ...int) (Threads, error) {
 						switch len(threads) {
 						case 1: // ignore threads if only thread values detected
 							global.Set_WriteCtx(global.USay)
-							vmsg := expandScalableTags(expandLiteralTags(ptR[i].Verbal))
+							vmsg := expandLiteralTags(ptR[i].Verbal, s)
 							global.Set_WriteCtx(global.UDisplay)
-							dmsg := expandScalableTags(expandLiteralTags(ptR[i].Text))
+							dmsg := expandLiteralTags(ptR[i].Text, s)
 							instruct := InstructionT{Text: dmsg, Verbal: vmsg, Thread: ptR[i].Thread, Division: ptR[i].Division}
 							threads[t].Instructions = append(threads[t].Instructions, instruct)
 						default:
 							if ptR[i].Thread == threads[t].Thread {
 								global.Set_WriteCtx(global.USay)
-								vmsg := expandScalableTags(expandLiteralTags(ptR[i].Verbal))
+								vmsg := expandLiteralTags(ptR[i].Verbal, s)
 								global.Set_WriteCtx(global.UDisplay)
-								dmsg := expandScalableTags(expandLiteralTags(ptR[i].Text))
+								dmsg := expandLiteralTags(ptR[i].Text, s)
 								instruct := InstructionT{Text: dmsg, Verbal: vmsg, Thread: ptR[i].Thread, Division: ptR[i].Division}
 								threads[t].Instructions = append(threads[t].Instructions, instruct)
 							}
@@ -263,17 +263,17 @@ func (s *sessCtx) cacheInstructions(sId ...int) (Threads, error) {
 					switch len(threads) {
 					case 1: // ignore threads if only two or less thread values detected  (see thrdCnt)
 						global.Set_WriteCtx(global.USay)
-						vmsg := expandScalableTags(expandLiteralTags(ptR[i].Verbal))
+						vmsg := expandLiteralTags(ptR[i].Verbal, s)
 						global.Set_WriteCtx(global.UDisplay)
-						dmsg := expandScalableTags(expandLiteralTags(ptR[i].Text))
+						dmsg := expandLiteralTags(ptR[i].Text, s)
 						instruct := InstructionT{Text: dmsg, Verbal: vmsg, Part: ptR[i].Part, EOL: ptR[i].EOL, PEOL: ptR[i].PEOL, PID: ptR[i].PId}
 						threads[t].Instructions = append(threads[t].Instructions, instruct)
 					default:
 						if ptR[i].Thread == threads[t].Thread {
 							global.Set_WriteCtx(global.USay)
-							vmsg := expandScalableTags(expandLiteralTags(ptR[i].Verbal))
+							vmsg := expandLiteralTags(ptR[i].Verbal, s)
 							global.Set_WriteCtx(global.UDisplay)
-							dmsg := expandScalableTags(expandLiteralTags(ptR[i].Text))
+							dmsg := expandLiteralTags(ptR[i].Text, s)
 							instruct := InstructionT{Text: dmsg, Verbal: vmsg, Part: ptR[i].Part, EOL: ptR[i].EOL, PEOL: ptR[i].PEOL, PID: ptR[i].PId}
 							threads[t].Instructions = append(threads[t].Instructions, instruct)
 						}

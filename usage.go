@@ -645,70 +645,13 @@ func (s *sessCtx) purgeRecipe() error {
 	return nil
 }
 
-// scalable tags are non-literal tags in the form : {q|u|s|n}
-// where q-quantity, u-unit, s-size, n-num
-// scalable tags are a halfway point, between using the data model to convey a measurement and explicitly stating it.
-// scalable tags are ideal in the instruction records (T-?-?) where the data model is not available but you
-// don't want to write the measurement explicitly. Its partial parsed form makes it compact and scalable.
-
-func expandScalableTags(str string) string {
-	var (
-		b      strings.Builder // supports io.Write write expanded text/verbal text to this buffer before saving to Task or Verbal fields
-		tclose int
-		topen  int
-		nm     *MeasureT
-	)
-
-	fmt.Println("** expandScalableTags")
-	for tclose, topen = 0, strings.IndexByte(str, '{'); topen != -1; {
-		b.WriteString(str[tclose:topen])
-		nextclose := strings.IndexByte(str[topen:], '}')
-		if nextclose == -1 {
-			panic(fmt.Errorf("Error: closing } not found in expandIngrd() [%s]", str))
-		}
-		nextopen := strings.IndexByte(str[topen+1:], '{')
-		if nextopen != -1 {
-			if nextclose > nextopen {
-				panic(fmt.Errorf("Error: closing } not found in expandIngrd() [%s]", str))
-			}
-		}
-		tclose += strings.IndexByte(str[tclose:], '}')
-		//
-		tag := strings.Split(strings.ToLower(str[topen+1:tclose]), ":")
-		fmt.Println("tag: ", strings.ToLower(str[topen+1:tclose]))
-		switch tag[0] {
-		case "m", "t":
-			//literal tags, pass through
-			b.WriteString(str[topen : tclose+1])
-		default:
-			// scalable literal - use string method to perform any scaling
-			pt := strings.Split(strings.ToLower(tag[0]), "|")
-			nm = &MeasureT{Num: pt[3], Quantity: pt[0], Size: pt[2], Unit: pt[1]}
-			fmt.Println("Expandable tags: ", nm)
-			b.WriteString(nm.String())
-		}
-		//
-		tclose += 1
-		topen = strings.IndexByte(str[tclose:], '{')
-		if topen == -1 {
-			b.WriteString(str[tclose:])
-		} else {
-			topen += tclose
-		}
-	}
-	if tclose == 0 {
-		// no {} found
-		return str
-	}
-	return b.String()
-}
-
 // literal tags are tags in the form : {type:q|u|s|n}
-// where type is "m" for measure or "t" for time or "l" for length
+// where type is "m" for measure or "t" for time or "l" for length, "c" for container
+// note type "m" is salable all others are not scaled.
 // literal tags are provided to add flexibility to embed a measurement anywhere beyond what the data
 // model is designed to handle. All tags except m type are non-scalable
 
-func expandLiteralTags(str string) string {
+func expandLiteralTags(str string, s ...*sessCtx) string {
 	var (
 		b          strings.Builder // supports io.Write write expanded text/verbal text to this buffer before saving to Task or Verbal fields
 		tclose     int
@@ -756,6 +699,21 @@ func expandLiteralTags(str string) string {
 			// length literal
 			pt := strings.Split(strings.ToLower(tag[1]), "|")
 			b.WriteString(pt[0] + UnitMap[pt[1]].String())
+		case "c":
+			// {addtoC} tag where container is scalable
+			pt := strings.Split(strings.ToLower(tag[1]), "|")
+			c := &Container{Label: pt[0], Measure: &MeasureCT{Quantity: pt[1], Size: pt[2], Shape: pt[3], Dimension: pt[4], Height: pt[5], Unit: pt[6]}}
+			if len(s) > 0 {
+				if s[0].dispCtr != nil {
+					if len(s[0].dispCtr.UDimension) > 0 {
+						b.WriteString(" your " + c.label())
+					} else {
+						b.WriteString(" a " + c.String())
+					}
+				}
+			} else {
+				b.WriteString(" a " + c.String())
+			}
 		default:
 			// not a literal tag, pass through
 			b.WriteString(str[topen : tclose+1])

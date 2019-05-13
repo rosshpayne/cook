@@ -851,7 +851,7 @@ func (s *sessCtx) orchestrateRequest() error {
 	//
 	// respond to select from displayed items
 	//
-	if s.request == "select" || s.request == "start" { //&& s.selId > 0 {
+	if s.request == "select" || s.request == "start" { //&& s.selId > 0 { selId==0 when partmenu is being displayed from start
 		// selId is the response from Alexa on the index (ordinal value) of the selected display item
 		fmt.Println("SELCTX is : ", s.selCtx)
 
