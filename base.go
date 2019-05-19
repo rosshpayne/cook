@@ -839,7 +839,7 @@ func (s *sessCtx) loadBaseRecipe() error {
 									}
 									fmt.Fprintf(&b, "%s", "{c:"+typ+"|"+m.Quantity+"|"+m.Size+"|"+m.Shape+"|"+m.Dimension+"|"+m.Height+"|"+m.Unit+"}")
 								} else {
-									b.WriteString(c.String())
+									b.WriteString("a " + c.String())
 								}
 							}
 						case "measure":

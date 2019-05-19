@@ -127,8 +127,8 @@
                 },
                 "task" : { "L" : [             
                                 {"M" : { 
-                                  "txt" : { "S" : "Spread the {ingrd} into a {addToC}, and toast in the oven for about {time} {unit} or until their skins are loosened" },
-                                  "say" : { "S" : "Spread the {ingrd} into a {addToC}, and toast in the oven for about {time} {unit}, or until their skins are loosened" },
+                                  "txt" : { "S" : "Spread the {ingrd} into {addToC}, and toast in the oven for about {time} {unit} or until their skins are loosened" },
+                                  "say" : { "S" : "Spread the {ingrd} into {addToC}, and toast in the oven for about {time} {unit}, or until their skins are loosened" },
                                   "time" : { "N" : "10" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -213,8 +213,8 @@
                 },
                 "prep" : { "L" : [
                                 { "M" : {
-                                  "txt" : { "S" : "measure {measure} of {ingrd} into a {addToC} and set aside" },
-                                  "say" : { "S" : "measure, {measure} of {ingrd}, into a {addToC}, and set aside" },
+                                  "txt" : { "S" : "measure {measure} of {ingrd} into {addToC} and set aside" },
+                                  "say" : { "S" : "measure, {measure} of {ingrd}, into {addToC}, and set aside" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -255,8 +255,8 @@
                 },
                "prep" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Separate {measure} eggs. Whites into a {addtoc.0} and yolks into a {addtoc.1}" },
-                                  "say" : { "S" : "Sepperate {measure} eggs.  Whites into a {addtoc.0}, and yolks, into a {addtoc.1}" },
+                                  "txt" : { "S" : "Separate {measure} eggs. Whites into {addtoc.0} and yolks into {addtoc.1}" },
+                                  "say" : { "S" : "Sepperate {measure} eggs.  Whites into {addtoc.0}, and yolks, into {addtoc.1}" },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -276,8 +276,8 @@
                                   "useC" : { "SS" : [ "MixerBowl"] }  }
                                 } ,
                                 { "M" :  {
-                                  "txt" : { "S" : "Transfer the egg whites to a {addToC} and then clean the bowl" },
-                                  "say" : { "S" : "Transfer the egg whites to a {addToC}, and then clean the bowl" },
+                                  "txt" : { "S" : "Transfer the egg whites to {addToC} and then clean the bowl" },
+                                  "say" : { "S" : "Transfer the egg whites to {addToC}, and then clean the bowl" },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -319,8 +319,8 @@
                 },
                "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "in a separte a {addToC}, beat the {ingrd} lightly with a fork." },
-                                  "say" : { "S" : "in a separate a {addToC}, beat the {ingrd} lightly with a fork." },
+                                  "txt" : { "S" : "in a separte {addToC}, beat the {ingrd} lightly with a fork." },
+                                  "say" : { "S" : "in a separate {addToC}, beat the {ingrd} lightly with a fork." },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -416,8 +416,8 @@
                                   }}
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "Sift {measure} of {quali} {ingrd} into a {addToC} and set aside" },
-                                  "say" : { "S" : "Sift {measure} of {quali} {ingrd} into a {addToC}, and set aside" },
+                                  "txt" : { "S" : "Sift {measure} of {quali} {ingrd} into {addToC} and set aside" },
+                                  "say" : { "S" : "Sift {measure} of {quali} {ingrd} into {addToC}, and set aside" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -495,8 +495,8 @@
                                   }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "While the cake is cooling, finely grate {measure} of {quali} {ingrd} onto a {addToC}" },
-                                  "say" : { "S" : "While the cake is cooling, finely grate {measure} of {quali} {ingrd}, onto a {addToC}" },
+                                  "txt" : { "S" : "While the cake is cooling, finely grate {measure} of {quali} {ingrd} onto {addToC}" },
+                                  "say" : { "S" : "While the cake is cooling, finely grate {measure} of {quali} {ingrd}, onto {addToC}" },
                                   "time" : { "N" : "3" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
