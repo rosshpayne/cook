@@ -1,7 +1,7 @@
 package main
 
 import (
-	_ "context"
+	"context"
 	_ "encoding/json"
 	"fmt"
 	"log"
@@ -13,6 +13,7 @@ import (
 	"github.com/cook/global"
 
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-lambda-go/lambdacontext"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -41,6 +42,9 @@ type mRecipeM map[mRecipeT]bool
 
 type sessCtx struct {
 	//	err        error
+	alxReqId  string
+	invkReqId string
+	//
 	newSession bool
 	//path      string // InputEvent.Path
 	request string // pathItem[0] or redirected value
@@ -1113,7 +1117,7 @@ func (r *InputEvent) init() {
 }
 
 //
-func handler(request InputEvent) (RespEvent, error) {
+func handler(ctx context.Context, request InputEvent) (RespEvent, error) {
 
 	var (
 		pathItem []string
@@ -1131,20 +1135,24 @@ func handler(request InputEvent) (RespEvent, error) {
 		}
 		return dynamodb.New(sess, aws.NewConfig())
 	}
-
+	lc, _ := lambdacontext.FromContext(ctx)
+	alxreqid := strings.Split(request.QueryStringParameters["reqId"], ".")
 	pathItem = request.PathItem
-
+	fmt.Println("Alexa reqId : ", request.QueryStringParameters["reqId"])
+	fmt.Println("invoke reqId : ", lc.AwsRequestID)
 	//var body string
 	// create a new session context and merge with last session data if present.
 	sessctx := &sessCtx{
 		userId:      request.QueryStringParameters["uid"], // empty when not called
+		alxReqId:    alxreqid[len(alxreqid)-1],
+		invkReqId:   lc.AwsRequestID,
 		dynamodbSvc: dynamodbService(),
 		request:     pathItem[0],
 		origreq:     pathItem[0],
 		//path:        request.Path,
 		//param:       request.Param,
 	}
-
+	fmt.Printf("%#v\n", sessctx)
 	//
 	// Three request types:
 	//   * initialiseRequest - all requests associated with listing recipe related data
@@ -1228,9 +1236,14 @@ func handler(request InputEvent) (RespEvent, error) {
 		// used back button on display device. Note: back will ignore orachestrateRequest and go straight to displayGen()
 		sessctx.back = true
 		fmt.Println("** Back button hit")
+		_, err := sessctx.getState()
+		if err != nil {
+			fmt.Println("Error returned by getState()..")
+			break
+		}
 		err = sessctx.popState()
 		if err != nil {
-			fmt.Println("Error returned by popState..")
+			fmt.Println("Error returned by popState()..")
 		}
 	case container_, task_:
 		//  "object" request is required only for VUI, as all requests are be random by nature.

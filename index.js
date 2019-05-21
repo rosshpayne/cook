@@ -32,10 +32,13 @@ const LaunchRequestHandler = {
   
   handle(handlerInput) {
     const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
+    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
     const accessToken = handlerInput.requestEnvelope.context.System.apiAccessToken;
     const accessEndpoint = handlerInput.requestEnvelope.context.System.apiEndpoint;
     
-    invokeParams.Payload = '{ "Path" : "start" ,"Param" : "'+uid+'" }';
+    console.log("requestId : ",reqId);
+      
+    invokeParams.Payload = '{ "Path" : "start" ,"Param" : "'+uid+reqId+'" }';
     
     var promise= new Promise((resolve, reject) => {
           lambda.invoke(invokeParams, function(err, data) {
@@ -280,7 +283,8 @@ const EventHandler = {
   
   handle: handlerInput => {
     const uid='uid='+handlerInput.requestEnvelope.session.user.userId ;
-
+    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    
     const args = handlerInput.requestEnvelope.request.arguments;
     const event = args[0];
     //const ordinal = args[1];
@@ -290,7 +294,7 @@ const EventHandler = {
 
     switch (event) {
     case 'select':
-      invokeParams.Payload = '{ "Path" : "select" ,"Param" : "'+uid+selid+'" }';
+      invokeParams.Payload = '{ "Path" : "select" ,"Param" : "'+uid+reqId+selid+'" }';
 
       var promise= new Promise((resolve, reject) => {
           lambda.invoke(invokeParams, function(err, data) {
@@ -467,7 +471,8 @@ const RestartIntentHandler = {
   handle(handlerInput) {
 
     const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
-    invokeParams.Payload = '{ "Path" : "restart" ,"Param" : "'+uid+'" }';
+    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    invokeParams.Payload = '{ "Path" : "restart" ,"Param" : "'+uid+reqId+'" }';
     
     var promise= new Promise((resolve, reject) => {
           lambda.invoke(invokeParams, function(err, data) {
@@ -495,11 +500,12 @@ const ResizeIntentHandler = {
   handle(handlerInput) {
     const querystring = require('querystring');
     const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
+    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
     const size='&size='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.integer.resolutions.resolutionsPerAuthority[0].values[0].value.id);
   //  const size2='&size='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.object.resolutions.resolutionsPerAuthority[0].values[0].value.id);
     console.log("size: "+ size);
   //    console.log("size2: "+ size2);
-    invokeParams.Payload = '{ "Path" : "resize" ,"Param" : "'+uid+size+'" }';
+    invokeParams.Payload = '{ "Path" : "resize" ,"Param" : "'+uid+reqId+size+'" }';
     
     var promise= new Promise((resolve, reject) => {
           lambda.invoke(invokeParams, function(err, data) {
@@ -528,9 +534,10 @@ const ListIntentHandler = {
   handle(handlerInput) {
     const querystring = require('querystring');
     const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
+    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
     const act='&action='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.actionString.resolutions.resolutionsPerAuthority[0].values[0].value.name);
 
-   invokeParams.Payload = '{ "Path" : "list" ,"Param" : "'+uid+act+'" }';
+   invokeParams.Payload = '{ "Path" : "list" ,"Param" : "'+uid+reqId+act+'" }';
     
     var promise= new Promise((resolve, reject) => {
           lambda.invoke(invokeParams, function(err, data) {
@@ -561,9 +568,10 @@ const ScaleIntentHandler = {
    // const srch='&srch='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.ingrdcat.resolutions.resolutionsPerAuthority[0].values[0].value.name);
    
     const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
+    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
     const frac='&frac='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.fraction.resolutions.resolutionsPerAuthority[0].values[0].value.id);
     //                  handlerInput.requestEnvelope.request.intent.slots.YesNo.resolutions.resolutionsPerAuthority[0].values[0].value.id;
-    invokeParams.Payload = '{ "Path" : "scale" ,"Param" : "'+uid+frac+'" }';
+    invokeParams.Payload = '{ "Path" : "scale" ,"Param" : "'+uid+reqId+frac+'" }';
     
     var promise= new Promise((resolve, reject) => {
           lambda.invoke(invokeParams, function(err, data) {
@@ -591,8 +599,9 @@ const BookIntentHandler = {
   },
   handle(handlerInput) {
     const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
+    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
     const bkid='&bkid='+handlerInput.requestEnvelope.request.intent.slots.BookName.resolutions.resolutionsPerAuthority[0].values[0].value.id;
-    invokeParams.Payload = '{ "Path" : "book" ,"Param" : "'+uid+bkid+'" }';
+    invokeParams.Payload = '{ "Path" : "book" ,"Param" : "'+uid+reqId+bkid+'" }';
     
     var promise= new Promise((resolve, reject) => {
           lambda.invoke(invokeParams, function(err, data) {
@@ -619,7 +628,8 @@ const CloseBookIntentHandler = {
   },
   handle(handlerInput) {
     var uid="uid="+handlerInput.requestEnvelope.session.user.userId;
-    invokeParams.Payload = '{ "Path" : "close" ,"Param" : "'+uid+'" }';
+    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    invokeParams.Payload = '{ "Path" : "close" ,"Param" : "'+uid+reqId+'" }';
 
     var promise= new Promise((resolve, reject) => {
           lambda.invoke(invokeParams, function(err, data) {
@@ -654,7 +664,8 @@ const SearchIntentHandler = {
     //}
     console.log("srch=[" + srch + "]");
     const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
-    invokeParams.Payload = '{ "Path" : "search" ,"Param" : "'+uid+srch+'" }';
+    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    invokeParams.Payload = '{ "Path" : "search" ,"Param" : "'+uid+reqId+srch+'" }';
 
     var promise= new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
@@ -681,7 +692,8 @@ const ResumeIntentHandler = {
   },
   handle(handlerInput) {
     const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
-    invokeParams.Payload = '{ "Path" : "resume" ,"Param" : "'+uid+'" }';
+    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    invokeParams.Payload = '{ "Path" : "resume" ,"Param" : "'+uid+reqId+'" }';
 
     var promise= new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
@@ -707,7 +719,8 @@ const BackIntentHandler = {
   },
   handle(handlerInput) {
     const uid='uid='+handlerInput.requestEnvelope.session.user.userId   ; 
-    invokeParams.Payload = '{ "Path" : "back" ,"Param" : "'+uid+'" }';
+    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    invokeParams.Payload = '{ "Path" : "back" ,"Param" : "'+uid+reqId+'" }';
 
     var promise= new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
@@ -735,8 +748,9 @@ const SelectIntentHandler = {
   },
   handle(handlerInput) {
     const uid='uid='+handlerInput.requestEnvelope.session.user.userId   ; 
+    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
     const selid='&sId='+handlerInput.requestEnvelope.request.intent.slots.integerValue.resolutions.resolutionsPerAuthority[0].values[0].value.id;
-    invokeParams.Payload = '{ "Path" : "select" ,"Param" : "'+uid+selid+'" }';
+    invokeParams.Payload = '{ "Path" : "select" ,"Param" : "'+uid+selid+reqId+'" }';
     console.log("uid "+ uid);
     console.log("selId " + selid);
     var promise= new Promise((resolve, reject) => {
@@ -765,8 +779,9 @@ const GotoIntentHandler = {
 
   handle(handlerInput) {
     const uid='uid='+handlerInput.requestEnvelope.session.user.userId;
+    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
     const goId='&goId='+handlerInput.requestEnvelope.request.intent.slots.gotoId.resolutions.resolutionsPerAuthority[0].values[0].value.id;
-    invokeParams.Payload = '{ "Path" : "goto" ,"Param" : "'+uid+goId+'" }';
+    invokeParams.Payload = '{ "Path" : "goto" ,"Param" : "'+uid+reqId+goId+'" }';
 
     var promise= new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
@@ -795,7 +810,8 @@ const NextIntentHandler = {
   },
   handle(handlerInput) {
     const uid='uid='+handlerInput.requestEnvelope.session.user.userId;
-    invokeParams.Payload = '{ "Path" : "next" ,"Param" : "'+uid+'" }';
+    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    invokeParams.Payload = '{ "Path" : "next" ,"Param" : "'+uid+reqId+'" }';
 
     var promise= new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
@@ -822,7 +838,8 @@ const RepeatIntentHandler = {
   },
   handle(handlerInput) {
     const uid='uid='+handlerInput.requestEnvelope.session.user.userId;
-    invokeParams.Payload = '{ "Path" : "repeat" ,"Param" : "'+uid+'" }';
+    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    invokeParams.Payload = '{ "Path" : "repeat" ,"Param" : "'+uid+reqId+'" }';
 
     var promise= new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
@@ -849,7 +866,8 @@ const PrevIntentHandler = {
   },
   handle(handlerInput) {
     const uid='uid='+handlerInput.requestEnvelope.session.user.userId;
-    invokeParams.Payload = '{ "Path" : "prev" ,"Param" : "'+uid+'" }';
+    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    invokeParams.Payload = '{ "Path" : "prev" ,"Param" : "'+uid+reqId+'" }';
 
     var promise= new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
@@ -881,11 +899,12 @@ const RecipeIntentHandler = {
     //const bkIdRId = handlerInput.requestEnvelope.request.intent.slots.recipe.resolutions.resolutionsPerAuthority[0].values[0].value.id;
     const rname = querystring.escape(handlerInput.requestEnvelope.request.intent.slots.recipe.resolutions.resolutionsPerAuthority[0].values[0].value.name);
     const uid='uid='+handlerInput.requestEnvelope.session.user.userId;
+    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
     //var path_='&rcp='+bkIdRId
     //if ( bkIdRId.length == 0 ) {
     const path_='&rcp='+rname;
     //}
-    invokeParams.Payload = '{ "Path" : "recipe" ,"Param" : "'+uid+path_+'" }';
+    invokeParams.Payload = '{ "Path" : "recipe" ,"Param" : "'+uid+reqId+path_+'" }';
 
     var promise= new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
@@ -919,8 +938,9 @@ const VersionIntentHandler = {
     var displayText;
     var recipe ;
     const uid='uid='+handlerInput.requestEnvelope.session.user.userId;
+    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
     const ver='&ver='+handlerInput.requestEnvelope.request.intent.slots.version.resolutions.resolutionsPerAuthority[0].values[0].value.name;
-    invokeParams.Payload = '{ "Path" : "version" ,"Param" : "'+uid+ver+'" }';
+    invokeParams.Payload = '{ "Path" : "version" ,"Param" : "'+uid+reqId+ver+'" }';
 
     var promise= new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
@@ -957,8 +977,9 @@ const YesNoIntentHandler = {
     var displayText;
     var recipe ;
     var uid="uid="+handlerInput.requestEnvelope.session.user.userId;
+    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
     var yesno='&yn='+handlerInput.requestEnvelope.request.intent.slots.YesNo.resolutions.resolutionsPerAuthority[0].values[0].value.id;
-    invokeParams.Payload = '{ "Path" : "yesno" ,"Param" : "'+uid+yesno+'" }';
+    invokeParams.Payload = '{ "Path" : "yesno" ,"Param" : "'+uid+reqId+yesno+'" }';
  
     var promise= new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
@@ -993,7 +1014,8 @@ const TaskIntentHandler = {
     var displayText;
     var recipe ;
     var uid="uid="+handlerInput.requestEnvelope.session.user.userId;
-    invokeParams.Payload = '{ "Path" : "task" ,"Param" : "'+uid+'" }';
+    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    invokeParams.Payload = '{ "Path" : "task" ,"Param" : "'+uid+reqId+'" }';
 
     var promise= new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
@@ -1027,7 +1049,8 @@ const ContainerIntentHandler = {
     var displayText;
     var recipe ;
     var uid="uid="+handlerInput.requestEnvelope.session.user.userId;
-    invokeParams.Payload = '{ "Path" : "container" ,"Param" : "'+uid+'" }';
+    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    invokeParams.Payload = '{ "Path" : "container" ,"Param" : "'+uid+reqId+'" }';
 
     var promise= new Promise((resolve, reject) => {
       lambda.invoke(invokeParams, function(err, data) {
@@ -1125,7 +1148,7 @@ function handleResponse (handlerInput , resp) {
           return  handlerInput.responseBuilder
                             .speak(resp.Error)
                             .reprompt(resp.Text)
-                            .addDirective(ingrd(resp.BackBtn, resp.Header,resp.SubHdr, resp.List, " ", resp.Hint, resp.Error))
+                            .addDirective(ingrd(resp.BackBtn, resp.Header,resp.SubHdr, resp.List," ", resp.Hint, resp.Error))
                             .addDirective(speakcmd())
                             .getResponse();
         } else if (resp.Type === "Start" || resp.Type === "StartErr") {
@@ -1134,7 +1157,7 @@ function handleResponse (handlerInput , resp) {
           return  handlerInput.responseBuilder
                           .speak(resp.Verbal)
                           .reprompt(resp.Text)
-                          .addDirective(start(resp.BackBtn, resp.Header, resp.SubHdr, resp.Text, resp.List, "a", resp.Hint, resp.Error))
+                          .addDirective(start(resp.BackBtn, resp.Header, resp.SubHdr, resp.Text, resp.List, " ", resp.Hint, resp.Error))
                           .addDirective(speakcmd())
                           .getResponse();
         } else if (resp.Type === "PartList") {
@@ -1182,7 +1205,7 @@ function handleResponse (handlerInput , resp) {
           return  handlerInput.responseBuilder
                           .speak(resp.Verbal)
                           .reprompt(resp.Text)
-                          .addDirective(search(resp.BackBtn, resp.Header, resp.SubHdr, resp.List, resp.Hint, resp.Error))
+                          .addDirective(search(resp.BackBtn, resp.Header, resp.SubHdr, resp.List, " ", resp.Hint, resp.Error))
                           .addDirective(speakcmd())
                           .getResponse();
         // } else if (resp.Type === "OpenBook") {

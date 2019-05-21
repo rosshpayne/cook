@@ -78,7 +78,16 @@ type stateRec struct {
 	Welcome *WelcomeT `json:"Welc"`
 }
 
+type pKey struct {
+	PKey string `json:"PKey"`
+}
+
 type stateStack []stateRec
+
+type stateItemT struct {
+	PKey  string     `json:"PKey"`
+	State stateStack `json:"state"`
+}
 
 func (s stateStack) pop() *stateRec {
 	st := s[len(s)-1]
@@ -94,21 +103,30 @@ func (ls *stateRec) activeRecipe() bool {
 
 func (s *sessCtx) getState() (*stateRec, error) {
 	//
-	// Table:  Sessions
-	//
-	type pKey struct {
-		Uid string
-	}
-	pkey := pKey{s.userId}
-	av, err := dynamodbattribute.MarshalMap(&pkey)
+	fmt.Println("Enter getState() ..s.userId  ", s.userId)
+	combineReqIds := s.alxReqId + "|" + s.invkReqId
+	fmt.Println("Request IDs: ", combineReqIds)
+	t := time.Now()
+	t.Add(time.Hour * 52 * 1)
+	updateC := expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
+	updateC = updateC.Set(expression.Name("RIds"), expression.Value(combineReqIds))
+	notCond := expression.Not(expression.Equal(expression.Name("RIds"), expression.Value(combineReqIds)))
+	expr, err := expression.NewBuilder().WithUpdate(updateC).WithCondition(notCond).Build()
 	if err != nil {
 		return nil, err
 	}
-	input := &dynamodb.GetItemInput{
-		Key:       av,
-		TableName: aws.String("Sessions"),
+	pkey := pKey{PKey: s.userId}
+	av, err := dynamodbattribute.MarshalMap(&pkey)
+	input := &dynamodb.UpdateItemInput{
+		TableName:                 aws.String("Sessions"),
+		Key:                       av, // accepts []map[]*attributeValues so must use marshal not expression
+		UpdateExpression:          expr.Update(),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+		ConditionExpression:       expr.Condition(),
+		ReturnValues:              aws.String("ALL_NEW"),
 	}
-	result, err := s.dynamodbSvc.GetItem(input)
+	result, err := s.dynamodbSvc.UpdateItem(input)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
@@ -116,8 +134,6 @@ func (s *sessCtx) getState() (*stateRec, error) {
 				fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
 			case dynamodb.ErrCodeResourceNotFoundException:
 				fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
-			//case dynamodb.ErrCodeRequestLimitExceeded:
-			//	fmt.Println(dynamodb.ErrCodeRequestLimitExceeded, aerr.Error())
 			case dynamodb.ErrCodeInternalServerError:
 				fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
 			default:
@@ -130,27 +146,93 @@ func (s *sessCtx) getState() (*stateRec, error) {
 		}
 		return nil, err
 	}
-	if len(result.Item) == 0 {
-		//
-		fmt.Println("getState.... 0 rows found")
-		s.newSession = true
-		return &stateRec{}, nil
+	if len(result.Attributes) == 0 {
+		fmt.Println("getState.... 0 item found")
+		panic(fmt.Errorf("Panic: duplicate request detected [%s]", combineReqIds))
 	}
 	//
 	type stateItemT struct {
-		Uid   string     `json:"Uid"`
 		State stateStack `json:"state"`
 	}
 
 	stateItem := stateItemT{}
-	err = dynamodbattribute.UnmarshalMap(result.Item, &stateItem)
+	err = dynamodbattribute.UnmarshalMap(result.Attributes, &stateItem)
 	if err != nil {
+		fmt.Println("error in UnmarshalMap")
 		return nil, err
+	}
+	if len(stateItem.State) == 0 {
+		//
+		fmt.Println("no state data..")
+		s.newSession = true
+		return &stateRec{}, nil
 	}
 	lastState := stateItem.State.pop()
 	s.state = stateItem.State
+	//
 	return lastState, nil
 }
+
+// func (s *sessCtx) getState() (*stateRec, error) {
+// 	//
+// 	// Table:  Sessions
+// 	//
+// 	type pKey struct {
+// 		PKey string
+// 	}
+// 	pkey := pKey{s.userId}
+// 	av, err := dynamodbattribute.MarshalMap(&pkey)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	input := &dynamodb.GetItemInput{
+// 		Key:       av,
+// 		TableName: aws.String("Sessions"),
+// 	}
+// 	result, err := s.dynamodbSvc.GetItem(input)
+// 	if err != nil {
+// 		if aerr, ok := err.(awserr.Error); ok {
+// 			switch aerr.Code() {
+// 			case dynamodb.ErrCodeProvisionedThroughputExceededException:
+// 				fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
+// 			case dynamodb.ErrCodeResourceNotFoundException:
+// 				fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
+// 			//case dynamodb.ErrCodeRequestLimitExceeded:
+// 			//	fmt.Println(dynamodb.ErrCodeRequestLimitExceeded, aerr.Error())
+// 			case dynamodb.ErrCodeInternalServerError:
+// 				fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
+// 			default:
+// 				fmt.Println(aerr.Error())
+// 			}
+// 		} else {
+// 			// Print the error, cast err to awserr.Error to get the Code and
+// 			// Message from an error.
+// 			fmt.Println(err.Error())
+// 		}
+// 		return nil, err
+// 	}
+// 	if len(result.Item) == 0 {
+// 		//
+// 		fmt.Println("getState.... 0 rows found")
+// 		s.newSession = true
+// 		return &stateRec{}, nil
+// 	}
+// 	//
+// 	type stateItemT struct {
+// 		PKey   string     `json:"PKey"`
+// 		State stateStack `json:"state"`
+// 	}
+
+// 	stateItem := stateItemT{}
+// 	err = dynamodbattribute.UnmarshalMap(result.Item, &stateItem)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	lastState := stateItem.State.pop()
+// 	s.state = stateItem.State
+// 	//
+// 	return lastState, nil
+// }
 
 func (s *sessCtx) setState(ls *stateRec) {
 	//return staterow.state.pop(), nil
@@ -432,7 +514,7 @@ func (s *sessCtx) setState(ls *stateRec) {
 func (s *sessCtx) pushState() (*stateRec, error) {
 	// equivalent to a push operation for a stack (state data in this case)
 	type pKey struct {
-		Uid string
+		PKey string
 	}
 
 	var (
@@ -522,6 +604,8 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 	t := time.Now()
 	t.Add(time.Hour * 52 * 1)
 	updateC = expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
+	//updateC = expression.Set(expression.Name("arqid"), expression.Value(s.alxReqId))
+	//updateC = expression.Set(expression.Name("irqid"), expression.Value(s.invkReqId))
 	if s.newSession {
 		//.RecId = [4]int{}
 		//s.state = State[:]
@@ -537,7 +621,7 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 	if err != nil {
 		return nil, err
 	}
-	pkey := pKey{Uid: s.userId}
+	pkey := pKey{PKey: s.userId}
 	av, err := dynamodbattribute.MarshalMap(&pkey)
 	input := &dynamodb.UpdateItemInput{
 		TableName:                 aws.String("Sessions"),
@@ -570,15 +654,15 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 	return &sr, nil
 }
 
-type srecT struct {
-	Uid string     `json:"Uid"`
-	Sr  []stateRec `json:state"`
-}
+// type srecT struct {
+// 	PKey string     `json:"PKey"`
+// 	Sr   []stateRec `json:state"`
+// }
 
 func (s *sessCtx) updateState() error {
 
 	type pKey struct {
-		Uid string
+		PKey string
 	}
 	var updateC expression.UpdateBuilder
 	var atribute string
@@ -672,7 +756,7 @@ func (s *sessCtx) updateState() error {
 	// updateC = updateC.Set(expression.Name(atribute), expression.Value(s.request))
 	//
 	expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
-	pkey := pKey{Uid: s.userId}
+	pkey := pKey{PKey: s.userId}
 	av, err := dynamodbattribute.MarshalMap(&pkey)
 	if err != nil {
 		panic(err)
@@ -734,7 +818,7 @@ func (s *sessCtx) popState() error {
 	// NB: must exit with s.displayData assigned - as this will route to GenDisplay to produce response.
 	//
 	type pKey struct {
-		Uid string
+		PKey string
 	}
 	var (
 		sr    *stateRec
@@ -764,7 +848,7 @@ func (s *sessCtx) popState() error {
 		expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
 		//
 		fmt.Println("using s.userid: ", s.userId)
-		pkey := pKey{Uid: s.userId}
+		pkey := pKey{PKey: s.userId}
 		av, err := dynamodbattribute.MarshalMap(&pkey)
 
 		input := &dynamodb.UpdateItemInput{
