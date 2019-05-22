@@ -23,11 +23,11 @@ var UnitMap map[string]*Unit // populated in getActivity()
 
 var unitS []*Unit = []*Unit{
 	&Unit{Slabel: "g", Llabel: "gram", Print: "s", Say: "l", Display: "s", Plural: "s"},
-	&Unit{Slabel: "kg", Llabel: "kilogram", Print: "s", Say: "l", Display: "s"},
-	&Unit{Slabel: "tbsp", Llabel: "tablespoon", Print: "s", Say: "l", Display: "s"},
-	&Unit{Slabel: "tsp", Llabel: "teespoon", Print: "s", Say: "l", Display: "l"},
-	&Unit{Slabel: "l", Llabel: "litre", Print: "l", Say: "l", Display: "s"},
-	&Unit{Slabel: "ml", Llabel: "mill", Print: "s", Say: "l", Display: "s"},
+	&Unit{Slabel: "kg", Llabel: "kilogram", Print: "s", Say: "l", Display: "s", Plural: "s"},
+	&Unit{Slabel: "tbsp", Llabel: "tablespoon", Print: "s", Say: "l", Display: "l", Plural: "s"},
+	&Unit{Slabel: "tsp", Llabel: "teespoon", Print: "s", Say: "l", Display: "l", Plural: "s"},
+	&Unit{Slabel: "l", Llabel: "litre", Print: "l", Say: "l", Display: "s", Plural: "s"},
+	&Unit{Slabel: "ml", Llabel: "mill", Print: "s", Say: "l", Display: "s", Plural: "s"},
 	&Unit{Slabel: "mm", Llabel: "millimeter", Print: "s", Say: "l", Display: "s"},
 	&Unit{Slabel: "cup", Llabel: "cup", Print: "s", Say: "l", Display: "s", Plural: "s"},
 	&Unit{Slabel: "cm", Llabel: "centimeter", Print: "s", Say: "l", Display: "s"},
@@ -60,9 +60,9 @@ func (u *Unit) String(i ...UnitPI) string {
 	case global.UPrint:
 		format = u.Print
 	case global.USay:
-		format = u.Say
+		format = u.Say // long or short
 	case global.UDisplay:
-		format = u.Display
+		format = u.Display // long or short
 	default:
 		panic(fmt.Errorf("%s", "write context not set"))
 	}
@@ -81,9 +81,15 @@ func (u *Unit) String(i ...UnitPI) string {
 		case "C", "F":
 			return "\u00B0" + u.Llabel
 		default:
-			if len(i) > 0 && len(u.Plural) > 0 && i[0].UPlural() {
-				return " " + u.Llabel + u.Plural
-			} else {
+			switch global.WriteCtx() {
+			case global.USay:
+				if len(i) > 0 && len(u.Plural) > 0 && i[0].UPlural() {
+					return " " + u.Llabel + u.Plural
+				} else {
+					return " " + u.Llabel
+				}
+			default:
+				// printed and displayed form never adds plural to unit even if specified
 				return " " + u.Llabel
 			}
 		}

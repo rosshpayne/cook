@@ -438,10 +438,13 @@ func (s *sessCtx) orchestrateRequest() error {
 			// if part menu is available then find appropriate selId based on s.part and set selCtx to part menu
 			// 0 index is CompleteRecipe_
 			if len(s.parts) > 0 {
-				s.selCtx = ctxPartMenu
+				//s.selCtx = ctxPartMenu
+				s.selCtx = ctxObjectMenu
 				// find item in Part Menu for s.part
-				s.selId = 0
+				//s.selId = 0
+				s.selId = len(s.menuL)
 				if len(s.part) > 0 {
+					s.selCtx = ctxPartMenu
 					if s.part == CompleteRecipe_ {
 						s.selId = 1
 					} else {
@@ -455,6 +458,9 @@ func (s *sessCtx) orchestrateRequest() error {
 				}
 			}
 		case "parts":
+			if len(s.part) > 0 {
+				s.part = ""
+			}
 			if len(s.parts) > 0 {
 				s.selId = len(s.menuL)
 			} else {
@@ -929,7 +935,7 @@ func (s *sessCtx) orchestrateRequest() error {
 				//s.selClear = true //TODO: what if they back at this point we have cleared sel.
 				fmt.Printf("s.parts  %#v [%s] \n", s.parts, s.part)
 				s.showObjMenu = false
-				if (len(s.parts) > 0 && s.origreq == "select") || (s.origreq == "list" && s.action == "parts") {
+				if len(s.parts) > 0 && len(s.part) == 0 { //&& (s.origreq == "select" || s.origreq == "list")) { //|| (s.origreq == "list" && s.action == "parts") {
 					//s.dispPartMenu = true
 					s.displayData = s.parts
 					s.selCtx = ctxPartMenu
@@ -1074,6 +1080,10 @@ func (s *sessCtx) orchestrateRequest() error {
 				return err
 			}
 			if s.request == "select" {
+				err = s.updateState() // save part name to state upto objMenu
+				if err != nil {
+					return err
+				}
 				_, err = s.pushState()
 				if err != nil {
 					return err
@@ -1118,7 +1128,7 @@ func (r *InputEvent) init() {
 
 //
 func handler(ctx context.Context, request InputEvent) (RespEvent, error) {
-
+	//func handler(request InputEvent) (RespEvent, error) {
 	var (
 		pathItem []string
 		err      error
@@ -1135,12 +1145,12 @@ func handler(ctx context.Context, request InputEvent) (RespEvent, error) {
 		}
 		return dynamodb.New(sess, aws.NewConfig())
 	}
+	pathItem = request.PathItem
 	lc, _ := lambdacontext.FromContext(ctx)
 	alxreqid := strings.Split(request.QueryStringParameters["reqId"], ".")
-	pathItem = request.PathItem
 	fmt.Println("Alexa reqId : ", request.QueryStringParameters["reqId"])
 	fmt.Println("invoke reqId : ", lc.AwsRequestID)
-	//var body string
+	// var body string
 	// create a new session context and merge with last session data if present.
 	sessctx := &sessCtx{
 		userId:      request.QueryStringParameters["uid"], // empty when not called
@@ -1236,11 +1246,11 @@ func handler(ctx context.Context, request InputEvent) (RespEvent, error) {
 		// used back button on display device. Note: back will ignore orachestrateRequest and go straight to displayGen()
 		sessctx.back = true
 		fmt.Println("** Back button hit")
-		_, err := sessctx.getState()
-		if err != nil {
-			fmt.Println("Error returned by getState()..")
-			break
-		}
+		// _, err := sessctx.getState()
+		// if err != nil {
+		// 	fmt.Println("Error returned by getState()..")
+		// 	break
+		// }
 		err = sessctx.popState()
 		if err != nil {
 			fmt.Println("Error returned by popState()..")
@@ -1387,14 +1397,14 @@ func main() {
 	// // p2 := InputEvent{Path: "addUser", Param: "uid=" + uid + "&bkids=20,21"}
 	// p2 := InputEvent{Path: os.Args[1], Param: "sid=" + uid + "&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
 
-	// if len(os.Args) < 5 {
-	// 	scaleF = 1.0
-	// } else {
-	// 	scaleF, err = strconv.ParseFloat(os.Args[4], 64)
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	// }
+	// // if len(os.Args) < 5 {
+	// // 	scaleF = 1.0
+	// // } else {
+	// // 	scaleF, err = strconv.ParseFloat(os.Args[4], 64)
+	// // 	if err != nil {
+	// // 		panic(err)
+	// // 	}
+	// // }
 
 	// global.Set_WriteCtx(global.UDisplay)
 	// p, _ := handler(p2)

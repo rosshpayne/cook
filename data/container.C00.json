@@ -259,7 +259,7 @@
             "PutRequest": { 
                "Item": {
                   "PKey" : { "S": "C-0-0" },
-                  "SortK" : { "S": "MC-S" },
+                  "SortK" : { "S": "SAMC-S" },
                   "label" : { "S" : "Measuring Cup" },
                   "type" : { "S": "Measuring Cup" },
                   "measure" : { "M" : { 
@@ -273,7 +273,7 @@
             "PutRequest": { 
                "Item": {
                   "PKey" : { "S": "C-0-0" },
-                  "SortK" : { "S": "MC-M" },
+                  "SortK" : { "S": "SAMC-M" },
                   "label" : { "S" : "Measuring Cup" },
                   "type" : { "S": "Measuring Cup" },
                   "measure" : { "M" : { 
@@ -287,8 +287,8 @@
             "PutRequest": { 
                "Item": {
                   "PKey" : { "S": "C-0-0" },
-                  "SortK" : { "S": "MC-L" },
-                  "label" : { "S" : "Measuring Bowl" },
+                  "SortK" : { "S": "SAMC-L" },
+                  "label" : { "S" : "Measuring Jug" },
                   "type" : { "S": "Measuring Cup" },
                   "measure" : { "M" : { 
                                       "size" : { "S" : "4.5cup" } 

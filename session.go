@@ -84,8 +84,12 @@ type pKey struct {
 
 type stateStack []stateRec
 
+// type stateItemT struct {
+// 	PKey  string     `json:"PKey"`
+// 	State stateStack `json:"state"`
+// }
+
 type stateItemT struct {
-	PKey  string     `json:"PKey"`
 	State stateStack `json:"state"`
 }
 
@@ -101,32 +105,106 @@ func (ls *stateRec) activeRecipe() bool {
 	return false
 }
 
+// getState uses UpdateItem() and conditional update to check that requests ids have not been used before ie. a duplicate request which can happen due to error retries.
+// retrieves state  data and pops entry into session ctx
+// func (s *sessCtx) getState() (*stateRec, error) {
+// 	//
+// 	fmt.Println("Enter getState() ..s.userId  ", s.userId)
+// 	combineReqIds := []string{s.alxReqId + "|" + s.invkReqId}
+// 	fmt.Println("Request IDs: ", combineReqIds)
+// 	t := time.Now()
+// 	t.Add(time.Hour * 52 * 1)
+// 	updateC := expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
+// 	updateC = updateC.Set(expression.Name("RIds"), expression.ListAppend(expression.Name("RIds"), expression.Value(combineReqIds)))
+// 	// uf error then
+// 	// updateC = updateC.Set(expression.Name("RIds"), expression.Value(combineReqIds))
+
+// 	//updateC = updateC.Add(expression.Name("RIds"), expression.Value(combineReqIds)) . operand not LIST error.
+
+// 	notCond := expression.Not(expression.Contains(expression.Name("RIds"), *aws.String(combineReqIds[0])))
+// 	expr, err := expression.NewBuilder().WithUpdate(updateC).WithCondition(notCond).Build()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	pkey := pKey{PKey: s.userId}
+// 	av, err := dynamodbattribute.MarshalMap(&pkey)
+// 	input := &dynamodb.UpdateItemInput{
+// 		TableName:                 aws.String("Sessions"),
+// 		Key:                       av, // accepts map[string]*attributeValues so must use marshal not expression
+// 		UpdateExpression:          expr.Update(),
+// 		ExpressionAttributeNames:  expr.Names(),
+// 		ExpressionAttributeValues: expr.Values(),
+// 		ConditionExpression:       expr.Condition(),
+// 		ReturnValues:              aws.String("ALL_NEW"),
+// 	}
+// 	// UpdateItem will update an existing item or create a new one if none exists. Note conditional update is used.
+// 	result, err := s.dynamodbSvc.UpdateItem(input)
+// 	if err != nil {
+// 		if aerr, ok := err.(awserr.Error); ok {
+// 			switch aerr.Code() {
+// 			case dynamodb.ErrCodeProvisionedThroughputExceededException:
+// 				fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
+// 			case dynamodb.ErrCodeResourceNotFoundException:
+// 				fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
+// 			case dynamodb.ErrCodeInternalServerError:
+// 				fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
+// 			default:
+// 				fmt.Println("error in UpdateItem getStat() ", aerr.Error())
+// 			}
+// 		} else {
+// 			// Print the error, cast err to awserr.Error to get the Code and
+// 			// Messagrom an error.
+// 			fmt.Println("error in UpdateItem getStat() ", err.Error())
+// 		}
+// 		fmt.Println("error in UpdateItem getStat() ")
+// 		return nil, err
+// 	}
+// 	if len(result.Attributes) == 0 {
+// 		fmt.Println("getState.... 0 item found")
+// 		err := fmt.Errorf("Abort:  duplicate request. Not processing [%s]", combineReqIds[0])
+// 		return nil, err
+// 	}
+// 	//
+// 	stateItem := stateItemT{}
+// 	err = dynamodbattribute.UnmarshalMap(result.Attributes, &stateItem)
+// 	if err != nil {
+// 		fmt.Println("error in UnmarshalMap")
+// 		return nil, err
+// 	}
+// 	if len(stateItem.State) == 0 {
+// 		//
+// 		fmt.Println("no state data..")
+// 		s.newSession = true
+// 		return &stateRec{}, nil
+// 	}
+// 	lastState := stateItem.State.pop()
+// 	s.state = stateItem.State
+// 	//
+// 	return lastState, nil
+// }
+
 func (s *sessCtx) getState() (*stateRec, error) {
 	//
-	fmt.Println("Enter getState() ..s.userId  ", s.userId)
-	combineReqIds := s.alxReqId + "|" + s.invkReqId
-	fmt.Println("Request IDs: ", combineReqIds)
-	t := time.Now()
-	t.Add(time.Hour * 52 * 1)
-	updateC := expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
-	updateC = updateC.Set(expression.Name("RIds"), expression.Value(combineReqIds))
-	notCond := expression.Not(expression.Equal(expression.Name("RIds"), expression.Value(combineReqIds)))
-	expr, err := expression.NewBuilder().WithUpdate(updateC).WithCondition(notCond).Build()
+	// Table:  Sessions
+	//
+	pkey := pKey{s.userId}
+	av, err := dynamodbattribute.MarshalMap(&pkey)
 	if err != nil {
 		return nil, err
 	}
-	pkey := pKey{PKey: s.userId}
-	av, err := dynamodbattribute.MarshalMap(&pkey)
-	input := &dynamodb.UpdateItemInput{
-		TableName:                 aws.String("Sessions"),
-		Key:                       av, // accepts []map[]*attributeValues so must use marshal not expression
-		UpdateExpression:          expr.Update(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-		ConditionExpression:       expr.Condition(),
-		ReturnValues:              aws.String("ALL_NEW"),
+	proj := expression.NamesList(expression.Name("state"))
+	expr, err := expression.NewBuilder().WithProjection(proj).Build()
+	if err != nil {
+		return nil, err
 	}
-	result, err := s.dynamodbSvc.UpdateItem(input)
+	input := &dynamodb.GetItemInput{
+		Key:                      av,
+		TableName:                aws.String("Sessions"),
+		ProjectionExpression:     expr.Projection(),
+		ExpressionAttributeNames: expr.Names(),
+		ConsistentRead:           aws.Bool(true), // added on 22 May 2019
+	}
+	result, err := s.dynamodbSvc.GetItem(input)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
@@ -134,6 +212,8 @@ func (s *sessCtx) getState() (*stateRec, error) {
 				fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
 			case dynamodb.ErrCodeResourceNotFoundException:
 				fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
+			//case dynamodb.ErrCodeRequestLimitExceeded:
+			//	fmt.Println(dynamodb.ErrCodeRequestLimitExceeded, aerr.Error())
 			case dynamodb.ErrCodeInternalServerError:
 				fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
 			default:
@@ -146,93 +226,23 @@ func (s *sessCtx) getState() (*stateRec, error) {
 		}
 		return nil, err
 	}
-	if len(result.Attributes) == 0 {
-		fmt.Println("getState.... 0 item found")
-		panic(fmt.Errorf("Panic: duplicate request detected [%s]", combineReqIds))
-	}
-	//
-	type stateItemT struct {
-		State stateStack `json:"state"`
-	}
-
-	stateItem := stateItemT{}
-	err = dynamodbattribute.UnmarshalMap(result.Attributes, &stateItem)
-	if err != nil {
-		fmt.Println("error in UnmarshalMap")
-		return nil, err
-	}
-	if len(stateItem.State) == 0 {
+	if len(result.Item) == 0 {
 		//
-		fmt.Println("no state data..")
+		fmt.Println("getState.... 0 rows found")
 		s.newSession = true
 		return &stateRec{}, nil
+	}
+	//
+	stateItem := stateItemT{}
+	err = dynamodbattribute.UnmarshalMap(result.Item, &stateItem)
+	if err != nil {
+		return nil, err
 	}
 	lastState := stateItem.State.pop()
 	s.state = stateItem.State
 	//
 	return lastState, nil
 }
-
-// func (s *sessCtx) getState() (*stateRec, error) {
-// 	//
-// 	// Table:  Sessions
-// 	//
-// 	type pKey struct {
-// 		PKey string
-// 	}
-// 	pkey := pKey{s.userId}
-// 	av, err := dynamodbattribute.MarshalMap(&pkey)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	input := &dynamodb.GetItemInput{
-// 		Key:       av,
-// 		TableName: aws.String("Sessions"),
-// 	}
-// 	result, err := s.dynamodbSvc.GetItem(input)
-// 	if err != nil {
-// 		if aerr, ok := err.(awserr.Error); ok {
-// 			switch aerr.Code() {
-// 			case dynamodb.ErrCodeProvisionedThroughputExceededException:
-// 				fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
-// 			case dynamodb.ErrCodeResourceNotFoundException:
-// 				fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
-// 			//case dynamodb.ErrCodeRequestLimitExceeded:
-// 			//	fmt.Println(dynamodb.ErrCodeRequestLimitExceeded, aerr.Error())
-// 			case dynamodb.ErrCodeInternalServerError:
-// 				fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
-// 			default:
-// 				fmt.Println(aerr.Error())
-// 			}
-// 		} else {
-// 			// Print the error, cast err to awserr.Error to get the Code and
-// 			// Message from an error.
-// 			fmt.Println(err.Error())
-// 		}
-// 		return nil, err
-// 	}
-// 	if len(result.Item) == 0 {
-// 		//
-// 		fmt.Println("getState.... 0 rows found")
-// 		s.newSession = true
-// 		return &stateRec{}, nil
-// 	}
-// 	//
-// 	type stateItemT struct {
-// 		PKey   string     `json:"PKey"`
-// 		State stateStack `json:"state"`
-// 	}
-
-// 	stateItem := stateItemT{}
-// 	err = dynamodbattribute.UnmarshalMap(result.Item, &stateItem)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	lastState := stateItem.State.pop()
-// 	s.state = stateItem.State
-// 	//
-// 	return lastState, nil
-// }
 
 func (s *sessCtx) setState(ls *stateRec) {
 	//return staterow.state.pop(), nil
@@ -678,7 +688,8 @@ func (s *sessCtx) updateState() error {
 	//
 	if len(s.state) == 0 {
 		// this case for new session. No UserId in session table so no state.
-		panic(fmt.Errorf("s.state not set in UpdateState()"))
+		err := fmt.Errorf("s.state not set in UpdateState()")
+		return err
 	}
 	// for close book op only - shrink state slice down to 1
 	// if len(s.CloseBkName) > 0 { . // errors with ValidationException: Invalid UpdateExpression: Two document paths overlap with each other; must remove or rewrite one of these paths; path one: [state], path two: [state, [0], MenuL]
@@ -759,8 +770,9 @@ func (s *sessCtx) updateState() error {
 	pkey := pKey{PKey: s.userId}
 	av, err := dynamodbattribute.MarshalMap(&pkey)
 	if err != nil {
-		panic(err)
+		return err
 	}
+	fmt.Println(" dynamodb.UpdateItemInput{ in updateState in sessions.go")
 	input := &dynamodb.UpdateItemInput{
 		TableName:                 aws.String("Sessions"),
 		Key:                       av, // accets []map[]*attributeValues so must use marshal not expression
@@ -789,6 +801,8 @@ func (s *sessCtx) updateState() error {
 			fmt.Println("error in UpdateItem:2 ")
 			fmt.Println(err.Error())
 		}
+		fmt.Println("error in UpdateItem:3 ")
+		fmt.Println(err.Error())
 		return err
 	}
 	//

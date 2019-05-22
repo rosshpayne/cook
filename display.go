@@ -352,7 +352,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		} else {
 			err := s.updateState()
 			if err != nil {
-				return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
+				return RespEvent{Text: err.Error(), Verbal: s.dmsg, Error: err.Error()}
 			}
 		}
 		hint = `hint:  "next", "previous", "repeat", "list ingredients", "list containers", "go back", "restart" `
@@ -413,7 +413,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		s.menuL = nil
 		err := s.updateState()
 		if err != nil {
-			return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
+			return RespEvent{Text: err.Error(), Verbal: s.dmsg, Error: err.Error()}
 		}
 		hint = "hint:  next, previous, say again, resume"
 		return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Hint: hint, Text: rec.Text, Verbal: speak, ListA: listA, ListB: listB, ListC: listC,
