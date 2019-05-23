@@ -982,27 +982,36 @@ func (s *sessCtx) orchestrateRequest() error {
 					if s.reqVersion != "" {
 						s.pkey += "-" + s.reqVersion
 					}
-					r, err := s.recipeRSearch()
-					if err != nil {
-						return err
+					// if recipe name is not known get it
+					var r *RecipeT
+					if len(s.reqRName) == 0 {
+						r, err = s.recipeRSearch()
+						if err != nil {
+							return err
+						}
+					} else {
+						rId, err := strconv.Atoi(s.reqRId)
+						if err != nil {
+							return fmt.Errorf("%s. Converting reqRId  [%s] to int - %s", "main", s.reqRId, err.Error())
+						}
+						r = &RecipeT{PKey: "R-" + s.reqBkId, SortK: rId, RName: s.reqRName}
 					}
 					// set unit formating mode
 					global.Set_WriteCtx(global.UPrint)
+					// load recipe data, part metadata, containers etc
 					as, err := s.loadActivities()
 					if err != nil {
 						return err
 					}
 					// generate ingredient listing
-
+					global.Set_WriteCtx(global.UIngredient)
 					s.ingrdList = IngredientT(as.String(r))
 					s.displayData = s.ingrdList
 					s.showObjMenu = false
 
 					if s.reScale { // change in scale from last session
-						fmt.Println("in ingredient List: update state not pushState")
 						s.updateState()
 					} else {
-						fmt.Println("in ingredient List: pushState")
 						_, err = s.pushState()
 					}
 					if err != nil {
@@ -1126,7 +1135,6 @@ func (r *InputEvent) init() {
 	r.PathItem = strings.Split(r.Path, "/")
 }
 
-//
 func handler(ctx context.Context, request InputEvent) (RespEvent, error) {
 	//func handler(request InputEvent) (RespEvent, error) {
 	var (
@@ -1150,6 +1158,7 @@ func handler(ctx context.Context, request InputEvent) (RespEvent, error) {
 	alxreqid := strings.Split(request.QueryStringParameters["reqId"], ".")
 	fmt.Println("Alexa reqId : ", request.QueryStringParameters["reqId"])
 	fmt.Println("invoke reqId : ", lc.AwsRequestID)
+
 	// var body string
 	// create a new session context and merge with last session data if present.
 	sessctx := &sessCtx{
@@ -1356,7 +1365,7 @@ func handler(ctx context.Context, request InputEvent) (RespEvent, error) {
 	if err != nil {
 		fmt.Println("::::::: error :::::::")
 		//TODO: create an ERROR screen APL
-		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata, Error: err.Error()}, nil
+		return RespEvent{Type: "error", Header: "Internal error has occurred", Text: "Error: ", Error: err.Error()}, nil
 	}
 	//
 	// validate the request and populate session context with appropriate metadata associated with request
@@ -1364,15 +1373,17 @@ func handler(ctx context.Context, request InputEvent) (RespEvent, error) {
 	if !sessctx.back {
 		err = sessctx.orchestrateRequest()
 		if err != nil {
-			return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata, Error: err.Error()}, nil
+			fmt.Println("error after orachestrateRequest ", err.Error())
+			return RespEvent{Type: "error", Header: "Internal error has occurred: ", Text: "Error: ", Error: err.Error()}, nil
+			//sessctx.derr = err.Error()
 		}
 	}
 	//
 	// package the response data RespEvent (an APL aware "display" structure) and return
 	//
 	if sessctx.displayData == nil {
-		sessctx.dmsg = "displayData not set"
-		return RespEvent{Text: sessctx.vmsg, Verbal: sessctx.dmsg + sessctx.ddata}, nil
+		sessctx.derr = "displayData not set"
+		return RespEvent{Type: "error", Header: "Internal error has occurred: ", Text: "Error: ", Error: err.Error()}, nil
 	}
 	var resp RespEvent
 	fmt.Println("=========== displayData.GenDisplay =============")

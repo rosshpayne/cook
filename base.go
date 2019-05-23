@@ -25,7 +25,7 @@ func (s *sessCtx) loadActivities() (Activities, error) {
 	kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value("A-"+s.pkey))
 	expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
 	if err != nil {
-		return nil, fmt.Errorf("Error: in getIngredientData Query - %s", err.Error())
+		return nil, fmt.Errorf("Error: in loadActivities Query - %s", err.Error())
 	}
 	input := &dynamodb.QueryInput{
 		KeyConditionExpression:    expr.KeyCondition(),
@@ -37,16 +37,16 @@ func (s *sessCtx) loadActivities() (Activities, error) {
 	//*dynamodb.DynamoDB,
 	result, err := s.dynamodbSvc.Query(input)
 	if err != nil {
-		return nil, fmt.Errorf("Error: in getIngredientData Query - %s", err.Error())
+		return nil, fmt.Errorf("Error: in loadActivities Query - %s", err.Error())
 	}
 	if int(*result.Count) == 0 {
-		return nil, fmt.Errorf("No data found for reqRId %s in getIngredientData for Activity - ", s.pkey)
+		return nil, fmt.Errorf("No data found for recipe %s in loadActivities  ", s.pkey)
 	}
 	//ActivityS := make([]Activity, int(*result.Count))
 	ActivityS := make(Activities, int(*result.Count))
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &ActivityS)
 	if err != nil {
-		return nil, fmt.Errorf("** Error during UnmarshalListOfMaps in getIngredientData - %s", err.Error())
+		return nil, fmt.Errorf("** Error during UnmarshalListOfMaps in loadActivities - %s", err.Error())
 	}
 	// link up activities via next,prev pointers
 	for i := 0; i < len(ActivityS)-1; i++ {
@@ -780,15 +780,19 @@ func (s *sessCtx) loadBaseRecipe() error {
 						//   currenlty only device oven and noncurrent activity is supported
 						if tdot := strings.IndexByte(str[topen+1:tclose], '.'); tdot > 0 {
 							// dot notation used. Breakdown object being referenced.
+							fmt.Println(str[topen+1 : tclose])
 							s := strings.SplitN(strings.ToLower(str[topen+1:tclose]), ".", 2)
 							el, el2 = s[0], strings.TrimSpace(s[1])
-							// reference to attribute in noncurrent activity e.g. {ingrd.30}
-							p_ := p
-							if el == "ingrd" {
-								if p, ok = ActivityM[str[topen+1+tdot+1:tclose]]; !ok {
-									return fmt.Errorf("Error: in loadBaseRecipe. Reference to non-existent activity in [%d]\n", p_.AId)
+							// examples {ingrd.30}, {ingrd.label}
+							_, err = strconv.Atoi(el2)
+							if err == nil {
+								p_ := p
+								if el == "ingrd" {
+									if p, ok = ActivityM[str[topen+1+tdot+1:tclose]]; !ok {
+										return fmt.Errorf("Error: in loadBaseRecipe. Reference to non-existent activity in [%d]\n", p_.AId)
+									}
+									tclose_ -= len(str[topen+1+tdot+1:tclose]) + 1
 								}
-								tclose_ -= len(str[topen+1+tdot+1:tclose]) + 1
 							}
 						} else {
 							el, el2 = strings.ToLower(str[topen+1:tclose_]), ""
@@ -920,7 +924,12 @@ func (s *sessCtx) loadBaseRecipe() error {
 								return fmt.Errorf("in loadBaseRecipe. UseDevice attribute not defined for Activity [%d]\n", p.AId)
 							}
 							context = device
-							fmt.Fprintf(&b, "%s", pt.UseDevice.String())
+							//if len(pt.UseDevice.Set) > 0 {
+							fmt.Fprintf(&b, "{T:%s|%s|%s}", pt.UseDevice.Unit, pt.UseDevice.Temp, pt.UseDevice.Set)
+							// } else {
+							// 	fmt.Fprintf(&b, "{T:%s|%s|}", pt.UseDevice.Unit, pt.UseDevice.Temp)
+							// }
+							//fmt.Fprintf(&b, "%s", pt.UseDevice.String())
 						case "label", "alabel":
 							fmt.Fprintf(&b, "%s", p.Label)
 						case "tlabel":
@@ -968,6 +977,12 @@ func (s *sessCtx) loadBaseRecipe() error {
 								fmt.Fprintf(&b, "%s", u.String())
 							}
 						case "ingrd":
+							if el2 == "label" {
+								if len(p.Label) > 0 {
+									fmt.Fprintf(&b, "%s", strings.ToLower(p.Label))
+									break
+								}
+							}
 							fmt.Fprintf(&b, "%s", strings.ToLower(p.Ingredient))
 						case "altingrd":
 							fmt.Fprintf(&b, "%s", strings.ToLower(p.AltIngrd))

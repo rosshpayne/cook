@@ -209,6 +209,9 @@ type prepCtl struct {
 var prepctl prepCtl = prepCtl{}
 
 func (m *MeasureT) UPlural() bool {
+	if strings.IndexByte(m.Quantity, '/') > 0 && len(m.Quantity) > 4 {
+		return true
+	}
 	if len(m.Quantity) > 0 {
 		f, err := strconv.ParseFloat(m.Quantity, 32)
 		if err != nil {
@@ -268,7 +271,7 @@ func (d *DeviceT) String() string {
 	if len(d.Set) > 0 {
 		if len(s) > 0 {
 			if global.WriteCtx() == global.USay {
-				s += " or " + d.Set
+				s += ", or " + d.Set
 			} else {
 				s += "/" + d.Set
 			}
@@ -285,6 +288,7 @@ func (c *Container) String() string {
 	var (
 		b strings.Builder
 	)
+	fmt.Println("container.string() ")
 	if c.Measure != nil {
 		b.WriteString(c.Measure.String() + " ")
 	}
@@ -743,7 +747,11 @@ func (m *MeasureT) FormatString() string {
 		}
 		if m.Unit == "tsp" || m.Unit == "tbsp" || m.Unit == "g" || m.Unit == "kg" {
 			if (strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0) && format != "l" {
-				return m.Quantity + UnitMap[m.Unit].String(m)
+				if len(m.Quantity) < 4 && strings.IndexByte(m.Quantity, '/') > 0 && global.WriteCtx() != global.UIngredient {
+					return " a " + m.Quantity + UnitMap[m.Unit].String(m)
+				} else {
+					return m.Quantity + UnitMap[m.Unit].String(m)
+				}
 			} else {
 				return m.Quantity + UnitMap[m.Unit].String(m)
 			}

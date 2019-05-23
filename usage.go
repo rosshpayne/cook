@@ -667,7 +667,6 @@ func expandLiteralTags(str string, s ...*sessCtx) string {
 	}
 	// literal tags are not scalable, set scale to 1 for duration of function.
 	defer resetScale()()
-
 	for tclose, topen = 0, strings.IndexByte(str, '{'); topen != -1; {
 		b.WriteString(str[tclose:topen])
 		nextclose := strings.IndexByte(str[topen:], '}')
@@ -682,7 +681,7 @@ func expandLiteralTags(str string, s ...*sessCtx) string {
 		}
 		tclose += strings.IndexByte(str[tclose:], '}')
 		//
-		tag := strings.Split(strings.ToLower(str[topen+1:tclose]), ":")
+		tag := strings.Split(str[topen+1:tclose], ":")
 		switch tag[0] {
 		case "m":
 			// weight measure literal - needs to be scaled
@@ -693,15 +692,23 @@ func expandLiteralTags(str string, s ...*sessCtx) string {
 			global.SetScale(1.0)
 		case "t":
 			// time literal
+			fmt.Println("time literal ", tag[1])
 			pt := strings.Split(strings.ToLower(tag[1]), "|")
 			b.WriteString(pt[0] + UnitMap[pt[1]].String())
 		case "l":
 			// length literal
 			pt := strings.Split(strings.ToLower(tag[1]), "|")
 			b.WriteString(pt[0] + UnitMap[pt[1]].String())
+		case "T":
+			// temp literal
+			pt := strings.Split(tag[1], "|")
+			d := &DeviceT{Unit: pt[0], Temp: pt[1], Set: pt[2]}
+			fmt.Printf("usage: for T: %#v", *d)
+			b.WriteString(d.String())
 		case "c":
 			// {addtoC} tag where container is scalable
 			pt := strings.Split(strings.ToLower(tag[1]), "|")
+			fmt.Println("expand container tag..", pt)
 			c := &Container{Label: pt[0], Measure: &MeasureCT{Quantity: pt[1], Size: pt[2], Shape: pt[3], Dimension: pt[4], Height: pt[5], Unit: pt[6]}}
 			if len(s) > 0 {
 				if s[0].dispCtr != nil {
@@ -710,6 +717,8 @@ func expandLiteralTags(str string, s ...*sessCtx) string {
 					} else {
 						b.WriteString(" a " + c.String())
 					}
+				} else {
+					b.WriteString(" a " + c.String())
 				}
 			} else {
 				b.WriteString(" a " + c.String())

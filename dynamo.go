@@ -771,15 +771,17 @@ func (s *sessCtx) recipeRSearch() (*RecipeT, error) {
 		PKey  string
 		SortK float64
 	}
+
+	errmsg := " in recipeRSearch():"
 	fmt.Println("***** ENTERED recipeRSearch *********")
 	rId, err := strconv.Atoi(s.reqRId)
 	if err != nil {
-		return nil, fmt.Errorf("Error: in recipeRSearch converting reqRId  [%s] to int - %s", s.reqRId, err.Error())
+		return nil, fmt.Errorf("%s. Converting reqRId  [%s] to int - %s", errmsg, s.reqRId, err.Error())
 	}
 	pkey := pKey{PKey: "R-" + s.reqBkId, SortK: float64(rId)}
 	av, err := dynamodbattribute.MarshalMap(&pkey)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %s", "Error in MarshalMap of recipeIdLookup", err.Error())
+		return nil, fmt.Errorf("%s. MarshalMap: %s", errmsg, err.Error())
 	}
 	input := &dynamodb.GetItemInput{
 		Key:       av,
@@ -807,15 +809,15 @@ func (s *sessCtx) recipeRSearch() (*RecipeT, error) {
 			// Message from an error.
 			fmt.Println(err.Error())
 		}
-		return nil, fmt.Errorf("%s: %s", "Error in GetItem of recipeRSearch", err.Error())
+		return nil, fmt.Errorf("%s %s: %s", errmsg, "GetItem", errmsg, err.Error())
 	}
 	if len(result.Item) == 0 {
-		return nil, fmt.Errorf("No Recipe record found for R-%s-%s", s.reqBkId, s.reqRId)
+		return nil, fmt.Errorf("%s. No Recipe record found for R-%s-%s", errmsg, s.reqBkId, s.reqRId)
 	}
 	rec := &RecipeT{}
 	err = dynamodbattribute.UnmarshalMap(result.Item, rec)
 	if err != nil {
-		return nil, fmt.Errorf("Error: in UnmarshalMaps of recipeRSearch [%s] err", s.reqRId, err.Error())
+		return nil, fmt.Errorf("%s. UnmarshalMaps:  %s", errmsg, s.reqRId, err.Error())
 	}
 	// populate session context fields
 	s.reqRName = rec.RName
@@ -843,6 +845,7 @@ func (s *sessCtx) recipeRSearch() (*RecipeT, error) {
 	for _, v := range rec.Thread {
 		s.parts = append(s.parts, PartT{Title: v.Title, Type_: "Thrd", Index: v.Index})
 	}
+	fmt.Println("***** LEAVE recipeRSearch *********")
 	return rec, nil
 }
 

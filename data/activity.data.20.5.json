@@ -32,6 +32,21 @@
                   }
             }
          },
+         {
+          "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-20-5" },
+                  "SortK" : { "S": "zest" },
+                  "type" : { "S": "plate" },
+                  "label" : { "S": "plate" },
+                  "measure" : { "M" : {  "size" : { "S" : "medium" }
+                  } },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "contents" : { "S": "zest" },
+                  "purpose": { "S": "holding" }
+                  }
+            }
+         },
         {
           "PutRequest": { 
                "Item": { 
@@ -123,12 +138,12 @@
                                                     }}}
                                 },
                                 { "M" : { 
-                                  "txt" : { "S" : "Grease and lightly flour a {useC} or chiffon tin, tapping away any excess flour"},
-                                  "say" : { "S" : "Grease and lightly flour, a {useC}, or chiffon tin, tapping away an yexcess flour"},
+                                  "txt" : { "S" : "Grease and lightly flour {addtoc} or chiffon tin, tapping away any excess flour"},
+                                  "say" : { "S" : "Grease and lightly flour, {addtoc}, or chiffon tin, tapping away any excess flour"},
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
-                                  "useC" : { "SS" : ["caketin"] }
+                                  "addToC" : { "SS" : ["caketin"] }
                                 }},
                                 { "M" : { 
                                   "txt" : { "S" : "Sift {measure} of {ingrd} into {addtoc}."},
@@ -160,7 +175,7 @@
                 },
                 "task" : { "L" : [
                                 { "M" : {
-                                  "txt" : { "S" : "Add {measure} of {ingrd} to the bow" },
+                                  "txt" : { "S" : "Add {measure} of {ingrd}" },
                                   "say" : { "S" : "Add {measure} of {ingrd}" },
                                   "time" : { "N" : "30" },
                                   "tplus" : { "N" : "0" },
@@ -243,7 +258,7 @@
                 "task" : { "L" : [
                                 { "M" :  {
                                   "txt" : { "S" : "Fix a paddle attachment to the electric mixer" },
-                                  "say" : { "S" : "Fix a paddle attachment, to the electric mixer" },
+                                  "say" : { "S" : "Next, fix a paddle attachment, to the electric mixer" },
                                   "time" : { "N" : "30" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "sec" },
@@ -251,8 +266,8 @@
                                                     }}}
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "Measure {measure} of {ingrd} in {addToC}" },
-                                  "say" : { "S" : "Measure {measure}, of {ingrd}, in {addToC}" },
+                                  "txt" : { "S" : "Measure {measure} of {ingrd} into {addToC}" },
+                                  "say" : { "S" : "Measure {measure}, of {ingrd}, into {addToC}" },
                                   "time" : { "N" : "15" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "sec" },
@@ -291,8 +306,8 @@
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Add {measure} of {ingrd} to the {addToC}" },
-                                  "say" : { "S" : "Add {measure} of {ingrd}, to the  {addToC}" },
+                                  "txt" : { "S" : "Add the diced {ingrd} you set aside earlier" },
+                                  "say" : { "S" : "Add the diced {ingrd}, you set aside earlier" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "sec" },
@@ -320,7 +335,7 @@
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Now add {measure} of {ingrd} " },
+                                  "txt" : { "S" : "Add {measure} of {ingrd} " },
                                   "say" : { "S" : "Now Add {measure} of {ingrd} " },
                                   "time" : { "N" : "40" },
                                   "tplus" : { "N" : "0" },
@@ -354,19 +369,19 @@
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
-                                  "addToC" : { "SS" : [ "SAP-M"] }
+                                  "addToC" : { "SS" : [ "zest"] }
                                     }
                                 } 
                                 ]
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Add the {ingrd_} zest to the bowl"  },
-                                  "say" : { "S" : "Add the {ingrd_} zest  to the bowl"  },
+                                  "txt" : { "S" : "Add the zest of {ingrd} and {ingrd.90}  to the bowl"  },
+                                  "say" : { "S" : "Add the zest of {ingrd}, and {ingrd.90}, to the bowl"  },
                                   "time" : { "N" : "20" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "sec" },
-                                  "sourceC" : { "SS" : [ "SAP-M"] },
+                                  "sourceC" : { "SS" : [ "zest"] },
                                   "addToC" : { "SS" : [ "MixerBowl"] }
                                     }
                                 } 
@@ -380,7 +395,7 @@
             "Item": { 
                 "PKey" : { "S": "A-20-5" },
                 "SortK" : { "N": "90"},
-                "ingrd" : { "S" : "oranges" },
+                "ingrd" : { "S" : "orange" },
                 "qualm" : { "S" : "finely grated zest of" }, 
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
@@ -392,25 +407,12 @@
                 },
                "prep" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "zest enough {ingrd} onto {addtoc} to make {measure} and set aside."  },
-                                  "say" : { "S" : "zest enough {ingrd}, onto {addtoc}, to make {measure} and set aside."  },
+                                  "txt" : { "S" : "zest enough {ingrd}s onto {addtoc} to make {measure} and set aside."  },
+                                  "say" : { "S" : "zest enough {ingrd}s, onto {addtoc}, to make {measure} and set aside."  },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
-                                  "addToC" : { "SS" : [ "SAP-M"] }
-                                    }
-                                } 
-                                ]
-                },
-                "task" : { "L" : [ 
-                                { "M" :  {
-                                  "txt" : { "S" : "now add the {ingrd} zest to the bowl"  },
-                                  "say" : { "S" : "now add the {ingrd} zest, to the bowl"  },
-                                  "time" : { "N" : "20" },
-                                  "tplus" : { "N" : "0" },
-                                  "unit" : { "S" : "sec" },
-                                  "sourceC" : { "SS" : [ "SAP-M"] },
-                                  "addToC" : { "SS" : [ "MixerBowl"] }
+                                  "addToC" : { "SS" : [ "zest"] }
                                     }
                                 } 
                                 ]
@@ -478,7 +480,7 @@
                                 },
                                 { "M" :  {
                                   "txt" : { "S" : "Reduce the speed to low and add a third of the dry ingredients." },
-                                  "say" : { "S" : "Reduce the speed to low, and add a third, of the dry ingredients" },
+                                  "say" : { "S" : "Reduce the speed to low, and add a third of the dry ingredients" },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -518,8 +520,8 @@
                  },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "add {measure} or approximately a half of the {ingrd} and blend" },
-                                  "say" : { "S" : "now add {measure}, or approximately half, of the {ingrd} and blend"  },
+                                  "txt" : { "S" : "add {measure} or approximately a half of the {ingrd.label} and blend" },
+                                  "say" : { "S" : "now add {measure}, or approximately half, of the {ingrd.label}, and blend"  },
                                   "time" : { "N" : "20" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "sec" },
@@ -540,8 +542,8 @@
                                   }
                                 }, 
                                 { "M" :  {
-                                  "txt" : { "S" : "Add the remaining {ingrd} and blend" },
-                                  "say" : { "S" : "Add the remaining {ingrd}, and blend"  },
+                                  "txt" : { "S" : "Add the remaining {ingrd.label} and blend" },
+                                  "say" : { "S" : "Add the remaining {ingrd.label}, and blend"  },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -549,8 +551,8 @@
                                   }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "Finish with the final portion of dry ingredients and continuing to mix " },
-                                  "say" : { "S" : "Finish with the final portion of dry ingredients, and continuing to mix "  },
+                                  "txt" : { "S" : "Finish with the final portion of dry ingredients and continue to mix" },
+                                  "say" : { "S" : "Finish with the final portion of dry ingredients, and continue to mix "  },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -589,7 +591,7 @@
                                 } ,
                                 { "M" :  {
                                   "txt" : { "S" : "finally, scatter {measure} of {ingrd} evenly on top. " },
-                                  "say" : { "S" : "finally, scatter {measure} of {ingrd} evenly on top. " },
+                                  "say" : { "S" : "finally, scatter {measure} of {ingrd}, evenly on top. " },
                                   "time" : { "N" : "20" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "sec" },
@@ -597,12 +599,13 @@
                                     }
                                 } ,
                                 { "M" :  {
-                                  "txt" : { "S" : "Place in the oven and bake for {timeu}" },
-                                  "say" : { "S" : "Now Place in the oven and bake for {timeu}" },
+                                  "txt" : { "S" : "Place in the oven and bake for {timeu}. Temperate should be {device.oven.temp}" },
+                                  "say" : { "S" : "Now Place in the oven, and bake for {timeu}. Reminder, temperate should be {device.oven.temp}" },
                                   "time" : { "N" : "20" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
-                                  "useC" : { "SS" : [ "caketin"] }
+                                  "useC" : { "SS" : [ "caketin"] },
+                                  "useD" : { "M" : { "type" : {"S": "oven" }}}
                                     }
                                 }
                                 ]
@@ -638,7 +641,7 @@
                 "task" : { "L" : [ 
                                 { "M" :  {
                                   "txt" : { "S" : "To make the sugar crust topping, place the {ingrd} you set aside earlier into a {addToC} " },
-                                  "say" : { "S" : "To make the sugar crust topping, place the {ingrd} you set aside earlier into a {addToC}" },
+                                  "say" : { "S" : "To make the sugar crust topping, place the {ingrd} you set aside earlier, into a {addToC}" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -668,7 +671,7 @@
                 "task" : { "L" : [ 
                                 { "M" :  {
                                   "txt" : { "S" : "Add {measure} {ingrd} and beat with a {used} to form a thick paste " },
-                                  "say" : { "S" : "Add {measure} {ingrd}, and beat with a {used}, to form a thick paste" },
+                                  "say" : { "S" : "Add {measure} of {ingrd}, and beat with a {used}, to form a thick paste" },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -730,8 +733,8 @@
                                     }
                                 },
                                  { "M" :  {
-                                  "txt" : { "S" : "Immediately lower the oven temperature to {temp} and continue to bake for another {timeu} to {tplus} {unit}" },
-                                  "say" : { "S" : "Immediately, lower the oven temperature to {temp} ,and continue to bake for another {timeu} to {tplus} {unit}" },
+                                  "txt" : { "S" : "Immediately lower the oven temperature to {temp} and continue to bake for another {timeu}" },
+                                  "say" : { "S" : "Immediately, lower the oven temperature to {temp} ,and continue to bake for another {timeu}" },
                                   "time" : { "N" : "35" },
                                   "tplus" : { "N" : "5" },
                                   "unit" : { "S" : "min" },
@@ -744,7 +747,7 @@
                                 },
                                 { "M" :  {
                                   "txt" : { "S" : "Remove from the oven and set aside to cool for {timeu} before removing from the tin " },
-                                  "say" : { "S" : "Remove from the oven, and set aside to cool, for {timeu}, before removing from the tin " },
+                                  "say" : { "S" : "Remove from the oven, and set aside to cool for {timeu}, before removing from the tin " },
                                   "time" : { "N" : "30" },
                                   "unit" : { "S" : "min" },
                                   "sourceC" : { "SS" : [ "SAB-S"] }

@@ -61,7 +61,7 @@ func (u *Unit) String(i ...UnitPI) string {
 		format = u.Print
 	case global.USay:
 		format = u.Say // long or short
-	case global.UDisplay:
+	case global.UDisplay, global.UIngredient:
 		format = u.Display // long or short
 	default:
 		panic(fmt.Errorf("%s", "write context not set"))

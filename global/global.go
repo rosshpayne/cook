@@ -16,6 +16,7 @@ const (
 	UPrint WriteContextT = iota + 1
 	USay
 	UDisplay
+	UIngredient
 )
 
 func Set_WriteCtx(w WriteContextT) {
