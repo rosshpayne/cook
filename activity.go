@@ -111,6 +111,7 @@ type MeasureT struct {
 	NoScale  bool   `json:"ns"`   // do not scale this measure
 	// normalized quantity
 	nzQty float64
+	post  string // for verbal only: of, of a phrase after qty and before unit
 }
 
 // "timer" : { "M" :  {
@@ -288,7 +289,6 @@ func (c *Container) String() string {
 	var (
 		b strings.Builder
 	)
-	fmt.Println("container.string() ")
 	if c.Measure != nil {
 		b.WriteString(c.Measure.String() + " ")
 	}
@@ -389,12 +389,6 @@ func (m *MeasureCT) String() string {
 func (m *MeasureT) String() string {
 
 	var scaleFactor float64 = global.GetScale()
-
-	if scaleFactor > scaleThreshold || m.NoScale {
-		return m.FormatString()
-	}
-	//
-	//************ ingredient scaling necessary *************
 	//
 	const (
 		c_pinchof string = "pinch of"
@@ -455,14 +449,21 @@ func (m *MeasureT) String() string {
 			fint += 1
 		} else if frac > 0.625 {
 			fstr = "3/4"
+			m.post = " of a "
 		} else if frac > 0.375 {
 			fstr = "1/2"
+			m.post = " a "
 		} else if frac > 0.1875 {
 			fstr = "1/4"
+			m.post = " of a "
 		} else if frac > 0.075 {
 			fstr = "1/8"
+			m.post = " of a "
 		} else {
 			return c_pinchof
+		}
+		if fint > 0 {
+			m.post = ""
 		}
 		ff := strconv.FormatFloat(fint, 'g', -1, 64)
 		if fint == 0 {
@@ -486,16 +487,22 @@ func (m *MeasureT) String() string {
 			f = 0.0
 		} else if frac > 0.625 {
 			f = 0.75
+			m.post = " of a "
 		} else if frac > 0.375 {
 			f = 0.5
+			m.post = " a "
 		} else if frac > 0.1875 {
 			f = 0.25
+			m.post = " of a "
 		} else if frac > 0.075 {
 			f = 0.125
+			m.post = " of a "
 		} else {
 			return c_pinchof
 		}
-		fmt.Println("scaleFloat: ", ff, f)
+		if ff > 0 {
+			m.post = ""
+		}
 		return strconv.FormatFloat(ff+f, 'g', -1, 64)
 	}
 
@@ -513,19 +520,25 @@ func (m *MeasureT) String() string {
 				f = 0.0
 			} else if frac > 0.625 {
 				s = " 3/4"
+				m.post = " of a "
 			} else if frac > 0.375 {
 				s = " 1/2"
+				m.post = " a "
 			} else if frac > 0.1875 {
 				s = " 1/4"
+				m.post = " of a "
 			} else if frac > 0.075 {
 				s = " 1/8"
+				m.post = " of a "
 			} else {
 				if ff < 1 {
 					return c_pinchof
 				}
 			}
 		}
-		fmt.Println("scaleFloat: ", ff, f)
+		if ff > 0 {
+			m.post = ""
+		}
 		return strconv.FormatFloat(ff, 'g', -1, 64) + s
 	}
 
@@ -569,22 +582,22 @@ func (m *MeasureT) String() string {
 		// fraction defined
 		if strings.IndexByte(m.Num, '/') > 0 {
 			s := scaleFraction(m.Num)
-			mn := &MeasureT{Size: m.Size, Num: s, Unit: m.Unit}
+			mn := &MeasureT{Size: m.Size, Num: s, Unit: m.Unit, post: m.post}
 			return mn.FormatString()
 		}
 		if strings.IndexByte(m.Num, '.') > 0 {
 			var mn *MeasureT
 			s := scaleFloat(m.Num)
 			if s != c_pinchof {
-				mn = &MeasureT{Size: m.Size, Num: s, Unit: m.Unit}
+				mn = &MeasureT{Size: m.Size, Num: s, Unit: m.Unit, post: m.post}
 			} else {
-				mn = &MeasureT{Size: m.Size, Num: s, Unit: m.Unit}
+				mn = &MeasureT{Size: m.Size, Num: s, Unit: m.Unit, post: m.post}
 			}
 			return mn.FormatString()
 		}
 		s := scaleInt(m.Num)
 		//s := scaleFraction(m.Num)
-		mn := &MeasureT{Size: m.Size, Num: s, Unit: m.Unit}
+		mn := &MeasureT{Size: m.Size, Num: s, Unit: m.Unit, post: m.post}
 		return mn.FormatString()
 	}
 	if len(m.Quantity) > 0 && len(m.Unit) == 0 {
@@ -594,22 +607,22 @@ func (m *MeasureT) String() string {
 		// fraction defined
 		if strings.IndexByte(m.Quantity, '/') > 0 {
 			s := scaleFraction(m.Quantity)
-			mn := &MeasureT{Quantity: s, Size: m.Size, Num: m.Num}
+			mn := &MeasureT{Quantity: s, Size: m.Size, Num: m.Num, post: m.post}
 			return mn.FormatString()
 		}
 		if strings.IndexByte(m.Quantity, '.') > 0 {
 			var mn *MeasureT
 			s := scaleFloat(m.Quantity)
 			if s != c_pinchof {
-				mn = &MeasureT{Quantity: s, Size: m.Size, Num: m.Num}
+				mn = &MeasureT{Quantity: s, Size: m.Size, Num: m.Num, post: m.post}
 			} else {
-				mn = &MeasureT{Quantity: s, Size: m.Size, Num: m.Num}
+				mn = &MeasureT{Quantity: s, Size: m.Size, Num: m.Num, post: m.post}
 			}
 			return mn.FormatString()
 		}
 		s := scaleInt(m.Quantity)
 		//s := scaleFloat(m.Quantity)
-		mn := &MeasureT{Quantity: s, Size: m.Size, Num: m.Num}
+		mn := &MeasureT{Quantity: s, Size: m.Size, Num: m.Num, post: m.post}
 		return mn.FormatString()
 	}
 	var (
@@ -625,10 +638,10 @@ func (m *MeasureT) String() string {
 			// return from here..
 			s := scaleFraction(m.Quantity)
 			if s == c_pinchof {
-				mn := &MeasureT{Quantity: s, Size: m.Size, Num: m.Num}
+				mn := &MeasureT{Quantity: s, Size: m.Size, Num: m.Num, post: m.post}
 				return mn.FormatString()
 			} else {
-				mn := &MeasureT{Quantity: s, Unit: m.Unit, Size: m.Size, Num: m.Num}
+				mn := &MeasureT{Quantity: s, Unit: m.Unit, Size: m.Size, Num: m.Num, post: m.post}
 				return mn.FormatString()
 			}
 		}
@@ -649,7 +662,6 @@ func (m *MeasureT) String() string {
 		}
 		// *1000 as we are to change to smaller unit
 		qty = f * scaleFactor
-		fmt.Println("qty: ", qty)
 		if m.Unit == "l" || m.Unit == "cm" || m.Unit == "kg" {
 			var unit string
 			qty *= 1000
@@ -668,7 +680,7 @@ func (m *MeasureT) String() string {
 			}
 			qty = roundTo5(qty)
 			qtyStr = strconv.FormatFloat(float64(qty), 'g', -1, 64)
-			mn := &MeasureT{Quantity: qtyStr, Unit: unit, Size: m.Size, Num: m.Num}
+			mn := &MeasureT{Quantity: qtyStr, Unit: unit, Size: m.Size, Num: m.Num, post: m.post}
 			return mn.FormatString()
 		}
 		qty = roundTo5(qty)
@@ -679,31 +691,38 @@ func (m *MeasureT) String() string {
 				fint += 1.0
 			} else if frac > .625 {
 				part = " 3/4"
+				m.post = " of a "
 				//part = ".75"
 			} else if frac > .375 {
 				part = " 1/2"
+				m.post = " a "
 				//part = ".5"
 			} else if frac > .175 {
 				part = " 1/4"
+				m.post = " of a "
 				//part = ".25"
 			} else if frac > .075 {
 				part = " 1/8"
+				m.post = " of a "
 				//part = ".125"
 			} else {
 				part = ""
 			}
 		}
+		if fint > 0 {
+			m.post = ""
+		}
 		ff := strconv.FormatFloat(fint, 'g', -1, 64)
 		if qty < 10 {
 			if fint == 0 {
-				mn := &MeasureT{Quantity: part, Unit: m.Unit, Size: m.Size, Num: m.Num}
+				mn := &MeasureT{Quantity: part, Unit: m.Unit, Size: m.Size, Num: m.Num, post: m.post}
 				return mn.FormatString()
 			} else {
-				mn := &MeasureT{Quantity: ff + part, Unit: m.Unit, Size: m.Size, Num: m.Num}
+				mn := &MeasureT{Quantity: ff + part, Unit: m.Unit, Size: m.Size, Num: m.Num, post: m.post}
 				return mn.FormatString()
 			}
 		} else {
-			mn := &MeasureT{Quantity: ff, Unit: m.Unit, Size: m.Size, Num: m.Num}
+			mn := &MeasureT{Quantity: ff, Unit: m.Unit, Size: m.Size, Num: m.Num, post: m.post}
 			return mn.FormatString()
 		}
 
@@ -748,20 +767,36 @@ func (m *MeasureT) FormatString() string {
 		if m.Unit == "tsp" || m.Unit == "tbsp" || m.Unit == "g" || m.Unit == "kg" {
 			if (strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0) && format != "l" {
 				if len(m.Quantity) < 4 && strings.IndexByte(m.Quantity, '/') > 0 && global.WriteCtx() != global.UIngredient {
-					return " a " + m.Quantity + UnitMap[m.Unit].String(m)
+					if global.WriteCtx() == global.USay {
+						return " a " + m.Quantity + m.post + UnitMap[m.Unit].String(m)
+					} else {
+						return " a " + m.Quantity + UnitMap[m.Unit].String(m)
+					}
+				} else {
+					if global.WriteCtx() == global.USay {
+						return m.Quantity + m.post + UnitMap[m.Unit].String(m)
+					} else {
+						return m.Quantity + UnitMap[m.Unit].String(m)
+					}
+				}
+			} else {
+				if global.WriteCtx() == global.USay {
+					return m.Quantity + m.post + UnitMap[m.Unit].String(m)
 				} else {
 					return m.Quantity + UnitMap[m.Unit].String(m)
 				}
-			} else {
-				return m.Quantity + UnitMap[m.Unit].String(m)
 			}
 		}
 		if strings.IndexByte(m.Quantity, '/') > 0 || strings.IndexByte(m.Quantity, '.') > 0 || m.Quantity == "1" {
-			return m.Quantity + UnitMap[m.Unit].String(m)
+			if global.WriteCtx() == global.USay {
+				return m.Quantity + m.post + UnitMap[m.Unit].String(m)
+			} else {
+				return m.Quantity + UnitMap[m.Unit].String(m)
+			}
 		} else {
 			//if writeCtx == uSay {
 			if global.WriteCtx() == global.USay {
-				return m.Quantity + UnitMap[m.Unit].String(m)
+				return m.Quantity + m.post + UnitMap[m.Unit].String(m)
 			} else {
 				return m.Quantity + UnitMap[m.Unit].String(m)
 			}

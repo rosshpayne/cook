@@ -7,7 +7,7 @@
                   "SortK" : { "S": "caketin" },
                   "type" : { "S": "caketin" },
                   "scale" : {"BOOL": true},
-                  "label" : { "S": "angle food cake tin" },
+                  "label" : { "S": "angel food cake tin" },
                   "measure" : { "M" : {  "shape" : { "S" : "round" },
                                           "dim" : { "S" : "25"},
                                           "height" : { "S" : "5" },
@@ -228,7 +228,7 @@
                 },
                "task" : { "L" : [ 
                                 { "M" :  {
-                                 "txt" : { "S" : "and finally, add {measure} of {ingrd} and set the dry ingredients aside " },
+                                 "txt" : { "S" : "finally, add {measure} of {ingrd} and set the dry ingredients aside " },
                                   "say" : { "S" : "and finally, add {measure} of {ingrd}, and set the dry ingredients aside " },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
@@ -364,8 +364,8 @@
                 },
                 "prep" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "zest enough {ingrd} onto {addtoc} to make {measure} and set aside."  },
-                                  "say" : { "S" : "zest enough {ingrd}, onto {addtoc}, to make {measure} and set aside."  },
+                                  "txt" : { "S" : "zest enough {ingrd} onto {addtoc} to make {measure} "  },
+                                  "say" : { "S" : "zest enough {ingrd}, onto {addtoc}, to make {measure}"  },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -376,7 +376,7 @@
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Add the zest of {ingrd} and {ingrd.90}  to the bowl"  },
+                                  "txt" : { "S" : "Add the zest of {ingrd} and {ingrd.90} to the bowl"  },
                                   "say" : { "S" : "Add the zest of {ingrd}, and {ingrd.90}, to the bowl"  },
                                   "time" : { "N" : "20" },
                                   "tplus" : { "N" : "0" },
@@ -407,8 +407,8 @@
                 },
                "prep" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "zest enough {ingrd}s onto {addtoc} to make {measure} and set aside."  },
-                                  "say" : { "S" : "zest enough {ingrd}s, onto {addtoc}, to make {measure} and set aside."  },
+                                  "txt" : { "S" : "onto the same plate zest enough {ingrd}s to make {measure} and set aside."  },
+                                  "say" : { "S" : "onto the same plate zest enough {ingrd}s to make {measure} and set aside.."  },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -607,6 +607,16 @@
                                   "useC" : { "SS" : [ "caketin"] },
                                   "useD" : { "M" : { "type" : {"S": "oven" }}}
                                     }
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" : "set a timer for {timeu}. In the meantime start on the crust topping" },
+                                  "say" : { "S" : "set a timer for {timeu}. In the meantime start on the crust topping" },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useC" : { "SS" : [ "caketin"] },
+                                  "useD" : { "M" : { "type" : {"S": "oven" }}}
+                                    }
                                 }
                                 ]
                 }
@@ -640,8 +650,8 @@
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "To make the sugar crust topping, place the {ingrd} you set aside earlier into a {addToC} " },
-                                  "say" : { "S" : "To make the sugar crust topping, place the {ingrd} you set aside earlier, into a {addToC}" },
+                                  "txt" : { "S" : "To make the sugar crust topping, place the {ingrd} into a {addToC} " },
+                                  "say" : { "S" : "To make the sugar crust topping, place the {ingrd}, into a {addToC}" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -670,7 +680,7 @@
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Add {measure} {ingrd} and beat with a {used} to form a thick paste " },
+                                  "txt" : { "S" : "Add {measure} {ingrd} and beat with a {used} to form a thick paste and set aside until the cake  " },
                                   "say" : { "S" : "Add {measure} of {ingrd}, and beat with a {used}, to form a thick paste" },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
@@ -681,8 +691,18 @@
                                     }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "When the cake has been in the oven for {timeu}, quickly but gently remove it and dot the sugar crust evenly over the top, breaking it into small pieces as you go. " },
-                                  "say" : { "S" : "When the cake has been in the oven for {timeu}, quickly but gently remove it, and dot the sugar crust evenly over the top, breaking it into small pieces as you go." },
+                                  "txt" : { "S" : "When the cake has been in the oven for {timeu}, gently remove it" },
+                                  "say" : { "S" : "When the cake has been in the oven for {timeu}, gently remove it" },
+                                  "time" : { "N" : "20" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "topbowl"] },
+                                  "useD" : { "M" : { "type" : {"S": "wooden spoon" }
+                                                    }} }
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" : "dot the sugar crust evenly over the top, breaking it into small pieces as you go. " },
+                                  "say" : { "S" : "dot the sugar crust evenly over the top, breaking it into small pieces as you go." },
                                   "time" : { "N" : "20" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -724,8 +744,8 @@
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Scatter the {ingrd} evenly over the top and return it to the oven. " },
-                                  "say" : { "S" : "Scatter the {ingrd} evenly over the top and return it to the oven." },
+                                  "txt" : { "S" : "Scatter the {ingrd} you prepared earlier evenly over the top and return it to the oven. " },
+                                  "say" : { "S" : "Scatter the {ingrd}, you prepared earlier, evenly over the top and return it to the oven." },
                                   "time" : { "N" : "20" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "sec" },
@@ -744,6 +764,14 @@
                                                      "set" : { "S" : "Gas Mark 4"},
                                                      "unit" : { "S" : "C" }
                                                     }}}
+                                },
+                                { "M" :  {
+                                  "txt" : { "S" : "Set a timer for {timeu} and get back to me " },
+                                  "say" : { "S" : "Set a timer for {timeu} and get back to me" },
+                                  "time" : { "N" : "30" },
+                                  "unit" : { "S" : "min" },
+                                  "sourceC" : { "SS" : [ "SAB-S"] }
+                                }
                                 },
                                 { "M" :  {
                                   "txt" : { "S" : "Remove from the oven and set aside to cool for {timeu} before removing from the tin " },
