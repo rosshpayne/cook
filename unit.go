@@ -25,7 +25,7 @@ var unitS []*Unit = []*Unit{
 	&Unit{Slabel: "g", Llabel: "gram", Print: "s", Say: "l", Display: "s", Plural: "s"},
 	&Unit{Slabel: "kg", Llabel: "kilogram", Print: "s", Say: "l", Display: "s", Plural: "s"},
 	&Unit{Slabel: "tbsp", Llabel: "tablespoon", Print: "s", Say: "l", Display: "l", Plural: "s"},
-	&Unit{Slabel: "tsp", Llabel: "teespoon", Print: "s", Say: "l", Display: "l", Plural: "s"},
+	&Unit{Slabel: "tsp", Llabel: "teaspoon", Print: "s", Say: "l", Display: "l", Plural: "s"},
 	&Unit{Slabel: "l", Llabel: "litre", Print: "l", Say: "l", Display: "s", Plural: "s"},
 	&Unit{Slabel: "ml", Llabel: "mill", Print: "s", Say: "l", Display: "s", Plural: "s"},
 	&Unit{Slabel: "mm", Llabel: "millimeter", Print: "s", Say: "l", Display: "s"},
