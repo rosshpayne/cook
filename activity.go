@@ -143,7 +143,9 @@ type PerformT struct {
 	UseDevice   *DeviceT  `json:"useD"`
 	Measure     *MeasureT `json:"measure"` // used by those tasks that use some portion of the ingredient.
 	WaitOn      int       `json:"waitOn"`  // depenency on other activity to complete
-	Division    string    `json:"div"`     // inherit from activity if not present. Recipe division based on instructions/tasks not part ingredient e.g. division: day-before, on-day
+	Division    string    `json:"div"`     // inherit from activity if not present. Recipe division based on time/instructions/tasks not part ingredient e.g. division: day-before, on-day
+	Div_        string    `json:"div_"`    // same as "div" but can only be displayed when part div is chosen.
+	divOnly     bool      // task applies to division only. Not to be printed for normal tasks.
 	Thread      string    `json:"thrd"`    // inherit from activity if not present. No thread means thread 1.
 	MergeThrd   int       `json:"mthrd"`   // task where parallel task (thread) will merge
 	ThrdName    string    `json:"thrdnme"` // title of thread - appears in threadedBottom.json, threadedTop.json
@@ -292,11 +294,14 @@ func (c *Container) String() string {
 	if c.Measure != nil {
 		b.WriteString(c.Measure.String() + " ")
 	}
-	if len(c.Label) > 0 {
-		b.WriteString(strings.ToLower(c.Label))
+	if len(c.Prelabel) > 0 {
+		b.WriteString(" " + strings.ToLower(c.Prelabel))
 	}
-	if len(c.Requirement) > 0 {
-		b.WriteString(" " + strings.ToLower(c.Requirement))
+	if len(c.Label) > 0 {
+		b.WriteString(" " + strings.ToLower(c.Label))
+	}
+	if len(c.Postlabel) > 0 {
+		b.WriteString(" " + strings.ToLower(c.Postlabel))
 	}
 	if c.AltMeasure != nil {
 		b.WriteString(" or ")
@@ -378,7 +383,9 @@ func (m *MeasureCT) String() string {
 		b.WriteString(m.Quantity)
 	}
 	if len(m.Size) > 0 {
-		b.WriteString(m.Size)
+		if m.Size[0] != '_' {
+			b.WriteString(m.Size)
+		}
 	}
 	//fmt.Println(s)
 	return b.String()

@@ -8,7 +8,7 @@
                   "type" : { "S": "Pan" },
                   "label" : { "S": "sausepan" },
                   "slabel" : {"S": "pan" },
-                  "requ" : {"S" : "with a lid"},
+                  "postlabel" : {"S" : "with a lid"},
                   "measure" : { "M" : { "size" : { "S" : "large"}} },
                   "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
                   "contents" : { "S": "pork" },

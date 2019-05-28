@@ -849,7 +849,9 @@ func (s *sessCtx) loadBaseRecipe() error {
 								case "form": // depreciated - only alt used now. Still here to support existing
 									b.WriteString(c.String())
 								case "label":
-									b.WriteString(c.label())
+									b.WriteString(c.Label)
+								case "slabel":
+									b.WriteString(c.Slabel)
 								default:
 									panic(fmt.Errorf(`Error: useC or addtoC tag not followed by "form" or "type" type in AId [%d] [%s]`, p.AId, str))
 								}
@@ -865,6 +867,14 @@ func (s *sessCtx) loadBaseRecipe() error {
 									b.WriteString("a " + c.String())
 								}
 							}
+						case "altmeasure":
+							context = measure
+							if p.AltMeasure == nil {
+								return fmt.Errorf("in loadBaseRecipe. Ingredient AltMeasure not defined for Activity [%d]\n", p.AId)
+							}
+							m := p.AltMeasure
+							fmt.Fprintf(&b, "%s", "{m:"+m.Quantity+"|"+m.Unit+"|"+m.Size+"|"+m.Num+"}")
+							//
 						case "measure":
 							context = measure
 							// heirarchy - look for a task measure. If not present, use the activity measure.

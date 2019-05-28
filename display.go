@@ -146,6 +146,15 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		//panic(fmt.Errorf("Error: in getInstruction, recipe part index [%s] not found in s.parts ", index))
 		return ""
 	}
+	threadName := func(thread int) string {
+		for i := 0; i < len(s.parts); i++ {
+			v := &s.parts[i]
+			if v.Type_ == "Thrd" && v.Index == strconv.Itoa(thread) {
+				return v.Title
+			}
+		}
+		return "no-thread-found,"
+	}
 	fmt.Println("GenDisplay:  Threads")
 	if len(t) == 0 {
 		s.derr = "Error: internal, instructions has not been cached"
@@ -156,9 +165,22 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 	//var id = t[s.cThread].id // cThread either zero (for no thread), 1 for one thread or 2 for two threads. Number of actual threads is len(t)
 	fmt.Println("cThread = ", s.cThread)
 	fmt.Println("object = ", s.object)
-
+	if s.cThread == 0 {
+		s.oThread = 0
+	}
 	id := s.recId[objectMap[s.object]] // is the next record id to speak
+	//
+	fmt.Println("id = ", id)
+	if id > 0 && id <= len(t[s.cThread].Instructions) {
+		cthread := t[s.cThread].Instructions[id-1].Thread
+		if cthread == 0 {
+			s.cThread, s.oThread = 0, 0
+		}
+		fmt.Println("new cThread = ", cthread)
+	}
 
+	fmt.Println("object = ", s.object)
+	fmt.Println("id = ", id)
 	//
 	// check id within instruction set range - don't change to a lower thread here. Must be explicitly done by resume request.
 	//
@@ -179,21 +201,29 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		id = len(t[s.cThread].Instructions)
 		s.recId[objectMap[s.object]] = id
 
-	case id > len(t[s.cThread].Instructions) && len(t) > 1 && s.cThread == len(t)-1:
-		// last thread in multiple threaded recipe so check if all previous threads completed.
-		if t[s.cThread-1].Id == len(t[s.cThread-1].Instructions) {
+	case id > len(t[s.cThread].Instructions) && len(t) > 1 && s.cThread == 0: // thread 1
+		// i.e. current thread in multiple threaded recipe so check if all previous threads completed.
+		s.cThread, s.oThread = 2, 1
+		s.recId[objectMap[s.object]], id = 1, 1
+	case id > len(t[s.cThread].Instructions) && len(t) > 1 && s.cThread == 1: // thread 1
+		// i.e. current thread in multiple threaded recipe so check if all previous threads completed.
+		s.cThread, s.oThread = 2, 1
+		id = len(t[s.cThread].Instructions)
+		s.recId[objectMap[s.object]] = id
+		if t[s.cThread].Id == len(t[s.cThread].Instructions) {
 			// previous thead completed. Have reached end
-			s.derr = "Recipe completed"
+			//s.derr = "Thread " + threadName() + " completed"
 			id = len(t[s.cThread].Instructions)
-			s.recId[objectMap[s.object]] = id
-		} else {
-			// hint at unfinished thread. Must explicit go to it -not here.
-			s.derr = "You must resume previous thread and complete it"
-			id = len(t[s.cThread].Instructions)
-			s.recId[objectMap[s.object]] = id
+			s.cThread, s.oThread = s.oThread, s.cThread
+			if t[s.cThread].Id == len(t[s.cThread].Instructions) {
+				s.derr = "Recipe completed"
+			} else {
+				s.recId[objectMap[s.object]] = 1
+				id = t[s.cThread].Id + 1
+			}
 		}
 
-	case id > len(t[s.cThread].Instructions) && len(t) > 1:
+	case id > len(t[s.cThread].Instructions) && s.cThread == 2:
 		// recipe has forked or resumed thread has completed.
 		switch s.oThread {
 		case 0:
@@ -201,11 +231,13 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 			s.oThread = s.oThread + 1
 			s.cThread = s.oThread + 1
 			id = 1
+			fmt.Println("recipe forked - othr, cthr, id ", s.oThread, s.cThread, id)
 		case 1:
 			// resumed thread completed
 			s.oThread = -1 // resumed thread completed
 			s.cThread = s.cThread + 1
 			id = t[s.cThread].Id
+			fmt.Println("resumed thread completed - othr, cthr, id ", s.oThread, s.cThread, id)
 		}
 		s.recId[objectMap[s.object]] = id
 		if t[s.cThread].Id == len(t[s.cThread].Instructions) {
@@ -217,6 +249,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 	}
 	//
 	t[s.cThread].Id = id
+	fmt.Println("t[s.cThread].Id = ", t[s.cThread].Id, s.cThread, id)
 	//rec := &t[s.cThread].Instructions[id-1]
 	fmt.Println("cThread, id = ", s.cThread, id)
 	//eol := t[s.cThread].EOL
@@ -274,6 +307,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 			thread--
 			id = t[thread].Id
 		}
+		fmt.Println("Sect B: id,thread = ", id, thread)
 		list[0] = DisplayItem{Title: "<speak>" + t[thread].Instructions[id-1].Text + "</speak>"}
 		return list
 	}
@@ -362,15 +396,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 
 	default:
 		// two threads with 3 sections in each. should always display threads 1 and 2 in that order, never thread 0
-		threadName := func(thread int) string {
-			for i := 0; i < len(s.parts); i++ {
-				v := &s.parts[i]
-				if v.Type_ == "Thrd" && v.Index == strconv.Itoa(thread) {
-					return v.Title
-				}
-			}
-			return "no-thread-found,"
-		}
+
 		tc := s.oThread
 		type_ := "threadedBottom"
 		color1 := "yellow"
@@ -407,7 +433,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		// pid = strconv.Itoa(rec.PID)
 		//s.eol, s.peol, s.part, s.pid = rec.EOL, rec.PEOL, part, rec.PID
 		s.part = part
-		fmt.Println("4 cThread, id = ", s.cThread, id)
+		fmt.Println("4 cThread, id , part = ", s.cThread, id, part)
 		speak := "<speak>" + rec.Verbal + "</speak>"
 
 		s.menuL = nil
@@ -595,7 +621,7 @@ func (p PartS) GenDisplay(s *sessCtx) RespEvent {
 	hdr = s.reqRName
 	sf := strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
 	subh = `Recipe is divided into parts. Select first option to follow complete recipe  (Scale: ` + sf + ")"
-
+	//
 	list := make([]DisplayItem, 1)
 	list[0] = DisplayItem{Id: "1", Title: CompleteRecipe_}
 	for _, v := range p {

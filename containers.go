@@ -17,13 +17,14 @@ import (
 
 // instance data from dynamo "activity" table
 type Container struct {
-	Cid         string     `json:"SortK"`
-	Type        string     `json:"type"` // value used to aggregate and sort mulitple containers
-	Purpose     string     `json:"purpose"`
-	Coord       [2]float32 `json:"coord"`
-	Contains    string     `json:"contents"`
-	Requirement string     `json:"requ"` // any requirements that the container must have e..g "have a lid"
-	Scale       bool       `json:"scale"`
+	Cid       string     `json:"SortK"`
+	Type      string     `json:"type"` // value used to aggregate and sort mulitple containers
+	Purpose   string     `json:"purpose"`
+	Coord     [2]float32 `json:"coord"`
+	Contains  string     `json:"contents"`
+	Prelabel  string     `json:"prelabel"`  // may be redundant
+	Postlabel string     `json:"postlabel"` // may be redundant
+	Scale     bool       `json:"scale"`
 	// two instances of this container
 	Label      string     `json:"label"`  // name used in graphics system and String() which generates name using "label requirement"
 	Slabel     string     `json:"slabel"` // short name
@@ -658,7 +659,6 @@ func (s *sessCtx) loadBaseContainers() (ContainerS, error) {
 			}
 		}
 	}
-	fmt.Println("objRecId: ", s.objRecId)
 	ctS = append(ctS, "\n")
 	ctS = append(ctS, "Utensils:")
 	ctS = append(ctS, "\n")

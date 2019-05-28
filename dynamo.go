@@ -45,7 +45,8 @@ type taskRecT struct {
 	AId      int    `json:"AId"`   // Activity Id
 	Type     byte   `json:"Type"`
 	time     int    // all Linked preps sum time components into this field
-	Division string `json:"Div"` // divide tasks/instructs into divisions, e.g. day-before, on-day
+	Division string `json:"Div"`     // divide tasks/instructs into divisions, e.g. day-before, on-day
+	DivOnly  bool   `json:"divOnly"` // divide tasks/instructs into divisions, e.g. day-before, on-day. Not to be printed for non-Division parts
 	//Thread    string  `json:"Thrd"` // instruction thread
 	Thread    int    `json:"Thrd"`
 	Text      string `json:"Text"` // all Linked preps combined text into this field
@@ -170,7 +171,7 @@ func (s *sessCtx) cacheInstructions(sId ...int) (Threads, error) {
 		// 0 index for no thead case, index 1,2 for threads 1,2
 		for t := 0; t < len(threads); t++ {
 			for _, v := range ptR {
-				if v.Thread == threads[t].Thread {
+				if v.Thread == threads[t].Thread && !v.DivOnly {
 					global.Set_WriteCtx(global.USay)
 					vmsg := expandLiteralTags(v.Verbal, s)
 					global.Set_WriteCtx(global.UDisplay)
@@ -193,7 +194,7 @@ func (s *sessCtx) cacheInstructions(sId ...int) (Threads, error) {
 			var thrdCnt int
 			threads = make(Threads, 1)
 			for thread, i := 0, 0; i < len(ptR); i++ {
-				if ptR[i].Division == v.Index {
+				if len(ptR[i].Division) > 0 && ptR[i].Division == v.Index {
 					if ptR[i].Thread > thread {
 						thread = ptR[i].Thread
 						thrdCnt++
@@ -211,7 +212,7 @@ func (s *sessCtx) cacheInstructions(sId ...int) (Threads, error) {
 			// 0 index for no thead case, index 1,2 for threads 1,2
 			for t := 0; t < len(threads); t++ {
 				for i, _ := range ptR {
-					if ptR[i].Division == v.Index {
+					if len(ptR[i].Division) > 0 && ptR[i].Division == v.Index {
 						switch len(threads) {
 						case 1: // ignore threads if only thread values detected
 							global.Set_WriteCtx(global.USay)
@@ -262,14 +263,16 @@ func (s *sessCtx) cacheInstructions(sId ...int) (Threads, error) {
 					i := id - 1
 					switch len(threads) {
 					case 1: // ignore threads if only two or less thread values detected  (see thrdCnt)
-						global.Set_WriteCtx(global.USay)
-						vmsg := expandLiteralTags(ptR[i].Verbal, s)
-						global.Set_WriteCtx(global.UDisplay)
-						dmsg := expandLiteralTags(ptR[i].Text, s)
-						instruct := InstructionT{Text: dmsg, Verbal: vmsg, Part: ptR[i].Part, EOL: ptR[i].EOL, PEOL: ptR[i].PEOL, PID: ptR[i].PId}
-						threads[t].Instructions = append(threads[t].Instructions, instruct)
+						if !ptR[i].DivOnly && !ptR[i].DivOnly {
+							global.Set_WriteCtx(global.USay)
+							vmsg := expandLiteralTags(ptR[i].Verbal, s)
+							global.Set_WriteCtx(global.UDisplay)
+							dmsg := expandLiteralTags(ptR[i].Text, s)
+							instruct := InstructionT{Text: dmsg, Verbal: vmsg, Part: ptR[i].Part, EOL: ptR[i].EOL, PEOL: ptR[i].PEOL, PID: ptR[i].PId}
+							threads[t].Instructions = append(threads[t].Instructions, instruct)
+						}
 					default:
-						if ptR[i].Thread == threads[t].Thread {
+						if ptR[i].Thread == threads[t].Thread && !ptR[i].DivOnly {
 							global.Set_WriteCtx(global.USay)
 							vmsg := expandLiteralTags(ptR[i].Verbal, s)
 							global.Set_WriteCtx(global.UDisplay)
@@ -870,7 +873,7 @@ func (s *sessCtx) keywordSearch(srch string) error {
 	)
 	// zero recipeList list
 	//
-	fmt.Println("^^^^^^^^^^ entered keywordSearch ^^^^^^^^^^^^")
+	fmt.Printf("^^^^^^^^^^ entered keywordSearch [%s]\n", srch)
 	if len(s.reqOpenBk) > 0 {
 		// look for recipes in current book only
 		kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value(srch))

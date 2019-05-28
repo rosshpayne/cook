@@ -21,7 +21,7 @@ import (
 // use this struct as key into map
 type mkey struct {
 	size string
-	Type string
+	Type string // probably redundant
 }
 type clsort []mkey
 
@@ -43,19 +43,14 @@ func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 	// use map to group-by-container-type-and-size - map value contains list of identical containers and the number of them
 	ctGroup := make(map[mkey]*ctCount)
 	//
-	for k, v := range cm {
-		var size_ string
+	for _, v := range cm {
+		//var size_ string
 		// for each container aggregate based on type (bowl, plate, tray, ebowl) and size (small,medium,large)
 		if v.Measure == nil {
 			// ingore container if no measurements defined - unlikely
 			continue
 		}
-		if len(v.Measure.Size) > 0 {
-			size_ = strings.ToLower(v.Measure.Size)
-		} else {
-			// where no size defined give each container its own size - order at the top
-			size_ = "AAA" + k
-		}
+		size_ := v.String()
 		//
 		// key is made up of a containers, size & type
 		//
@@ -108,7 +103,8 @@ func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 		//
 		cCnt := len(ctGroup[v].C)
 		if cCnt != ctGroup[v].numPhysical {
-			b.WriteString(fmt.Sprintf(" %d-%d* %s %s", ctGroup[v].numPhysical, cCnt, strings.ToLower(v.size), v.Type) + "s")
+			//	b.WriteString(fmt.Sprintf(" %d-%d* %s %s", ctGroup[v].numPhysical, cCnt, strings.ToLower(v.size), v.Type) + "s")
+			b.WriteString(fmt.Sprintf(" %d-%d* %s", ctGroup[v].numPhysical, cCnt, strings.ToLower(v.size)) + "s")
 			footnote = true
 		} else {
 			if cCnt == 1 {
@@ -122,11 +118,14 @@ func (cm ContainerMap) generateContainerUsage(svc *dynamodb.DynamoDB) []string {
 				if len(c.Label) > 0 {
 					t = c.Label
 				}
+				if len(c.Prelabel) > 0 {
+					r = ", " + c.Postlabel
+				}
 				if c.Measure != nil {
 					m = c.Measure.String()
 				}
-				if len(c.Requirement) > 0 {
-					r = ", " + c.Requirement
+				if len(c.Postlabel) > 0 {
+					r = ", " + c.Postlabel
 				}
 				b.WriteString(fmt.Sprintf(" 1 %s %s %s", m, strings.ToLower(t), r))
 			} else {
@@ -210,12 +209,21 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 			if len(pa.Prep[i].Division) == 0 && len(adiv) > 0 {
 				pa.Prep[i].Division = adiv
 			}
+			if len(pa.Task[i].Div_) > 0 {
+				pa.Task[i].divOnly = true
+				pa.Task[i].Division = pa.Task[i].Div_
+			}
 		}
 		for i := 0; i < len(pa.Task); i++ {
 			if len(pa.Task[i].Division) == 0 && len(adiv) > 0 {
 				pa.Task[i].Division = adiv
 			}
+			if len(pa.Task[i].Div_) > 0 {
+				pa.Task[i].divOnly = true
+				pa.Task[i].Division = pa.Task[i].Div_
+			}
 		}
+
 	}
 	//
 	// Are threads used..
@@ -246,6 +254,7 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 			}
 		}
 	}
+	fmt.Println("thread based: ", thrdBased)
 	//
 	// check all tasks have thread value if activity is assigned to a thread
 	//
@@ -286,7 +295,7 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 						panic(fmt.Errorf("Error: cannot convert to int for Thread in ptR %s", pp.Thread))
 					}
 				}
-				pt := taskRecT{PKey: pKey, AId: pa.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Thread: thrd, MergeThrd: pp.MergeThrd, Division: pp.Division, Part: pa.Part, taskp: pp}
+				pt := taskRecT{PKey: pKey, AId: pa.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Thread: thrd, MergeThrd: pp.MergeThrd, Division: pp.Division, DivOnly: pp.divOnly, Part: pa.Part, taskp: pp}
 				ptS = append(ptS, &pt)
 			}
 		}
@@ -320,7 +329,7 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 					panic(fmt.Errorf("Error: cannot convert to int for Thread in ptR %s", pp.Thread))
 				}
 			}
-			pt := taskRecT{PKey: pKey, SortK: i, AId: pa.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Thread: thrd, MergeThrd: pp.MergeThrd, Division: pp.Division, Part: pa.Part, taskp: pp}
+			pt := taskRecT{PKey: pKey, SortK: i, AId: pa.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Thread: thrd, MergeThrd: pp.MergeThrd, Division: pp.Division, DivOnly: pp.divOnly, Part: pa.Part, taskp: pp}
 			ptS = append(ptS, &pt)
 			i++
 		}
@@ -339,7 +348,7 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 					panic(fmt.Errorf("Error: cannot convert to int for Thread in ptR %s", pp.Thread))
 				}
 			}
-			pt := taskRecT{PKey: pKey, SortK: i, AId: pa.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Thread: thrd, MergeThrd: pp.MergeThrd, Division: pp.Division, Part: pa.Part, taskp: pp}
+			pt := taskRecT{PKey: pKey, SortK: i, AId: pa.AId, Type: 'P', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Thread: thrd, MergeThrd: pp.MergeThrd, Division: pp.Division, DivOnly: pp.divOnly, Part: pa.Part, taskp: pp}
 			ptS = append(ptS, &pt)
 			i++
 		}
@@ -347,7 +356,7 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 	//
 	// append tasks
 	//
-	timerMsg := "Set a timer for %s, and get back to me at that time."
+	//timerMsg := "Set a timer for %s, and get back to me at that time."
 	for pa := taskctl.start; pa != nil; pa = pa.nextTask {
 		for _, pp := range pa.Task {
 			var thrd int
@@ -358,29 +367,29 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 					panic(fmt.Errorf("Error: cannot convert to int for Thread in ptR %s", pp.Thread))
 				}
 			}
-			pt := taskRecT{PKey: pKey, SortK: i, AId: pa.AId, Type: 'T', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Thread: thrd, MergeThrd: pp.MergeThrd, Division: pp.Division, Part: pa.Part, taskp: pp}
+			pt := taskRecT{PKey: pKey, SortK: i, AId: pa.AId, Type: 'T', time: pp.Time, Text: pp.text, Verbal: pp.verbal, Thread: thrd, MergeThrd: pp.MergeThrd, Division: pp.Division, DivOnly: pp.divOnly, Part: pa.Part, taskp: pp}
 			ptS = append(ptS, &pt)
 			i++
-			if pp.Timer != nil && pp.Timer.Set {
-				//
-				// create a timer instruction - this may trigger a Alexa Reminder in future.
-				//
-				var ts string
-				var msg string
-				if pp.Timer.Time == 0 {
-					ts = fmt.Sprintf("%d%s", pp.Time, UnitMap[pp.Unit].String(pp))
-				} else {
-					ts = fmt.Sprintf("%d%s", pp.Timer.Time, UnitMap[pp.Timer.Unit].String(pp.Timer))
-				}
-				if len(pp.Timer.Msg) > 0 {
-					msg = fmt.Sprintf(pp.Timer.Msg, ts)
-				} else {
-					msg = fmt.Sprintf(timerMsg, ts)
-				}
-				pt := taskRecT{PKey: pKey, SortK: i, AId: pa.AId, Type: 'T', Text: msg, Verbal: msg, Thread: thrd, Division: pp.Division, Part: pa.Part, taskp: pp}
-				ptS = append(ptS, &pt)
-				i++
-			}
+			// if pp.Timer != nil && pp.Timer.Set {
+			// 	//
+			// 	// create a timer instruction - this may trigger a Alexa Reminder in future.
+			// 	//
+			// 	var ts string
+			// 	var msg string
+			// 	if pp.Timer.Time == 0 {
+			// 		ts = fmt.Sprintf("%d%s", pp.Time, UnitMap[pp.Unit].String(pp))
+			// 	} else {
+			// 		ts = fmt.Sprintf("%d%s", pp.Timer.Time, UnitMap[pp.Timer.Unit].String(pp.Timer))
+			// 	}
+			// 	if len(pp.Timer.Msg) > 0 {
+			// 		msg = fmt.Sprintf(pp.Timer.Msg, ts)
+			// 	} else {
+			// 		msg = fmt.Sprintf(timerMsg, ts)
+			// 	}
+			// 	pt := taskRecT{PKey: pKey, SortK: i, AId: pa.AId, Type: 'T', Text: msg, Verbal: msg, Thread: thrd, Division: pp.Division, Part: pa.Part, taskp: pp}
+			// 	ptS = append(ptS, &pt)
+			// 	i++
+			// }
 
 		}
 	}

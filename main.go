@@ -80,8 +80,8 @@ type sessCtx struct {
 	dynamodbSvc *dynamodb.DynamoDB
 	object      string //container,ingredient,instruction,utensil. Sourced from Sessions table or request
 	//updateAdd      int        // dynamodb Update ADD. Operation dependent
-	gotoRecId      int  // sourced from request
-	objRecId       int  // current record id for object. Object is a ingredient,task,container,utensil.- displayed record id persisted to session after use.
+	gotoRecId int // sourced from request
+	//objRecId       int  // current record id for object. Object is a ingredient,task,container,utensil.- displayed record id persisted to session after use.
 	recIdNotExists bool // determines whether to create []RecId set attribute in Session  table
 	//noGetRecRequired bool        // a mutliple record request e.g. ingredients listing
 	recipeList RecipeListT // multi-choice select. Recipe name and ingredient searches can result in mutliple records being returned. Results are saved.
@@ -257,7 +257,7 @@ func (s *sessCtx) clearForSearch(lastState *stateRec) {
 	s.menuL = nil
 	s.indexRecs = nil
 	s.object = ""
-	s.objRecId = 0
+	//s.objRecId = 0
 	s.recipeList = nil
 	s.selCtx, s.selId = 0, 0
 	s.ingrdList = ""
@@ -714,15 +714,17 @@ func (s *sessCtx) orchestrateRequest() error {
 			if err != nil {
 				return err
 			}
-			if srch[len(srch)-1] == 's' {
-				srch = srch[:len(srch)-1]
-			} else {
-				srch = srch + "s"
-			}
-			fmt.Println(" search for: ", srch)
-			err = s.keywordSearch(srch)
-			if err != nil {
-				return err
+			if len(s.recipeList) == 0 {
+				if srch[len(srch)-1] == 's' {
+					srch = srch[:len(srch)-1]
+				} else {
+					srch = srch + "s"
+				}
+				fmt.Println(" search for: ", srch)
+				err = s.keywordSearch(srch)
+				if err != nil {
+					return err
+				}
 			}
 			return nil
 		}
@@ -740,6 +742,21 @@ func (s *sessCtx) orchestrateRequest() error {
 		if err != nil {
 			return err
 		}
+		//
+		f := strings.Fields(s.reqSearch)
+		if len(s.recipeList) == 0 {
+			// reverse words
+			switch len(f) {
+			case 2:
+				err = s.keywordSearch(f[1] + " " + f[0])
+			case 3:
+				err = s.keywordSearch(f[2] + " " + f[1] + " " + f[0])
+			}
+			if err != nil {
+				return err
+			}
+		}
+		//
 		if len(s.recipeList) == 0 {
 			// remove filler words
 			for _, v := range []string{" of ", " with ", " the ", " has ", " and ", " recipe "} {
@@ -749,6 +766,7 @@ func (s *sessCtx) orchestrateRequest() error {
 			srch = strings.Replace(srch, "  ", " ", -1)
 			search(srch)
 		}
+
 		// for k, _ := range s.recipeMap {
 		// 	s.recipeList = append(s.recipeList, k)
 		// }
@@ -830,19 +848,19 @@ func (s *sessCtx) orchestrateRequest() error {
 	switch s.request {
 	case "goto":
 		fmt.Printf("gotoRecId = %d  %d\n", s.gotoRecId, lastState.EOL)
-		s.objRecId = s.gotoRecId
+		//s.objRecId = s.gotoRecId
 		s.recId[objectMap[s.object]] = s.gotoRecId
 		return nil
 	case "repeat":
 		// return - no need to pushState as nothing has changed.  Select current recId.
-		s.objRecId = s.recId[objectMap[s.object]]
+		//s.objRecId = s.recId[objectMap[s.object]]
 		s.dmsg, s.vmsg, s.ddata = lastState.Dmsg, lastState.Vmsg, lastState.DData
 		return nil
 	case "prev":
 		if len(s.object) == 0 {
 			return fmt.Errorf("Error: no object defined for previous in orchestrateRequest")
 		}
-		s.objRecId = s.recId[objectMap[s.object]] - 1
+		//s.objRecId = s.recId[objectMap[s.object]] - 1
 		s.recId[objectMap[s.object]] -= 1
 		return nil
 	case "next", "select-next", "start-next":
@@ -854,7 +872,7 @@ func (s *sessCtx) orchestrateRequest() error {
 			return fmt.Errorf("Error: no object defined for next in orchestrateRequest")
 		}
 		// recId contains last processed instruction. So must add one to get current instruction.
-		s.objRecId = s.recId[objectMap[s.object]] + 1
+		//	s.objRecId = s.recId[objectMap[s.object]] + 1
 		s.recId[objectMap[s.object]] += 1
 		return nil
 	}
@@ -1083,6 +1101,7 @@ func (s *sessCtx) orchestrateRequest() error {
 			}
 			fmt.Printf("selId  %d   parts   %#v\n", s.selId, s.part)
 			s.reset = true
+			s.recId = [4]int{0, 0, 0, 0}
 			s.showObjMenu = false
 			s.displayData, err = s.cacheInstructions(s.selId)
 			if err != nil {

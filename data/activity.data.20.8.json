@@ -6,9 +6,8 @@
                   "PKey" : { "S": "C-20-8" },
                   "SortK" : { "S": "Tray" },
                   "type" : { "S": "Tray" },
-                  "label" : { "S": "Baking Tray" },
-                  "slabel" : { "S" : "Tray" },
-                  "requ" : { "S": "high sided" },
+                  "slabel" : { "S": "baking tray" },
+                  "label" : { "S": "high sided baking Tray" },
                   "measure" : { "M" : {  "dim" : { "S" : "30x20" },
                                          "unit" : { "S" : "cm" }
                   } },
@@ -22,9 +21,7 @@
                   "PKey" : { "S": "C-20-8" },
                   "SortK" : { "S": "Tray2" },
                   "type" : { "S": "Tray" },
-                  "label" : { "S": "second baking Tray" },
-                  "slabel" : { "S" : "Tray" },
-                  "requ" : { "S": "high sided" },
+                  "label" : { "S": "high sided baking Tray" },
                   "measure" : { "M" : {  "dim" : { "S" : "30x20" },
                                          "unit" : { "S" : "cm" }
                   } },
@@ -39,6 +36,19 @@
                   "SortK" : { "S": "bowl" },
                   "type" : { "S": "Bowl" },
                   "label" : { "S": "Bowl" },
+                  "measure" : { "M" : {  "size" : { "S" : "large" }
+                  } },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  }
+                  }
+            }
+         },
+        {
+          "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-20-8" },
+                  "SortK" : { "S": "rhubarb" },
+                  "type" : { "S": "Bowl" },
+                  "label" : { "S": "Bowl" },
                   "measure" : { "M" : {  "size" : { "S" : "medium" }
                   } },
                   "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  }
@@ -51,7 +61,7 @@
                   "PKey" : { "S": "C-20-8" },
                   "SortK" : { "S": "CreamB" },
                   "type" : { "S": "Bowl" },
-                  "label" : { "S": "Bowl" },
+                  "label" : { "S": "bowl" },
                   "measure" : { "M" : {  "size" : { "S" : "medium" }
                   } },
                   "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  }
@@ -82,11 +92,11 @@
                 "Thread" : { "L" : [
                                 { "M" : { 
                                   "Idx" : { "S" : "1"},
-                                  "Title" : { "S" : "RhubarbXX" }}
+                                  "Title" : { "S" : "Rhubarb" }}
                                 },
                                 { "M" : { 
                                   "Idx" : { "S" : "2"},
-                                  "Title" : { "S" : "MainX" }}
+                                  "Title" : { "S" : "Main" }}
                                 }
                                 ]
                 }
@@ -108,8 +118,8 @@
                 },
                 "task" : { "L" : [
                                 { "M" : { 
-                                  "txt" : { "S" : "Add {measure} of {quali} {ingrd} to a {addToC}"},
-                                  "say" : { "S" : "Add {measure} of {quali} {ingrd} to a {addToC}"},
+                                  "txt" : { "S" : "Add {measure} of {quali} {ingrd} to {addToC}"},
+                                  "say" : { "S" : "Add {measure} of {quali} {ingrd}, to {addToC}"},
                                   "time" : { "N" : "1" },
                                   "div" :  { "S" : "db" },
                                   "unit" : { "S" : "min" },
@@ -133,8 +143,8 @@
                 },
                 "task" : { "L" : [
                                 { "M" : { 
-                                  "txt" : { "S" : "Add {measure} of {quali} {ingrd} to the {addToC}"},
-                                  "say" : { "S" : "Add {measure} of {quali} {ingrd} to the {addToC}"},
+                                  "txt" : { "S" : "Add {measure} of {quali} {ingrd} to the {addToC.slabel}"},
+                                  "say" : { "S" : "Add {measure} of {quali} {ingrd} to the {addToC.slabel}"},
                                   "time" : { "N" : "1" },
                                    "div" :  { "S" : "db" },
                                   "unit" : { "S" : "min" },
@@ -158,8 +168,8 @@
                 },
                 "task" : { "L" : [
                                 { "M" : { 
-                                  "txt" : { "S" : "Add {measure} of {ingrd} "},
-                                  "say" : { "S" : "Add {measure} of {ingrd} "},
+                                  "txt" : { "S" : "Add {qualm} of {measure} {ingrd} to the {addToC.slabel}"},
+                                  "say" : { "S" : "Add a {qualm} of {measure} {ingrd}, to the {addToC.slabel}"},
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" },
                                    "div" :  { "S" : "db" },
@@ -173,8 +183,7 @@
             "Item": { 
                 "PKey" : { "S": "A-20-8" },
                 "SortK" : { "N": "40"},
-                "ingrd" : { "S" : "bay leaves" },
-                "quali" : { "S" : "fresh" },
+                "ingrd" : { "S" : "fresh bay leaves" },
                 "iQual" : { "S" : ", torn in half " },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
@@ -184,8 +193,8 @@
                 },
                 "task" : { "L" : [
                                 { "M" : { 
-                                  "txt" : { "S" : "Add {measure} of {ingrd} "},
-                                  "say" : { "S" : "Add {measure} of {ingrd} "},
+                                  "txt" : { "S" : "Tear in half {measure} {ingrd} and add to the {addtoc.slabel}"},
+                                  "txt" : { "S" : "Tear in half {measure} {ingrd}, and add to the {addtoc.slabel}"},
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" },
                                    "div" :  { "S" : "db" },
@@ -209,8 +218,7 @@
                 },
                 "task" : { "L" : [
                                 { "M" : { 
-                                  "txt" : { "S" : "Add {measure} of {ingrd} "},
-                                  "say" : { "S" : "Add {measure} of {ingrd} "},
+                                  "txt" : { "S" : "Add {measure} {ingrd} "},
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" },
                                   "div" :  { "S" : "db" },
@@ -234,8 +242,8 @@
                 },
                 "prep" : { "L" : [
                                 { "M" : { 
-                                  "txt" : { "S" : "Prehead the oven to {temp} "},
-                                  "say" : { "S" : "Prehead the oven to {temp}" },
+                                  "txt" : { "S" : "Preheat the oven to {temp} "},
+                                  "say" : { "S" : "Preheat the oven to {temp}" },
                                   "time" : { "N" : "12" },
                                   "unit" : { "S" : "min" },
                                    "div" :  { "S" : "db" },
@@ -244,13 +252,12 @@
                                                      "set" : { "S" : "Gas Mark 3"},
                                                      "unit" : { "S" : "C" }
                                                     }
-                                  },
-                                  "parallel" : {"BOOL" : true }   } }
+                                  }}}
                                 ] 
                },
               "task" : { "L" : [
                                 { "M" : { 
-                                  "txt" : { "S" : "finally, add {measure} of {ingrd} "},
+                                  "txt" : { "S" : "add {measure} of {ingrd} "},
                                   "say" : { "S" : "finally, add {measure} of {ingrd} "},
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" },
@@ -261,69 +268,94 @@
                                   "say" : { "S" : "Transfer the tray to the oven, and bake for {timeu}, uncovered"},
                                   "time" : { "N" : "70" },
                                   "unit" : { "S" : "min" },
+                                  "useD" : { "M" : { "type" : {"S": "oven" }}}
+                                   }
+                                },
+                                { "M" : { 
+                                  "txt" : { "S" : "The oven temperature should be {device.oven.temp} "},
+                                  "say" : { "S" : "Reminder, the oven temperature should be {device.oven.temp} "},
                                   "useD" : { "M" : { "type" : {"S": "oven" }}} }
                                 },
                                { "M" : { 
-                                  "txt" : { "S" : "set a timer for {timeu} and give the contents a stir"},
-                                  "say" : { "S" : "set a timer for {timeu} and give the contents a stir"},
+                                  "txt" : { "S" : "Half way through the baking you will need to give the rice a gentle stir. Set a timer for {timeu} and get back to me"},
+                                  "say" : { "S" : "Half way through the baking, you will need to give the rice a gentle stir. Set a timer for {timeu}, and get back to me"},
+                                  "time" : { "N" : "35" },
+                                  "unit" : { "S" : "min" },
+                                  "timer" : { "M" : { "set" : {"BOOL" : false } ,
+                                                      "name" :  {"S": " Rice a stir" }
+                                  }}
+                                }},
+                                { "M" : { 
+                                  "txt" : { "S" : "Remove the tray from the oven and give the contents a gentle stir."},
+                                  "say" : { "S" : "Now Remove the tray from the oven, and give the contents a gentle stir."},
                                   "time" : { "N" : "35" },
                                   "unit" : { "S" : "min" },
                                   "timer" : { "M" : { "set" : {"BOOL" : true } ,
                                                       "name" :  {"S": "Check Rice is cooked" }
-                                  },
-                                  "useD" : { "M" : { "type" : {"S": "oven" }}} }
-                                },
+                                  }},
+                                  "useD" : { "M" : { "type" : {"S": "woden/silcon spoon" }} }
+                                }},
                                 { "M" : { 
-                                  "txt" : { "S" : "set a timer for {timeu} to check the rice is cooked. It should be cooked through but still hold its shape and most of the milk should be absorbed"},
-                                  "say" : { "S" : "set a timer for {timeu} to check the rice is cooked. It should be cooked through but still hold its shape and most of the milk should be absorbed"},
+                                  "txt" : { "S" : "set a timer for {timeu} at which point the rice should be cooked. "},
+                                  "say" : { "S" : "set a timer for {timeu}, at which point the rice should be cooked."},
                                   "time" : { "N" : "35" },
-                                  "unit" : { "S" : "min" },
-                                  "timer" : { "M" : { "BOOL" : true } ,
-                                                      "Name" : {"S": "Check Rice is cooked" }
-                                  },
-                                  "useD" : { "M" : { "type" : {"S": "oven" }}} }
-                                },
+                                  "unit" : { "S" : "min" }
+                                }},
                                 { "M" : { 
-                                  "txt" : { "S" : "Ok the rice should be cooked now. Check it is cooked through and most of the milk should be absorbed"},
-                                  "say" : { "S" : "Ok the rice should be cooked now. Check it is cooked through and most of the milk should be absorbed"},
+                                  "txt" : { "S" : "the rice should be cooked now. It should be cooked through but still hold its shape and most of the milk should be absorbed"},
+                                  "say" : { "S" : "Ok, the rice should be cooked now. It should be cooked through, but still hold its shape, and most of the milk should be absorbed"},
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" },
-                                  "useD" : { "M" : { "type" : {"S": "oven" }}} }
+                                  "useD" : { "M" : { "type" : {"S": "woden/silcon spoon" }}} }
                                 },
                                 { "M" : { 
-                                  "txt" : { "S" : "When cooked, remove the tray from the oven and set aside to cool. This will take atleast {timeu}. "},
-                                  "say" : { "S" : "When cooked, remove the tray from the oven and set aside to cool. This will take atleast {timeu}."},
+                                  "txt" : { "S" : "If cooked, remove the tray from the oven and set aside to cool. This will take atleast {timeu}. "},
+                                  "say" : { "S" : "If cooked, remove the tray from the oven and set aside to cool. This will take atleast {timeu}."},
                                   "time" : { "N" : "40" },
                                   "unit" : { "S" : "min" },
                                   "useD" : { "M" : { "type" : {"S": "oven" }}} }
                                 },
                                 { "M" : { 
-                                  "txt" : { "S" : "When the rice is cooled sufficiently, remove the orange peel, bay leaves and cinnamon stick."},
-                                  "say" : { "S" : "When the rice is cooled sufficiently, remove the orange peel, bay leaves and cinnamon stick."},
+                                  "txt" : { "S" : "set a timer for {timeu} and get back to me. "},
+                                  "say" : { "S" : "set a timer for {timeu}, and get back to me."},
+                                  "time" : { "N" : "40" },
+                                  "unit" : { "S" : "min" },
+                                  "useD" : { "M" : { "type" : {"S": "oven" }}} }
+                                },
+                                { "M" : { 
+                                  "txt" : { "S" : "The rice should now be cooled sufficiently, remove the orange peel, bay leaves and cinnamon stick."},
+                                  "day" : { "S" : "The rice should now be cooled sufficiently, remove the orange peel, bay leaves, and cinnamon stick."},
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" },
                                   "useD" : { "M" : { "type" : {"S": "oven" }}} }
                                 },
                                 { "M" : { 
-                                  "txt" : { "S" : "Transfer the tray contents to a {addtoC}" },
-                                  "say" : { "S" : "Transfer the tray contents to a {addtoC}" },
+                                  "txt" : { "S" : "Transfer the tray contents to {addtoC}" },
+                                  "say" : { "S" : "Transfer the tray contents to {addtoC}" },
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" },
-                                  "addToC" : { "SS" : ["bowl"] }}
-                                },
+                                  "addToC" : { "SS" : ["bowl"] },
+                                  "sourceC" : { "SS" : ["Tray"] }
+                                }},
                                 { "M" : { 
-                                  "txt" : { "S" : "Let the bowl contents cool completely. This will take approximately {timeu}. Set a timer if you like " },
-                                  "say" : { "S" : "Let the bowl contents cool completely. This will take approximately {timeu}. Set a timer if you like " },
+                                  "txt" : { "S" : "Let the bowl contents cool completely. This will take another {timeu}." },
+                                  "say" : { "S" : "Let the bowl contents cool completely. This will take another {timeu}. Time for a cocktail, I think. " },
                                   "time" : { "N" : "20" },
                                   "unit" : { "S" : "min" },
-                                  "timer" : { "M" : { "set" : {"BOOL" : true } ,
+                                  "timer" : { "M" : { "set" : {"BOOL" : false } ,
                                                       "name" :  {"S": "Check ingredients haved cooled" }
-                                  },
+                                  }}
+                                }},
+                                 { "M" : { 
+                                  "txt" : { "S" : "Set a timer for {timeu} and get back to me" },
+                                  "say" : { "S" : "Set a timer for {timeu}, and get back to me" },
+                                  "time" : { "N" : "20" },
+                                  "unit" : { "S" : "min" },
                                   "useC" : { "SS" : ["bowl"] }}
                                 },
                                  { "M" : { 
                                   "txt" : { "S" : "Once cooled cover the bowl and keep in the fridge until required" },
-                                  "say" : { "S" : "Once cooled cover the bowl and keep in the fridge until required" },
+                                  "say" : { "S" : "Once cooled, cover the bowl and keep in the fridge until required" },
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" },
                                   "useC" : { "SS" : ["bowl"] }}
@@ -366,8 +398,8 @@
                                   }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "While the oven adjusts, in a {addToC} add {measure} or {altmeasure} of {iQual} {ingrd}" },
-                                  "say" : { "S" : "While the oven adjusts, in a {addToC} add {measure} or {altmeasure} of {iQual} {ingrd}" },
+                                  "txt" : { "S" : "While the oven adjusts, in {addToC} add {measure} or {altmeasure} of  {ingrd} {iQual}" },
+                                  "say" : { "S" : "While the oven adjusts, in {addToC}, add {measure} or {altmeasure}, of  {ingrd}, {iQual}" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" } ,
@@ -394,7 +426,7 @@
                 "task" : { "L" : [ 
                                 { "M" :  {
                                   "txt" : { "S" : "add {measure} of {quali} {ingrd} to the tray"  },
-                                  "say" : { "S" : "add {measure} of {quali} {ingrd} to the tray" },
+                                  "say" : { "S" : "add {measure} of {quali} {ingrd}, to the tray" },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -426,16 +458,19 @@
                 },
                "prep" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "separate half the tarragon or approximately, {3|sprig||} or {5|g||} and roughly chop the leaves and set aside" },
-                                  "say" : { "S" : "separate half the tarragon or approximately, {3|sprig||} or {5|g||} and roughly chop the leaves and set aside" },
+                                  "txt" : { "S" : "separate half the {ingrd}, about {m:3|sprig||} or approximately {m:5|g||} and roughly chop the leaves and set aside" },
+                                  "say" : { "S" : "separrate half the {ingrd}, about  {m:3|sprig||}, or approximately {m:5|g||}, and roughly chop the leaves and set aside" },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" }
                                     }
-                                } ,
+                                } 
+                                ]
+               },
+               "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "add the remaining whole {ingrd} sprigs to the pan"  },
-                                  "say" : { "S" : "add the remaining whole {ingrd} sprigs to the pan"  },
+                                  "txt" : { "S" : "add the remaining whole {ingrd} sprigs"  },
+                                  "say" : { "S" : "now add the remaining whole {ingrd} sprigs"  },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -461,8 +496,8 @@
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "take {measure} {ingrd} and slice in half lengthways and scrap the seeds." },
-                                  "say" : { "S" :  "take {measure} {ingrd} and slice in half lengthways and scrap the seeds." },
+                                  "txt" : { "S" : "take {measure} {ingrd} and slice in half lengthways and scrape the seeds." },
+                                  "say" : { "S" :  "take {measure} {ingrd}, and slice in half, lengthways, and scrape the seeds." },
                                   "time" : { "N" : "1" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" }
@@ -487,8 +522,8 @@
                 "PKey" : { "S": "A-20-8" },
                 "SortK" : { "N": "110"},
                 "ingrd" : { "S" : "water" },
-                "div" :  { "S" : "db" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "1" } ,
                                       "size" : { "S" : "tbsp" }
@@ -496,19 +531,21 @@
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "finally add {measure} of {ingrd} to the pan, stir the contents a little." },
-                                  "say" : { "S" : "finally add {measure} of {ingrd} to the pan, stir the contents a little." },
+                                  "txt" : { "S" : "add {measure} of {ingrd} to the pan, stirring the contents a little." },
+                                  "say" : { "S" : "finally add {measure} of {ingrd} to the pan, stirring the contents a little." },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
+                                  "div" :  { "S" : "db" },
                                   "unit" : { "S" : "min" },
                                   "addToC" : { "SS" : ["Tray2"] } 
                                     }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "check the oven temperature has reached the desired temperature of {device.oven.temp}" },
-                                  "say" : { "S" : "check the oven temperature has reached the desired temperature of {device.oven.temp}" },
+                                  "txt" : { "S" : "check the oven temperature has reached {device.oven.temp}" },
+                                  "say" : { "S" : "check the oven temperature has reached {device.oven.temp}" },
                                   "time" : { "N" : "2" },
                                   "tplus" : { "N" : "0" },
+                                 "div" :  { "S" : "db" },
                                   "unit" : { "S" : "min" }
                                     }
                                 },
@@ -517,48 +554,62 @@
                                   "say" : { "S" : "transfer the pan to the oven." },
                                   "time" : { "N" : "30" },
                                   "unit" : { "S" : "sec" },
+                                  "div" :  { "S" : "db" },
                                   "useD" : { "M" : { "type" : {"S": "oven" }}}
                                     }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "Set alarm for {time} to {tplus} {unit} to check rice is cooked. Say 'resume' to come back to this point" },
-                                  "say" : { "S" : "Set alarm for {time} to {tplus} {unit} to check rice is cooked. Say 'resume' to come back to this point" },
+                                  "txt" : { "S" : "Set an alarm for {time} {unit} to check the {ingrd.70} has cooked." },
+                                  "say" : { "S" : "Set an alarm for {time} {unit} to check the {ingrd.70} has cooked." },
                                   "time" : { "N" : "30" },
-                                  "tplus" : { "N" : "35" },
+                                  "tplus" : { "N" : "5" },
                                   "unit" : { "S" : "min" },
-                                  "timer" : { "M" : { "set" : {"BOOL" : true } ,
+                                  "timer" : { "M" : { "set" : {"BOOL" : false } ,
                                                       "name" :  {"S": "Check Rice is cooked" }
-                                  },
+                                  }},
                                   "useD" : { "M" : { "type" : {"S": "oven" }}}
                                     }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "Check {ingrd.70} is cooked. If so remove from oven and set aside to cool" },
-                                  "say" : { "S" : "Check {ingrd.70} is cooked. If so remove from oven and set aside to cool" }, 
+                                  "txt" : { "S" : "Check the {ingrd.70} is cooked. If so remove from the oven and set aside to cool" },
+                                  "say" : { "S" : "Now Check the {ingrd.70} is cooked. If so, remove from the oven and set aside to cool" }, 
                                   "time" : { "N" : "1" },
-                                  "thrd" : { "S" : "1" }, 
                                   "unit" : { "S" : "min" },
+                                  "thrd" : { "S" : "1" },
+                                  "div" :  { "S" : "db" },
                                   "useC" : { "SS" : ["Tray2"] } 
                                     }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "Once it has cooled remove the tarragon sprigs and vanilla pod." },
-                                  "say" : { "S" : "Once it has cooled remove the tarragon sprigs and vanilla pod." }, 
+                                  "txt" : { "S" : "Once it has cooled remove the {ingrd.90} sprigs and  {ingrd.100}. As a suggestion, the {ingrd.100} can be reused to flavour caster sugar." },
+                                  "say" : { "S" : "Once it has cooled, remove the {ingrd.90} sprigs and {ingrd.100}. As a suggestion, the {ingrd.100} can be reused to flavour caster sugar." }, 
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" },
                                   "thrd" : { "S" : "1" },
+                                  "div" :  { "S" : "db" },
                                   "useC" : { "SS" : ["Tray2"] } 
                                     }
                                 },
                                { "M" :  {
-                                  "txt" : { "S" : "The taragon can be discarded but the vanilla pod can be used to flavour caster sugar as a suggestion." },
-                                  "say" : { "S" : "The taragon can be discarded but the vanilla pod can be used to flavour caster sugar as a suggestion." },
+                                  "txt" : { "S" : "Transfer the {ingrd.70} to a bowl and place in the fridge." },
+                                  "say" : { "S" : "Transfer the {ingrd.70} to a bowl, and place in the fridge." },
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" },
                                   "thrd" : { "S" : "1" },
-                                  "useC" : { "SS" : ["Tray2"] } 
+                                  "div_" :  { "S" : "db" },
+                                  "useC" : { "SS" : ["rhubarb"] } 
                                     }
-                                }                               
+                                } ,
+                               { "M" :  {
+                                  "txt" : { "S" : "You have completed the day-before portion of the recipe. You can complete the on-the-day portion later" },
+                                  "say" : { "S" : "You have completed the day before portion of the recipe. You can complete the on the day portion later" },
+                                  "time" : { "N" : "1" },
+                                  "unit" : { "S" : "min" },
+                                  "thrd" : { "S" : "1" },
+                                  "div_" :  { "S" : "db" },
+                                  "useC" : { "SS" : ["rhubarb"] } 
+                                    }
+                                }                                 
                                 ]
                 }
             }
@@ -580,13 +631,28 @@
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "while the {ingrd.70} is cooking , place the {ingrd} in a {addToC}" },
-                                  "say" : { "S" : "while the {ingrd.70} is cooking , place the {ingrd} in a {addToC}" },
+                                  "txt" : { "S" : "while the {ingrd.70} is cooking, place the {ingrd} in {addToC}" },
+                                  "say" : { "S" : "while the {ingrd.70} is cooking, place the {ingrd} in {addToC}" },
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" },
-                                  "div" :  { "S" : "od" },
                                   "addToC" : { "SS" : [ "CreamB"] } }
-                                }
+                                },
+                               { "M" :  {
+                                "txt" : { "S" : "remove {ingrd.70} from fridge" },
+                                  "say" : { "S" : "remove {ingrd.70} from fridge" }, 
+                                  "time" : { "N" : "1" },
+                                  "unit" : { "S" : "min" },
+                                  "div_" :  { "S" : "od" },
+                                  "addToC" : { "SS" : [ "CreamB"] } }
+                               },
+                               { "M" :  {
+                                "txt" : { "S" : "place {measure} of {ingrd} in {addToC}" },
+                                  "say" : { "S" : "place {measure} of {ingrd} in {addToC}" },
+                                  "time" : { "N" : "1" },
+                                  "unit" : { "S" : "min" },
+                                  "div_" :  { "S" : "od" },
+                                  "addToC" : { "SS" : [ "CreamB"] } }
+                               }
                                 ]
                 }
             }
@@ -598,9 +664,9 @@
                 "PKey" : { "S": "A-20-8" },
                 "SortK" : { "N": "130"},
                 "ingrd" : { "S" : "icing sugar" },
-                "thrd" : { "S" : "2" },
                 "div" :  { "S" : "od" },
                 "iqual" : { "S" : ", sifted" },
+                "thrd" : { "S" : "2" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "30" } ,
@@ -609,8 +675,8 @@
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "Sift {measure} of {ingrd} into the {useC}" },
-                                  "say" : { "S" : "Sift {measure} of {ingrd} into the {useC}" },
+                                  "txt" : { "S" : "Sift {measure} of {ingrd} into the {usec.label}" },
+                                  "say" : { "S" : "Sift {measure} of {ingrd} into the {useC.label}" },
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" },
                                   "useC" : { "SS" : [ "CreamB"] },
@@ -643,9 +709,9 @@
             "Item": { 
                 "PKey" : { "S": "A-20-8" },
                 "SortK" : { "N": "140"},
-                "ingrd" : { "S" : "Greek Yogut" },
-                "thrd" : { "S" : "2" },
+                "ingrd" : { "S" : "Greek Yogurt" },
                 "div" :  { "S" : "od" },
+                "thrd" : { "S" : "2" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
                                       "qty" : { "S" : "100" } ,
@@ -654,7 +720,7 @@
                 },
                 "task" : { "L" : [ 
                                 { "M" :  {
-                                  "txt" : { "S" : "and finally, fold in {measure} of {ingrd}"  },
+                                  "txt" : { "S" : "fold in {measure} of {ingrd}"  },
                                   "say" : { "S" : "and finally, fold in {measure} of {ingrd}" },
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" },
@@ -662,7 +728,7 @@
                                   "useD" : { "M" : { "type" : {"S": "large spoon" }}}  }
                                 },
                                 { "M" :  {
-                                  "txt" : { "S" : "now cover the mixture and return to the fridge"  },
+                                  "txt" : { "S" : "cover the mixture and return to the fridge"  },
                                   "say" : { "S" : "now cover the mixture and return to the fridge" },
                                   "time" : { "N" : "1" },
                                   "unit" : { "S" : "min" },

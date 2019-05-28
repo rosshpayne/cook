@@ -113,7 +113,7 @@
                   "SortK" : { "S": "htbowl" },
                   "type" : { "S": "bowl" },
                   "label" : { "S": "bowl" }, 
-                  "requirement" : {"S": "heat proof"},
+                  "prelabel" : {"S": "heat proof"},
                   "measure" : { "M" : {  "size" : { "S" : "medium" }} },
                   "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  }
                   }
