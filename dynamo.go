@@ -136,6 +136,7 @@ func (s *sessCtx) cacheInstructions(sId ...int) (Threads, error) {
 		// this is caused by a goto operation exceeding EOL
 		return nil, fmt.Errorf("Error: %s [%s] ", "Internal error: no instructions found for recipe ", s.reqRName)
 	}
+	fmt.Println("cacheInstructions: Query: ConsumedCapacity: %#v\n", result.ConsumedCapacity)
 	ptR := make([]taskRecT, len(result.Items))
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &ptR)
 	if err != nil {
@@ -340,6 +341,7 @@ func (s *sessCtx) getScaleContainer() (*Container, error) {
 		}
 		panic(fmt.Errorf("%s: %s", "Error in GetItem of getContainerRecById", err.Error()))
 	}
+	fmt.Println("getScaleContainer: Query: ConsumedCapacity: %#v\n", result.ConsumedCapacity)
 	if len(result.Items) == 0 {
 		fmt.Println("in getScaleContainer - no records found.")
 		return nil, nil
@@ -814,6 +816,7 @@ func (s *sessCtx) recipeRSearch() (*RecipeT, error) {
 		}
 		return nil, fmt.Errorf("%s %s: %s", errmsg, "GetItem", errmsg, err.Error())
 	}
+	fmt.Println("recipeRSearch: GetItem: ConsumedCapacity: %#v\n", result.ConsumedCapacity)
 	if len(result.Item) == 0 {
 		return nil, fmt.Errorf("%s. No Recipe record found for R-%s-%s", errmsg, s.reqBkId, s.reqRId)
 	}

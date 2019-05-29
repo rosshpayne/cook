@@ -204,6 +204,8 @@ func (s *sessCtx) getState() (*stateRec, error) {
 		ExpressionAttributeNames: expr.Names(),
 		ConsistentRead:           aws.Bool(true), // added on 22 May 2019
 	}
+	input.SetConsistentRead(false).SetReturnConsumedCapacity("TOTAL")
+	//
 	result, err := s.dynamodbSvc.GetItem(input)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
@@ -226,6 +228,7 @@ func (s *sessCtx) getState() (*stateRec, error) {
 		}
 		return nil, err
 	}
+	fmt.Println("getState: GetItem ConsumedCapacity: %#v\n", result.ConsumedCapacity)
 	if len(result.Item) == 0 {
 		//
 		fmt.Println("getState.... 0 rows found")
@@ -640,7 +643,9 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
 	}
-	_, err = s.dynamodbSvc.UpdateItem(input)
+	input.SetReturnConsumedCapacity("TOTAL")
+	//
+	x, err := s.dynamodbSvc.UpdateItem(input)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
@@ -660,6 +665,7 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 		}
 		return nil, err
 	}
+	fmt.Println("pushState: UpdateItem: ConsumedCapacity: %#v\n", x.ConsumedCapacity)
 	fmt.Println("Exit pushState....")
 	return &sr, nil
 }
@@ -781,7 +787,9 @@ func (s *sessCtx) updateState() error {
 		ExpressionAttributeValues: expr.Values(),
 		ReturnValues:              aws.String("UPDATED_NEW"),
 	}
-	_, err = s.dynamodbSvc.UpdateItem(input)
+	input.SetReturnConsumedCapacity("TOTAL")
+	//
+	x, err := s.dynamodbSvc.UpdateItem(input)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
@@ -805,6 +813,7 @@ func (s *sessCtx) updateState() error {
 		fmt.Println(err.Error())
 		return err
 	}
+	fmt.Println("UpdateState: UpdateItem: ConsumedCapacity: %#v\n", x.ConsumedCapacity)
 	//
 	// following used in close book op - avoids extra dynamo access to fetch Welcome data
 	//
@@ -820,6 +829,108 @@ func (s *sessCtx) updateState() error {
 
 	// }
 	fmt.Println("finish updateState in sessions.go")
+	return nil
+}
+
+func (s *sessCtx) updateStateRecId() error {
+
+	type pKey struct {
+		PKey string
+	}
+	var updateC expression.UpdateBuilder
+	var atribute string
+	//
+	// update RecId attribute of latest state item
+	//
+	fmt.Println("entered updateStateRecId..")
+	t := time.Now()
+	t.Add(time.Hour * 24 * 1)
+	updateC = expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
+	//
+	// for current state
+	//
+	if len(s.state) == 0 {
+		// this case for new session. No UserId in session table so no state.
+		err := fmt.Errorf("s.state not set in UpdateState()")
+		return err
+	}
+	// for close book op only - shrink state slice down to 1
+	// if len(s.CloseBkName) > 0 { . // errors with ValidationException: Invalid UpdateExpression: Two document paths overlap with each other; must remove or rewrite one of these paths; path one: [state], path two: [state, [0], MenuL]
+	// 	State := s.state[:]
+	// 	updateC = expression.Set(expression.Name("state"), expression.Value(State))
+	// }
+	// change state upto and including objMenu
+	for i := len(s.state) - 1; i > 0; i-- {
+		//
+		atribute = fmt.Sprintf("state[%d].RecId", i)
+		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
+		//
+		if len(s.state[len(s.state)-1].InstructionData) > 0 {
+			atribute = fmt.Sprintf("state[%d].I[%d].id", len(s.state)-1, s.cThread)
+			updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId[objectMap[task_]]))
+		}
+		if s.state[i].ShowObjMenu {
+			break
+		}
+	}
+	//
+	// do not change Request value after it has been inserted.
+	// atribute = fmt.Sprintf("state[%d].Request", len(s.state)-1)
+	// updateC = updateC.Set(expression.Name(atribute), expression.Value(s.request))
+	//
+	expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
+	pkey := pKey{PKey: s.userId}
+	av, err := dynamodbattribute.MarshalMap(&pkey)
+	if err != nil {
+		return err
+	}
+	input := &dynamodb.UpdateItemInput{
+		TableName:                 aws.String("Sessions"),
+		Key:                       av, // accets []map[]*attributeValues so must use marshal not expression
+		UpdateExpression:          expr.Update(),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+		ReturnValues:              aws.String("UPDATED_NEW"),
+	}
+	input.SetReturnConsumedCapacity("TOTAL")
+	//
+	x, err := s.dynamodbSvc.UpdateItem(input)
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case dynamodb.ErrCodeProvisionedThroughputExceededException:
+				fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
+			case dynamodb.ErrCodeResourceNotFoundException:
+				fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
+			case dynamodb.ErrCodeInternalServerError:
+				fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
+			default:
+				fmt.Println(aerr.Error())
+			}
+		} else {
+			// Print the error, cast err to awserr.Error to get the Code and
+			// Message from an error.
+			fmt.Println(err.Error())
+		}
+		fmt.Println(err.Error())
+		return err
+	}
+	fmt.Println("updateStateRecId: UpdateItem: ConsumedCapacity:\n", x.ConsumedCapacity)
+	//
+	// following used in close book op - avoids extra dynamo access to fetch Welcome data
+	//
+	// if s.request == "start" {
+	// 	x2 := srecT{}
+	// 	err = dynamodbattribute.UnmarshalMap(result.Attributes, &x2)
+	// 	if err != nil {
+	// 		return fmt.Errorf("Error: %s %s", "in UnmarshalMap in updateState ", err.Error())
+	// 	}
+	// 	fmt.Printf("displayData = Welcome = %#v\n", *(x2.Sr[0].Welcome))
+	// 	s.welcome = x2.Sr[0].Welcome
+	// 	s.displayData = x2.Sr[0].Welcome
+
+	// }
+	fmt.Println("finish updateStateRecId in sessions.go")
 	return nil
 }
 
@@ -873,8 +984,9 @@ func (s *sessCtx) popState() error {
 			ExpressionAttributeValues: expr.Values(),
 			ReturnValues:              aws.String("UPDATED_NEW"),
 		}
-		fmt.Println("Dyamo UpdateItem1: ")
-		_, err = s.dynamodbSvc.UpdateItem(input)
+		input.SetReturnConsumedCapacity("TOTAL")
+		//
+		x, err := s.dynamodbSvc.UpdateItem(input)
 		if err != nil {
 			fmt.Println("Dyamo error in popstate 1: ", err.Error())
 			if aerr, ok := err.(awserr.Error); ok {
@@ -896,6 +1008,7 @@ func (s *sessCtx) popState() error {
 			fmt.Println("Dyamo error in popstate 2: ", err.Error())
 			return err
 		}
+		fmt.Println("popState: UpdateItem: ConsumedCapacity: %#v\n", x.ConsumedCapacity)
 		// pop last entry from session context state
 		//s.state = s.state[:len(s.state)-1]
 		fmt.Println("Successfully updateItem")
@@ -903,6 +1016,7 @@ func (s *sessCtx) popState() error {
 	} else {
 		sr = s.state.pop() //[len(s.state)-1]
 	}
+
 	//
 	fmt.Println("after dynamo: ")
 	// transfer state data to session context

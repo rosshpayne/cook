@@ -384,7 +384,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		if len(s.derr) > 0 {
 			type_ += "Err"
 		} else {
-			err := s.updateState()
+			err := s.updateStateRecId()
 			if err != nil {
 				return RespEvent{Text: err.Error(), Verbal: s.dmsg, Error: err.Error()}
 			}
@@ -437,7 +437,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		speak := "<speak>" + rec.Verbal + "</speak>"
 
 		s.menuL = nil
-		err := s.updateState()
+		err := s.updateStateRecId()
 		if err != nil {
 			return RespEvent{Text: err.Error(), Verbal: s.dmsg, Error: err.Error()}
 		}

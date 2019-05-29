@@ -99,6 +99,7 @@ func (s *sessCtx) loadBaseRecipe() error {
 		}
 		return err
 	}
+	fmt.Println("loadBaseRecipe: Query Recipe A- ConsumedCapacity: %#v\n", result.ConsumedCapacity)
 	if int(*result.Count) == 0 {
 		return fmt.Errorf("No data found for reqRId %s in loadBaseRecipe for Activity - ", s.pkey)
 	} else {
@@ -284,6 +285,7 @@ func (s *sessCtx) loadBaseRecipe() error {
 	if err != nil {
 		return fmt.Errorf("%s", "Error in Query of container table: "+err.Error())
 	}
+	fmt.Println("loadBaseRecipe: Query Ingredient C- ConsumedCapacity: %#v\n", result.ConsumedCapacity)
 	if int(*result.Count) == 0 {
 		fmt.Println("No container data..")
 	}
@@ -319,6 +321,7 @@ func (s *sessCtx) loadBaseRecipe() error {
 	if err != nil {
 		return fmt.Errorf("%s", "Error in Query of container table: "+err.Error())
 	}
+	fmt.Println("loadBaseRecipe: Query Ingredient  C-0-0 ConsumedCapacity: %#v\n", result.ConsumedCapacity)
 	if int(*result.Count) == 0 {
 		fmt.Println("No container data..")
 	}
