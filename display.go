@@ -204,12 +204,14 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 	case id > len(t[s.cThread].Instructions) && len(t) > 1 && s.cThread == 0: // thread 1
 		// i.e. current thread in multiple threaded recipe so check if all previous threads completed.
 		s.cThread, s.oThread = 2, 1
-		s.recId[objectMap[s.object]], id = 1, 1
+		s.recId[objectMap[s.object]], id, t[s.cThread].Id = 1, 1, 1
 	case id > len(t[s.cThread].Instructions) && len(t) > 1 && s.cThread == 1: // thread 1
 		// i.e. current thread in multiple threaded recipe so check if all previous threads completed.
 		s.cThread, s.oThread = 2, 1
-		id = len(t[s.cThread].Instructions)
-		s.recId[objectMap[s.object]] = id
+		//id = len(t[s.cThread].Instructions)
+		t[s.cThread].Id++
+		id = t[s.cThread].Id
+		s.recId[objectMap[s.object]] = t[s.cThread].Id
 		if t[s.cThread].Id == len(t[s.cThread].Instructions) {
 			// previous thead completed. Have reached end
 			//s.derr = "Thread " + threadName() + " completed"
@@ -249,9 +251,9 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 	}
 	//
 	t[s.cThread].Id = id
-	fmt.Println("t[s.cThread].Id = ", t[s.cThread].Id, s.cThread, id)
+	//
+	fmt.Println("t[s.cThread].Id, s.cThread, id  = ", t[s.cThread].Id, s.cThread, id)
 	//rec := &t[s.cThread].Instructions[id-1]
-	fmt.Println("cThread, id = ", s.cThread, id)
 	//eol := t[s.cThread].EOL
 	//
 	// generate display
@@ -284,6 +286,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 	}
 
 	fmt.Println("switch on thread: ", t[s.cThread].Thread)
+	fmt.Println("oThread: ", s.oThread)
 	//
 	// local funcs
 	//
@@ -302,6 +305,10 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 	SectB := func(thread int) []DisplayItem {
 		list := make([]DisplayItem, 1)
 		id := t[thread].Id
+		if t[thread].Id == 0 {
+			t[thread].Id = 1
+			id = t[thread].Id
+		}
 		if id == 0 {
 			// thread not accessed yet - show last intruction in previous thread
 			thread--
@@ -340,7 +347,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 	//
 	// is there an other thread means there are two active threads that need to be displayed on a Echo Show.
 	//
-	fmt.Println("oThread: ", s.oThread)
+
 	switch s.oThread {
 	case 0, -1:
 		//
@@ -384,7 +391,8 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		if len(s.derr) > 0 {
 			type_ += "Err"
 		} else {
-			err := s.updateStateRecId()
+			s.updateState_()
+			err := s.saveState_()
 			if err != nil {
 				return RespEvent{Text: err.Error(), Verbal: s.dmsg, Error: err.Error()}
 			}
@@ -437,7 +445,8 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		speak := "<speak>" + rec.Verbal + "</speak>"
 
 		s.menuL = nil
-		err := s.updateStateRecId()
+		s.updateState_()
+		err := s.saveState_()
 		if err != nil {
 			return RespEvent{Text: err.Error(), Verbal: s.dmsg, Error: err.Error()}
 		}

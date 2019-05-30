@@ -108,8 +108,8 @@ func (a ContainerMap) saveContainerUsage(s *sessCtx) error {
 	return nil
 }
 
-func (s *sessCtx) cacheInstructions(sId ...int) (Threads, error) {
-
+func (s *sessCtx) loadInstructions() (Threads, error) {
+	// based around part display
 	// part_ respresents a division of a recipe by ingredients e.g. topping, or a division by instructions e.g. day-before
 	pKey := "T-" + s.pkey
 	keyC := expression.KeyEqual(expression.Key("PKey"), expression.Value(pKey))
@@ -132,21 +132,31 @@ func (s *sessCtx) cacheInstructions(sId ...int) (Threads, error) {
 		//return taskRecT{}, fmt.Errorf("Error in Query of Tasks: " + err.Error())
 		return nil, err
 	}
+	fmt.Println("loadInstructions: Query: ConsumedCapacity: %#v\n", result.ConsumedCapacity)
 	if int(*result.Count) == 0 { //TODO - put this code back so it makes sense
 		// this is caused by a goto operation exceeding EOL
 		return nil, fmt.Errorf("Error: %s [%s] ", "Internal error: no instructions found for recipe ", s.reqRName)
 	}
-	fmt.Println("cacheInstructions: Query: ConsumedCapacity: %#v\n", result.ConsumedCapacity)
 	ptR := make([]taskRecT, len(result.Items))
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &ptR)
 	if err != nil {
-		return nil, fmt.Errorf("Error: %s - %s", "in UnmarshalMap in cacheInstructions ", err.Error())
+		return nil, fmt.Errorf("Error: %s - %s", "in UnmarshalMap in loadInstructions ", err.Error())
 	}
-	fmt.Printf(" cacheInstructions len() %d\n ", len(ptR))
-	part := "DivPt"
-	if len(sId) == 0 || sId[0] == 1 {
-		part = CompleteRecipe_
+	part := s.part
+	fmt.Printf(" loadInstructions len() %d .  s.selId = %d	\n ", len(ptR), s.selId)
+	if len(s.part) == 0 {
+		part = "DivPt"
+		if s.selId == 0 || s.selId == 1 {
+			// either no parts menu or item 1 is chosen
+			part = CompleteRecipe_
+		}
+	} else {
+		if s.part != CompleteRecipe_ {
+			part = "DivPt"
+		}
 	}
+
+	fmt.Println("loadInstructions: part =", part)
 	//
 	// 	type ThreadT struct {
 	// 	Instructions InstructionS
@@ -190,7 +200,8 @@ func (s *sessCtx) cacheInstructions(sId ...int) (Threads, error) {
 		instructs[0] = InstructionT{} // blank instruction at index 0, so Instructions start at index 1.
 
 		switch v.Type_ {
-		case "Div": // division by instruction - loop through all instructions looking for any threads
+		case "Div":
+			// division by instruction - loop through all instructions looking for any threads
 			// generate threads: look for multiple threads within division/part
 			var thrdCnt int
 			threads = make(Threads, 1)
@@ -235,8 +246,10 @@ func (s *sessCtx) cacheInstructions(sId ...int) (Threads, error) {
 					}
 				}
 			}
+			s.cThread = threads[0].Thread
 
-		default: // division by ingredient (part) - currently uses linked instructions. May go scan like Div in future.
+		default:
+			// division by ingredient (part) - currently uses linked instructions. May go scan like Div in future.
 			// generate threads: look for multiple threads within part
 			var thrdCnt int
 			threads = make(Threads, 1)
@@ -286,7 +299,7 @@ func (s *sessCtx) cacheInstructions(sId ...int) (Threads, error) {
 			}
 		}
 	}
-	s.cThread = threads[0].Thread // index into threads
+	//s.cThread = threads[0].Thread // index into threads
 	//
 	return threads, nil
 }

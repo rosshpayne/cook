@@ -51,7 +51,8 @@ type sessCtx struct {
 	lastreq string // previous request (not current one)
 	origreq string // original pathItem[0] before redirect if used
 	//param     string // InputEvent.Param
-	state     stateStack
+	state stateStack
+	//
 	lastState *stateRec // state attribute from state dynamo item - contains state history
 	//
 	userId      string   // sourced from request. Used as PKey to Sessions table
@@ -312,7 +313,7 @@ func (s *sessCtx) orchestrateRequest() error {
 		return err
 	}
 	// set current state based on last session
-	s.setState(lastState)
+	s.setSessionState(lastState)
 
 	// if selectCtxRequired(s.request) {
 	// 	s.incrSelectCtx(lastState)
@@ -334,9 +335,8 @@ func (s *sessCtx) orchestrateRequest() error {
 		fmt.Println("start...")
 		switch wx := s.displayData.(type) {
 		case Threads:
-			fmt.Println("displayData: Threads")
-			// redirect request
-			s.request = "start-next"
+			fmt.Println("request start: displayData: Threads")
+			return nil
 
 		case *WelcomeT:
 			fmt.Println("displayData: *WelcomeT")
@@ -400,7 +400,7 @@ func (s *sessCtx) orchestrateRequest() error {
 		// rollup to objMenu
 		//
 		for showObjMenu := s.showObjMenu; !showObjMenu; showObjMenu = s.showObjMenu {
-			err := s.popState() // will set request to "start" assigned from stateRec[0].Request.
+			err := s.popState_() // will set request to "start" assigned from stateRec[0].Request.
 			if err != nil {
 				return err
 			}
@@ -832,6 +832,7 @@ func (s *sessCtx) orchestrateRequest() error {
 			x := s.cThread
 			s.cThread = s.oThread
 			s.oThread = x
+			t[s.cThread].Id++
 			s.recId[objectMap[s.object]] = t[s.cThread].Id
 		} else {
 			s.derr = "There is nothing to resume"
@@ -863,7 +864,7 @@ func (s *sessCtx) orchestrateRequest() error {
 		//s.objRecId = s.recId[objectMap[s.object]] - 1
 		s.recId[objectMap[s.object]] -= 1
 		return nil
-	case "next", "select-next", "start-next":
+	case "next", "select-next":
 		if len(s.recId) == 0 {
 			s.recId = [4]int{}
 		}
@@ -973,7 +974,7 @@ func (s *sessCtx) orchestrateRequest() error {
 					return nil
 				} else {
 					// go straight to instruction
-					s.displayData, err = s.cacheInstructions()
+					s.displayData, err = s.loadInstructions()
 					if err != nil {
 						return err
 					}
@@ -1101,21 +1102,20 @@ func (s *sessCtx) orchestrateRequest() error {
 			}
 			fmt.Printf("selId  %d   parts   %#v\n", s.selId, s.part)
 			s.reset = true
-			s.recId = [4]int{0, 0, 0, 0}
+			//s.recId = [4]int{0, 0, 0, 0}
 			s.showObjMenu = false
-			s.displayData, err = s.cacheInstructions(s.selId)
+			s.displayData, err = s.loadInstructions()
 			if err != nil {
 				return err
 			}
 			if s.request == "select" {
-				err = s.updateState() // save part name to state upto objMenu
-				if err != nil {
-					return err
+				if s.part != lastState.Part {
+					err = s.updateState() // save part name to state upto objMenu
+					if err != nil {
+						return err
+					}
 				}
-				_, err = s.pushState()
-				if err != nil {
-					return err
-				}
+				s.pushState_() // create new in-memory leaf which will be updated in display which updates leaf and back upto to objMenu node.
 			}
 			// now complete the request by morphing request to a next operation
 			s.request = "select-next"

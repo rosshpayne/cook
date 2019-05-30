@@ -228,7 +228,6 @@ func (s *sessCtx) getState() (*stateRec, error) {
 		}
 		return nil, err
 	}
-	fmt.Println("getState: GetItem ConsumedCapacity: %#v\n", result.ConsumedCapacity)
 	if len(result.Item) == 0 {
 		//
 		fmt.Println("getState.... 0 rows found")
@@ -241,13 +240,14 @@ func (s *sessCtx) getState() (*stateRec, error) {
 	if err != nil {
 		return nil, err
 	}
-	lastState := stateItem.State.pop()
 	s.state = stateItem.State
+	lastState := stateItem.State.pop()
 	//
+	fmt.Println("getState: GetItem ConsumedCapacity: %#v\n", result.ConsumedCapacity)
 	return lastState, nil
 }
 
-func (s *sessCtx) setState(ls *stateRec) {
+func (s *sessCtx) setSessionState(ls *stateRec) {
 	//return staterow.state.pop(), nil
 	// DONT SET display here. This must set just before pushState.
 	//if ls.Display.Type != 0 {
@@ -267,6 +267,9 @@ func (s *sessCtx) setState(ls *stateRec) {
 	}
 	s.cThread = ls.CThread
 	s.oThread = ls.OThread
+	fmt.Println("ls.CThread ", ls.CThread)
+	fmt.Println("ls.OThread ", ls.OThread)
+	fmt.Println("s.cThread ", s.cThread)
 	if len(s.reqBkId) == 0 {
 		s.reqBkId = ls.BkId
 	}
@@ -346,40 +349,11 @@ func (s *sessCtx) setState(ls *stateRec) {
 	if len(s.part) == 0 {
 		s.part = ls.Part
 	}
-
-	if len(ls.InstructionData) > 0 {
-		dd := ls.InstructionData
-		// if s.peol == 0 && len(dd) > 0 && dd[ls.CThread].Id > 0 {
-		// 	s.peol = dd[ls.CThread].Instructions[dd[ls.CThread].Id-1].PEOL //[ls.RecId[objectMap[ls.Obj]]].PEOL
-		// }
-		// if s.pid > 0 && len(dd) > 0 && dd[ls.CThread].Id > 0 {
-		// 	s.pid = dd[ls.CThread].Instructions[dd[ls.CThread].Id-1].PID
-		// }
-		if ls.EOL > 0 && len(dd) > 0 && dd[ls.CThread].Id > 0 {
-			s.eol = dd[ls.CThread].Instructions[dd[ls.CThread].Id-1].EOL
-		}
-		s.displayData = dd
+	if len(s.parts) == 0 && len(ls.Parts) > 0 {
+		s.part = ls.Part
+		s.parts = ls.Parts
+		//s.displayData = ls.Parts
 	}
-	if len(ls.Ingredients) > 0 {
-		s.displayData = ls.Ingredients
-		fmt.Println("** setState: s.displayData set to Ingredients")
-	}
-	// if len(ls.ContainerData) > 0 {
-	// 	s.displayData = ls.ContainerData
-	// }
-	if len(ls.RecipeList) > 0 {
-		s.recipeList = ls.RecipeList
-		s.displayData = s.recipeList
-	}
-	//
-	// if s.request == "search" {
-	// 	switch ls.request {
-	// 	case "start" :
-	// 		s.displayData=
-	// 	case
-	// 	}
-	// }
-	fmt.Println("in SetState: selId = ", s.selId)
 	//
 	// gen primary key - used for most dyamo accesses
 	//
@@ -402,6 +376,50 @@ func (s *sessCtx) setState(ls *stateRec) {
 			s.reset = true
 		}
 	}
+	if len(ls.InstructionData) > 0 && !(s.origreq == "list" && s.action != "instructions") {
+		dd := ls.InstructionData
+		// if s.peol == 0 && len(dd) > 0 && dd[ls.CThread].Id > 0 {
+		// 	s.peol = dd[ls.CThread].Instructions[dd[ls.CThread].Id-1].PEOL //[ls.RecId[objectMap[ls.Obj]]].PEOL
+		// }
+		// if s.pid > 0 && len(dd) > 0 && dd[ls.CThread].Id > 0 {
+		// 	s.pid = dd[ls.CThread].Instructions[dd[ls.CThread].Id-1].PID
+		// }
+		if ls.EOL > 0 && len(dd) > 0 && dd[ls.CThread].Id > 0 {
+			s.eol = dd[ls.CThread].Instructions[dd[ls.CThread].Id-1].EOL
+		}
+		// selId contains Parts menu choice
+		s.selId = ls.SelId
+		x, err := s.loadInstructions()
+		fmt.Println("cacheINstructions in setState() len(x), len(dd) ", len(x), len(dd))
+		if err != nil {
+			panic(err)
+		}
+		for i := 0; i < len(x); i++ {
+			x[i].Id = dd[i].Id
+		}
+		s.displayData = x
+		//s.displayData = dd
+	}
+	if len(ls.Ingredients) > 0 {
+		s.displayData = ls.Ingredients
+		fmt.Println("** setState: s.displayData set to Ingredients")
+	}
+	// if len(ls.ContainerData) > 0 {
+	// 	s.displayData = ls.ContainerData
+	// }
+	if len(ls.RecipeList) > 0 {
+		s.recipeList = ls.RecipeList
+		s.displayData = s.recipeList
+	}
+	//
+	// if s.request == "search" {
+	// 	switch ls.request {
+	// 	case "start" :
+	// 		s.displayData=
+	// 	case
+	// 	}
+	// }
+	fmt.Println("in SetState: selId = ", s.selId)
 	//s.showObjMenu = ls.ShowObjMenu
 	if s.showObjMenu { // && len(ls.Ingredients) == 0 && len(ls.RecipeList) == 0 {
 		fmt.Println("in setSession: displaying object menu is set")
@@ -484,6 +502,8 @@ func (s *sessCtx) setState(ls *stateRec) {
 			panic(err)
 		}
 	}
+	fmt.Println("s.cThread ", s.cThread)
+	fmt.Println("Exit setState()............")
 	//
 }
 
@@ -582,7 +602,13 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 	sr.Parts = s.parts
 	sr.Part = s.part
 	if d, ok := s.displayData.(Threads); ok {
-		sr.InstructionData = d
+		// don't save actual instructions as it costs to many write units.
+		x := make(Threads, len(d))
+		for i := 0; i < len(d); i++ {
+			x[i] = d[i]
+			x[i].Instructions = nil
+		}
+		sr.InstructionData = x
 	}
 	sr.CThread = s.cThread
 	sr.OThread = s.oThread
@@ -614,6 +640,16 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 	// add to session context state
 	s.state = append(s.state, sr)
 	//
+	if s.origreq == "list" {
+		s.updateState_()
+		return nil, nil
+	}
+	//
+	// if s.origreq == "list" {
+	// 	// in memory state has been pushed to, but don't save just
+	// 	fmt.Println("pushState: no IO : ConsumedCapacity: 0", result.ConsumedCapacity)
+	// 	return nil, nil
+	// }
 	t := time.Now()
 	t.Add(time.Hour * 52 * 1)
 	updateC = expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
@@ -642,10 +678,11 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 		UpdateExpression:          expr.Update(),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
+		ReturnValues:              aws.String("UPDATED_NEW"),
 	}
 	input.SetReturnConsumedCapacity("TOTAL")
 	//
-	x, err := s.dynamodbSvc.UpdateItem(input)
+	result, err := s.dynamodbSvc.UpdateItem(input)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
@@ -665,23 +702,127 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 		}
 		return nil, err
 	}
-	fmt.Println("pushState: UpdateItem: ConsumedCapacity: %#v\n", x.ConsumedCapacity)
-	fmt.Println("Exit pushState....")
+	st := stateItemT{}
+	err = dynamodbattribute.UnmarshalMap(result.Attributes, &st)
+	if err != nil {
+		return nil, fmt.Errorf("Error: %s %s", "in UnmarshalMap in updateState ", err.Error())
+	}
+	s.state = st.State
+	fmt.Println("pushState: UpdateItem: ConsumedCapacity: %#v\n", result.ConsumedCapacity)
 	return &sr, nil
 }
 
-// type srecT struct {
-// 	PKey string     `json:"PKey"`
-// 	Sr   []stateRec `json:state"`
-// }
+func (s *sessCtx) pushState_() {
+	// equivalent to a push operation for a stack (state data in this case)
+	type pKey struct {
+		PKey string
+	}
+
+	var (
+		sr stateRec
+		//updateC expression.UpdateBuilder
+	)
+	fmt.Println("Entered pushState_ (not saved)")
+
+	// copy statevfrom session context
+	//sr.Path = s.path
+	//sr.Param = s.param
+	sr.DT = time.Now().Format("Jan 2 15:04:05")
+	sr.RId = s.reqRId       // Recipe Id
+	sr.BkId = s.reqBkId     // Book Id
+	sr.BkName = s.reqBkName // Book name - saves a lookup under some circumstances
+	sr.RName = s.reqRName   // Recipe name - saves a lookup under some circumstances
+	sr.SwpBkNm = s.swapBkName
+	sr.SwpBkId = s.swapBkId
+	sr.Request = s.request // Request e.g.next, prev, repeat, modify)
+	sr.ReqType = s.curReqType
+	sr.Serves = s.serves
+	sr.Qid = s.questionId // Question id	for k,v:=range objectMap {
+	sr.Obj = s.object     // Object - to which operation (listing) apply
+	sr.Ingredients = s.ingrdList
+	sr.Ver = s.reqVersion
+	sr.EOL = s.eol // last RecId of current list. Used to determine when last record is reached or exceeded in the case of goto operation
+	sr.Dmsg = s.dmsg
+	sr.Vmsg = s.vmsg
+	sr.DData = s.ddata
+	sr.OpenBk = s.reqOpenBk
+	sr.Authors = s.authors
+	//
+	// Record id across objects
+	//
+	if s.reset {
+		sr.RecId = [4]int{0, 0, 0, 0}
+	} else {
+		sr.RecId = s.recId
+	}
+	// search
+	//
+	sr.Search = s.reqSearch
+	sr.RecipeList = s.recipeList
+	//
+	// select
+	//
+	sr.SelCtx = s.selCtx // select a recipe or other which is (ingred, task, container, utensil)
+	sr.SelId = s.selId   //
+	//
+	// Recipe Part related data
+	//
+	sr.Parts = s.parts
+	sr.Part = s.part
+	if d, ok := s.displayData.(Threads); ok {
+		// don't save actual instructions as it costs to many write units.
+		x := make(Threads, len(d))
+		for i := 0; i < len(d); i++ {
+			x[i] = d[i]
+			x[i].Instructions = nil
+		}
+		sr.InstructionData = x
+	}
+	sr.CThread = s.cThread
+	sr.OThread = s.oThread
+	sr.ShowObjMenu = s.showObjMenu
+	//sr.ObjMenu = s.ObjMenu
+	if len(s.menuL) > 0 {
+		sr.MenuL = s.menuL
+	}
+	if s.dispCtr == nil {
+		fmt.Printf("pushState: s.dispCtr is nil\n")
+	} else {
+		fmt.Printf("pushState: s.dispCtr %#v\n", s.dispCtr)
+	}
+	if s.dispCtr != nil {
+		//sr.DispCtr = *(s.dispCtr)
+		sr.DispCtr = s.dispCtr
+	}
+	sr.ScaleF = global.GetScale()
+	//
+	// if s.display != nil {
+	// 	sr.Display = *(s.display)
+	// }
+	if s.welcome != nil {
+		sr.Welcome = s.welcome
+	}
+	//
+	State := make(stateStack, 1)
+	State[0] = sr
+	// add to session context state
+	s.state = append(s.state, sr)
+	//
+}
 
 func (s *sessCtx) updateState() error {
 
 	type pKey struct {
 		PKey string
 	}
+	if s.origreq == "list" {
+		s.updateState_()
+		return nil
+	}
 	var updateC expression.UpdateBuilder
 	var atribute string
+	//
+
 	//
 	// update RecId attribute of latest state item
 	//
@@ -789,7 +930,7 @@ func (s *sessCtx) updateState() error {
 	}
 	input.SetReturnConsumedCapacity("TOTAL")
 	//
-	x, err := s.dynamodbSvc.UpdateItem(input)
+	result, err := s.dynamodbSvc.UpdateItem(input)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
@@ -813,88 +954,73 @@ func (s *sessCtx) updateState() error {
 		fmt.Println(err.Error())
 		return err
 	}
-	fmt.Println("UpdateState: UpdateItem: ConsumedCapacity: %#v\n", x.ConsumedCapacity)
 	//
-	// following used in close book op - avoids extra dynamo access to fetch Welcome data
-	//
-	// if s.request == "start" {
-	// 	x2 := srecT{}
-	// 	err = dynamodbattribute.UnmarshalMap(result.Attributes, &x2)
-	// 	if err != nil {
-	// 		return fmt.Errorf("Error: %s %s", "in UnmarshalMap in updateState ", err.Error())
-	// 	}
-	// 	fmt.Printf("displayData = Welcome = %#v\n", *(x2.Sr[0].Welcome))
-	// 	s.welcome = x2.Sr[0].Welcome
-	// 	s.displayData = x2.Sr[0].Welcome
-
+	st := stateItemT{}
+	err = dynamodbattribute.UnmarshalMap(result.Attributes, &st)
+	if err != nil {
+		return fmt.Errorf("Error: %s %s", "in UnmarshalMap in updateState ", err.Error())
+	}
+	s.state = st.State
+	//}
 	// }
-	fmt.Println("finish updateState in sessions.go")
+	fmt.Println("UpdateState: UpdateItem: ConsumedCapacity: %#v\n", result.ConsumedCapacity)
 	return nil
 }
 
-func (s *sessCtx) updateStateRecId() error {
-
+func (s *sessCtx) updateState_() {
+	//
+	// only to be used for instructions (for the moment)
+	//
 	type pKey struct {
 		PKey string
 	}
-	var updateC expression.UpdateBuilder
-	var atribute string
+	fmt.Println("******* . entered updateState_ .  *******  len(s.state) =  ", len(s.state))
 	//
-	// update RecId attribute of latest state item
+	// update s.state before saving
 	//
-	fmt.Println("entered updateStateRecId..")
-	t := time.Now()
-	t.Add(time.Hour * 24 * 1)
-	updateC = expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
-	//
-	// for current state
-	//
-	if len(s.state) == 0 {
-		// this case for new session. No UserId in session table so no state.
-		err := fmt.Errorf("s.state not set in UpdateState()")
-		return err
-	}
-	// for close book op only - shrink state slice down to 1
-	// if len(s.CloseBkName) > 0 { . // errors with ValidationException: Invalid UpdateExpression: Two document paths overlap with each other; must remove or rewrite one of these paths; path one: [state], path two: [state, [0], MenuL]
-	// 	State := s.state[:]
-	// 	updateC = expression.Set(expression.Name("state"), expression.Value(State))
-	// }
-	// change state upto and including objMenu
 	for i := len(s.state) - 1; i > 0; i-- {
-		//
-		atribute = fmt.Sprintf("state[%d].RecId", i)
-		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
-		//
-		if len(s.state[len(s.state)-1].InstructionData) > 0 {
-			atribute = fmt.Sprintf("state[%d].I[%d].id", len(s.state)-1, s.cThread)
-			updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId[objectMap[task_]]))
-		}
+		fmt.Printf("updating s.state[%d].RecId %#v \n", i, s.recId)
+		s.state[i].RecId = s.recId
+		fmt.Printf("updating s.state[%d].CThread %#v \n", i, s.cThread)
+		s.state[i].CThread = s.cThread
+		s.state[i].OThread = s.oThread
+
 		if s.state[i].ShowObjMenu {
 			break
 		}
 	}
+	fmt.Println("now updating InstrucitonData..")
+	if len(s.state[len(s.state)-1].InstructionData) > 0 {
+		s.state[len(s.state)-1].InstructionData[s.cThread].Id = s.recId[objectMap[task_]]
+	}
+
+}
+
+func (s *sessCtx) saveState_() error {
 	//
-	// do not change Request value after it has been inserted.
-	// atribute = fmt.Sprintf("state[%d].Request", len(s.state)-1)
-	// updateC = updateC.Set(expression.Name(atribute), expression.Value(s.request))
+	// save s.state
 	//
+	var updateC expression.UpdateBuilder
+	t := time.Now()
+	t.Add(time.Hour * 24 * 1)
+	updateC = expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
+	// rewrite all but last state entry - this is how we delete from a list in dynamo. Here the list represents the state stack.
+	updateC = updateC.Set(expression.Name("state"), expression.Value(s.state))
 	expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
+	//
 	pkey := pKey{PKey: s.userId}
 	av, err := dynamodbattribute.MarshalMap(&pkey)
-	if err != nil {
-		return err
-	}
+
 	input := &dynamodb.UpdateItemInput{
 		TableName:                 aws.String("Sessions"),
 		Key:                       av, // accets []map[]*attributeValues so must use marshal not expression
 		UpdateExpression:          expr.Update(),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
-		ReturnValues:              aws.String("UPDATED_NEW"),
 	}
 	input.SetReturnConsumedCapacity("TOTAL")
 	//
-	x, err := s.dynamodbSvc.UpdateItem(input)
+	result, err := s.dynamodbSvc.UpdateItem(input)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
@@ -912,25 +1038,10 @@ func (s *sessCtx) updateStateRecId() error {
 			// Message from an error.
 			fmt.Println(err.Error())
 		}
-		fmt.Println(err.Error())
 		return err
 	}
-	fmt.Println("updateStateRecId: UpdateItem: ConsumedCapacity:\n", x.ConsumedCapacity)
 	//
-	// following used in close book op - avoids extra dynamo access to fetch Welcome data
-	//
-	// if s.request == "start" {
-	// 	x2 := srecT{}
-	// 	err = dynamodbattribute.UnmarshalMap(result.Attributes, &x2)
-	// 	if err != nil {
-	// 		return fmt.Errorf("Error: %s %s", "in UnmarshalMap in updateState ", err.Error())
-	// 	}
-	// 	fmt.Printf("displayData = Welcome = %#v\n", *(x2.Sr[0].Welcome))
-	// 	s.welcome = x2.Sr[0].Welcome
-	// 	s.displayData = x2.Sr[0].Welcome
-
-	// }
-	fmt.Println("finish updateStateRecId in sessions.go")
+	fmt.Println("UpdateState_: UpdateItem: ConsumedCapacity: %#v\n", result.ConsumedCapacity)
 	return nil
 }
 
@@ -1083,9 +1194,18 @@ func (s *sessCtx) popState() error {
 	//
 	//
 	s.displayData = s.parts
+
 	if len(sr.InstructionData) > 0 {
 		fmt.Println("displayData = InstructionData")
-		s.displayData = sr.InstructionData
+		x, err := s.loadInstructions()
+		if err != nil {
+			panic(err)
+		}
+		y := sr.InstructionData
+		for i := 0; i < len(x); i++ {
+			x[i].Id = y[i].Id
+		}
+		s.displayData = x
 	}
 	if s.ctSize == 0 && sr.CtSize > 0 {
 		s.ctSize = sr.CtSize
@@ -1151,7 +1271,183 @@ func (s *sessCtx) popState() error {
 	fmt.Printf("Popstate: s.reqBkId %s\n", s.reqBkId)
 	fmt.Printf("Popstate: s.reqRId %s\n", s.reqRId)
 	fmt.Printf("Popstate: s.request %s\n", s.request)
+	return nil
+}
 
-	fmt.Println("Exit popState()..")
+func (s *sessCtx) popState_() error {
+	//
+	// removes top entry in state attribute of dynamo session item.
+	//  populates session context with state data from the new top entry
+	//  (which was the penultimate entry before deletion)
+	//
+	// NB: must exit with s.displayData assigned - as this will route to GenDisplay to produce response.
+	//
+	type pKey struct {
+		PKey string
+	}
+	var (
+		sr    *stateRec
+		State stateStack
+	)
+
+	fmt.Println("*** . Entered popState_()")
+	// get current state if not already sourced
+	if len(s.state) == 0 {
+		s.getState()
+	}
+	fmt.Println(" state size: ", len(s.state))
+	if len(s.state) > 1 {
+		//
+		// pop state and persist to dynamo
+		//
+		fmt.Println("popState_()  before len(s.state) = ", len(s.state))
+		State = s.state[:len(s.state)-1]
+		s.state = State[:]
+		fmt.Println("popState_() after len(s.state) = ", len(s.state))
+		sr = State.pop()
+	} else {
+		sr = s.state.pop() //[len(s.state)-1]
+	}
+	// transfer state data to session context
+	//s.path = sr.Path
+	//s.param = sr.Param
+
+	s.reqRId = sr.RId       // Recipe Id
+	s.reqBkId = sr.BkId     // Book Id
+	s.reqBkName = sr.BkName // Book name - saves a lookup under some circumstances
+	s.reqRName = sr.RName   // Recipe name - saves a lookup under some circumstances
+	s.swapBkName = sr.SwpBkNm
+	s.swapBkId = sr.SwpBkId
+	s.request = sr.Request // Request e.g.next, prev, repeat, modify)
+	s.curReqType = sr.ReqType
+	s.serves = sr.Serves
+	//	s.questionId = sr.Qid // Question id	for k,v:=range objectMap {
+	s.object = sr.Obj  // Object - to which operation (listing) apply
+	s.recId = sr.RecId //s.recId     // current record in object list. (SortK in Recipe table)
+	s.reqVersion = sr.Ver
+	s.eol = sr.EOL // last RecId of current list. Used to determine when last record is reached or exceeded in the case of goto operation
+	s.dmsg = sr.Dmsg
+	s.vmsg = sr.Vmsg
+	s.ddata = sr.DData
+	s.authors = sr.Authors
+	s.showObjMenu = sr.ShowObjMenu
+	//
+	if len(sr.OpenBk) > 0 {
+		bk := strings.Split(string(sr.OpenBk), "|")
+		fmt.Printf("popstate: open bk %#v\n", bk)
+		s.reqBkId, s.reqBkName, s.authors = bk[0], bk[1], bk[2]
+		s.authorS = strings.Split(s.authors, ",")
+		s.reqOpenBk = sr.OpenBk
+	}
+	//
+	s.ingrdList = sr.Ingredients
+	//
+	// Record id across objects
+	//
+	s.recId = sr.RecId
+	// search
+	//
+	s.reqSearch = sr.Search
+	s.recipeList = sr.RecipeList
+	//
+	// select
+	//
+	s.selCtx = sr.SelCtx // select a recipe or other which is (ingred, task, container, utensil)
+	s.selId = sr.SelId   //
+	//
+	// Recipe Part related data
+	//
+	s.parts = sr.Parts
+	s.part = sr.Part
+	//
+	//s.peol = sr.PEOL
+	//s.pid = sr.PId
+	//
+	// Display Menu choices
+	//
+	// s.dispObjectMenu = sr.DispObjectMenu
+	// s.dispIngredients = sr.DispIngredients
+	// s.dispContainers = sr.DispContainers
+	// s.dispPartMenu = sr.DispPartMenu
+	//
+	//
+	s.displayData = s.parts
+
+	if len(sr.InstructionData) > 0 {
+		fmt.Println("displayData = InstructionData")
+		x, err := s.loadInstructions()
+		if err != nil {
+			panic(err)
+		}
+		y := sr.InstructionData
+		for i := 0; i < len(x); i++ {
+			x[i].Id = y[i].Id
+		}
+		s.displayData = x
+	}
+	if s.ctSize == 0 && sr.CtSize > 0 {
+		s.ctSize = sr.CtSize
+	}
+	if len(sr.Ingredients) > 0 {
+		fmt.Println("displayData = Ingredients")
+		s.displayData = sr.Ingredients
+	}
+	if len(sr.RecipeList) > 0 {
+		fmt.Println("displayData = RecipeList")
+		s.displayData = sr.RecipeList
+	}
+	if sr.ShowObjMenu {
+		fmt.Println("displayData = showObjMenu")
+		s.displayData = objMenu
+		//		s.showObjMenu = sr.ShowObjMenu
+	}
+	// if sr.Request == "book" && len(sr.OpenBk) > 0 { // book request value not saved in session - as it is
+	// 	s.displayData = s.reqOpenBk
+	// }
+	// if sr.Request == "book/close" && len(sr.OpenBk) > 0 {
+	// 	s.displayData = s.reqOpenBk
+	//
+	if len(sr.MenuL) > 0 {
+		s.menuL = sr.MenuL
+	}
+	//s.dispCtr = &sr.DispCtr
+	s.dispCtr = sr.DispCtr
+	if sr.ScaleF == 0 {
+		global.SetScale(1.0)
+	} else {
+		global.SetScale(sr.ScaleF)
+	}
+	s.pkey = s.reqBkId + "-" + s.reqRId
+	//
+	// set displayData - important to do this as "back" will rely on popstate() to determine apl display to show
+	//
+	// do we use Request or Display to drive off - only one need be used, but will persis with Request for time being until
+	// Display is fully implemented (if ever)
+	//if sr.Request == "start" && sr.Display.Type != 0 && s.displayData == nil {
+	// if sr.Request == "start" {
+	// 	fmt.Println(" ** back now in start")
+	// 	s.display = &sr.Display
+	// 	fmt.Printf("s.display = %#v\n", s.display)
+	// 	var w WelcomeT
+	// 	s.displayData = w
+	// }
+	if sr.Request == "start" {
+		fmt.Printf("displayData = Welcome = %#v\n", *(sr.Welcome))
+		s.welcome = sr.Welcome // used in close book op
+		s.displayData = sr.Welcome
+
+	}
+	// switch s.display.Type {
+	// case WELCOME:
+	// 	var w WelcomeT
+	// 	s.displayData = w
+	// }
+
+	fmt.Printf("Popstate_: parts %#v\n", s.parts)
+	fmt.Println("Popstate_: sr.showOBjMenu ", sr.ShowObjMenu)
+	fmt.Printf("Popstate_: sr.RecipeList %#v\n", sr.RecipeList)
+	fmt.Printf("Popstate_: s.reqBkId %s\n", s.reqBkId)
+	fmt.Printf("Popstate_: s.reqRId %s\n", s.reqRId)
+	fmt.Printf("Popstate_: s.request %s\n", s.request)
 	return nil
 }
