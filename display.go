@@ -391,11 +391,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		if len(s.derr) > 0 {
 			type_ += "Err"
 		} else {
-			s.updateState_()
-			err := s.saveState_()
-			if err != nil {
-				return RespEvent{Text: err.Error(), Verbal: s.dmsg, Error: err.Error()}
-			}
+			s.updateState()
 		}
 		hint = `hint:  "next", "previous", "repeat", "list ingredients", "list containers", "go back", "restart" `
 		fmt.Println("hint: ", hint)
@@ -445,11 +441,7 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		speak := "<speak>" + rec.Verbal + "</speak>"
 
 		s.menuL = nil
-		s.updateState_()
-		err := s.saveState_()
-		if err != nil {
-			return RespEvent{Text: err.Error(), Verbal: s.dmsg, Error: err.Error()}
-		}
+		s.updateState()
 		hint = "hint:  next, previous, say again, resume"
 		return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Hint: hint, Text: rec.Text, Verbal: speak, ListA: listA, ListB: listB, ListC: listC,
 			ListD: listD, ListE: listE, ListF: listF, Color1: color1, Color2: color2, Thread1: trName1, Thread2: trName2,
@@ -526,9 +518,9 @@ func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 		var err error
 		s.welcome = w
 		if len(s.state) == 0 {
-			_, err = s.pushState()
+			s.pushState()
 		} else {
-			err = s.updateState()
+			s.updateState()
 		}
 		if err != nil {
 			type_ := "Ingredient"
@@ -800,7 +792,6 @@ func (o ObjMenu) GenDisplay(s *sessCtx) RespEvent {
 		}
 		//}
 	}
-	var err error
 
 	backBtn = true
 	if len(s.state) < 2 {
@@ -808,10 +799,7 @@ func (o ObjMenu) GenDisplay(s *sessCtx) RespEvent {
 	}
 	if !s.back {
 		// only update state if going forward not going back
-		err = s.updateState()
-		if err != nil {
-			return RespEvent{Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
-		}
+		s.updateState()
 	}
 	type_ := "Search"
 	if len(s.derr) > 0 {
@@ -905,15 +893,9 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 		// persist  new scaleF
 		switch s.request {
 		case "select":
-			_, err := s.pushState()
-			if err != nil {
-				s.derr = err.Error()
-			}
+			s.pushState()
 		case "resize":
-			err = s.updateState()
-			if err != nil {
-				s.derr = err.Error()
-			}
+			s.updateState()
 		}
 		sf = strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
 		fmt.Println("s.scalef, global.GetScale() = ", s.scalef, global.GetScale())
@@ -967,10 +949,7 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 		list[5] = DisplayItem{Title: `What is the size of your container? Say 'size [newsize]' e.g. "size ` + suggdim + `"`}
 		list[6] = DisplayItem{Title: `Note: your container size must be less than the recipe container size displayed above`}
 		if s.request != "start" {
-			_, err := s.pushState()
-			if err != nil {
-				s.derr = err.Error()
-			}
+			s.pushState()
 		}
 	}
 	// create new state - must do this so when back button is hit we can pop this state otherwise we loose objMenu state

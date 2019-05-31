@@ -132,7 +132,7 @@ func (s *sessCtx) loadInstructions() (Threads, error) {
 		//return taskRecT{}, fmt.Errorf("Error in Query of Tasks: " + err.Error())
 		return nil, err
 	}
-	fmt.Println("loadInstructions: Query: ConsumedCapacity: %#v\n", result.ConsumedCapacity)
+	fmt.Println("loadInstructions: Query: Query ConsumedCapacity: \n", result.ConsumedCapacity)
 	if int(*result.Count) == 0 { //TODO - put this code back so it makes sense
 		// this is caused by a goto operation exceeding EOL
 		return nil, fmt.Errorf("Error: %s [%s] ", "Internal error: no instructions found for recipe ", s.reqRName)
@@ -354,7 +354,7 @@ func (s *sessCtx) getScaleContainer() (*Container, error) {
 		}
 		panic(fmt.Errorf("%s: %s", "Error in GetItem of getContainerRecById", err.Error()))
 	}
-	fmt.Println("getScaleContainer: Query: ConsumedCapacity: %#v\n", result.ConsumedCapacity)
+	fmt.Println("getScaleContainer: Query: Query ConsumedCapacity:\n", result.ConsumedCapacity)
 	if len(result.Items) == 0 {
 		fmt.Println("in getScaleContainer - no records found.")
 		return nil, nil
@@ -829,7 +829,7 @@ func (s *sessCtx) recipeRSearch() (*RecipeT, error) {
 		}
 		return nil, fmt.Errorf("%s %s: %s", errmsg, "GetItem", errmsg, err.Error())
 	}
-	fmt.Println("recipeRSearch: GetItem: ConsumedCapacity: %#v\n", result.ConsumedCapacity)
+	fmt.Println("recipeRSearch: GetItem: Query ConsumedCapacity: \n", result.ConsumedCapacity)
 	if len(result.Item) == 0 {
 		return nil, fmt.Errorf("%s. No Recipe record found for R-%s-%s", errmsg, s.reqBkId, s.reqRId)
 	}
@@ -864,7 +864,7 @@ func (s *sessCtx) recipeRSearch() (*RecipeT, error) {
 	for _, v := range rec.Thread {
 		s.parts = append(s.parts, PartT{Title: v.Title, Type_: "Thrd", Index: v.Index})
 	}
-	fmt.Println("***** LEAVE recipeRSearch *********")
+	fmt.Println("Exit recipeRSearch ")
 	return rec, nil
 }
 
@@ -889,7 +889,7 @@ func (s *sessCtx) keywordSearch(srch string) error {
 	)
 	// zero recipeList list
 	//
-	fmt.Printf("^^^^^^^^^^ entered keywordSearch [%s]\n", srch)
+	fmt.Printf("entered keywordSearch [%s]\n", srch)
 	if len(s.reqOpenBk) > 0 {
 		// look for recipes in current book only
 		kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value(srch))
@@ -904,12 +904,13 @@ func (s *sessCtx) keywordSearch(srch string) error {
 			ExpressionAttributeNames:  expr.Names(),
 			ExpressionAttributeValues: expr.Values(),
 		}
-		input = input.SetTableName("Ingredient").SetConsistentRead(false)
+		input = input.SetTableName("Ingredient").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
 		//
 		result, err = s.dynamodbSvc.Query(input)
 		if err != nil {
 			return fmt.Errorf("Error: %s [%s] %s", "in Query in keywordSearch of ", s.reqSearch, err.Error())
 		}
+		fmt.Println("keywordSearch: Query ConsumedCapacity: \n", result.ConsumedCapacity)
 		recS = make([]searchRecT, int(*result.Count))
 		err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &recS)
 		if err != nil {
@@ -1118,12 +1119,13 @@ func (s *sessCtx) recipeNameSearch() error {
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
 	}
-	input = input.SetTableName("Recipe").SetConsistentRead(false)
+	input = input.SetTableName("Recipe").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
 	// while BkId is unique we are using a GSI so must use Query (I presume)
 	result, err := s.dynamodbSvc.Query(input)
 	if err != nil {
 		return fmt.Errorf("Error: %s [%s] - %s", "in Query in recipeNameSearch of ", s.reqRName, err.Error())
 	}
+	fmt.Println("recipeNameSearch: Query ConsumedCapacity: \n", result.ConsumedCapacity)
 	if int(*result.Count) == 0 {
 		return fmt.Errorf("No recipe found in recipeNameSearch, for rname [%s]", s.reqRName)
 	}
@@ -1217,12 +1219,13 @@ func (s *sessCtx) bookNameLookup() error {
 		ExpressionAttributeValues: expr.Values(),
 		ProjectionExpression:      expr.Projection(),
 	}
-	input = input.SetTableName("Recipe").SetConsistentRead(false)
+	input = input.SetTableName("Recipe").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
 	// while BkId is unique we are using a GSI so must use Query (I presume)
 	result, err := s.dynamodbSvc.Query(input)
 	if err != nil {
 		return fmt.Errorf("Error: %s [%s] %s", "in Query in bookNameLookup of ", s.reqBkId, err.Error())
 	}
+	fmt.Println("bookNameLookup: Query ConsumedCapacity: \n", result.ConsumedCapacity)
 	if int(*result.Count) == 0 {
 		// Alexa respository means all requests should be for its registered book so we shouldn't get 0 found.
 		return fmt.Errorf("Internal error: Book Id [%s] not found", s.reqBkId)

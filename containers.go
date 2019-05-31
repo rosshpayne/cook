@@ -76,6 +76,7 @@ func (s *sessCtx) loadBaseContainers() (ContainerS, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Error: in readBaseRecipeForContainers Query - %s", err.Error())
 	}
+	fmt.Println("loadBaseContainers: Query: A-  ConsumedCapacity: %#v\n", result.ConsumedCapacity)
 	if int(*result.Count) == 0 {
 		return nil, fmt.Errorf("No data found for reqRId %s in processBaseRecipe for Activity - ", s.pkey)
 	}
@@ -255,6 +256,7 @@ func (s *sessCtx) loadBaseContainers() (ContainerS, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s", "Error in Query of container table: "+err.Error())
 	}
+	fmt.Println("loadBaseContainers: Query: ConsumedCapacity: %#v\n", result.ConsumedCapacity)
 	if int(*result.Count) == 0 {
 		fmt.Println("No container data..")
 	}
@@ -290,6 +292,7 @@ func (s *sessCtx) loadBaseContainers() (ContainerS, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s", "Error in Query of container table: "+err.Error())
 	}
+	fmt.Println("loadBaseContainers: Query C-0-0: ConsumedCapacity: %#v\n", result.ConsumedCapacity)
 	if int(*result.Count) == 0 {
 		fmt.Println("No container data..")
 	}

@@ -51,7 +51,8 @@ type sessCtx struct {
 	lastreq string // previous request (not current one)
 	origreq string // original pathItem[0] before redirect if used
 	//param     string // InputEvent.Param
-	state stateStack
+	state     stateStack // read from dynamo by getState, commited to dynamo by saveState
+	saveState bool
 	//
 	lastState *stateRec // state attribute from state dynamo item - contains state history
 	//
@@ -201,10 +202,7 @@ func (s *sessCtx) restart() error {
 	//
 	if len(s.state) > 1 {
 		s.state = s.state[0:2]
-		err := s.popState() // will set request to "start" assigned from stateRec[0].Request.
-		if err != nil {
-			return err
-		}
+		s.popState() // will set request to "start" assigned from stateRec[0].Request.
 	}
 	//
 	//  now lets clear some state attributes in the remaining state
@@ -216,10 +214,7 @@ func (s *sessCtx) restart() error {
 	}
 	s.back = true // condition used in display()
 	//
-	err := s.updateState()
-	if err != nil {
-		return err
-	}
+	s.updateState()
 	//
 	s.welcome = s.state[0].Welcome
 	s.displayData = s.welcome
@@ -242,10 +237,7 @@ func (s *sessCtx) openBook() error {
 	//s.newSession = true
 	fmt.Println("openBook() - ", s.reqOpenBk)
 	s.cThread, s.oThread = 0, 0
-	// err := s.updateState()
-	// if err != nil {
-	// 	return err
-	// }
+	s.updateState()
 	return nil
 }
 
@@ -400,10 +392,7 @@ func (s *sessCtx) orchestrateRequest() error {
 		// rollup to objMenu
 		//
 		for showObjMenu := s.showObjMenu; !showObjMenu; showObjMenu = s.showObjMenu {
-			err := s.popState_() // will set request to "start" assigned from stateRec[0].Request.
-			if err != nil {
-				return err
-			}
+			s.popState() // will set request to "start" assigned from stateRec[0].Request.
 			if s.request == "start" {
 				err = fmt.Errorf("Internal Error:  list request failed to popState() to objMenu")
 				break
@@ -603,10 +592,7 @@ func (s *sessCtx) orchestrateRequest() error {
 		}
 		//
 		s.ingrdList, s.object, s.selCtx, s.showObjMenu = "", "", 0, false
-		_, err = s.pushState()
-		if err != nil {
-			return err
-		}
+		s.pushState()
 		return nil
 	}
 	if s.request == "book" { // open book
@@ -807,10 +793,7 @@ func (s *sessCtx) orchestrateRequest() error {
 			s.selCtx = ctxRecipeMenu
 			s.selId = 0
 			fmt.Printf("recipe List found [%#v]\n", s.recipeList)
-			_, err = s.pushState()
-			if err != nil {
-				return err
-			}
+			s.pushState()
 			return nil
 		}
 	}
@@ -914,10 +897,7 @@ func (s *sessCtx) orchestrateRequest() error {
 			s.reset = true
 			if !s.reScale {
 				fmt.Println("ctxRecipeMenu: about to pushState")
-				_, err = s.pushState()
-				if err != nil {
-					return err
-				}
+				s.pushState()
 			} else {
 				s.updateState()
 			}
@@ -965,10 +945,7 @@ func (s *sessCtx) orchestrateRequest() error {
 						if s.reScale {
 							s.updateState()
 						} else {
-							_, err = s.pushState()
-							if err != nil {
-								return err
-							}
+							s.pushState()
 						}
 					}
 					return nil
@@ -980,10 +957,7 @@ func (s *sessCtx) orchestrateRequest() error {
 					}
 					//
 					if s.request == "select" {
-						_, err = s.pushState()
-						if err != nil {
-							return err
-						}
+						s.pushState()
 					}
 					// now complete the request by morphing request to a "next" operation
 					s.reset = true
@@ -1031,10 +1005,7 @@ func (s *sessCtx) orchestrateRequest() error {
 					if s.reScale { // change in scale from last session
 						s.updateState()
 					} else {
-						_, err = s.pushState()
-					}
-					if err != nil {
-						return err
+						s.pushState()
 					}
 
 				case "start", "list":
@@ -1058,12 +1029,9 @@ func (s *sessCtx) orchestrateRequest() error {
 				s.showObjMenu = false
 				s.curReqType = 0
 				if s.reScale {
-					err = s.updateState()
+					s.updateState()
 				} else if s.request == "select" {
-					_, err = s.pushState()
-				}
-				if err != nil {
-					return err
+					s.pushState()
 				}
 				return nil
 
@@ -1110,12 +1078,9 @@ func (s *sessCtx) orchestrateRequest() error {
 			}
 			if s.request == "select" {
 				if s.part != lastState.Part {
-					err = s.updateState() // save part name to state upto objMenu
-					if err != nil {
-						return err
-					}
+					s.updateState() // save part name to state upto objMenu
 				}
-				s.pushState_() // create new in-memory leaf which will be updated in display which updates leaf and back upto to objMenu node.
+				s.pushState() // create new in-memory leaf which will be updated in display which updates leaf and back upto to objMenu node.
 			}
 			// now complete the request by morphing request to a next operation
 			s.request = "select-next"
@@ -1407,6 +1372,13 @@ func handler(ctx context.Context, request InputEvent) (RespEvent, error) {
 	var resp RespEvent
 	fmt.Println("=========== displayData.GenDisplay =============")
 	resp = sessctx.displayData.GenDisplay(sessctx)
+	//
+	if sessctx.saveState && len(sessctx.derr) == 0 {
+		err = sessctx.commitState()
+		if err != nil {
+			panic(err)
+		}
+	}
 	return resp, nil
 }
 

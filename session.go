@@ -94,8 +94,7 @@ type stateItemT struct {
 }
 
 func (s stateStack) pop() *stateRec {
-	st := s[len(s)-1]
-	return &st
+	return &s[len(s)-1]
 }
 
 func (ls *stateRec) activeRecipe() bool {
@@ -235,15 +234,15 @@ func (s *sessCtx) getState() (*stateRec, error) {
 		return &stateRec{}, nil
 	}
 	//
-	stateItem := stateItemT{}
-	err = dynamodbattribute.UnmarshalMap(result.Item, &stateItem)
+	stateItem := &stateItemT{}
+	err = dynamodbattribute.UnmarshalMap(result.Item, stateItem)
 	if err != nil {
 		return nil, err
 	}
 	s.state = stateItem.State
 	lastState := stateItem.State.pop()
 	//
-	fmt.Println("getState: GetItem ConsumedCapacity: %#v\n", result.ConsumedCapacity)
+	fmt.Println("getState: ConsumedCapacity:\n", result.ConsumedCapacity)
 	return lastState, nil
 }
 
@@ -258,7 +257,7 @@ func (s *sessCtx) setSessionState(ls *stateRec) {
 	// 		s.displayData = w
 	// 	}
 	// }
-	fmt.Printf("** in setState()")
+	fmt.Printf("** Enter setSessionState()")
 	if len(ls.Request) > 0 {
 		s.lastreq = ls.Request
 	}
@@ -507,58 +506,17 @@ func (s *sessCtx) setSessionState(ls *stateRec) {
 	//
 }
 
-// func (s *sessCtx) incrSelectCtx(ls *stateRec) {
-// 	//
-// 	//  moves "select context" (selCtx) forward based on last session state
-// 	//
-// 	fmt.Println("in incrSelectCtx: selId = ", s.selId)
-// 	if s.selId > 0 {
-// 		fmt.Println("Before selCtx = ", s.selCtx)
-// 		fmt.Println("Before selId = ", s.selId)
-// 		fmt.Println("Before object = ", s.object)
-// 		switch {
-
-// 		// case s.request == "select" && len(ls.Parts) > 0 && len(ls.Part) == 0:
-// 		// 	s.selCtx = ctxPartMenu
-// 		// 	fmt.Println("in SetState: selCtx = ctxPartMenu")
-// 		// case s.request == "select" && s.selId == len(s.menuL):
-// 		// 	s.selCtx = ctxObjectMenu // if Part Menu is required that is determined in the selId item.
-// 		// 	fmt.Println("in SetState: selCtx = ctxPartMenu")
-// 		// case ls.SelCtx == ctxObjectMenu && s.request == "scale" && len(ls.Ingredients) > 0:
-// 		// 	s.selCtx = ctxObjectMenu
-// 		// 	s.ingrdList = ls.Ingredients
-// 		// 	fmt.Println("in setState: s.selCtx = ", s.selCtx)
-// 		// case ls.SelCtx == ctxObjectMenu && len(ls.Ingredients) > 0:
-// 		// 	s.selCtx = ctxObjectMenu
-// 		// 	s.ingrdList = ls.Ingredients
-// 		// 	fmt.Println("in setState: s.selCtx = ", s.selCtx)
-// 		case ls.SelCtx == ctxRecipeMenu && len(s.reqRName) > 0:
-// 			s.selCtx = ctxObjectMenu
-// 			fmt.Println("in SetState: selCtx = ctxObjectMenu")
-// 		}
-// 		fmt.Println("After selCtx = ", s.selCtx)
-// 		fmt.Println("After selId = ", s.selId)
-// 		fmt.Println("After object = ", s.object)
-
-// 	}
-
-// }
-
-func (s *sessCtx) pushState() (*stateRec, error) {
+func (s *sessCtx) pushState() {
 	// equivalent to a push operation for a stack (state data in this case)
 	type pKey struct {
 		PKey string
 	}
-
-	var (
-		sr      stateRec
-		updateC expression.UpdateBuilder
-	)
-	fmt.Println("Entered pushState..")
-
-	// copy statevfrom session context
-	//sr.Path = s.path
-	//sr.Param = s.param
+	var sr stateRec
+	s.saveState = true
+	fmt.Println("Entered pushState ")
+	//
+	// copy bits of session data to state that you want preserved
+	//
 	sr.DT = time.Now().Format("Jan 2 15:04:05")
 	sr.RId = s.reqRId       // Recipe Id
 	sr.BkId = s.reqBkId     // Book Id
@@ -635,248 +593,43 @@ func (s *sessCtx) pushState() (*stateRec, error) {
 		sr.Welcome = s.welcome
 	}
 	//
-	State := make(stateStack, 1)
-	State[0] = sr
-	// add to session context state
 	s.state = append(s.state, sr)
 	//
-	if s.origreq == "list" {
-		s.updateState_()
-		return nil, nil
-	}
-	//
-	// if s.origreq == "list" {
-	// 	// in memory state has been pushed to, but don't save just
-	// 	fmt.Println("pushState: no IO : ConsumedCapacity: 0", result.ConsumedCapacity)
-	// 	return nil, nil
-	// }
-	t := time.Now()
-	t.Add(time.Hour * 52 * 1)
-	updateC = expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
-	//updateC = expression.Set(expression.Name("arqid"), expression.Value(s.alxReqId))
-	//updateC = expression.Set(expression.Name("irqid"), expression.Value(s.invkReqId))
-	if s.newSession {
-		//.RecId = [4]int{}
-		//s.state = State[:]
-		updateC = updateC.Set(expression.Name("state"), expression.Value(State))
-		s.newSession = false
-	} else if len(s.state) > 12 {
-		fmt.Println("> 12.. : ", State)
-		updateC = updateC.Set(expression.Name("state"), expression.Value(s.state[len(s.state)-8:]))
-	} else {
-		updateC = updateC.Set(expression.Name("state"), expression.ListAppend(expression.Name("state"), expression.Value(State)))
-	}
-	expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
-	if err != nil {
-		return nil, err
-	}
-	pkey := pKey{PKey: s.userId}
-	av, err := dynamodbattribute.MarshalMap(&pkey)
-	input := &dynamodb.UpdateItemInput{
-		TableName:                 aws.String("Sessions"),
-		Key:                       av, // accepts []map[]*attributeValues so must use marshal not expression
-		UpdateExpression:          expr.Update(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-		ReturnValues:              aws.String("UPDATED_NEW"),
-	}
-	input.SetReturnConsumedCapacity("TOTAL")
-	//
-	result, err := s.dynamodbSvc.UpdateItem(input)
-	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			case dynamodb.ErrCodeProvisionedThroughputExceededException:
-				fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
-			case dynamodb.ErrCodeResourceNotFoundException:
-				fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
-			case dynamodb.ErrCodeInternalServerError:
-				fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
-			default:
-				fmt.Println(aerr.Error())
-			}
-		} else {
-			// Print the error, cast err to awserr.Error to get the Code and
-			// Message from an error.
-			fmt.Println(err.Error())
-		}
-		return nil, err
-	}
-	st := stateItemT{}
-	err = dynamodbattribute.UnmarshalMap(result.Attributes, &st)
-	if err != nil {
-		return nil, fmt.Errorf("Error: %s %s", "in UnmarshalMap in updateState ", err.Error())
-	}
-	s.state = st.State
-	fmt.Println("pushState: UpdateItem: ConsumedCapacity: %#v\n", result.ConsumedCapacity)
-	return &sr, nil
+	fmt.Println("Exit pushState ")
 }
 
-func (s *sessCtx) pushState_() {
-	// equivalent to a push operation for a stack (state data in this case)
-	type pKey struct {
-		PKey string
-	}
-
-	var (
-		sr stateRec
-		//updateC expression.UpdateBuilder
-	)
-	fmt.Println("Entered pushState_ (not saved)")
-
-	// copy statevfrom session context
-	//sr.Path = s.path
-	//sr.Param = s.param
-	sr.DT = time.Now().Format("Jan 2 15:04:05")
-	sr.RId = s.reqRId       // Recipe Id
-	sr.BkId = s.reqBkId     // Book Id
-	sr.BkName = s.reqBkName // Book name - saves a lookup under some circumstances
-	sr.RName = s.reqRName   // Recipe name - saves a lookup under some circumstances
-	sr.SwpBkNm = s.swapBkName
-	sr.SwpBkId = s.swapBkId
-	sr.Request = s.request // Request e.g.next, prev, repeat, modify)
-	sr.ReqType = s.curReqType
-	sr.Serves = s.serves
-	sr.Qid = s.questionId // Question id	for k,v:=range objectMap {
-	sr.Obj = s.object     // Object - to which operation (listing) apply
-	sr.Ingredients = s.ingrdList
-	sr.Ver = s.reqVersion
-	sr.EOL = s.eol // last RecId of current list. Used to determine when last record is reached or exceeded in the case of goto operation
-	sr.Dmsg = s.dmsg
-	sr.Vmsg = s.vmsg
-	sr.DData = s.ddata
-	sr.OpenBk = s.reqOpenBk
-	sr.Authors = s.authors
-	//
-	// Record id across objects
-	//
-	if s.reset {
-		sr.RecId = [4]int{0, 0, 0, 0}
-	} else {
-		sr.RecId = s.recId
-	}
-	// search
-	//
-	sr.Search = s.reqSearch
-	sr.RecipeList = s.recipeList
-	//
-	// select
-	//
-	sr.SelCtx = s.selCtx // select a recipe or other which is (ingred, task, container, utensil)
-	sr.SelId = s.selId   //
-	//
-	// Recipe Part related data
-	//
-	sr.Parts = s.parts
-	sr.Part = s.part
-	if d, ok := s.displayData.(Threads); ok {
-		// don't save actual instructions as it costs to many write units.
-		x := make(Threads, len(d))
-		for i := 0; i < len(d); i++ {
-			x[i] = d[i]
-			x[i].Instructions = nil
-		}
-		sr.InstructionData = x
-	}
-	sr.CThread = s.cThread
-	sr.OThread = s.oThread
-	sr.ShowObjMenu = s.showObjMenu
-	//sr.ObjMenu = s.ObjMenu
-	if len(s.menuL) > 0 {
-		sr.MenuL = s.menuL
-	}
-	if s.dispCtr == nil {
-		fmt.Printf("pushState: s.dispCtr is nil\n")
-	} else {
-		fmt.Printf("pushState: s.dispCtr %#v\n", s.dispCtr)
-	}
-	if s.dispCtr != nil {
-		//sr.DispCtr = *(s.dispCtr)
-		sr.DispCtr = s.dispCtr
-	}
-	sr.ScaleF = global.GetScale()
-	//
-	// if s.display != nil {
-	// 	sr.Display = *(s.display)
-	// }
-	if s.welcome != nil {
-		sr.Welcome = s.welcome
-	}
-	//
-	State := make(stateStack, 1)
-	State[0] = sr
-	// add to session context state
-	s.state = append(s.state, sr)
-	//
-}
-
-func (s *sessCtx) updateState() error {
-
-	type pKey struct {
-		PKey string
-	}
-	if s.origreq == "list" {
-		s.updateState_()
-		return nil
-	}
-	var updateC expression.UpdateBuilder
-	var atribute string
-	//
-
+func (s *sessCtx) updateState() {
 	//
 	// update RecId attribute of latest state item
 	//
 	fmt.Println("entered updateState..")
-	t := time.Now()
-	t.Add(time.Hour * 24 * 1)
-	updateC = expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
+	s.saveState = true
 	//
 	// for current state
 	//
 	if len(s.state) == 0 {
 		// this case for new session. No UserId in session table so no state.
 		err := fmt.Errorf("s.state not set in UpdateState()")
-		return err
+		panic(err)
 	}
-	// for close book op only - shrink state slice down to 1
-	// if len(s.CloseBkName) > 0 { . // errors with ValidationException: Invalid UpdateExpression: Two document paths overlap with each other; must remove or rewrite one of these paths; path one: [state], path two: [state, [0], MenuL]
-	// 	State := s.state[:]
-	// 	updateC = expression.Set(expression.Name("state"), expression.Value(State))
-	// }
+	cs := len(s.state) - 1
 	if len(s.menuL) > 0 {
-		atribute = fmt.Sprintf("state[%d].MenuL", len(s.state)-1)
-		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.menuL))
+		s.state[cs].MenuL = s.menuL
 	}
-	fmt.Println("About to update ScaleF..")
-	// if scale changes then history must change to new value upto but not including last ingredients display or end of state list.
-
-	// change state upto and including objMenu
-	for scale, i := global.GetScale(), len(s.state)-1; i > 0; i-- {
-		fmt.Println("About to update ScaleF..2   i ", i)
-
-		atribute = fmt.Sprintf("state[%d].SF", i)
-		updateC = updateC.Set(expression.Name(atribute), expression.Value(scale))
-		fmt.Println(atribute, scale)
-		//
-		atribute = fmt.Sprintf("state[%d].Dim", i)
-		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.ctSize))
+	for scale, i := global.GetScale(), cs; i > 0; i-- {
+		s.state[i].ScaleF = scale
+		s.state[i].CtSize = s.ctSize
 		//
 		if s.dispCtr != nil {
-			atribute = fmt.Sprintf("state[%d].Dctr", i)
-			updateC = updateC.Set(expression.Name(atribute), expression.Value(s.dispCtr))
+			s.state[i].DispCtr = s.dispCtr
 		}
 		//
-		atribute = fmt.Sprintf("state[%d].RecId", i)
-		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId))
-		//
-		atribute = fmt.Sprintf("state[%d].CThrd", i)
-		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.cThread))
-		atribute = fmt.Sprintf("state[%d].OThrd", i)
-		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.oThread))
+		s.state[i].RecId = s.recId
+		s.state[i].CThread = s.cThread
+		s.state[i].OThread = s.oThread
 		//
 		if len(s.part) > 0 {
-			atribute = fmt.Sprintf("state[%d].Part", i)
-			updateC = updateC.Set(expression.Name(atribute), expression.Value(s.part))
+			s.state[i].Part = s.part
 		}
 		if s.state[i].ShowObjMenu {
 			break
@@ -884,119 +637,28 @@ func (s *sessCtx) updateState() error {
 	}
 	//
 	if s.openBkChange {
-		atribute = fmt.Sprintf("state[%d].OpenBk", len(s.state)-1)
-		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.reqOpenBk))
+		s.state[cs].OpenBk = s.reqOpenBk
 		// when Bkids change
-		atribute = fmt.Sprintf("state[%d].Welc", len(s.state)-1)
-		updateC = updateC.Set(expression.Name(atribute), expression.Value(*(s.welcome)))
+		s.state[cs].Welcome = s.welcome
 	}
-	if len(s.state[len(s.state)-1].InstructionData) > 0 {
-		atribute = fmt.Sprintf("state[%d].I[%d].id", len(s.state)-1, s.cThread)
-		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.recId[objectMap[task_]]))
+	if len(s.state[cs].InstructionData) > 0 {
+		s.state[cs].InstructionData[s.cThread].Id = s.recId[objectMap[task_]]
 	}
 	if len(s.state[len(s.state)-1].Ingredients) > 0 && len(s.ingrdList) > 0 {
-		atribute = fmt.Sprintf("state[%d].ingrd", len(s.state)-1)
-		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.ingrdList))
+		s.state[cs].Ingredients = s.ingrdList
 	}
 	if s.request == "book" || s.request == "close" {
 		// don't record book open/close requests. Contents of reqOpenBk tells us about this request.
 		s.request = s.lastreq
 	}
-	atribute = fmt.Sprintf("state[%d].DT", len(s.state)-1)
-	updateC = updateC.Set(expression.Name(atribute), expression.Value(time.Now().Format("Jan 2 15:04:05")))
+	s.state[cs].DT = time.Now().Format("Jan 2 15:04:05")
 
 	if len(s.CloseBkName) > 0 {
-		atribute = fmt.Sprintf("state[%d].OpenBk", len(s.state)-1)
-		updateC = updateC.Set(expression.Name(atribute), expression.Value(s.reqOpenBk))
+		s.state[cs].OpenBk = s.reqOpenBk
 	}
-	// do not change Request value after it has been inserted.
-	// atribute = fmt.Sprintf("state[%d].Request", len(s.state)-1)
-	// updateC = updateC.Set(expression.Name(atribute), expression.Value(s.request))
-	//
-	expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
-	pkey := pKey{PKey: s.userId}
-	av, err := dynamodbattribute.MarshalMap(&pkey)
-	if err != nil {
-		return err
-	}
-	fmt.Println(" dynamodb.UpdateItemInput{ in updateState in sessions.go")
-	input := &dynamodb.UpdateItemInput{
-		TableName:                 aws.String("Sessions"),
-		Key:                       av, // accets []map[]*attributeValues so must use marshal not expression
-		UpdateExpression:          expr.Update(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-		ReturnValues:              aws.String("UPDATED_NEW"),
-	}
-	input.SetReturnConsumedCapacity("TOTAL")
-	//
-	result, err := s.dynamodbSvc.UpdateItem(input)
-	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			case dynamodb.ErrCodeProvisionedThroughputExceededException:
-				fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
-			case dynamodb.ErrCodeResourceNotFoundException:
-				fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
-			case dynamodb.ErrCodeInternalServerError:
-				fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
-			default:
-				fmt.Println("error in UpdateItem: ")
-				fmt.Println(aerr.Error())
-			}
-		} else {
-			// Print the error, cast err to awserr.Error to get the Code and
-			// Message from an error.
-			fmt.Println("error in UpdateItem:2 ")
-			fmt.Println(err.Error())
-		}
-		fmt.Println("error in UpdateItem:3 ")
-		fmt.Println(err.Error())
-		return err
-	}
-	//
-	st := stateItemT{}
-	err = dynamodbattribute.UnmarshalMap(result.Attributes, &st)
-	if err != nil {
-		return fmt.Errorf("Error: %s %s", "in UnmarshalMap in updateState ", err.Error())
-	}
-	s.state = st.State
-	//}
-	// }
-	fmt.Println("UpdateState: UpdateItem: ConsumedCapacity: %#v\n", result.ConsumedCapacity)
-	return nil
 }
 
-func (s *sessCtx) updateState_() {
-	//
-	// only to be used for instructions (for the moment)
-	//
-	type pKey struct {
-		PKey string
-	}
-	fmt.Println("******* . entered updateState_ .  *******  len(s.state) =  ", len(s.state))
-	//
-	// update s.state before saving
-	//
-	for i := len(s.state) - 1; i > 0; i-- {
-		fmt.Printf("updating s.state[%d].RecId %#v \n", i, s.recId)
-		s.state[i].RecId = s.recId
-		fmt.Printf("updating s.state[%d].CThread %#v \n", i, s.cThread)
-		s.state[i].CThread = s.cThread
-		s.state[i].OThread = s.oThread
-
-		if s.state[i].ShowObjMenu {
-			break
-		}
-	}
-	fmt.Println("now updating InstrucitonData..")
-	if len(s.state[len(s.state)-1].InstructionData) > 0 {
-		s.state[len(s.state)-1].InstructionData[s.cThread].Id = s.recId[objectMap[task_]]
-	}
-
-}
-
-func (s *sessCtx) saveState_() error {
+func (s *sessCtx) commitState() error {
 	//
 	// save s.state
 	//
@@ -1010,7 +672,7 @@ func (s *sessCtx) saveState_() error {
 	//
 	pkey := pKey{PKey: s.userId}
 	av, err := dynamodbattribute.MarshalMap(&pkey)
-
+	//
 	input := &dynamodb.UpdateItemInput{
 		TableName:                 aws.String("Sessions"),
 		Key:                       av, // accets []map[]*attributeValues so must use marshal not expression
@@ -1041,7 +703,7 @@ func (s *sessCtx) saveState_() error {
 		return err
 	}
 	//
-	fmt.Println("UpdateState_: UpdateItem: ConsumedCapacity: %#v\n", result.ConsumedCapacity)
+	fmt.Println("commitState: ConsumedCapacity: \n", result.ConsumedCapacity)
 	return nil
 }
 
@@ -1060,80 +722,28 @@ func (s *sessCtx) popState() error {
 		sr    *stateRec
 		State stateStack
 	)
-
+	s.saveState = true
 	fmt.Println("Entered popState()")
-	var updateC expression.UpdateBuilder
+
 	// get current state if not already sourced
 	if len(s.state) == 0 {
 		s.getState()
 	}
 	fmt.Println(" state size: ", len(s.state))
+	//
+	// pop state
+	//
 	if len(s.state) > 1 {
-		//
-		// pop state and persist to dynamo
-		//
+
 		State = s.state[:len(s.state)-1]
 		s.state = State[:]
-		fmt.Println("about to save state size: ", len(s.state))
-		//
-		t := time.Now()
-		t.Add(time.Hour * 24 * 1)
-		updateC = expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
-		// rewrite all but last state entry - this is how we delete from a list in dynamo. Here the list represents the state stack.
-		updateC = updateC.Set(expression.Name("state"), expression.Value(State))
-		expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
-		//
-		fmt.Println("using s.userid: ", s.userId)
-		pkey := pKey{PKey: s.userId}
-		av, err := dynamodbattribute.MarshalMap(&pkey)
-
-		input := &dynamodb.UpdateItemInput{
-			TableName:                 aws.String("Sessions"),
-			Key:                       av, // accets []map[]*attributeValues so must use marshal not expression
-			UpdateExpression:          expr.Update(),
-			ExpressionAttributeNames:  expr.Names(),
-			ExpressionAttributeValues: expr.Values(),
-			ReturnValues:              aws.String("UPDATED_NEW"),
-		}
-		input.SetReturnConsumedCapacity("TOTAL")
-		//
-		x, err := s.dynamodbSvc.UpdateItem(input)
-		if err != nil {
-			fmt.Println("Dyamo error in popstate 1: ", err.Error())
-			if aerr, ok := err.(awserr.Error); ok {
-				switch aerr.Code() {
-				case dynamodb.ErrCodeProvisionedThroughputExceededException:
-					fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
-				case dynamodb.ErrCodeResourceNotFoundException:
-					fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
-				case dynamodb.ErrCodeInternalServerError:
-					fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
-				default:
-					fmt.Println(aerr.Error())
-				}
-			} else {
-				// Print the error, cast err to awserr.Error to get the Code and
-				// Message from an error.
-				fmt.Println(err.Error())
-			}
-			fmt.Println("Dyamo error in popstate 2: ", err.Error())
-			return err
-		}
-		fmt.Println("popState: UpdateItem: ConsumedCapacity: %#v\n", x.ConsumedCapacity)
-		// pop last entry from session context state
-		//s.state = s.state[:len(s.state)-1]
-		fmt.Println("Successfully updateItem")
 		sr = State.pop()
 	} else {
 		sr = s.state.pop() //[len(s.state)-1]
 	}
-
 	//
-	fmt.Println("after dynamo: ")
 	// transfer state data to session context
-	//s.path = sr.Path
-	//s.param = sr.Param
-
+	//
 	s.reqRId = sr.RId       // Recipe Id
 	s.reqBkId = sr.BkId     // Book Id
 	s.reqBkName = sr.BkName // Book name - saves a lookup under some circumstances
@@ -1271,183 +881,5 @@ func (s *sessCtx) popState() error {
 	fmt.Printf("Popstate: s.reqBkId %s\n", s.reqBkId)
 	fmt.Printf("Popstate: s.reqRId %s\n", s.reqRId)
 	fmt.Printf("Popstate: s.request %s\n", s.request)
-	return nil
-}
-
-func (s *sessCtx) popState_() error {
-	//
-	// removes top entry in state attribute of dynamo session item.
-	//  populates session context with state data from the new top entry
-	//  (which was the penultimate entry before deletion)
-	//
-	// NB: must exit with s.displayData assigned - as this will route to GenDisplay to produce response.
-	//
-	type pKey struct {
-		PKey string
-	}
-	var (
-		sr    *stateRec
-		State stateStack
-	)
-
-	fmt.Println("*** . Entered popState_()")
-	// get current state if not already sourced
-	if len(s.state) == 0 {
-		s.getState()
-	}
-	fmt.Println(" state size: ", len(s.state))
-	if len(s.state) > 1 {
-		//
-		// pop state and persist to dynamo
-		//
-		fmt.Println("popState_()  before len(s.state) = ", len(s.state))
-		State = s.state[:len(s.state)-1]
-		s.state = State[:]
-		fmt.Println("popState_() after len(s.state) = ", len(s.state))
-		sr = State.pop()
-	} else {
-		sr = s.state.pop() //[len(s.state)-1]
-	}
-	// transfer state data to session context
-	//s.path = sr.Path
-	//s.param = sr.Param
-
-	s.reqRId = sr.RId       // Recipe Id
-	s.reqBkId = sr.BkId     // Book Id
-	s.reqBkName = sr.BkName // Book name - saves a lookup under some circumstances
-	s.reqRName = sr.RName   // Recipe name - saves a lookup under some circumstances
-	s.swapBkName = sr.SwpBkNm
-	s.swapBkId = sr.SwpBkId
-	s.request = sr.Request // Request e.g.next, prev, repeat, modify)
-	s.curReqType = sr.ReqType
-	s.serves = sr.Serves
-	//	s.questionId = sr.Qid // Question id	for k,v:=range objectMap {
-	s.object = sr.Obj  // Object - to which operation (listing) apply
-	s.recId = sr.RecId //s.recId     // current record in object list. (SortK in Recipe table)
-	s.reqVersion = sr.Ver
-	s.eol = sr.EOL // last RecId of current list. Used to determine when last record is reached or exceeded in the case of goto operation
-	s.dmsg = sr.Dmsg
-	s.vmsg = sr.Vmsg
-	s.ddata = sr.DData
-	s.authors = sr.Authors
-	s.showObjMenu = sr.ShowObjMenu
-	//
-	if len(sr.OpenBk) > 0 {
-		bk := strings.Split(string(sr.OpenBk), "|")
-		fmt.Printf("popstate: open bk %#v\n", bk)
-		s.reqBkId, s.reqBkName, s.authors = bk[0], bk[1], bk[2]
-		s.authorS = strings.Split(s.authors, ",")
-		s.reqOpenBk = sr.OpenBk
-	}
-	//
-	s.ingrdList = sr.Ingredients
-	//
-	// Record id across objects
-	//
-	s.recId = sr.RecId
-	// search
-	//
-	s.reqSearch = sr.Search
-	s.recipeList = sr.RecipeList
-	//
-	// select
-	//
-	s.selCtx = sr.SelCtx // select a recipe or other which is (ingred, task, container, utensil)
-	s.selId = sr.SelId   //
-	//
-	// Recipe Part related data
-	//
-	s.parts = sr.Parts
-	s.part = sr.Part
-	//
-	//s.peol = sr.PEOL
-	//s.pid = sr.PId
-	//
-	// Display Menu choices
-	//
-	// s.dispObjectMenu = sr.DispObjectMenu
-	// s.dispIngredients = sr.DispIngredients
-	// s.dispContainers = sr.DispContainers
-	// s.dispPartMenu = sr.DispPartMenu
-	//
-	//
-	s.displayData = s.parts
-
-	if len(sr.InstructionData) > 0 {
-		fmt.Println("displayData = InstructionData")
-		x, err := s.loadInstructions()
-		if err != nil {
-			panic(err)
-		}
-		y := sr.InstructionData
-		for i := 0; i < len(x); i++ {
-			x[i].Id = y[i].Id
-		}
-		s.displayData = x
-	}
-	if s.ctSize == 0 && sr.CtSize > 0 {
-		s.ctSize = sr.CtSize
-	}
-	if len(sr.Ingredients) > 0 {
-		fmt.Println("displayData = Ingredients")
-		s.displayData = sr.Ingredients
-	}
-	if len(sr.RecipeList) > 0 {
-		fmt.Println("displayData = RecipeList")
-		s.displayData = sr.RecipeList
-	}
-	if sr.ShowObjMenu {
-		fmt.Println("displayData = showObjMenu")
-		s.displayData = objMenu
-		//		s.showObjMenu = sr.ShowObjMenu
-	}
-	// if sr.Request == "book" && len(sr.OpenBk) > 0 { // book request value not saved in session - as it is
-	// 	s.displayData = s.reqOpenBk
-	// }
-	// if sr.Request == "book/close" && len(sr.OpenBk) > 0 {
-	// 	s.displayData = s.reqOpenBk
-	//
-	if len(sr.MenuL) > 0 {
-		s.menuL = sr.MenuL
-	}
-	//s.dispCtr = &sr.DispCtr
-	s.dispCtr = sr.DispCtr
-	if sr.ScaleF == 0 {
-		global.SetScale(1.0)
-	} else {
-		global.SetScale(sr.ScaleF)
-	}
-	s.pkey = s.reqBkId + "-" + s.reqRId
-	//
-	// set displayData - important to do this as "back" will rely on popstate() to determine apl display to show
-	//
-	// do we use Request or Display to drive off - only one need be used, but will persis with Request for time being until
-	// Display is fully implemented (if ever)
-	//if sr.Request == "start" && sr.Display.Type != 0 && s.displayData == nil {
-	// if sr.Request == "start" {
-	// 	fmt.Println(" ** back now in start")
-	// 	s.display = &sr.Display
-	// 	fmt.Printf("s.display = %#v\n", s.display)
-	// 	var w WelcomeT
-	// 	s.displayData = w
-	// }
-	if sr.Request == "start" {
-		fmt.Printf("displayData = Welcome = %#v\n", *(sr.Welcome))
-		s.welcome = sr.Welcome // used in close book op
-		s.displayData = sr.Welcome
-
-	}
-	// switch s.display.Type {
-	// case WELCOME:
-	// 	var w WelcomeT
-	// 	s.displayData = w
-	// }
-
-	fmt.Printf("Popstate_: parts %#v\n", s.parts)
-	fmt.Println("Popstate_: sr.showOBjMenu ", sr.ShowObjMenu)
-	fmt.Printf("Popstate_: sr.RecipeList %#v\n", sr.RecipeList)
-	fmt.Printf("Popstate_: s.reqBkId %s\n", s.reqBkId)
-	fmt.Printf("Popstate_: s.reqRId %s\n", s.reqRId)
-	fmt.Printf("Popstate_: s.request %s\n", s.request)
 	return nil
 }
