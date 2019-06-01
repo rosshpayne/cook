@@ -324,7 +324,9 @@ func (s *sessCtx) orchestrateRequest() error {
 	// alexa launch request
 	//
 	if s.request == "start" {
-		fmt.Println("start...")
+		s.request = lastState.Request
+		fmt.Println("in start...")
+		fmt.Println("s.request = ", s.request)
 		switch wx := s.displayData.(type) {
 		case Threads:
 			fmt.Println("request start: displayData: Threads")
@@ -793,7 +795,9 @@ func (s *sessCtx) orchestrateRequest() error {
 			s.selCtx = ctxRecipeMenu
 			s.selId = 0
 			fmt.Printf("recipe List found [%#v]\n", s.recipeList)
-			s.pushState()
+			if s.origreq != "start" {
+				s.pushState()
+			}
 			return nil
 		}
 	}
@@ -863,7 +867,7 @@ func (s *sessCtx) orchestrateRequest() error {
 	//
 	// respond to select from displayed items
 	//
-	if s.request == "select" || s.request == "start" { //&& s.selId > 0 { selId==0 when partmenu is being displayed from start
+	if s.request == "select" { //|| s.request == "start" { //&& s.selId > 0 { selId==0 when partmenu is being displayed from start
 		// selId is the response from Alexa on the index (ordinal value) of the selected display item
 		fmt.Println("SELCTX is : ", s.selCtx)
 
@@ -982,13 +986,16 @@ func (s *sessCtx) orchestrateRequest() error {
 						if err != nil {
 							return err
 						}
+						fmt.Printf("receipeRSearch returned: %#v", r)
 					} else {
 						rId, err := strconv.Atoi(s.reqRId)
 						if err != nil {
 							return fmt.Errorf("%s. Converting reqRId  [%s] to int - %s", "main", s.reqRId, err.Error())
 						}
-						r = &RecipeT{PKey: "R-" + s.reqBkId, SortK: rId, RName: s.reqRName}
+						r = &RecipeT{PKey: "R-" + s.reqBkId, SortK: rId, RName: s.reqRName, Part: s.parts}
+						fmt.Printf("not-receipRSearch created: %#v", r)
 					}
+					fmt.Printf("receipeRSearch returned: %#v", r)
 					// set unit formating mode
 					global.Set_WriteCtx(global.UPrint)
 					// load recipe data, part metadata, containers etc
@@ -996,6 +1003,7 @@ func (s *sessCtx) orchestrateRequest() error {
 					if err != nil {
 						return err
 					}
+					fmt.Println("ingredient_: num Activities = ", len(as))
 					// generate ingredient listing
 					global.Set_WriteCtx(global.UIngredient)
 					s.ingrdList = IngredientT(as.String(r))
@@ -1008,7 +1016,8 @@ func (s *sessCtx) orchestrateRequest() error {
 						s.pushState()
 					}
 
-				case "start", "list":
+				//case "start", "list":
+				case "list":
 					s.ingrdList = IngredientT(s.ingrdList)
 				}
 				//
@@ -1063,6 +1072,9 @@ func (s *sessCtx) orchestrateRequest() error {
 				s.part = CompleteRecipe_
 			default:
 				s.part = s.parts[s.selId-2].Title
+				if s.parts[s.selId-2].Type_ == "Div" {
+					s.cThread, s.oThread = 0, 0
+				}
 			}
 			// zero index into instructions if part changed
 			if s.part != curPart {
@@ -1140,8 +1152,8 @@ func handler(ctx context.Context, request InputEvent) (RespEvent, error) {
 	pathItem = request.PathItem
 	lc, _ := lambdacontext.FromContext(ctx)
 	alxreqid := strings.Split(request.QueryStringParameters["reqId"], ".")
-	fmt.Println("Alexa reqId : ", request.QueryStringParameters["reqId"])
-	fmt.Println("invoke reqId : ", lc.AwsRequestID)
+	// fmt.Println("Alexa reqId : ", request.QueryStringParameters["reqId"])
+	// fmt.Println("invoke reqId : ", lc.AwsRequestID)
 
 	// var body string
 	// create a new session context and merge with last session data if present.
@@ -1155,7 +1167,6 @@ func handler(ctx context.Context, request InputEvent) (RespEvent, error) {
 		//path:        request.Path,
 		//param:       request.Param,
 	}
-	fmt.Printf("%#v\n", sessctx)
 	//
 	// Three request types:
 	//   * initialiseRequest - all requests associated with listing recipe related data

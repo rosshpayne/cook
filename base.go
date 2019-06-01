@@ -22,6 +22,7 @@ func (s *sessCtx) loadActivities() (Activities, error) {
 	//
 	// Table:  Activity
 	//
+	fmt.Println("entered loadActivities: PKey=", "A-"+s.pkey)
 	kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value("A-"+s.pkey))
 	expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
 	if err != nil {

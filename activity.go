@@ -61,11 +61,11 @@ type RecipeT struct {
 	SortK int    `json:"PKey"`
 	RName string `json:"RName"`
 	//Title  string   `json:"Title"`
-	Index    []string `json:"Index"`
-	Serves   string   `json:"Srv"`
-	Part     []PartT  `json:"Part"`   // order list of recipe parts. Load will prepend "nopart_" if parts are detected in Activities and some are not assigned part.
-	Division []PartT  `json:"Div"`    // order list of recipe divisions. Divisions apply at the instruction level rather than ingredient. Example, All instructions that can be done the day-before.
-	Thread   []PartT  `json:"Thread"` // List of thread names for each thread index.
+	Index  []string `json:"Index"`
+	Serves string   `json:"Srv"`
+	Part   []PartT  `json:"Part"` // order list of recipe parts. Load will prepend "nopart_" if parts are detected in Activities and some are not assigned part.
+	// Division []PartT  `json:"Div"`    // order list of recipe divisions. Divisions apply at the instruction level rather than ingredient. Example, All instructions that can be done the day-before.
+	// Thread   []PartT  `json:"Thread"` // List of thread names for each thread index.
 }
 
 // type Part struct {
@@ -952,6 +952,7 @@ func (a Activity) String() string {
 
 func (as Activities) String(r *RecipeT) string {
 	// map of parts containing activities
+	fmt.Println("entered Actvities.String:")
 	partM := make(map[string][]*Activity)
 	// find if there are any parts to recipe
 	for a := &as[0]; a != nil; a = a.next {
@@ -963,7 +964,9 @@ func (as Activities) String(r *RecipeT) string {
 			partM["nopart_"] = append(partM["nopart_"], a)
 		}
 	}
+	fmt.Println("PartM: ", partM)
 	var b strings.Builder
+	fmt.Println("r.Part: ", r.Part)
 	if len(r.Part) == 0 {
 		//legacy code - Recipe not divided into parts.
 		for _, a := range partM["nopart_"] {
@@ -975,7 +978,7 @@ func (as Activities) String(r *RecipeT) string {
 	}
 	// r.Part is an ordered list of recipe parts
 	for _, v := range r.Part {
-
+		fmt.Println("Actvities.String: part ", v)
 		if len(v.Title) > 0 {
 			var l []string
 			var p string

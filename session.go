@@ -727,7 +727,10 @@ func (s *sessCtx) popState() error {
 
 	// get current state if not already sourced
 	if len(s.state) == 0 {
-		s.getState()
+		_, err := s.getState()
+		if err != nil {
+			return err
+		}
 	}
 	fmt.Println(" state size: ", len(s.state))
 	//

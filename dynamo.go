@@ -640,7 +640,7 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 		GenerateEntries(pre)
 	}
 	//
-	// index using index attribute from recipe item
+	// index using index attribute from recipe item //TODO is this necessary as index make not be useful.
 	//
 	index := s.recipe.Index
 	for _, entry := range index {
@@ -858,12 +858,12 @@ func (s *sessCtx) recipeRSearch() (*RecipeT, error) {
 	for _, v := range s.parts {
 		v.Type_ = "Pt"
 	}
-	for _, v := range rec.Division {
-		s.parts = append(s.parts, PartT{Title: v.Title, Type_: "Div", Index: v.Index})
-	}
-	for _, v := range rec.Thread {
-		s.parts = append(s.parts, PartT{Title: v.Title, Type_: "Thrd", Index: v.Index})
-	}
+	// for _, v := range rec.Division {
+	// 	s.parts = append(s.parts, PartT{Title: v.Title, Type_: "Div", Index: v.Index})
+	// }
+	// for _, v := range rec.Thread {
+	// 	s.parts = append(s.parts, PartT{Title: v.Title, Type_: "Thrd", Index: v.Index})
+	// }
 	fmt.Println("Exit recipeRSearch ")
 	return rec, nil
 }
@@ -956,12 +956,13 @@ func (s *sessCtx) keywordSearch(srch string) error {
 				ExpressionAttributeNames:  expr.Names(),
 				ExpressionAttributeValues: expr.Values(),
 			}
-			input = input.SetTableName("Ingredient").SetConsistentRead(false)
+			input = input.SetTableName("Ingredient").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
 			//
 			result, err = s.dynamodbSvc.Query(input)
 			if err != nil {
 				return fmt.Errorf("Error: %s [%s] %s", "in Query in keywordSearch of ", s.reqBkId, err.Error())
 			}
+			fmt.Println("keywordSearch: Query ConsumedCapacity: \n", result.ConsumedCapacity)
 			input = input.SetTableName("Ingredient").SetConsistentRead(false)
 			//
 			result, err = s.dynamodbSvc.Query(input)
