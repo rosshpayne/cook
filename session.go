@@ -50,6 +50,7 @@ type stateRec struct {
 	// search
 	//
 	Search     string
+	RSearch    bool
 	RecipeList RecipeListT // recipes menu, recipe-part menu,
 	//
 	// select
@@ -501,6 +502,7 @@ func (s *sessCtx) setSessionState(ls *stateRec) {
 			panic(err)
 		}
 	}
+	s.rsearch = ls.RSearch
 	fmt.Println("s.cThread ", s.cThread)
 	fmt.Println("Exit setState()............")
 	//
@@ -537,6 +539,7 @@ func (s *sessCtx) pushState() {
 	sr.DData = s.ddata
 	sr.OpenBk = s.reqOpenBk
 	sr.Authors = s.authors
+	sr.RSearch = s.rsearch
 	//
 	// Record id across objects
 	//
@@ -636,6 +639,8 @@ func (s *sessCtx) updateState() {
 		}
 	}
 	//
+	s.state[cs].RSearch = s.rsearch
+
 	if s.openBkChange {
 		s.state[cs].OpenBk = s.reqOpenBk
 		// when Bkids change
@@ -794,6 +799,8 @@ func (s *sessCtx) popState() error {
 	//
 	s.parts = sr.Parts
 	s.part = sr.Part
+	//
+	s.rsearch = sr.RSearch
 	//
 	//s.peol = sr.PEOL
 	//s.pid = sr.PId

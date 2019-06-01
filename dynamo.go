@@ -858,12 +858,13 @@ func (s *sessCtx) recipeRSearch() (*RecipeT, error) {
 	for _, v := range s.parts {
 		v.Type_ = "Pt"
 	}
-	// for _, v := range rec.Division {
-	// 	s.parts = append(s.parts, PartT{Title: v.Title, Type_: "Div", Index: v.Index})
-	// }
-	// for _, v := range rec.Thread {
-	// 	s.parts = append(s.parts, PartT{Title: v.Title, Type_: "Thrd", Index: v.Index})
-	// }
+	for _, v := range rec.Division {
+		s.parts = append(s.parts, PartT{Title: v.Title, Type_: "Div", Index: v.Index})
+	}
+	for _, v := range rec.Thread {
+		s.parts = append(s.parts, PartT{Title: v.Title, Type_: "Thrd", Index: v.Index})
+	}
+	s.rsearch = true
 	fmt.Println("Exit recipeRSearch ")
 	return rec, nil
 }

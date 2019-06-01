@@ -68,6 +68,7 @@ type sessCtx struct {
 	recId       [4]int   // record id for each object (ingredient, container, utensils, containers). No display will use verbal for all object listings.
 	pkey        string   // primary key
 	recipe      *RecipeT //  record from dynamo recipe query
+	rsearch     bool     // searchR
 	swapBkName  string
 	swapBkId    string
 	authorS     []string
@@ -887,6 +888,7 @@ func (s *sessCtx) orchestrateRequest() error {
 				// s.vmsg = fmt.Sprintf(`Now that you have selected {%s] recipe would you like to list ingredients, cooking instructions, utensils or containers or cancel`, s.reqRName)
 				// chosen recipe, so set select context to object (ingredient, utensil, container, tas			s.selCtx = ctxObjectMenu
 				//
+				s.parts = nil
 				_, err := s.recipeRSearch()
 				if err != nil {
 					return err
@@ -979,9 +981,9 @@ func (s *sessCtx) orchestrateRequest() error {
 					if s.reqVersion != "" {
 						s.pkey += "-" + s.reqVersion
 					}
-					// if recipe name is not known get it
+					//if recipe name is not known get it
 					var r *RecipeT
-					if len(s.reqRName) == 0 {
+					if len(s.reqRName) == 0 || s.recipe == nil {
 						r, err = s.recipeRSearch()
 						if err != nil {
 							return err

@@ -61,11 +61,11 @@ type RecipeT struct {
 	SortK int    `json:"PKey"`
 	RName string `json:"RName"`
 	//Title  string   `json:"Title"`
-	Index  []string `json:"Index"`
-	Serves string   `json:"Srv"`
-	Part   []PartT  `json:"Part"` // order list of recipe parts. Load will prepend "nopart_" if parts are detected in Activities and some are not assigned part.
-	// Division []PartT  `json:"Div"`    // order list of recipe divisions. Divisions apply at the instruction level rather than ingredient. Example, All instructions that can be done the day-before.
-	// Thread   []PartT  `json:"Thread"` // List of thread names for each thread index.
+	Index    []string `json:"Index"`
+	Serves   string   `json:"Srv"`
+	Part     []PartT  `json:"Part"`   // order list of recipe parts. Load will prepend "nopart_" if parts are detected in Activities and some are not assigned part.
+	Division []PartT  `json:"Div"`    // order list of recipe divisions. Divisions apply at the instruction level rather than ingredient. Example, All instructions that can be done the day-before.
+	Thread   []PartT  `json:"Thread"` // List of thread names for each thread index.
 }
 
 // type Part struct {

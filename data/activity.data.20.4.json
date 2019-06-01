@@ -81,6 +81,7 @@
                 "SortK" : { "N": "4"},
                 "RName" : { "S": "Rhubarb and strawberry crumble cake"},
                 "Srv" : { "S" :"12" },
+                "Index" : { "SS" : ["tartx", "tarty tartz"] },
                 "Part" : { "L" : [
                                 { "M" : { 
                                   "Idx" : { "S" : "cr"},
