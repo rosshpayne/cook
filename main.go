@@ -722,8 +722,9 @@ func (s *sessCtx) orchestrateRequest() error {
 
 		fmt.Println("Search.....", s.reqSearch)
 		fmt.Println("Before BookId, RecipeId ", s.reqBkId, s.reqRId)
+		//
 		s.recipeList = nil
-		// remove superflous stuff
+		//
 		//s.recipeMap = make(mRecipeM)
 		srch := s.reqSearch
 		// full search for recipe name
@@ -733,17 +734,17 @@ func (s *sessCtx) orchestrateRequest() error {
 		}
 		//
 		f := strings.Fields(s.reqSearch)
-		if len(s.recipeList) == 0 {
-			// reverse words
-			switch len(f) {
-			case 2:
-				err = s.keywordSearch(f[1] + " " + f[0])
-			case 3:
-				err = s.keywordSearch(f[2] + " " + f[1] + " " + f[0])
-			}
-			if err != nil {
-				return err
-			}
+		//
+		// reverse words - even if found previously
+		//
+		switch len(f) {
+		case 2:
+			err = s.keywordSearch(f[1] + " " + f[0])
+		case 3:
+			err = s.keywordSearch(f[2] + " " + f[1] + " " + f[0])
+		}
+		if err != nil {
+			return err
 		}
 		//
 		if len(s.recipeList) == 0 {
@@ -881,7 +882,7 @@ func (s *sessCtx) orchestrateRequest() error {
 					s.derr = "selection is not within range"
 					return nil
 				}
-
+				s.rsearch = false
 				p := s.recipeList[s.selId-1]
 				s.reqRId, s.reqRName, s.reqBkId, s.reqBkName = p.RId, p.RName, p.BkId, p.BkName
 				// s.dmsg = fmt.Sprintf(`Now that you have selected [%s] recipe would you like to list ingredients, cooking instructions, utensils or containers or cancel`, s.reqRName)
@@ -983,21 +984,14 @@ func (s *sessCtx) orchestrateRequest() error {
 					}
 					//if recipe name is not known get it
 					var r *RecipeT
+					r = s.recipe
 					if len(s.reqRName) == 0 || s.recipe == nil {
 						r, err = s.recipeRSearch()
 						if err != nil {
 							return err
 						}
 						fmt.Printf("receipeRSearch returned: %#v", r)
-					} else {
-						rId, err := strconv.Atoi(s.reqRId)
-						if err != nil {
-							return fmt.Errorf("%s. Converting reqRId  [%s] to int - %s", "main", s.reqRId, err.Error())
-						}
-						r = &RecipeT{PKey: "R-" + s.reqBkId, SortK: rId, RName: s.reqRName, Part: s.parts}
-						fmt.Printf("not-receipRSearch created: %#v", r)
 					}
-					fmt.Printf("receipeRSearch returned: %#v", r)
 					// set unit formating mode
 					global.Set_WriteCtx(global.UPrint)
 					// load recipe data, part metadata, containers etc
@@ -1154,7 +1148,8 @@ func handler(ctx context.Context, request InputEvent) (RespEvent, error) {
 	pathItem = request.PathItem
 	lc, _ := lambdacontext.FromContext(ctx)
 	alxreqid := strings.Split(request.QueryStringParameters["reqId"], ".")
-	// fmt.Println("Alexa reqId : ", request.QueryStringParameters["reqId"])
+
+	//fmt.Println("Alexa reqId : ", request.QueryStringParameters["reqId"])
 	// fmt.Println("invoke reqId : ", lc.AwsRequestID)
 
 	// var body string
