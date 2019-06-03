@@ -39,10 +39,10 @@ var unitS []*Unit = []*Unit{
 	&Unit{Slabel: "hr", Llabel: "hour", Print: "l", Say: "l", Display: "l", Plural: "s"},
 	&Unit{Slabel: "clove", Llabel: "clove", Print: "l", Say: "l", Display: "l", Plural: "s", Nsu: true},
 	&Unit{Slabel: "pinch", Llabel: "pinch", Print: "l", Say: "l", Display: "l", Plural: "es", Nsu: true},
-	&Unit{Slabel: "sachet", Llabel: "sachet", Print: "l", Say: "l", Display: "s", Plural: "s", Nsu: true},
-	&Unit{Slabel: "bunch", Llabel: "bunch", Print: "l", Say: "l", Display: "s", Plural: "es", Nsu: true},
-	&Unit{Slabel: "sprig", Llabel: "sprig", Print: "l", Say: "l", Display: "s", Plural: "s", Nsu: true},
-	&Unit{Slabel: "stick", Llabel: "stick", Print: "l", Say: "l", Display: "s", Plural: "s", Nsu: true},
+	&Unit{Slabel: "sachet", Llabel: "sachet", Print: "l", Say: "l", Display: "l", Plural: "s", Nsu: true},
+	&Unit{Slabel: "bunch", Llabel: "bunch", Print: "l", Say: "l", Display: "l", Plural: "es", Nsu: true},
+	&Unit{Slabel: "sprig", Llabel: "sprig", Print: "l", Say: "l", Display: "l", Plural: "s", Nsu: true},
+	&Unit{Slabel: "stick", Llabel: "stick", Print: "l", Say: "l", Display: "l", Plural: "s", Nsu: true},
 }
 
 func (u *Unit) IsNsu() bool {
@@ -90,7 +90,11 @@ func (u *Unit) String(i ...UnitPI) string {
 				}
 			default:
 				// printed and displayed form never adds plural to unit even if specified
-				return " " + u.Llabel
+				if len(i) > 0 && len(u.Plural) > 0 && i[0].UPlural() {
+					return " " + u.Llabel + u.Plural
+				} else {
+					return " " + u.Llabel
+				}
 			}
 		}
 	default:

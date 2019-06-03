@@ -212,14 +212,10 @@ type prepCtl struct {
 var prepctl prepCtl = prepCtl{}
 
 func (m *MeasureT) UPlural() bool {
-	if strings.IndexByte(m.Quantity, '/') > 0 && len(m.Quantity) > 4 {
-		return true
-	}
 	if len(m.Quantity) > 0 {
 		f, err := strconv.ParseFloat(m.Quantity, 32)
 		if err != nil {
-			s := strings.Split(m.Quantity, "-")
-			if len(s) > 1 {
+			if s := strings.Split(m.Quantity, "-"); len(s) > 1 {
 				f, err := strconv.ParseFloat(s[1], 32)
 				if err != nil {
 					return false
@@ -228,11 +224,27 @@ func (m *MeasureT) UPlural() bool {
 					return true
 				}
 			}
-			return false
+			if strings.Index(m.Quantity, " or ") > 0 || strings.Index(m.Quantity, " to ") > 0 {
+				s := strings.Fields(m.Quantity)
+				fmt.Println(" or to ", s)
+				f, err := strconv.ParseFloat(s[2], 32)
+				fmt.Println(" or to ", f)
+				if err != nil {
+					return false
+				}
+				if f > 1 {
+					return true
+				}
+				return false
+			}
 		}
+		// actual number
 		if f > 1 {
 			return true
 		}
+	}
+	if strings.IndexByte(m.Quantity, '/') > 0 && len(m.Quantity) > 4 {
+		return true
 	}
 	return false
 }
@@ -439,7 +451,7 @@ func (m *MeasureT) String() string {
 		case "1/4":
 			f = 0.25
 		case "1/2":
-			f = 0.667
+			f = 0.5
 		case "3/4":
 			f = 0.75
 		}
@@ -538,13 +550,19 @@ func (m *MeasureT) String() string {
 				s = " 1/8"
 				m.post = " of a "
 			} else {
+				s = ""
 				if ff < 1 {
 					return c_pinchof
 				}
 			}
+		} else {
+			s = ""
 		}
 		if ff > 0 {
 			m.post = ""
+		}
+		if ff == 0 {
+			return s
 		}
 		return strconv.FormatFloat(ff, 'g', -1, 64) + s
 	}
@@ -641,6 +659,10 @@ func (m *MeasureT) String() string {
 
 	if len(m.Quantity) > 0 && len(m.Unit) > 0 {
 		//
+		if strings.IndexByte(m.Quantity, '-') > 0 || strings.Index(m.Quantity, " or ") > 0 || strings.Index(m.Quantity, " to ") > 0 {
+			return m.FormatString()
+		}
+
 		if strings.IndexByte(m.Quantity, '/') > 0 {
 			// return from here..
 			s := scaleFraction(m.Quantity)
@@ -659,7 +681,7 @@ func (m *MeasureT) String() string {
 				panic(fmt.Errorf("Error: cannot covert Quantity [%s] to float64 in *MeasureT.String()", m.Quantity))
 			}
 		} else {
-			if strings.IndexByte(m.Quantity, '-') == -1 {
+			if strings.IndexByte(m.Quantity, '-') == -1 || strings.Index(m.Quantity, " or ") == -1 {
 				i, err := strconv.Atoi(m.Quantity)
 				if err != nil {
 					panic(fmt.Errorf("Error: cannot covert Quantity [%s] to int in *MeasureT.String()", m.Quantity))
@@ -823,6 +845,7 @@ func (m *MeasureT) FormatString() string {
 			return m.Num
 		}
 	}
+	fmt.Printf("Before No-Measure: %#v\n ", m)
 	return "No-Measure"
 }
 
@@ -874,7 +897,8 @@ func (a Activity) String() string {
 			if len(a.AltIngrd) == 0 {
 				// check if unit is non-standard
 				if UnitMap[m.Unit].IsNsu() {
-					b.WriteString(" (about ")
+					b.WriteString(" (")
+					fmt.Printf("am: %#v\n", am)
 					b.WriteString(am.String())
 					b.WriteString(")")
 				} else {

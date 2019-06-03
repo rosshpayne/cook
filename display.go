@@ -662,7 +662,7 @@ func (i IngredientT) GenDisplay(s *sessCtx) RespEvent {
 	}
 	sf := strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
 	subhdr = "Ingredients       (Scale: " + sf + " )"
-	hint = "hint:  scale recipe 75 percent"
+	hint = "hint:  scale  75,  scale reset"
 	type_ := "Ingredient"
 	if len(s.derr) > 0 {
 		type_ += "Err"
