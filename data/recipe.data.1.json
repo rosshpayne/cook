@@ -32,63 +32,6 @@
                 "Publisher" : { "S" : "Ebury Press" }
             }
         }
-        },
-        {
-        "PutRequest": { 
-            "Item": { 
-                "PKey" : { "S": "R-20" },
-                "SortK" : { "N": "1"},
-                "RName" : { "S": "Take-home Chocolate Cake"},
-                "Cat" : { "S" : "cake" }
-            }
-        }
-        },
-        {
-        "PutRequest": { 
-            "Item": { 
-                "PKey" : { "S": "R-20" },
-                "SortK" : { "N": "2"},
-                "RName" : { "S": "Pistachio and rose water semolina cake"},
-                 "Cat" : { "S" : "cake" }
-            }
-            }
-        },
-        {
-        "PutRequest": { 
-            "Item": { 
-                "PKey" : { "S": "R-20" },
-                "SortK" : { "N": "3"},
-                "RName" : { "S": "Chocolate banana ripple cheesecake"},
-                "Cat" : { "S" : "cheesecake" }
-            }
-            }
-        },
-        {
-        "PutRequest": { 
-            "Item": { 
-                "PKey" : { "S": "R-21" },
-                "SortK" : { "N": "2"},
-                "RName" : { "S": "Braised Cavolo Nero"}
-                }
-            }
-        },
-        {
-        "PutRequest": { 
-            "Item": { 
-                "PKey" : { "S": "R-21" },
-                "SortK" : { "N": "3"},
-                "RName" : { "S": "Take-home Chocolate Cake"}
-                }
-            }
-        } ,
-        {
-        "PutRequest": { 
-            "Item": { 
-                "PKey" : { "S": "R-22" },
-                "SortK" : { "N": "1"},
-                "RName" : { "S": "Take-home Chocolate Cake"}
-                }
-            }
         }
         ]
 }

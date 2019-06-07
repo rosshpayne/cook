@@ -681,7 +681,7 @@ func (m *MeasureT) String() string {
 				panic(fmt.Errorf("Error: cannot covert Quantity [%s] to float64 in *MeasureT.String()", m.Quantity))
 			}
 		} else {
-			if strings.IndexByte(m.Quantity, '-') == -1 || strings.Index(m.Quantity, " or ") == -1 {
+			if strings.IndexByte(m.Quantity, '-') == -1 || strings.Index(m.Quantity, " or ") == -1 || strings.Index(m.Quantity, " to ") == -1 {
 				i, err := strconv.Atoi(m.Quantity)
 				if err != nil {
 					panic(fmt.Errorf("Error: cannot covert Quantity [%s] to int in *MeasureT.String()", m.Quantity))

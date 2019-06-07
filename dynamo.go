@@ -146,7 +146,9 @@ func (s *sessCtx) loadInstructions() (Threads, error) {
 	fmt.Printf(" loadInstructions len() %d .  s.selId = %d	\n ", len(ptR), s.selId)
 	if len(s.part) == 0 {
 		part = "DivPt"
-		if s.selId == 0 || s.selId == 1 {
+		if len(s.parts) == 0 {
+			part = CompleteRecipe_
+		} else if s.selId == 0 || s.selId == 1 {
 			// either no parts menu or item 1 is chosen
 			part = CompleteRecipe_
 		}

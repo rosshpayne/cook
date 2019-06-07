@@ -10,6 +10,7 @@ var   invokeParams = {
 
 var lambda = new AWS.Lambda();
 AWS.config.region = 'us-east-1';
+const querystring = require('querystring');
 
 const messages = {
       WELCOME: 'Welcome to the Sample Device Address API Skill!  You can ask for the device address by saying what is my address.  What do you want to ask?',
@@ -32,11 +33,9 @@ const LaunchRequestHandler = {
   
   handle(handlerInput) {
     const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
-    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    const reqId="&reqId="+querystring.escape(handlerInput.requestEnvelope.request.requestId);
     const accessToken = handlerInput.requestEnvelope.context.System.apiAccessToken;
     const accessEndpoint = handlerInput.requestEnvelope.context.System.apiEndpoint;
-    
-    console.log("requestId : ",reqId);
       
     invokeParams.Payload = '{ "Path" : "start" ,"Param" : "'+uid+reqId+'" }';
     
@@ -66,7 +65,7 @@ const LaunchRequestHandler = {
                       "authorization": "Bearer" + " " + accessToken
                 }
               };
-              var prom= new Promise((resolve, reject) => {
+              var prom = new Promise((resolve, reject) => {
                     var req = https.get(options, function(res) {
                         // reject on bad status
                         if (res.statusCode < 200 || res.statusCode >= 300) {
@@ -283,8 +282,9 @@ const EventHandler = {
   
   handle: handlerInput => {
     const uid='uid='+handlerInput.requestEnvelope.session.user.userId ;
-    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
-    
+    const reqId="&reqId="+querystring.escape(handlerInput.requestEnvelope.request.requestId);
+    console.log(handlerInput.requestEnvelope.request);
+    console.log("reqId " , reqId);
     const args = handlerInput.requestEnvelope.request.arguments;
     const event = args[0];
     //const ordinal = args[1];
@@ -313,7 +313,7 @@ const EventHandler = {
       }).catch(function (err) { console.log(err, err.stack);  } );
         
     case 'backButton':
-       invokeParams.Payload = '{ "Path" : "back" ,"Param" : "'+uid+'" }';
+       invokeParams.Payload = '{ "Path" : "back" ,"Param" : "'+uid+reqId+'" }';
         
        promise= new Promise((resolve, reject) => {
           lambda.invoke(invokeParams, function(err, data) {
@@ -471,7 +471,7 @@ const RestartIntentHandler = {
   handle(handlerInput) {
 
     const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
-    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    const reqId="&reqId="+querystring.escape(handlerInput.requestEnvelope.request.requestId);
     invokeParams.Payload = '{ "Path" : "restart" ,"Param" : "'+uid+reqId+'" }';
     
     var promise= new Promise((resolve, reject) => {
@@ -498,9 +498,8 @@ const ResizeIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'ResizeIntent';
   },
   handle(handlerInput) {
-    const querystring = require('querystring');
     const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
-    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    const reqId="&reqId="+querystring.escape(handlerInput.requestEnvelope.request.requestId);
     const size='&size='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.integer.resolutions.resolutionsPerAuthority[0].values[0].value.id);
   //  const size2='&size='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.object.resolutions.resolutionsPerAuthority[0].values[0].value.id);
     console.log("size: "+ size);
@@ -532,9 +531,8 @@ const ListIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'ListIntent';
   },
   handle(handlerInput) {
-    const querystring = require('querystring');
     const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
-    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    const reqId="&reqId="+querystring.escape(handlerInput.requestEnvelope.request.requestId);
     const act='&action='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.actionString.resolutions.resolutionsPerAuthority[0].values[0].value.name);
 
    invokeParams.Payload = '{ "Path" : "list" ,"Param" : "'+uid+reqId+act+'" }';
@@ -563,12 +561,11 @@ const ScaleIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'ScaleIntent';
   },
   handle(handlerInput) {
-    const querystring = require('querystring');
     //TODO is querystring necessary here as I believe AWS may escape it.
    // const srch='&srch='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.ingrdcat.resolutions.resolutionsPerAuthority[0].values[0].value.name);
    
     const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
-    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    const reqId="&reqId="+querystring.escape(handlerInput.requestEnvelope.request.requestId);
     const frac='&frac='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.fraction.resolutions.resolutionsPerAuthority[0].values[0].value.id);
     //                  handlerInput.requestEnvelope.request.intent.slots.YesNo.resolutions.resolutionsPerAuthority[0].values[0].value.id;
     invokeParams.Payload = '{ "Path" : "scale" ,"Param" : "'+uid+reqId+frac+'" }';
@@ -599,7 +596,7 @@ const BookIntentHandler = {
   },
   handle(handlerInput) {
     const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
-    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    const reqId="&reqId="+querystring.escape(handlerInput.requestEnvelope.request.requestId);
     const bkid='&bkid='+handlerInput.requestEnvelope.request.intent.slots.BookName.resolutions.resolutionsPerAuthority[0].values[0].value.id;
     invokeParams.Payload = '{ "Path" : "book" ,"Param" : "'+uid+reqId+bkid+'" }';
     
@@ -628,7 +625,7 @@ const CloseBookIntentHandler = {
   },
   handle(handlerInput) {
     var uid="uid="+handlerInput.requestEnvelope.session.user.userId;
-    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    const reqId="&reqId="+querystring.escape(handlerInput.requestEnvelope.request.requestId);
     invokeParams.Payload = '{ "Path" : "close" ,"Param" : "'+uid+reqId+'" }';
 
     var promise= new Promise((resolve, reject) => {
@@ -656,7 +653,6 @@ const SearchIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'SearchIntent';
   },
   handle(handlerInput) {
-    const querystring = require('querystring');
     //let srch='&srch='+querystring.escape(handlerInput.requestEnvelope.request.intent.slots.ingrdcat.value);
      
     //if (srch === "&srch=undefined") {
@@ -664,7 +660,7 @@ const SearchIntentHandler = {
     //}
     console.log("srch=[" + srch + "]");
     const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
-    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    const reqId="&reqId="+querystring.escape(handlerInput.requestEnvelope.request.requestId);
     invokeParams.Payload = '{ "Path" : "search" ,"Param" : "'+uid+reqId+srch+'" }';
 
     var promise= new Promise((resolve, reject) => {
@@ -692,7 +688,7 @@ const ResumeIntentHandler = {
   },
   handle(handlerInput) {
     const uid="uid="+handlerInput.requestEnvelope.session.user.userId;
-    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    const reqId="&reqId="+querystring.escape(handlerInput.requestEnvelope.request.requestId);
     invokeParams.Payload = '{ "Path" : "resume" ,"Param" : "'+uid+reqId+'" }';
 
     var promise= new Promise((resolve, reject) => {
@@ -719,7 +715,7 @@ const BackIntentHandler = {
   },
   handle(handlerInput) {
     const uid='uid='+handlerInput.requestEnvelope.session.user.userId   ; 
-    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    const reqId="&reqId="+querystring.escape(handlerInput.requestEnvelope.request.requestId);
     invokeParams.Payload = '{ "Path" : "back" ,"Param" : "'+uid+reqId+'" }';
 
     var promise= new Promise((resolve, reject) => {
@@ -748,7 +744,7 @@ const SelectIntentHandler = {
   },
   handle(handlerInput) {
     const uid='uid='+handlerInput.requestEnvelope.session.user.userId   ; 
-    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    const reqId="&reqId="+querystring.escape(handlerInput.requestEnvelope.request.requestId);
     const selid='&sId='+handlerInput.requestEnvelope.request.intent.slots.integerValue.resolutions.resolutionsPerAuthority[0].values[0].value.id;
     invokeParams.Payload = '{ "Path" : "select" ,"Param" : "'+uid+selid+reqId+'" }';
     console.log("uid "+ uid);
@@ -779,7 +775,7 @@ const GotoIntentHandler = {
 
   handle(handlerInput) {
     const uid='uid='+handlerInput.requestEnvelope.session.user.userId;
-    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    const reqId="&reqId="+querystring.escape(handlerInput.requestEnvelope.request.requestId);
     const goId='&goId='+handlerInput.requestEnvelope.request.intent.slots.gotoId.resolutions.resolutionsPerAuthority[0].values[0].value.id;
     invokeParams.Payload = '{ "Path" : "goto" ,"Param" : "'+uid+reqId+goId+'" }';
 
@@ -810,7 +806,7 @@ const NextIntentHandler = {
   },
   handle(handlerInput) {
     const uid='uid='+handlerInput.requestEnvelope.session.user.userId;
-    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    const reqId="&reqId="+querystring.escape(handlerInput.requestEnvelope.request.requestId);
     invokeParams.Payload = '{ "Path" : "next" ,"Param" : "'+uid+reqId+'" }';
 
     var promise= new Promise((resolve, reject) => {
@@ -838,7 +834,7 @@ const RepeatIntentHandler = {
   },
   handle(handlerInput) {
     const uid='uid='+handlerInput.requestEnvelope.session.user.userId;
-    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    const reqId="&reqId="+querystring.escape(handlerInput.requestEnvelope.request.requestId);
     invokeParams.Payload = '{ "Path" : "repeat" ,"Param" : "'+uid+reqId+'" }';
 
     var promise= new Promise((resolve, reject) => {
@@ -866,7 +862,7 @@ const PrevIntentHandler = {
   },
   handle(handlerInput) {
     const uid='uid='+handlerInput.requestEnvelope.session.user.userId;
-    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    const reqId="&reqId="+querystring.escape(handlerInput.requestEnvelope.request.requestId);
     invokeParams.Payload = '{ "Path" : "prev" ,"Param" : "'+uid+reqId+'" }';
 
     var promise= new Promise((resolve, reject) => {
@@ -899,7 +895,7 @@ const RecipeIntentHandler = {
     //const bkIdRId = handlerInput.requestEnvelope.request.intent.slots.recipe.resolutions.resolutionsPerAuthority[0].values[0].value.id;
     const rname = querystring.escape(handlerInput.requestEnvelope.request.intent.slots.recipe.resolutions.resolutionsPerAuthority[0].values[0].value.name);
     const uid='uid='+handlerInput.requestEnvelope.session.user.userId;
-    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    const reqId="&reqId="+querystring.escape(handlerInput.requestEnvelope.request.requestId);
     //var path_='&rcp='+bkIdRId
     //if ( bkIdRId.length == 0 ) {
     const path_='&rcp='+rname;
@@ -938,7 +934,7 @@ const VersionIntentHandler = {
     var displayText;
     var recipe ;
     const uid='uid='+handlerInput.requestEnvelope.session.user.userId;
-    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    const reqId="&reqId="+querystring.escape(handlerInput.requestEnvelope.request.requestId);
     const ver='&ver='+handlerInput.requestEnvelope.request.intent.slots.version.resolutions.resolutionsPerAuthority[0].values[0].value.name;
     invokeParams.Payload = '{ "Path" : "version" ,"Param" : "'+uid+reqId+ver+'" }';
 
@@ -977,7 +973,7 @@ const YesNoIntentHandler = {
     var displayText;
     var recipe ;
     var uid="uid="+handlerInput.requestEnvelope.session.user.userId;
-    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    const reqId="&reqId="+querystring.escape(handlerInput.requestEnvelope.request.requestId);
     var yesno='&yn='+handlerInput.requestEnvelope.request.intent.slots.YesNo.resolutions.resolutionsPerAuthority[0].values[0].value.id;
     invokeParams.Payload = '{ "Path" : "yesno" ,"Param" : "'+uid+reqId+yesno+'" }';
  
@@ -1014,7 +1010,7 @@ const TaskIntentHandler = {
     var displayText;
     var recipe ;
     var uid="uid="+handlerInput.requestEnvelope.session.user.userId;
-    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    const reqId="&reqId="+querystring.escape(handlerInput.requestEnvelope.request.requestId);
     invokeParams.Payload = '{ "Path" : "task" ,"Param" : "'+uid+reqId+'" }';
 
     var promise= new Promise((resolve, reject) => {
@@ -1049,7 +1045,7 @@ const ContainerIntentHandler = {
     var displayText;
     var recipe ;
     var uid="uid="+handlerInput.requestEnvelope.session.user.userId;
-    const reqId="&reqId="+handlerInput.requestEnvelope.request.requestId;
+    const reqId="&reqId="+querystring.escape(handlerInput.requestEnvelope.request.requestId);
     invokeParams.Payload = '{ "Path" : "container" ,"Param" : "'+uid+reqId+'" }';
 
     var promise= new Promise((resolve, reject) => {
@@ -1152,7 +1148,7 @@ function handleResponse (handlerInput , resp) {
                             .addDirective(speakcmd())
                             .getResponse();
         } else if (resp.Type === "Start" || resp.Type === "StartErr") {
-          const start = require('APL/' + resp.Type + '2.js');
+          const start = require('APL/' + resp.Type + '.js');
           const speakcmd = require('APL/speakcmd.js');
           return  handlerInput.responseBuilder
                           .speak(resp.Verbal)
@@ -1168,8 +1164,8 @@ function handleResponse (handlerInput , resp) {
                           .addDirective(search(resp.BackBtn, resp.Header, resp.SubHdr, resp.Height, resp.List, resp.Hint, resp.Error))
                           .getResponse();
        } else if (resp.Type ==="Tripple" ) { 
-         console.log("T: ", resp.Text)
-          console.log("V: ",resp.Verbal)
+         console.log("T: ", resp.Text);
+          console.log("V: ",resp.Verbal);
           const tripple = require('APL/'+resp.Type+'.js'); 
           const speakcmd = require('APL/speakcmd.js');
           return  handlerInput.responseBuilder
@@ -1184,7 +1180,15 @@ function handleResponse (handlerInput , resp) {
                             .reprompt(resp.Error)
                             .addDirective(tripple(resp.Header,resp.SubHdr, resp.ListA, resp.ListB, resp.ListC, resp.Verbal, resp.Text, resp.Hint, resp.Height, resp.Error ))
                             .getResponse(); 
-       } else if (resp.Type === "threaded" ) { 
+       } else if (resp.Type === "threadedBottom" ) { 
+          const tripple = require('APL/'+resp.Type+'.js');
+          const speakcmd = require('APL/speakcmd.js');
+          return  handlerInput.responseBuilder
+                            .reprompt(resp.Verbal)
+                            .addDirective(tripple(resp.Header,resp.SubHdr, resp.ListA, resp.ListB, resp.ListC, resp.Verbal, resp.Text, resp.ListD, resp.ListE, resp.ListF, resp.Thread1, resp.Thread2, resp.Color1, resp.Color2))
+                            .addDirective(speakcmd())
+                            .getResponse(); 
+        } else if (resp.Type === "threadedTop" ) { 
           const tripple = require('APL/'+resp.Type+'.js');
           const speakcmd = require('APL/speakcmd.js');
           return  handlerInput.responseBuilder
@@ -1200,7 +1204,7 @@ function handleResponse (handlerInput , resp) {
                             .addDirective(select(resp.BackBtn, resp.Header,resp.SubHdr, resp.List))
                             .getResponse();     
         } else if (resp.Type === "Search" || resp.Type === "SearchErr") {
-          const search = require('APL/' + resp.Type + '2.js');
+          const search = require('APL/' + resp.Type + '.js');
            const speakcmd = require('APL/speakcmd.js');
           return  handlerInput.responseBuilder
                           .speak(resp.Verbal)
@@ -1208,13 +1212,16 @@ function handleResponse (handlerInput , resp) {
                           .addDirective(search(resp.BackBtn, resp.Header, resp.SubHdr, resp.List, " ", resp.Hint, resp.Error))
                           .addDirective(speakcmd())
                           .getResponse();
-        // } else if (resp.Type === "OpenBook") {
-        //   const display = require('APL/OpenBook.js');
-        //   return  handlerInput.responseBuilder
-        //                     .speak(resp.Verbal)
-        //                     .reprompt(resp.Verbal)
-        //                     .addDirective(display(resp.Header, resp.SubHdr , resp.Text, resp.Hint ) )
-        //                     .getResponse();
+        }  else if (resp.Type === "error") {
+          console.log("about to show error screen.....")
+          const search = require('APL/' + resp.Type + '.js');
+          const speakcmd = require('APL/speakcmd.js');
+          return  handlerInput.responseBuilder
+                          .speak(resp.Verbal)
+                          .reprompt(resp.Text)
+                          .addDirective(search(resp.Header, resp.Text, resp.Error ))
+                          .addDirective(speakcmd())
+                          .getResponse();
         } else {
            const search = require('APL/Search.js');
            return  handlerInput.responseBuilder

@@ -663,55 +663,6 @@ func (s *sessCtx) updateState() {
 	}
 }
 
-func (s *sessCtx) commitState() error {
-	//
-	// save s.state
-	//
-	var updateC expression.UpdateBuilder
-	t := time.Now()
-	t.Add(time.Hour * 24 * 1)
-	updateC = expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
-	// rewrite all but last state entry - this is how we delete from a list in dynamo. Here the list represents the state stack.
-	updateC = updateC.Set(expression.Name("state"), expression.Value(s.state))
-	expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
-	//
-	pkey := pKey{PKey: s.userId}
-	av, err := dynamodbattribute.MarshalMap(&pkey)
-	//
-	input := &dynamodb.UpdateItemInput{
-		TableName:                 aws.String("Sessions"),
-		Key:                       av, // accets []map[]*attributeValues so must use marshal not expression
-		UpdateExpression:          expr.Update(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-	}
-	input.SetReturnConsumedCapacity("TOTAL")
-	//
-	result, err := s.dynamodbSvc.UpdateItem(input)
-	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			case dynamodb.ErrCodeProvisionedThroughputExceededException:
-				fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
-			case dynamodb.ErrCodeResourceNotFoundException:
-				fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
-			case dynamodb.ErrCodeInternalServerError:
-				fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
-			default:
-				fmt.Println(aerr.Error())
-			}
-		} else {
-			// Print the error, cast err to awserr.Error to get the Code and
-			// Message from an error.
-			fmt.Println(err.Error())
-		}
-		return err
-	}
-	//
-	fmt.Println("commitState: ConsumedCapacity: \n", result.ConsumedCapacity)
-	return nil
-}
-
 func (s *sessCtx) popState() error {
 	//
 	// removes top entry in state attribute of dynamo session item.
@@ -873,17 +824,12 @@ func (s *sessCtx) popState() error {
 	// 	var w WelcomeT
 	// 	s.displayData = w
 	// }
-	if sr.Request == "start" {
+	if sr.Request == "start" || sr.Welcome != nil {
 		fmt.Printf("displayData = Welcome = %#v\n", *(sr.Welcome))
 		s.welcome = sr.Welcome // used in close book op
 		s.displayData = sr.Welcome
 
 	}
-	// switch s.display.Type {
-	// case WELCOME:
-	// 	var w WelcomeT
-	// 	s.displayData = w
-	// }
 
 	fmt.Printf("Popstate: parts %#v\n", s.parts)
 	fmt.Println("Popstate: sr.showOBjMenu ", sr.ShowObjMenu)
@@ -891,5 +837,54 @@ func (s *sessCtx) popState() error {
 	fmt.Printf("Popstate: s.reqBkId %s\n", s.reqBkId)
 	fmt.Printf("Popstate: s.reqRId %s\n", s.reqRId)
 	fmt.Printf("Popstate: s.request %s\n", s.request)
+	return nil
+}
+
+func (s *sessCtx) commitState() error {
+	//
+	// save s.state
+	//
+	var updateC expression.UpdateBuilder
+	t := time.Now()
+	t.Add(time.Hour * 24 * 1)
+	updateC = expression.Set(expression.Name("Epoch"), expression.Value(t.Unix()))
+	// rewrite all but last state entry - this is how we delete from a list in dynamo. Here the list represents the state stack.
+	updateC = updateC.Set(expression.Name("state"), expression.Value(s.state))
+	expr, err := expression.NewBuilder().WithUpdate(updateC).Build()
+	//
+	pkey := pKey{PKey: s.userId}
+	av, err := dynamodbattribute.MarshalMap(&pkey)
+	//
+	input := &dynamodb.UpdateItemInput{
+		TableName:                 aws.String("Sessions"),
+		Key:                       av, // accets []map[]*attributeValues so must use marshal not expression
+		UpdateExpression:          expr.Update(),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+	}
+	input.SetReturnConsumedCapacity("TOTAL")
+	//
+	result, err := s.dynamodbSvc.UpdateItem(input)
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case dynamodb.ErrCodeProvisionedThroughputExceededException:
+				fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
+			case dynamodb.ErrCodeResourceNotFoundException:
+				fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
+			case dynamodb.ErrCodeInternalServerError:
+				fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
+			default:
+				fmt.Println(aerr.Error())
+			}
+		} else {
+			// Print the error, cast err to awserr.Error to get the Code and
+			// Message from an error.
+			fmt.Println(err.Error())
+		}
+		return err
+	}
+	//
+	fmt.Println("commitState: ConsumedCapacity: \n", result.ConsumedCapacity)
 	return nil
 }

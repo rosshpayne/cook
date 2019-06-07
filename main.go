@@ -328,6 +328,7 @@ func (s *sessCtx) orchestrateRequest() error {
 		s.request = lastState.Request
 		fmt.Println("in start...")
 		fmt.Println("s.request = ", s.request)
+		fmt.Println("s.email = ", s.email)
 		switch wx := s.displayData.(type) {
 		case Threads:
 			fmt.Println("request start: displayData: Threads")
@@ -341,7 +342,7 @@ func (s *sessCtx) orchestrateRequest() error {
 			if len(s.email) > 0 {
 				// resp from startwithEmail. (see below) for the case of no registerd books.
 				var w WelcomeT
-				w.msg = fmt.Sprintf("Hi, you have no books registered. Please go to www.eburypress.co.uk and register your  book purchase, using the email: %s ", s.email)
+				w.msg = fmt.Sprintf("Hi, you have no books registered. \n\nPlease go to www.eburypress.co.uk and register your book purchase, using the email;\n\n%s ", s.email)
 				s.displayData = &w
 				return nil
 			}
@@ -359,7 +360,6 @@ func (s *sessCtx) orchestrateRequest() error {
 				return nil
 			default:
 				var w WelcomeT
-				w.msg = "You have the following books registered to your email."
 				s.displayData = &w
 				return nil
 			}
@@ -1149,8 +1149,8 @@ func handler(ctx context.Context, request InputEvent) (RespEvent, error) {
 	lc, _ := lambdacontext.FromContext(ctx)
 	alxreqid := strings.Split(request.QueryStringParameters["reqId"], ".")
 
-	//fmt.Println("Alexa reqId : ", request.QueryStringParameters["reqId"])
-	// fmt.Println("invoke reqId : ", lc.AwsRequestID)
+	fmt.Println("Alexa reqId : ", request.QueryStringParameters["reqId"])
+	fmt.Println("invoke reqId : ", lc.AwsRequestID)
 
 	// var body string
 	// create a new session context and merge with last session data if present.
@@ -1377,8 +1377,9 @@ func handler(ctx context.Context, request InputEvent) (RespEvent, error) {
 		sessctx.derr = "displayData not set"
 		return RespEvent{Type: "error", Header: "Internal error has occurred: ", Text: "Error: ", Error: err.Error()}, nil
 	}
-	var resp RespEvent
 	fmt.Println("=========== displayData.GenDisplay =============")
+	//
+	var resp RespEvent
 	resp = sessctx.displayData.GenDisplay(sessctx)
 	//
 	if sessctx.saveState && len(sessctx.derr) == 0 {

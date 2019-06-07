@@ -11,6 +11,14 @@ import (
 	"github.com/cook/global"
 )
 
+type WelcomeT struct {
+	msg     string
+	Bkids   []string // registered book ids
+	Display []DisplayItem
+	//
+	request string
+}
+
 type Displayer interface {
 	GenDisplay(s *sessCtx) RespEvent
 }
@@ -454,14 +462,6 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 // 	DispList []DisplayItem `json:"dlist"`
 // }
 
-type WelcomeT struct {
-	msg     string
-	Bkids   []string // registered book ids
-	Display []DisplayItem
-	//
-	request string
-}
-
 func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 	var (
 		hdr    string
@@ -469,7 +469,6 @@ func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 		title  string
 		hint   string
 		openBk string
-		list   []DisplayItem
 	)
 	//
 	OpenBkName := func() string {
@@ -485,20 +484,21 @@ func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 		return `"open book ` + bkname + `"`
 	}
 
-	fmt.Println("GenDisplay:  WelcomeT")
 	if w == nil {
 		panic(fmt.Errorf("WelcomeT: w not assigned"))
 	}
+	fmt.Printf("GenDisplay:  WelcomeT %#v\n", *w)
 
 	if len(w.Display) == 0 || (len(w.Bkids) != len(s.bkids) && s.back == false) || s.openBkChange {
-		fmt.Println(" push or update.... len(s.state) = ", len(s.state))
+		fmt.Println("**  push or update.... len(s.state) = ", len(s.state))
 		fmt.Println(" openBkChange.. ", s.openBkChange)
 		fmt.Println("w.Bkids ", len(w.Bkids))
 		fmt.Println("s.bkids ", len(s.bkids))
 		// s.bkids is the latest book register value
 		// w.Bkids is the cached value and hence maybe out-of-date
 		w.Bkids = s.bkids
-		//
+		fmt.Printf("w.Bkids = %#v\n", w.Bkids)
+		var list []DisplayItem
 		for _, v := range s.bkids {
 			s.reqBkId = v
 			err := s.bookNameLookup()
@@ -515,26 +515,34 @@ func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 		// clear all book/recipe data as populated by bookNameLookup(), as we currently have not user selected book/recipe.
 		s.reqBkId, s.reqBkName, s.reqRId, s.reqRName, s.authors = "", "", "", "", ""
 		//
-		var err error
 		s.welcome = w
 		if len(s.state) == 0 {
 			s.pushState()
 		} else {
 			s.updateState()
 		}
-		if err != nil {
-			type_ := "Ingredient"
-			return RespEvent{Type: type_, BackBtn: false, Text: s.vmsg, Verbal: s.dmsg, Error: err.Error()}
-		}
-	} else {
-		fmt.Printf("in display: list = %#v", w.Display)
-		list = w.Display
 	}
+
+	// list for screen display only not to save to session data.
+	list := make([]DisplayItem, len(w.Display))
+	copy(list, w.Display)
 	//
-	hdr = "Welcome to your EburyPress Cook books on Alexa"
+	hdr = "Welcome to your Ebury Press Cook books on Alexa"
 	srch := `, "search [ingredient,..]", "search [keyword,..]", "search [recipe-name]", "search [any-part-of-recipe-name]" e.g. "search tart", "search tarragon", "search chocolate cake"`
 
-	if len(s.reqOpenBk) > 0 {
+	type_ := "Start"
+	if len(s.derr) > 0 {
+		type_ += "Err"
+	}
+
+	if len(w.msg) > 0 {
+		fmt.Println("w.msg -------- ", w.msg)
+		title = w.msg
+		type_ = "Start2"
+		s.saveState = false // no point in saving state as nothing to transfer to next session.
+
+	} else if len(s.reqOpenBk) > 0 {
+		fmt.Println("reqOpenBK --------")
 		bk := strings.Split(string(s.reqOpenBk), "|")
 		if s.back {
 			title = bk[1] + " is open. Searches will be restricted to this book"
@@ -544,33 +552,26 @@ func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 		ob := strings.Split(string(s.reqOpenBk), "|")
 		for i, v := range w.Bkids {
 			if v == ob[0] {
-				w.Display[i].Title += "  (opened and searcheable)"
+				list[i].Title += "  (opened and searcheable)"
 			}
 		}
-		list = w.Display
 		hint = `hint: "close book"` + srch
 
 	} else if len(s.CloseBkName) > 0 {
+		fmt.Printf("close book. List = %#v\n --------", w.Display)
 		title = s.CloseBkName + " is now closed. Searches will be across all your books"
-		fmt.Printf("close book. List = %#v\n", w.Display)
-		list = w.Display
 		hint = `hint: ` + OpenBkName() + srch
 
 	} else if len(w.Bkids) > 0 || s.back {
+		fmt.Printf("w.Bkids > 0 or s.back ")
 		if len(w.Bkids) > 1 {
-			title = "Listed below are the books registered to this device."
+			title = "Listed below are the books registered to this device. Searches will be applied to all these books unless you open one"
 		} else {
-			title = "You have the following book registered to this device. Searches will be across all the books unless you open one"
+			title = "You have the following book registered to this device. "
 		}
-		hint = "hint: " + OpenBkName() + srch
+		hint = `hint: "close book"` + srch
 	}
-	if len(hint) == 0 {
-		hint = "hint: " + OpenBkName() + srch
-	}
-	type_ := "Start"
-	if len(s.derr) > 0 {
-		type_ += "Err"
-	}
+
 	if len(w.request) > 0 {
 		type_ = w.request // nb: email - as in get me email. index.js handles it.
 		if len(openBk) == 0 {
@@ -578,7 +579,7 @@ func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 		}
 	}
 
-	return RespEvent{Type: type_, BackBtn: false, Header: hdr, SubHdr: subh, Hint: hint, Text: title, List: list, Error: s.derr}
+	return RespEvent{Type: type_, BackBtn: false, Header: hdr, SubHdr: subh, Hint: hint, Text: title, Verbal: title, List: list, Error: s.derr}
 }
 
 func (c ContainerS) GenDisplay(s *sessCtx) RespEvent {
