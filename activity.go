@@ -645,7 +645,11 @@ func (m *MeasureT) String() string {
 			}
 			return mn.FormatString()
 		}
-		s := scaleInt(m.Quantity)
+		s := m.Quantity
+		fmt.Println("format: ", s)
+		if strings.Index(strings.ToLower(s), "drizzle") == -1 && strings.Index(strings.ToLower(s), "bunch") == -1 {
+			s = scaleInt(m.Quantity)
+		}
 		//s := scaleFloat(m.Quantity)
 		mn := &MeasureT{Quantity: s, Size: m.Size, Num: m.Num, post: m.post}
 		return mn.FormatString()
@@ -832,7 +836,7 @@ func (m *MeasureT) FormatString() string {
 		}
 	}
 	if len(m.Quantity) > 0 {
-		if strings.Index(strings.ToLower(m.Quantity), "drizzle") >= 0 {
+		if strings.Index(strings.ToLower(m.Quantity), "drizzle") != -1 && strings.Index(strings.ToLower(m.Quantity), "bunch") != -1 {
 			return m.Quantity + " of"
 		}
 		return m.Quantity

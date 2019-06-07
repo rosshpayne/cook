@@ -540,7 +540,7 @@ func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 	if len(w.msg) > 0 {
 		fmt.Println("w.msg -------- ", w.msg)
 		title = w.msg
-		type_ = "Start2"
+		//type_ = "Start2"
 		s.saveState = false // no point in saving state as nothing to transfer to next session.
 
 	} else if len(s.reqOpenBk) > 0 {

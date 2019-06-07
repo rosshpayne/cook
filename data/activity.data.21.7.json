@@ -57,8 +57,8 @@
                  },
                  "prep" : { "L" : [
                                 { "M" : { 
-                                  "txt" : { "S" : "Put {qty}{unit} of {quali} {ingrd} in a sieve and rinse under cold running water. Leave to soak in soak in cold water for {time} {unit}" },
-                                  "say" : { "S" : "Put {qty}{unit} of {quali} {ingrd} in a sieve and rinse under cold running water. Leave to soak in soak in cold water for {time} {unit}" },
+                                  "txt" : { "S" : "Put {measure} of {quali} {ingrd} in a sieve and rinse under cold running water. Leave to soak in soak in cold water for {time} {unit}" },
+                                  "say" : { "S" : "Put {measure} of {quali} {ingrd} in a sieve and rinse under cold running water. Leave to soak in soak in cold water for {time} {unit}" },
                                   "time" : { "N" : "40" },
                                   "tplus" : { "N" : "0" },
                                   "unit" : { "S" : "min" },
@@ -146,6 +146,7 @@
                 "label" : { "S": "Fish"},
                 "ingrd" : { "S" : "Sole" },
                 "quali" : { "S" : "whole Dover" },
+                "iQual" : { "S" : ", scaled and cleaned" },
                 "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
                 "measure" : { "M" : { 
                                       "num" : { "S" : "4" } ,
@@ -189,8 +190,8 @@
                                   }
                                 },
                                 { "M" : {
-                                  "txt" : { "S" : "Transfer the tray to the oven to bake for {time} to {tplus} {unit}. To test when the fish is cooked use the point of a sharp knife inserted into the centre of the thickest part of the {ingrd}. It is cooked when the flesh comes away from the bone" },
-                                  "say" : { "S" : "Transfer the tray to the oven to bake for {time} to {tplus} {unit}.To test when the fish is cooked use the point of a sharp knife inserted into the centre of the thickest part of the {ingrd}. It is cooked when the flesh comes away from the bone " },
+                                  "txt" : { "S" : "Transfer the tray to the oven to bake for {timeu}. To test when the fish is cooked use the point of a sharp knife inserted into the centre of the thickest part of the {ingrd}. It is cooked when the flesh comes away from the bone" },
+                                  "say" : { "S" : "Transfer the tray to the oven to bake for {timeu}. To test when the fish is cooked use the point of a sharp knife inserted into the centre of the thickest part of the {ingrd}. It is cooked when the flesh comes away from the bone " },
                                   "time" : { "N" : "15" },
                                   "tplus" : { "N" : "5" },
                                   "unit" : { "S" : "min" },

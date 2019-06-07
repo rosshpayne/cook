@@ -45,6 +45,8 @@ var unitS []*Unit = []*Unit{
 	&Unit{Slabel: "stick", Llabel: "stick", Print: "l", Say: "l", Display: "l", Plural: "s", Nsu: true},
 }
 
+// note drizzle is q quantity
+
 func (u *Unit) IsNsu() bool {
 	return u.Nsu
 }

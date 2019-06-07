@@ -209,9 +209,9 @@ func (a Activities) GenerateTasks(pKey string, r *RecipeT, s *sessCtx) prepTaskS
 			if len(pa.Prep[i].Division) == 0 && len(adiv) > 0 {
 				pa.Prep[i].Division = adiv
 			}
-			if len(pa.Task[i].Div_) > 0 {
-				pa.Task[i].divOnly = true
-				pa.Task[i].Division = pa.Task[i].Div_
+			if len(pa.Prep[i].Div_) > 0 {
+				pa.Prep[i].divOnly = true
+				pa.Prep[i].Division = pa.Prep[i].Div_
 			}
 		}
 		for i := 0; i < len(pa.Task); i++ {

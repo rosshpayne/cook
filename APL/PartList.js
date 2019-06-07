@@ -1,11 +1,12 @@
 
 
-module.exports = (backbtn, header, subhdr, height, data) => { return {
+module.exports = (backbtn, header, subhdr, height, data, hint ) => { return {
     type: 'Alexa.Presentation.APL.RenderDocument',
     token: 'splash-screen',
     document: {
       type: 'APL',
       version: '1.0',
+      theme: "dark",
       import: [
         {
           name: 'alexa-styles',
@@ -119,7 +120,7 @@ module.exports = (backbtn, header, subhdr, height, data) => { return {
               },
               {
                 type: "AlexaFooter",
-                hintText: "hint text goes here.."
+                hintText: hint
               }
           ]
       }

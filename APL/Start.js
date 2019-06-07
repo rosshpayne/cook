@@ -6,6 +6,7 @@ module.exports = (bkbtn, header, subhdr, title, data, verbal, hint, ) => { retur
     document: {
       type: 'APL',
       version: '1.0',
+      theme: "dark",
       import: [
         {
           name: 'alexa-styles',
@@ -22,7 +23,7 @@ module.exports = (bkbtn, header, subhdr, title, data, verbal, hint, ) => { retur
           values: [
             { backgroundColor: "blue",
               borderColor: "yellow",
-              color: "yellow"
+              color: "black"
             }
         ]
       }

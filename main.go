@@ -1155,8 +1155,8 @@ func handler(ctx context.Context, request InputEvent) (RespEvent, error) {
 	lc, _ := lambdacontext.FromContext(ctx)
 	alxreqid := strings.Split(request.QueryStringParameters["reqId"], ".")
 
-	fmt.Println("Alexa reqId : ", request.QueryStringParameters["reqId"])
-	fmt.Println("invoke reqId : ", lc.AwsRequestID)
+	// fmt.Println("Alexa reqId : ", request.QueryStringParameters["reqId"])
+	// fmt.Println("invoke reqId : ", lc.AwsRequestID)
 
 	// var body string
 	// create a new session context and merge with last session data if present.
