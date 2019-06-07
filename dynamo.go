@@ -142,23 +142,32 @@ func (s *sessCtx) loadInstructions() (Threads, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Error: %s - %s", "in UnmarshalMap in loadInstructions ", err.Error())
 	}
-	part := s.part
-	fmt.Printf(" loadInstructions len() %d .  s.selId = %d	\n ", len(ptR), s.selId)
-	if len(s.part) == 0 {
-		part = "DivPt"
-		if len(s.parts) == 0 {
-			part = CompleteRecipe_
-		} else if s.selId == 0 || s.selId == 1 {
-			// either no parts menu or item 1 is chosen
-			part = CompleteRecipe_
-		}
+	fmt.Printf(" loadInstructions len() %d part [%s]   s.selId = [%d]	\n ", len(ptR), s.part, s.selId)
+
+	var listPart string
+	if len(s.parts) == 0 {
+		listPart = CompleteRecipe_
 	} else {
-		if s.part != CompleteRecipe_ {
-			part = "DivPt"
+		listPart = "DivPt"
+		if s.selId == 1 {
+			// either no parts menu or item 1 is chosen
+			listPart = CompleteRecipe_
 		}
 	}
-
-	fmt.Println("loadInstructions: part =", part)
+	// s.part
+	// if len(s.part) == 0 {
+	// 	part = "DivPt"
+	// 	if len(s.parts) == 0 {
+	// 		part = CompleteRecipe_
+	// 	} else if s.selId == 0 || s.selId == 1 {
+	// 		// either no parts menu or item 1 is chosen
+	// 		part = CompleteRecipe_
+	// 	}
+	// } else {
+	// 	if s.part != CompleteRecipe_ {
+	// 		part = "DivPt"
+	// 	}
+	// }
 	//
 	// 	type ThreadT struct {
 	// 	Instructions InstructionS
@@ -169,7 +178,7 @@ func (s *sessCtx) loadInstructions() (Threads, error) {
 		instructs InstructionS
 	)
 
-	switch part {
+	switch listPart {
 	case CompleteRecipe_:
 		// look for multiple threads within CompleteRecipe_
 		threads = make(Threads, 1)
