@@ -543,27 +543,6 @@ func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 		//type_ = "Start2"
 		s.saveState = false // no point in saving state as nothing to transfer to next session.
 
-	} else if len(s.reqOpenBk) > 0 {
-		fmt.Println("reqOpenBK --------")
-		bk := strings.Split(string(s.reqOpenBk), "|")
-		if s.back {
-			title = bk[1] + " is open. Searches will be restricted to this book"
-		} else {
-			title = bk[1] + " is now open. Searches will be restricted to this book"
-		}
-		ob := strings.Split(string(s.reqOpenBk), "|")
-		for i, v := range w.Bkids {
-			if v == ob[0] {
-				list[i].Title += "  (opened and searcheable)"
-			}
-		}
-		hint = `hint: "close book"` + srch
-
-	} else if len(s.CloseBkName) > 0 {
-		fmt.Printf("close book. List = %#v\n --------", w.Display)
-		title = s.CloseBkName + " is now closed. Searches will be across all your books"
-		hint = `hint: ` + OpenBkName() + srch
-
 	} else if len(w.Bkids) > 0 || s.back {
 		fmt.Printf("w.Bkids > 0 or s.back ")
 		if len(w.Bkids) > 1 {
@@ -571,7 +550,30 @@ func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 		} else {
 			title = "You have the following book registered to this device. "
 		}
-		hint = `hint: "close book"` + srch
+
+		hint = `hint: ` + OpenBkName() + srch
+
+		if len(s.reqOpenBk) > 0 {
+			fmt.Println("reqOpenBK --------")
+			bk := strings.Split(string(s.reqOpenBk), "|")
+			if s.back {
+				title = bk[1] + " is open. Searches will be restricted to this book"
+			} else {
+				title = bk[1] + " is now open. Searches will be restricted to this book"
+			}
+			ob := strings.Split(string(s.reqOpenBk), "|")
+			for i, v := range w.Bkids {
+				if v == ob[0] {
+					list[i].Title += "  (opened and searcheable)"
+				}
+			}
+			hint = `hint: "close book"` + srch
+
+		} else if len(s.CloseBkName) > 0 {
+			fmt.Printf("close book. List = %#v\n --------", w.Display)
+			title = s.CloseBkName + " is now closed. Searches will be across all your books"
+		}
+
 	}
 
 	if len(w.request) > 0 {
