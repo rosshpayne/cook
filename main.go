@@ -598,7 +598,10 @@ func (s *sessCtx) orchestrateRequest() error {
 		s.pushState()
 		return nil
 	}
-	if s.request == "book" { // open book
+	//
+	// open book
+	//
+	if s.request == "book" {
 		//
 		// open book requested
 		//
@@ -666,6 +669,9 @@ func (s *sessCtx) orchestrateRequest() error {
 		//s.ingrdList, s.recipeList, s.object, s.showObjMenu = "", nil, "", false
 		//return nil
 	}
+	//
+	// close book
+	//
 	if s.request == "close" {
 		if len(s.object) > 0 && s.eol != s.recId[objectMap[s.object]] {
 			s.dmsg = fmt.Sprintf("You currently have recipe %s open. Do you still want to close the book?", lastState.RName)

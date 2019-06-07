@@ -439,6 +439,8 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		// rec is the Instruction record, read from the Thread which is held in state.
 		//
 		rec := &t[s.cThread].Instructions[id-1]
+		fmt.Println("type_ : ", type_)
+		fmt.Printf("** rec = [%#v]\n", rec)
 		// eol = strconv.Itoa(rec.EOL)
 		// peol = strconv.Itoa(rec.PEOL)
 		part = getLongName(rec.Part)

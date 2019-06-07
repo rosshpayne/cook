@@ -1156,6 +1156,13 @@ function handleResponse (handlerInput , resp) {
                           .addDirective(start(resp.BackBtn, resp.Header, resp.SubHdr, resp.Text, resp.List, " ", resp.Hint, resp.Error))
                           .addDirective(speakcmd())
                           .getResponse();
+        } else if (resp.Type === "Start2") {
+          const search = require('APL/' + resp.Type + '.js');
+          return  handlerInput.responseBuilder
+                          .speak(resp.Verbal)
+                          .reprompt(resp.Text)
+                          .addDirective(search(resp.BackBtn, resp.Header, resp.SubHdr, resp.Text, resp.Hint))
+                          .getResponse();
         } else if (resp.Type === "PartList") {
           const search = require('APL/' + resp.Type + '.js');
           return  handlerInput.responseBuilder
