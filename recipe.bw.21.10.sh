@@ -1,5 +1,5 @@
 aws dynamodb batch-write-item \
-    --request-items file://data/activity.data.21.10.json \
+    --request-items file://data/books.json \
     --return-consumed-capacity TOTAL
     
 

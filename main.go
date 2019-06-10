@@ -795,6 +795,11 @@ func (s *sessCtx) orchestrateRequest() error {
 			s.request = "select"
 			s.selCtx = ctxRecipeMenu
 			s.selId = 1
+			s.authors = s.recipeList[0].Authors
+			s.reqBkName = s.recipeList[0].BkName
+			s.reqRId = s.recipeList[0].RId
+			s.reqBkId = s.recipeList[0].BkId
+			s.reqRName = s.recipeList[0].RName
 
 		default:
 			// many recipes found
@@ -1262,6 +1267,17 @@ func handler(ctx context.Context, request InputEvent) (RespEvent, error) {
 		if err != nil {
 			fmt.Println("Error returned by popState()..")
 		}
+		//
+		// zero some attribute
+		//
+		s := sessctx
+		if s.cThread > 0 || s.recId[1] > 0 || len(s.part) > 0 {
+			s.cThread, s.oThread = 0, 0
+			s.recId = [4]int{0, 0, 0, 0}
+			s.part = ""
+			s.updateState()
+		}
+		// zero these attributes
 	case container_, task_:
 		//  "object" request is required only for VUI, as all requests are be random by nature.
 		//  GUI requests, on the other hand, are controlled by this app making the following request redundant.

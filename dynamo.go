@@ -148,18 +148,22 @@ func (s *sessCtx) loadInstructions() (Threads, error) {
 	if len(s.parts) == 0 {
 		listPart = CompleteRecipe_
 	} else {
+		listPart = s.part
+		if s.part != CompleteRecipe_ {
+			listPart = "DivPt"
+		}
 		listPart = "DivPt"
 		if s.selId == 1 {
 			// either no parts menu or item 1 is chosen
 			listPart = CompleteRecipe_
 		}
 	}
-	// s.part
+	fmt.Printf(" loadInstructions len() %d part [%s]   s.selId = [%d]  listPart [%s]	\n ", len(ptR), s.part, s.selId, listPart)
+	// part := s.part
+	// fmt.Printf(" loadInstructions len() %d .  s.selId = %d	\n ", len(ptR), s.selId)
 	// if len(s.part) == 0 {
 	// 	part = "DivPt"
-	// 	if len(s.parts) == 0 {
-	// 		part = CompleteRecipe_
-	// 	} else if s.selId == 0 || s.selId == 1 {
+	// 	if s.selId == 0 || s.selId == 1 {
 	// 		// either no parts menu or item 1 is chosen
 	// 		part = CompleteRecipe_
 	// 	}
@@ -167,11 +171,6 @@ func (s *sessCtx) loadInstructions() (Threads, error) {
 	// 	if s.part != CompleteRecipe_ {
 	// 		part = "DivPt"
 	// 	}
-	// }
-	//
-	// 	type ThreadT struct {
-	// 	Instructions InstructionS
-	// 	id           int // active record in Instructions starting at 1
 	// }
 	var (
 		threads   Threads // []ThreadT
@@ -206,6 +205,7 @@ func (s *sessCtx) loadInstructions() (Threads, error) {
 		}
 	case "DivPt":
 		// find instructions associated with the part
+		// s.selId is value from part list screen
 		v := s.parts[s.selId-2]
 		instructs = make(InstructionS, 1)
 		instructs[0] = InstructionT{} // blank instruction at index 0, so Instructions start at index 1.
@@ -260,6 +260,7 @@ func (s *sessCtx) loadInstructions() (Threads, error) {
 			s.cThread = threads[0].Thread
 
 		default:
+			// v.type_=Thread
 			// division by ingredient (part) - currently uses linked instructions. May go scan like Div in future.
 			// generate threads: look for multiple threads within part
 			var thrdCnt int
