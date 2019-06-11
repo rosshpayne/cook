@@ -748,14 +748,16 @@ func (s *sessCtx) orchestrateRequest() error {
 		//
 		// reverse words - even if found previously
 		//
-		switch len(f) {
-		case 2:
-			err = s.keywordSearch(f[1] + " " + f[0])
-		case 3:
-			err = s.keywordSearch(f[2] + " " + f[1] + " " + f[0])
-		}
-		if err != nil {
-			return err
+		if len(s.recipeList) == 0 {
+			switch len(f) {
+			case 2:
+				err = s.keywordSearch(f[1] + " " + f[0])
+			case 3:
+				err = s.keywordSearch(f[2] + " " + f[1] + " " + f[0])
+			}
+			if err != nil {
+				return err
+			}
 		}
 		//
 		if len(s.recipeList) == 0 {
@@ -1070,7 +1072,7 @@ func (s *sessCtx) orchestrateRequest() error {
 				s.displayData = s.parts
 				return nil
 			}
-			s.dispCtr = nil
+			//s.dispCtr = nil TODO check...
 			if s.selId > len(s.parts)+1 || s.selId < 1 {
 				//s.setDisplay(lastState)
 				s.derr = "selection is not within range"
@@ -1092,7 +1094,7 @@ func (s *sessCtx) orchestrateRequest() error {
 			if s.part != curPart {
 				s.recId[objectMap[s.object]] = 0
 			}
-			fmt.Printf("selId  %d   parts   %#v\n", s.selId, s.part)
+			fmt.Printf("^^^ selId  %d   parts   %#v\n", s.selId, s.part)
 			s.reset = true
 			//s.recId = [4]int{0, 0, 0, 0}
 			s.showObjMenu = false

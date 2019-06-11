@@ -955,44 +955,44 @@ func (s *sessCtx) keywordSearch(srch string) error {
 		//
 		// if more than four books maybe better to scan all book and merge with known books
 		//
-		for _, v := range bkids {
-			fmt.Println("About to search book: ", v)
-			kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value(srch))
-			kcond = kcond.And(expression.KeyBeginsWith(expression.Key("SortK"), v+"-"))
-			expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
-			if err != nil {
-				return fmt.Errorf("Error: %s [%s] %s", "in NewBuilder in keywordSearch of ", s.reqSearch, err.Error())
-			}
-			input := &dynamodb.QueryInput{
-				KeyConditionExpression:    expr.KeyCondition(),
-				FilterExpression:          expr.Filter(),
-				ExpressionAttributeNames:  expr.Names(),
-				ExpressionAttributeValues: expr.Values(),
-			}
-			input = input.SetTableName("Ingredient").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
-			//
-			result, err = s.dynamodbSvc.Query(input)
-			if err != nil {
-				return fmt.Errorf("Error: %s [%s] %s", "in Query in keywordSearch of ", s.reqBkId, err.Error())
-			}
-			fmt.Println("keywordSearch: Query ConsumedCapacity: \n", result.ConsumedCapacity)
-			input = input.SetTableName("Ingredient").SetConsistentRead(false)
-			//
-			result, err = s.dynamodbSvc.Query(input)
-			if err != nil {
-				return fmt.Errorf("Error: %s [%s] %s", "in Query in keywordSearch of ", s.reqBkId, err.Error())
-			}
-			if int(*(result.Count)) == 0 {
-				fmt.Println("** No recipes found in book ", v)
-				continue
-			}
+		//for _, v := range bkids {
+		//fmt.Println("About to search book: ", v)
+		kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value(srch))
+		//	kcond = kcond.And(expression.KeyBeginsWith(expression.Key("SortK"), v+"-"))
+		expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
+		if err != nil {
+			return fmt.Errorf("Error: %s [%s] %s", "in NewBuilder in keywordSearch of ", s.reqSearch, err.Error())
+		}
+		input := &dynamodb.QueryInput{
+			KeyConditionExpression:    expr.KeyCondition(),
+			FilterExpression:          expr.Filter(),
+			ExpressionAttributeNames:  expr.Names(),
+			ExpressionAttributeValues: expr.Values(),
+		}
+		input = input.SetTableName("Ingredient").SetReturnConsumedCapacity("TOTAL").SetConsistentRead(false)
+		//
+		result, err = s.dynamodbSvc.Query(input)
+		if err != nil {
+			return fmt.Errorf("Error: %s [%s] %s", "in Query in keywordSearch of ", s.reqBkId, err.Error())
+		}
+		fmt.Println("keywordSearch: Query ConsumedCapacity: \n", result.ConsumedCapacity)
+		if int(*(result.Count)) > 0 {
+			// found one or more recipes.
 			recS_ := make([]searchRecT, int(*result.Count))
 			err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &recS_)
 			if err != nil {
 				return fmt.Errorf("Error: %s [%s] err", "in UnmarshalListMaps of keywordSearch ", s.reqRName, err.Error())
 			}
-			recS = append(recS, recS_...)
+			// Now check if recipes are in the list of registered books
+			for _, v := range bkids {
+				for _, r := range recS_ {
+					if v == r.SortK[:strings.IndexByte(r.SortK, '-')] {
+						recS = append(recS, r)
+					}
+				}
+			}
 		}
+		//	}
 	}
 	//
 	// result of seach within open book

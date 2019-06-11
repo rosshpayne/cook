@@ -724,7 +724,11 @@ func expandLiteralTags(str string, s ...*sessCtx) string {
 				if s[0].dispCtr != nil {
 					fmt.Printf("user defined container: %#v\n", s[0].dispCtr)
 					if len(s[0].dispCtr.UDimension) > 0 {
-						b.WriteString(" your " + c.label())
+						if s[0].dispCtr.UDimension != s[0].dispCtr.Dimension {
+							b.WriteString(" your " + c.label())
+						} else {
+							b.WriteString(" a " + c.String())
+						}
 					} else {
 						b.WriteString(" a " + c.String())
 					}

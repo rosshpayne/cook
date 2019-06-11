@@ -766,6 +766,8 @@ func (s *sessCtx) popState() error {
 	//
 	//
 	s.displayData = s.parts
+	//s.dispCtr = &sr.DispCtr
+	s.dispCtr = sr.DispCtr
 
 	if len(sr.InstructionData) > 0 {
 		fmt.Println("displayData = InstructionData")
@@ -804,8 +806,6 @@ func (s *sessCtx) popState() error {
 	if len(sr.MenuL) > 0 {
 		s.menuL = sr.MenuL
 	}
-	//s.dispCtr = &sr.DispCtr
-	s.dispCtr = sr.DispCtr
 	if sr.ScaleF == 0 {
 		global.SetScale(1.0)
 	} else {

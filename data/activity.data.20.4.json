@@ -764,13 +764,13 @@
                                                     }}}
                                 },
                                  {"M" : { 
-                                  "txt" : { "S" : "To bake the cake we, we make use of a {useC.form} if that is what you have. Eitherway, just make sure it is a springform or a tin with a removable base." },
-                                  "say" : { "S" : "To bake the cake we, we make use of a {useC.form} if that is what you have. Eitherway, just make sure it is a springform or a tin with a removable base." },
+                                  "txt" : { "S" : "As a reminder, to bake the cake it is best to use a springform cake tin or one with a removable base." },
+                                  "say" : { "S" : "As a reminder, to bake the cake it is best to use a springform cake tin, or one with a removable base." },
                                   "useC": {"SS" : ["caketin"] }}
                                  },
                                 {"M" : { 
-                                  "txt" : { "S" : "Lightly grease and line the {useC} with baking parchment and set aside" },
-                                  "say" : { "S" : "Lightly grease and line the {useC} with baking parchment and set aside" },
+                                  "txt" : { "S" : "Lightly grease and line {useC} with baking parchment and set aside" },
+                                  "say" : { "S" : "Lightly grease and line {useC} with baking parchment and set aside" },
                                   "useC": {"SS" : ["caketin"] }}
                                  }
                              ]
