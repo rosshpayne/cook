@@ -329,6 +329,11 @@ func (s *sessCtx) orchestrateRequest() error {
 		fmt.Println("in start...")
 		fmt.Println("s.request = ", s.request)
 		fmt.Println("s.email = ", s.email)
+		if s.dispCtr == nil {
+			fmt.Println("at start: s.dispCtr is NIL")
+		} else {
+			fmt.Printf(" at start: s.dispCtr %#v\n", s.dispCtr)
+		}
 		switch wx := s.displayData.(type) {
 		case Threads:
 			fmt.Println("request start: displayData: Threads")

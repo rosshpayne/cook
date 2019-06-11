@@ -376,6 +376,19 @@ func (s *sessCtx) setSessionState(ls *stateRec) {
 			s.reset = true
 		}
 	}
+	//s.dispCtr = &ls.DispCtr
+	if ls.DispCtr == nil {
+		fmt.Printf("getState: ls.DispCtr is nil\n")
+	} else {
+		fmt.Printf("getState: ls.DispCtr %#v\n", *(ls.DispCtr))
+	}
+	if ls.DispCtr != nil { //&& !s.showObjMenu {
+		s.dispCtr = ls.DispCtr
+		if s.displayData == nil {
+			s.displayData = s.dispCtr
+		}
+	}
+
 	if len(ls.InstructionData) > 0 && !(s.origreq == "list" && s.action != "instructions") {
 		dd := ls.InstructionData
 		// if s.peol == 0 && len(dd) > 0 && dd[ls.CThread].Id > 0 {
@@ -428,18 +441,6 @@ func (s *sessCtx) setSessionState(ls *stateRec) {
 	}
 	if len(ls.MenuL) > 0 {
 		s.menuL = ls.MenuL
-	}
-	//s.dispCtr = &ls.DispCtr
-	if ls.DispCtr == nil {
-		fmt.Printf("getState: ls.DispCtr is nil\n")
-	} else {
-		fmt.Printf("getState: ls.DispCtr %#v\n", *(ls.DispCtr))
-	}
-	if ls.DispCtr != nil { //&& !s.showObjMenu {
-		s.dispCtr = ls.DispCtr
-		if s.displayData == nil {
-			s.displayData = s.dispCtr
-		}
 	}
 	if s.dispCtr == nil {
 		fmt.Printf("getState: s.dispCtr is nil\n")

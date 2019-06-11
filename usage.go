@@ -720,16 +720,20 @@ func expandLiteralTags(str string, s ...*sessCtx) string {
 			fmt.Println("expand container tag..", pt)
 			c := &Container{Label: pt[0], Measure: &MeasureCT{Quantity: pt[1], Size: pt[2], Shape: pt[3], Dimension: pt[4], Height: pt[5], Unit: pt[6]}}
 			if len(s) > 0 {
+				fmt.Println("expand container: s passed in")
 				if s[0].dispCtr != nil {
+					fmt.Printf("user defined container: %#v\n", s[0].dispCtr)
 					if len(s[0].dispCtr.UDimension) > 0 {
 						b.WriteString(" your " + c.label())
 					} else {
 						b.WriteString(" a " + c.String())
 					}
 				} else {
+					fmt.Println("NO user defined container: dispCtr is nil")
 					b.WriteString(" a " + c.String())
 				}
 			} else {
+				fmt.Println("expand container: s not passed in")
 				b.WriteString(" a " + c.String())
 			}
 		default:
