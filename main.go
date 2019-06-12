@@ -1,19 +1,19 @@
 package main
 
 import (
-	"context"
+	_ "context"
 	_ "encoding/json"
 	"fmt"
 	"log"
 	"net/url"
-	_ "os"
+	"os"
 	"strconv"
 	"strings"
 
 	"github.com/cook/global"
 
-	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-lambda-go/lambdacontext"
+	_ "github.com/aws/aws-lambda-go/lambda"
+	_ "github.com/aws/aws-lambda-go/lambdacontext"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -709,70 +709,58 @@ func (s *sessCtx) orchestrateRequest() error {
 	if s.request == "search" {
 
 		search := func(srch string) error {
-			fmt.Println("search for: ", srch)
-			err := s.keywordSearch(srch)
+			if srch[len(srch)-1] == 's' {
+				srch = srch[:len(srch)-1]
+			} else {
+				srch = srch + "s"
+			}
+			fmt.Println(" search for: ", srch)
+			err = s.keywordSearch(srch)
 			if err != nil {
 				return err
-			}
-			if len(s.recipeList) == 0 {
-				if srch[len(srch)-1] == 's' {
-					srch = srch[:len(srch)-1]
-				} else {
-					srch = srch + "s"
-				}
-				fmt.Println(" search for: ", srch)
-				err = s.keywordSearch(srch)
-				if err != nil {
-					return err
-				}
 			}
 			return nil
 		}
 
 		s.clearForSearch(lastState)
-
 		fmt.Println("Search.....", s.reqSearch)
 		fmt.Println("Before BookId, RecipeId ", s.reqBkId, s.reqRId)
 		//
 		s.recipeList = nil
 		//
-		//s.recipeMap = make(mRecipeM)
 		srch := s.reqSearch
-		// full search for recipe name
+		for _, v := range []string{" of ", " with ", " the ", " has ", " and ", " recipe ", " recipes "} {
+			srch = strings.Replace(" "+srch, v, " ", -1)
+		}
+		srch = strings.Replace(strings.TrimSpace(srch), "  ", " ", -1)
+		//
 		err := s.keywordSearch(srch)
 		if err != nil {
 			return err
 		}
 		//
-		f := strings.Fields(s.reqSearch)
-		//
 		// reverse words - even if found previously
+		// .e.g. user enteres "rhubarb tarragon" then also search for "tarragon rhubarb"
+		// as some recipes may use the reverse.
 		//
-		if len(s.recipeList) == 0 {
-			switch len(f) {
-			case 2:
-				err = s.keywordSearch(f[1] + " " + f[0])
-			case 3:
-				err = s.keywordSearch(f[2] + " " + f[1] + " " + f[0])
+		f := strings.Fields(srch)
+		switch len(f) {
+		case 2:
+			err = s.keywordSearch(f[1] + " " + f[0])
+		case 3:
+			err = s.keywordSearch(f[2] + " " + f[1] + " " + f[0])
+			if err != nil {
+				return err
 			}
+			err = s.keywordSearch(f[1] + " " + f[0] + " " + f[2])
 			if err != nil {
 				return err
 			}
 		}
 		//
 		if len(s.recipeList) == 0 {
-			// remove filler words
-			for _, v := range []string{" of ", " with ", " the ", " has ", " and ", " recipe "} {
-				srch = strings.Replace(srch, v, " ", -1)
-			}
-			// remove double spaces
-			srch = strings.Replace(srch, "  ", " ", -1)
 			search(srch)
 		}
-
-		// for k, _ := range s.recipeMap {
-		// 	s.recipeList = append(s.recipeList, k)
-		// }
 		//
 		s.eol, s.reset, s.object = 0, true, ""
 		s.showObjMenu = false
@@ -1145,8 +1133,8 @@ func (r *InputEvent) init() {
 	r.PathItem = strings.Split(r.Path, "/")
 }
 
-func handler(ctx context.Context, request InputEvent) (RespEvent, error) {
-	//func handler(request InputEvent) (RespEvent, error) {
+//func handler(ctx context.Context, request InputEvent) (RespEvent, error) {
+func handler(request InputEvent) (RespEvent, error) {
 	var (
 		pathItem []string
 		err      error
@@ -1164,8 +1152,8 @@ func handler(ctx context.Context, request InputEvent) (RespEvent, error) {
 		return dynamodb.New(sess, aws.NewConfig())
 	}
 	pathItem = request.PathItem
-	lc, _ := lambdacontext.FromContext(ctx)
-	alxreqid := strings.Split(request.QueryStringParameters["reqId"], ".")
+	// lc, _ := lambdacontext.FromContext(ctx)
+	// alxreqid := strings.Split(request.QueryStringParameters["reqId"], ".")
 
 	// fmt.Println("Alexa reqId : ", request.QueryStringParameters["reqId"])
 	// fmt.Println("invoke reqId : ", lc.AwsRequestID)
@@ -1173,9 +1161,9 @@ func handler(ctx context.Context, request InputEvent) (RespEvent, error) {
 	// var body string
 	// create a new session context and merge with last session data if present.
 	sessctx := &sessCtx{
-		userId:      request.QueryStringParameters["uid"], // empty when not called
-		alxReqId:    alxreqid[len(alxreqid)-1],
-		invkReqId:   lc.AwsRequestID,
+		userId: request.QueryStringParameters["uid"], // empty when not called
+		// alxReqId:    alxreqid[len(alxreqid)-1],
+		// invkReqId:   lc.AwsRequestID,
 		dynamodbSvc: dynamodbService(),
 		request:     pathItem[0],
 		origreq:     pathItem[0],
@@ -1422,7 +1410,7 @@ func handler(ctx context.Context, request InputEvent) (RespEvent, error) {
 
 func main() {
 
-	lambda.Start(handler)
+	//lambda.Start(handler)
 
 	//p1 := InputEvent{Path: os.Args[1], Param: "uid=asdf-asdf-asdf-asdf-asdf-987654&rcp=Take-home Chocolate Cake"}
 	//var i float64 = 1.0
@@ -1433,25 +1421,25 @@ func main() {
 	//	var scaleF float64
 	// p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
 
-	// uid := `amzn1.ask.account.AFTQJDFZKJIDFN6GRQFTSILWMGO2BHFRTP55PK6KT42XY22GR4BABOP4Y663SUNVBWYABLLQCHEK22MZVUVR7HXVRO247IQZ5KSVNLMDBRDRYEINWGRB6N2U7J2BBWEOEKLY2HKQ6VQTTLGKT2JCH4VOE5A7XPFDI4VMNJW63YP4XCMYGIA5IU4VJGNHI2AAU33Q5J2TJIXP3DI`
-	// // p2 := InputEvent{Path: "addUser", Param: "uid=" + uid + "&bkids=20,21"}
-	// p2 := InputEvent{Path: os.Args[1], Param: "sid=" + uid + "&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
+	uid := `amzn1.ask.account.AFTQJDFZKJIDFN6GRQFTSILWMGO2BHFRTP55PK6KT42XY22GR4BABOP4Y663SUNVBWYABLLQCHEK22MZVUVR7HXVRO247IQZ5KSVNLMDBRDRYEINWGRB6N2U7J2BBWEOEKLY2HKQ6VQTTLGKT2JCH4VOE5A7XPFDI4VMNJW63YP4XCMYGIA5IU4VJGNHI2AAU33Q5J2TJIXP3DI`
+	// p2 := InputEvent{Path: "addUser", Param: "uid=" + uid + "&bkids=20,21"}
+	p2 := InputEvent{Path: os.Args[1], Param: "sid=" + uid + "&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
 
-	// // if len(os.Args) < 5 {
-	// // 	scaleF = 1.0
-	// // } else {
-	// // 	scaleF, err = strconv.ParseFloat(os.Args[4], 64)
-	// // 	if err != nil {
-	// // 		panic(err)
-	// // 	}
-	// // }
-
-	// global.Set_WriteCtx(global.UDisplay)
-	// p, _ := handler(p2)
-	// if len(p.Error) > 0 {
-	// 	fmt.Printf("%#v\n", p.Error)
+	// if len(os.Args) < 5 {
+	// 	scaleF = 1.0
 	// } else {
-	// 	fmt.Printf("output:   %s\n", p.Text)
-	// 	fmt.Printf("output:   %s\n", p.Verbal)
+	// 	scaleF, err = strconv.ParseFloat(os.Args[4], 64)
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
 	// }
+
+	global.Set_WriteCtx(global.UDisplay)
+	p, _ := handler(p2)
+	if len(p.Error) > 0 {
+		fmt.Printf("%#v\n", p.Error)
+	} else {
+		fmt.Printf("output:   %s\n", p.Text)
+		fmt.Printf("output:   %s\n", p.Verbal)
+	}
 }

@@ -508,11 +508,13 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 		switch len(e) {
 		case 0, 1:
 		case 2:
+			AddEntry(e[0] + " " + e[1])
 			AddEntry(e[0] + " " + e[1] + " " + subject)
 			//AddEntry(e[1] + " " + e[0] + " " + subject)
 			AddEntry(e[0] + " " + e[1] + " " + type_ + " " + subject)
 			//AddEntry(e[1] + " " + e[0] + " " + type_ + " " + subject)
 		default:
+			AddEntry(e[0] + " " + e[1])
 			AddEntry(e[0] + " " + e[1] + " " + subject)
 			AddEntry(e[0] + " " + e[2] + " " + subject)
 			AddEntry(e[1] + " " + e[2] + " " + subject)
@@ -628,8 +630,13 @@ func (s *sessCtx) generateAndSaveIndex(labelM map[string]*Activity, ingrdM map[s
 				s.WriteString(w[0] + " ")
 			}
 			str := RemoveCommonWords(RemovePuncs(s.String()))
-
+			fmt.Println("** with .. ", str)
+			words := strings.Fields(str)
 			GenerateEntries(str)
+			if len(words) > 2 {
+				GenerateEntries(words[1] + " " + words[2])
+			}
+
 			recipeIndexed = true
 		}
 	}
@@ -929,11 +936,10 @@ func (s *sessCtx) keywordSearch(srch string) error {
 		if err != nil {
 			return fmt.Errorf("Error: %s [%s] err", "in UnmarshalListMaps of keywordSearch ", s.reqRName, err.Error())
 		}
-		// if int(*result.Count) == 0 {
-		// 	allBooks = true
-		// }
-	}
-	if len(s.reqOpenBk) == 0 { //|| allBooks {
+	} else {
+		//
+		// allBooks
+		//
 		//
 		// loop through registered books index by userid.  Need to associate userId with email - in external system.
 		// 1. external system contains: email as registered by user and book names.
@@ -947,18 +953,8 @@ func (s *sessCtx) keywordSearch(srch string) error {
 		//
 		// for each book id for userId loop..(table: Ingredient: PKey: uId, SortK: BkId)
 		bkids := s.state[0].Welcome.Bkids
-		//bkids, err := getUserBooks()
-		// if err != nil {
-		// 	return (fmt.Errorf("Error:  ", err.Error()))
-		// }
-		fmt.Println("Num books found: ", len(bkids))
 		//
-		// if more than four books maybe better to scan all book and merge with known books
-		//
-		//for _, v := range bkids {
-		//fmt.Println("About to search book: ", v)
 		kcond := expression.KeyEqual(expression.Key("PKey"), expression.Value(srch))
-		//	kcond = kcond.And(expression.KeyBeginsWith(expression.Key("SortK"), v+"-"))
 		expr, err := expression.NewBuilder().WithKeyCondition(kcond).Build()
 		if err != nil {
 			return fmt.Errorf("Error: %s [%s] %s", "in NewBuilder in keywordSearch of ", s.reqSearch, err.Error())
@@ -992,24 +988,16 @@ func (s *sessCtx) keywordSearch(srch string) error {
 				}
 			}
 		}
-		//	}
 	}
 	//
-	// result of seach within open book
+	// append results to recipe list
 	//
-	// set session ctx to display object menu (ingredient,containers,utensils) list
-	//	default:
-	//s.makeSelect = true
-	//		s.vmsg = fmt.Sprintf("Multiple %s recipes found. See display", s.reqSearch)
-	//		s.dmsg = fmt.Sprintf(`%s recipes. Please select one by saying "select [number-in-list]"\n`, s.reqSearch)
 	for i, v := range recS {
 		sortk := strings.Split(v.SortK, "-")
 		s.ddata += strconv.Itoa(i+1) + ": " + v.BkName + " by " + v.Authors + ". Quantity: " + v.Quantity + "\n"
 		rec := mRecipeT{Id: i + 1, RName: v.RName, RId: sortk[1], BkName: v.BkName, BkId: sortk[0], Authors: v.Authors, Quantity: v.Quantity, Serves: v.Serves}
-		//s.recipeMap[rec] = true
 		s.recipeList = append(s.recipeList, rec)
 	}
-	//	}
 	return nil
 }
 
