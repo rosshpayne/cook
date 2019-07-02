@@ -401,7 +401,11 @@ func (t Threads) GenDisplay(s *sessCtx) RespEvent {
 		} else {
 			s.updateState()
 		}
-		hint = `hint:  "next", "previous", "repeat", "list ingredients", "list containers", "go back", "restart" `
+		if len(s.parts) > 0 {
+			hint = `hint:  "next", "previous", "repeat", "list ingredients", "list containers", "list parts", back", "restart" `
+		} else {
+			hint = `hint:  "next", "previous", "repeat", "list ingredients", "list containers", "back", "restart" `
+		}
 		fmt.Println("hint: ", hint)
 
 		return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Hint: hint, Text: rec.Text, Height: height, Verbal: speak, ListA: listA, ListB: listB, ListC: listC, Error: s.derr}
@@ -530,7 +534,7 @@ func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 	copy(list, w.Display)
 	//
 	hdr = "Welcome to your Ebury Press Cook books on Alexa"
-	srch := `, "search [ingredient,..]", "search [keyword,..]", "search [recipe-name]", "search [any-part-of-recipe-name]" e.g. "search tart", "search tarragon", "search chocolate cake"`
+	srch := `, "search [ingredient..]", "search [keyword]", "search [recipe-name]", "search [any-part-of-recipe-name]" e.g. "search tart", "search tarragon", "search chocolate cake"`
 
 	type_ := "Start"
 	if len(s.derr) > 0 {
@@ -570,7 +574,6 @@ func (w *WelcomeT) GenDisplay(s *sessCtx) RespEvent {
 			hint = `hint: "close book"` + srch
 
 		} else if len(s.CloseBkName) > 0 {
-			fmt.Printf("close book. List = %#v\n --------", w.Display)
 			title = s.CloseBkName + " is now closed. Searches will be across all your books"
 		}
 
@@ -595,7 +598,12 @@ func (c ContainerS) GenDisplay(s *sessCtx) RespEvent {
 		sf := strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
 		subh += "  (scale: " + sf + ")"
 	}
-	hint := `hint: "go back", "list ingredients", "list cooking instructions", "scale [integer]" `
+	var hint string
+	if len(s.parts) > 0 {
+		hint = `hint: "list ingredients", "list instructions", "list parts", back", "restart" `
+	} else {
+		hint = `hint: "list ingredients", "list instructions", "back", "restart" `
+	}
 	if len(s.reqOpenBk) > 0 {
 		hint += `, "close book" `
 	}
@@ -648,7 +656,7 @@ func (p PartS) GenDisplay(s *sessCtx) RespEvent {
 	if len(s.derr) > 0 {
 		type_ += "Err"
 	}
-	hint = "hint: select 1, scale recipe 55 percent"
+	hint = `hint: "select [integer]", "list ingredients", "list containers", "back", "restart"`
 	return RespEvent{Type: type_, BackBtn: true, Header: hdr, SubHdr: subh, Hint: hint, Height: "90", Verbal: s.vmsg, List: list, Error: s.derr}
 
 }
@@ -667,7 +675,11 @@ func (i IngredientT) GenDisplay(s *sessCtx) RespEvent {
 	}
 	sf := strconv.FormatFloat(global.GetScale(), 'g', 2, 64)
 	subhdr = "Ingredients       (Scale: " + sf + " )"
-	hint = "hint:  scale  75,  scale reset"
+	if len(s.parts) > 0 {
+		hint = `hint:  "scale [integer]", "scale reset", "list containers", "list insructions", "list parts", "back", "restart"`
+	} else {
+		hint = `hint:  "scale [integer]", "scale reset", "list containers", "list insructions", "back", "restart"`
+	}
 	type_ := "Ingredient"
 	if len(s.derr) > 0 {
 		type_ += "Err"
@@ -715,8 +727,10 @@ func (r RecipeListT) GenDisplay(s *sessCtx) RespEvent {
 	if len(s.derr) > 0 {
 		type_ += "Err"
 	}
+	hint = `hint: "select [integer]", "back", "restart"`
 	hdr = "Search results for: " + s.reqSearch
 	if len(s.reqOpenBk) > 0 {
+		hint = `hint: "select [integer]", "close book", "back", "restart"`
 		bk := strings.Split(string(s.reqOpenBk), "|")
 		subhdr = "Open book: " + bk[1]
 	} else {
@@ -726,7 +740,7 @@ func (r RecipeListT) GenDisplay(s *sessCtx) RespEvent {
 	if len(s.state) < 2 {
 		backBtn = false
 	}
-	hint = "hint: select three "
+
 	return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr, SubHdr: subhdr, Hint: hint, Text: s.vmsg, Verbal: s.dmsg, List: list, Error: s.derr}
 }
 
@@ -810,7 +824,11 @@ func (o ObjMenu) GenDisplay(s *sessCtx) RespEvent {
 	if len(s.derr) > 0 {
 		type_ += "Err"
 	}
-	hint = `hint: "list ingredients", "list containers", "list instructions", "size container" or "select one", "select two" etc`
+	if len(s.parts) > 0 {
+		hint = `hint: "select [integer]", "list instructions", "list ingredients", "list parts" , "list containers"`
+	} else {
+		hint = `hint: "select [integer]", "list instructions", "list ingredients", "list containers"`
+	}
 	if len(s.reqOpenBk) > 0 {
 		hint += `,"close book"`
 	}
@@ -967,6 +985,10 @@ func (c *DispContainerT) GenDisplay(s *sessCtx) RespEvent {
 	if len(s.state) < 2 {
 		backBtn = false
 	}
-	hint = `size [integer]`
+	if len(s.parts) > 0 {
+		hint = `hint: "size [integer]", "size clear", list ingredients", "list parts", "list instructions", "back", "restart"`
+	} else {
+		hint = `hint: "size [integer]", "size clear", list ingredients", "list instructions", "back", "restart"`
+	}
 	return RespEvent{Type: type_, BackBtn: backBtn, Header: hdr, SubHdr: subh, Hint: hint, List: list, Error: s.derr}
 }

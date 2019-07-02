@@ -118,14 +118,11 @@
                         }
                     ],
                     "samples": [
+                        "search for {opentext} recipes",
                         "search {opentext}",
-                        "list recipes {opentext}",
-                        "show recipe {opentext}",
-                        "find recipe {opentext}",
-                        "find recipes {opentext}",
-                        "show me {opentext}",
-                        "get me {opentext}",
-                        "search recipe {opentext}"
+                        "search for {opentext} recipe",
+                        "search {opentext} recipes",
+                        "search {opentext} recipe"
                     ]
                 },
                 {
@@ -153,6 +150,7 @@
                     "name": "CloseBookIntent",
                     "slots": [],
                     "samples": [
+                        "close",
                         "book close",
                         "close book"
                     ]
@@ -239,15 +237,13 @@
                     "name": "ScaleIntent",
                     "slots": [
                         {
-                            "name": "fraction",
-                            "type": "precentST"
+                            "name": "percent",
+                            "type": "percentST"
                         }
                     ],
                     "samples": [
-                        "scale ingredients {fraction}",
-                        "scale recipe {fraction} percent",
-                        "scale percent {fraction}",
-                        "scale recipe {fraction}"
+                        "scale {percent}",
+                        "scale {percent} percent"
                     ]
                 },
                 {
@@ -320,6 +316,12 @@
                 {
                     "name": "BookST",
                     "values": [
+                        {
+                            "id": "22",
+                            "name": {
+                                "value": "NOPI"
+                            }
+                        },
                         {
                             "id": "21",
                             "name": {
@@ -614,7 +616,7 @@
                     ]
                 },
                 {
-                    "name": "precentST",
+                    "name": "percentST",
                     "values": [
                         {
                             "id": "1.0",

@@ -1,19 +1,19 @@
 package main
 
 import (
-	_ "context"
+	"context"
 	_ "encoding/json"
 	"fmt"
 	"log"
 	"net/url"
-	"os"
+	_ "os"
 	"strconv"
 	"strings"
 
 	"github.com/cook/global"
 
-	_ "github.com/aws/aws-lambda-go/lambda"
-	_ "github.com/aws/aws-lambda-go/lambdacontext"
+	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-lambda-go/lambdacontext"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -326,8 +326,8 @@ func (s *sessCtx) orchestrateRequest() error {
 	//
 	if s.request == "start" {
 		s.request = lastState.Request
-		fmt.Println("in start...")
-		fmt.Println("s.request = ", s.request)
+		fmt.Println("in start....................")
+		fmt.Println("s.request, origreq  = ", s.request, s.origreq)
 		fmt.Println("s.email = ", s.email)
 		if s.dispCtr == nil {
 			fmt.Println("at start: s.dispCtr is NIL")
@@ -383,7 +383,10 @@ func (s *sessCtx) orchestrateRequest() error {
 			if s.selId == 0 { // no selection yet made so display parts menu
 				return nil
 			}
-
+		case IngredientT:
+			// reset request - Ingredient can be restarted (read data from cache)
+			// rather than start from beginning ie. requited to orchestrate the data
+			s.request = s.origreq
 		}
 	}
 
@@ -875,7 +878,7 @@ func (s *sessCtx) orchestrateRequest() error {
 	//
 	// respond to select from displayed items
 	//
-	if s.request == "select" { //|| s.request == "start" { //&& s.selId > 0 { selId==0 when partmenu is being displayed from start
+	if s.request == "select" || s.request == "start" { //&& s.selId > 0 { selId==0 when partmenu is being displayed from start
 		// selId is the response from Alexa on the index (ordinal value) of the selected display item
 		fmt.Println("SELCTX is : ", s.selCtx)
 
@@ -1012,14 +1015,13 @@ func (s *sessCtx) orchestrateRequest() error {
 					s.displayData = s.ingrdList
 					s.showObjMenu = false
 
-					if s.reScale { // change in scale from last session
+					if s.reScale {
 						s.updateState()
 					} else {
 						s.pushState()
 					}
 
-				//case "start", "list":
-				case "list":
+				case "start", "list":
 					s.ingrdList = IngredientT(s.ingrdList)
 				}
 				//
@@ -1133,8 +1135,8 @@ func (r *InputEvent) init() {
 	r.PathItem = strings.Split(r.Path, "/")
 }
 
-//func handler(ctx context.Context, request InputEvent) (RespEvent, error) {
-func handler(request InputEvent) (RespEvent, error) {
+func handler(ctx context.Context, request InputEvent) (RespEvent, error) {
+	//func handler(request InputEvent) (RespEvent, error) {
 	var (
 		pathItem []string
 		err      error
@@ -1152,8 +1154,8 @@ func handler(request InputEvent) (RespEvent, error) {
 		return dynamodb.New(sess, aws.NewConfig())
 	}
 	pathItem = request.PathItem
-	// lc, _ := lambdacontext.FromContext(ctx)
-	// alxreqid := strings.Split(request.QueryStringParameters["reqId"], ".")
+	lc, _ := lambdacontext.FromContext(ctx)
+	alxreqid := strings.Split(request.QueryStringParameters["reqId"], ".")
 
 	// fmt.Println("Alexa reqId : ", request.QueryStringParameters["reqId"])
 	// fmt.Println("invoke reqId : ", lc.AwsRequestID)
@@ -1161,9 +1163,9 @@ func handler(request InputEvent) (RespEvent, error) {
 	// var body string
 	// create a new session context and merge with last session data if present.
 	sessctx := &sessCtx{
-		userId: request.QueryStringParameters["uid"], // empty when not called
-		// alxReqId:    alxreqid[len(alxreqid)-1],
-		// invkReqId:   lc.AwsRequestID,
+		userId:      request.QueryStringParameters["uid"], // empty when not called
+		alxReqId:    alxreqid[len(alxreqid)-1],
+		invkReqId:   lc.AwsRequestID,
 		dynamodbSvc: dynamodbService(),
 		request:     pathItem[0],
 		origreq:     pathItem[0],
@@ -1410,7 +1412,7 @@ func handler(request InputEvent) (RespEvent, error) {
 
 func main() {
 
-	//lambda.Start(handler)
+	lambda.Start(handler)
 
 	//p1 := InputEvent{Path: os.Args[1], Param: "uid=asdf-asdf-asdf-asdf-asdf-987654&rcp=Take-home Chocolate Cake"}
 	//var i float64 = 1.0
@@ -1421,25 +1423,25 @@ func main() {
 	//	var scaleF float64
 	// p1 := InputEvent{Path: os.Args[1], Param: "sid=asdf-asdf-asdf-asdf-asdf-987654&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
 
-	uid := `amzn1.ask.account.AFTQJDFZKJIDFN6GRQFTSILWMGO2BHFRTP55PK6KT42XY22GR4BABOP4Y663SUNVBWYABLLQCHEK22MZVUVR7HXVRO247IQZ5KSVNLMDBRDRYEINWGRB6N2U7J2BBWEOEKLY2HKQ6VQTTLGKT2JCH4VOE5A7XPFDI4VMNJW63YP4XCMYGIA5IU4VJGNHI2AAU33Q5J2TJIXP3DI`
-	// p2 := InputEvent{Path: "addUser", Param: "uid=" + uid + "&bkids=20,21"}
-	p2 := InputEvent{Path: os.Args[1], Param: "sid=" + uid + "&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
+	// uid := `amzn1.ask.account.AFTQJDFZKJIDFN6GRQFTSILWMGO2BHFRTP55PK6KT42XY22GR4BABOP4Y663SUNVBWYABLLQCHEK22MZVUVR7HXVRO247IQZ5KSVNLMDBRDRYEINWGRB6N2U7J2BBWEOEKLY2HKQ6VQTTLGKT2JCH4VOE5A7XPFDI4VMNJW63YP4XCMYGIA5IU4VJGNHI2AAU33Q5J2TJIXP3DI`
+	// // p2 := InputEvent{Path: "addUser", Param: "uid=" + uid + "&bkids=20,21"}
+	// p2 := InputEvent{Path: os.Args[1], Param: "sid=" + uid + "&bkid=" + os.Args[2] + "&rid=" + os.Args[3]}
 
-	// if len(os.Args) < 5 {
-	// 	scaleF = 1.0
+	// // if len(os.Args) < 5 {
+	// // 	scaleF = 1.0
+	// // } else {
+	// // 	scaleF, err = strconv.ParseFloat(os.Args[4], 64)
+	// // 	if err != nil {
+	// // 		panic(err)
+	// // 	}
+	// // }
+
+	// global.Set_WriteCtx(global.UDisplay)
+	// p, _ := handler(p2)
+	// if len(p.Error) > 0 {
+	// 	fmt.Printf("%#v\n", p.Error)
 	// } else {
-	// 	scaleF, err = strconv.ParseFloat(os.Args[4], 64)
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
+	// 	fmt.Printf("output:   %s\n", p.Text)
+	// 	fmt.Printf("output:   %s\n", p.Verbal)
 	// }
-
-	global.Set_WriteCtx(global.UDisplay)
-	p, _ := handler(p2)
-	if len(p.Error) > 0 {
-		fmt.Printf("%#v\n", p.Error)
-	} else {
-		fmt.Printf("output:   %s\n", p.Text)
-		fmt.Printf("output:   %s\n", p.Verbal)
-	}
 }
