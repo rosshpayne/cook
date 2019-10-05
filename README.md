@@ -55,3 +55,13 @@ Some recipes fall naturally into separate components which in turn are represent
 access to each feature, but also direct access to said feature, whereas the GUI is less efficient, as it must follow a hierarchy of screens to gain access.
 Session State
 The App maintains a cooks session state for up to three days. This enables the cook to relaunch the App within this period and resume from exactly where they left off previously.
+
+
+# Two Interfaces
+The App supports both a graphic user interface (GUI) via the touch screen of the Echo Show, and voice commands via Alexa, to navigate through the various features of the app. The App is intended however, to be used solely via voice commands, as this permits not only hands free
+6
+ 10 only two concurrent threads are supported at this stage.
+7
+access to each feature, but also direct access to said feature, whereas the GUI is less efficient, as it must follow a hierarchy of screens to gain access.
+Session State
+The App maintains a cooks session state for up to three days. This enables the cook to relaunch the App within this period and resume from exactly where they left off previously.
