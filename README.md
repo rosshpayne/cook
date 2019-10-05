@@ -32,36 +32,27 @@ The data model permits this feature to be disabled for an individual recipe if d
 An alternative to directly scaling the ingredients is to adjust quantities based on a container size, which will be discussed next.
 5 from a cost and performance perspective there is a delicate balance between storage size of the index and CPU and IO of the query logic. The preference has been to increase the index size so the CPU and IO can be reduced.
 6 not to be confused with this App that runs solely on the Echo Show. The accompanying Alexa mobile app is an Amazon product that provides administrative functions to Alexa intelligent devices.
-7 rounding applies to any value over 20
-4
  
 # Scale by Container Size
 Some recipes, typically cakes, size the ingredient quantities to suite a particular container dimension. The “size” verbal command, enables a user to adjust all the ingredient quantities to suit the size of their container, provided the dimension is less than the original recipe container.
 For example, a cake recipe may specify a 30 cm round cake tin, however the cook may only have a 26 cm round cake tin available, in which case the cook can say “size twenty six” and the App will multiple all quantities by 0.7511 (26**2/30**2). As with the scale command, the ingredient listing and recipe instructions will make use of the adjusted values.
 This option can be disabled for an individual recipe if desired.
+
 # List Containers and Utensils.
 Cooking containers (bowls, cake tin, trays, etc) their size (small, medium, large) as well as cooking utensils (whisk, oven, electric mixer, rolling pin, grater etc) form a part of the recipe data, particularly relevant in the graph version of a recipe (more about that later).
 The verbal command, “list containers” displays the number of containers8 and their size that a recipe requires. It also list the utensils used by the recipe.
+
 # Recite Recipe Instructions
 The principal use case of the App is to recite recipe instructions. It should be understood that instructions in this context, are not simply sentences recited from the text in a book, as this content does not lend itself to fail safe execution of a recipe, in my experience.
 A single sentence from a book recipe may refer to many ingredients, often simply comma separated (up to five I have seen), requiring many separate activities across multiple containers to completely fulfil the intent of the sentence. A verbal instruction on the other hand, should represent a single non-divisible activity (within reason) applying to a single ingredient or mixture. Keeping an instruction as simple as possible reduces the chance of the cook making an error. Consequently one sentence in the original recipe text can easily expand to six or more verbal instructions.
 Each verbal instruction should contain all the information required to complete it, such as the ingredient quantity, size, container dimensions or oven temperature when relevant. The user should not need to consult any other data source to fulfil a verbal instruction.
 Alexa will start reciting an instruction with the command “list instructions”. Alexa will wait for up to twenty minutes for the user to respond with either “next”, “say again” or “previous”9. Previous will get Alexa to recite the previous instruction. The user can also respond with “list containers” or “list ingredients” should they need to review the containers or ingredients for any reason.
+
 # Recipe Parts
 Some recipes fall naturally into separate components which in turn are represented by their own recipe. It follows that “parts” have their own ingredient listing and set of cooking instructions. 
 
-
-7
-access to each feature, but also direct access to said feature, whereas the GUI is less efficient, as it must follow a hierarchy of screens to gain access.
-Session State
-The App maintains a cooks session state for up to three days. This enables the cook to relaunch the App within this period and resume from exactly where they left off previously.
-
-
 # Two Interfaces
-The App supports both a graphic user interface (GUI) via the touch screen of the Echo Show, and voice commands via Alexa, to navigate through the various features of the app. The App is intended however, to be used solely via voice commands, as this permits not only hands free
-6
- 10 only two concurrent threads are supported at this stage.
-7
-access to each feature, but also direct access to said feature, whereas the GUI is less efficient, as it must follow a hierarchy of screens to gain access.
-Session State
+The App supports both a graphic user interface (GUI) via the touch screen of the Echo Show, and voice commands via Alexa, to navigate through the various features of the app. The App is intended however, to be used solely via voice commands, as this permits not only hands freeaccess to each feature, but also direct access to said feature, whereas the GUI is less efficient, as it must follow a hierarchy of screens to gain access.
+
+# Session State
 The App maintains a cooks session state for up to three days. This enables the cook to relaunch the App within this period and resume from exactly where they left off previously.
