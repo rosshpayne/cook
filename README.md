@@ -1,7 +1,7 @@
 # A Really Useful Cooking Skill
 
 The Skill provides a virtual cooking assistant for cook book publishers, using a combination of Amazon Alexa voice assistant and intelligent display, with emphasis on the personalisation of recipe content.
-The App facilitates searching for recipes across a users library of Ebury Press books, by recipe name, ingredient or keyword. Ingredient quantities can be scaled on-the-fly to suit a cook’s requirement and the ingredient listing displayed in the familiar format of the respective cook book. Clear and simple cooking instructions can be recited to the cook at their prompting for the complete recipe or in the parts if the recipe has been partitioned into parts.
+The App facilitates searching for recipes across a users library of books, by recipe name, ingredient or keyword. Ingredient quantities can be scaled on-the-fly to suit a cook’s requirement and the ingredient listing displayed in the familiar format of the respective cook book. Clear and simple cooking instructions can be recited to the cook at their prompting for the complete recipe or in the parts if the recipe has been partitioned into parts.
 
 
 # So why another cooking skill?
