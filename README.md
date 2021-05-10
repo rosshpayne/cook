@@ -52,7 +52,7 @@ Alexa will start reciting an instruction with the command “list instructions�
 Some recipes fall naturally into separate components which in turn are represented by their own recipe. It follows that “parts” have their own ingredient listing and set of cooking instructions. 
 
 # Two Interfaces
-The App supports both a graphic user interface (GUI) via the touch screen of the Echo Show, and voice commands via Alexa, to navigate through the various features of the app. The App is intended however, to be used solely via voice commands, as this permits not only hands freeaccess to each feature, but also direct access to said feature, whereas the GUI is less efficient, as it must follow a hierarchy of screens to gain access.
+The App supports both a graphic user interface (GUI) via the touch screen of the Echo Show, and voice commands via Alexa, to navigate through the various features of the app. The App is intended however, to be used via voice commands most if not all of the time, as this permits, not only hands free access to each feature, but also direct access to said feature. The GUI on the other hand, must navigate a hierarchy of screens to gain access to a feature and is therefore a lot slower.
 
 # Session State
 The App maintains a cooks session state for up to three days. This enables the cook to relaunch the App within this period and resume from exactly where they left off previously.
