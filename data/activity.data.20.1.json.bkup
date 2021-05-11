@@ -1,0 +1,421 @@
+{
+        "Ingredient" : [ 
+        {
+          "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-20-1" },
+                  "SortK" : { "S": "CakeTin" },
+                  "type" : { "S": "Cake Tin " },
+                  "label" : { "S": "Cake Tin" },
+                  "measure" : { "M" : { "shape" : { "S" : "round" },
+                                        "dim" : { "S" : "30" },
+                                        "height" : { "S" : "5" },
+                                        "unit": {"S":"cm"} }
+                  },
+                  "scale" : { "BOOL" : true },
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  }
+                  }
+            }
+         },
+         {
+         "PutRequest": { 
+               "Item": { 
+                  "PKey" : { "S": "C-20-1" },
+                  "SortK" : { "S": "ChochMixBowl" },
+                  "type" : { "S": "Mixer Bowl" },
+                  "label" : { "S": "Mixer Bowl" },
+                  "measure" : { "M" : {"size" : { "S" : "large" }  }},
+                  "coord" : { "L" : [ {"N": "13" }, {"N": "45" } ]  },
+                  "contents" : { "S": "cake mix" }
+                  }
+            }
+         }
+        ],  
+      "Recipe" : [ 
+         {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "R-20" },
+                "SortK" : { "N": "1"},
+                "RName" : { "S": "Take-home Chocolate Cake"}
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-1" },
+                "SortK" : { "N": "10"},
+                "label" : { "S": "AddChocolate"},
+                "ingrd" : { "S" : "chocolate" },
+                "quali" : { "S" : "dark" },
+                "iQual" : { "S" : "(70 percent Cocoa)" },
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "200" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                         },
+                "task" : { "L" : [
+                                { "M" :  {
+                                  "txt" : { "S" : "Place a {addToC} over a pot of simmering water and break {measure} of {ingrd}, atleast {iQual}, into small pieces and place in bowl and stir to help melt in the melting process" },
+                                  "say" : { "S" : "Place a {addToC} over a pot of simmering water and break {measure} of {ingrd}, atleast {iQual}, into small pieces and place in bowl and stir to help melt in the melting process"},
+                                  "time" : { "N" : "6" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useC"  : { "SS" : [ "SAS-M"  ] },
+                                  "addToC" : { "SS" : [ "ChochMixBowl" ] }
+                                  }
+                         }]}
+                    }
+                }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-1" },
+                "SortK" : { "N": "20"},
+                "label" : { "S": "AddButter"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "butter"},
+                "Quali" : { "S" : "unsalted" },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "260" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                         },
+                "prep" :  { "L" : [
+                                { "M" :  {
+                                  "txt" : { "S" : "cut {measure} of {ingrd} into small pieces and set aside" },
+                                  "say" : { "S" : "cut {measure} of {ingrd} into small pieces and set aside" },
+                                  "time" : { "N" : "8" },
+                                  "unit" : { "S" : "min" },
+                                  "parallel" : { "BOOL" : true },
+                                  "addToC" : { "SS" : [ "SAP-L" ] }
+                                    }
+                                }]
+                        },
+                "task" : { "L" : [
+                            { "M" :  {
+                                  "txt" : { "S" : "Add {ingrd} into melted chocolate" },
+                                  "say" : { "S" : "Add {ingrd} into melted chocolate"},
+                                  "time" : { "N" : "3" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useD" : { "M" : {
+                                                "type" : { "S": "whisk" },
+                                                "purpose" : { "S":"mix cake ingredients"},
+                                                "alternate" : { "S" : "stand mixer" }
+                                        }
+                                    },
+                                  "sourceC": { "SS" : [ "SAP-L" ] },
+                                  "addToC" : { "SS" : [ "ChochMixBowl" ] }
+                            }
+                        }]}
+                 }
+          }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-1" },
+                "SortK" : { "N": "40"},
+                "label" : { "S": "Water"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "water" },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "350" } ,
+                                      "unit" : { "S" : "ml" }
+                                      } 
+                         },
+                "invisible" : { "BOOL" : true },
+                "task" :  { "L" : [
+                                { "M" : { 
+                                  "txt" : { "S" : "Bring {measure} of {ingrd} to a boil" },
+                                  "say" : { "S" : "Bring {measure} of {ingrd} to a boil" },
+                                  "time" : { "N" : "3" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useC" : { "SS" : [ "SAS-S" ] } } }
+                                    ]
+                       }
+                }
+            }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-1" },
+                "SortK" : { "N": "45"},
+                "label" : { "S": "Coffee"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "coffee" },
+                "quali" : { "S" : "instant" },
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "1.5" } ,
+                                      "unit" : { "S" : "tsp" }
+                                      } 
+                         },
+                "task" :  { "L" : [
+                                { "M" : { 
+                                  "txt" : { "S" : "Into the boiled {ingrd.40} disssolve {measure} of {quali} {ingrd} " },
+                                  "say" : { "S" : "Into the boiled {ingrd.40} disssolve {measure} of {quali} {ingrd} " },
+                                  "time" : { "N" : "3" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useC" : { "SS" : [ "SAS-S" ] },
+                                  "addToC" : { "SS" : [ "CoffeeBowl" ] }
+                                }
+                                },
+                                { "M" : { 
+                                  "txt" : { "S" : "Add disolved coffee to chocolate mix and combine " },
+                                  "say" : { "S" : "Add disolved coffee to chocolate mix and combine" },
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "useC" : { "SS" : [ "SAS-S" ] },
+                                  "addToC" : { "SS" : [ "CoffeeBowl" ] }
+                                }
+                                }
+                                ]}
+                       }
+                }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-1" },
+                "SortK" : { "N": "60"},
+                "label" : { "S": "AddSugar"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "sugar"},
+                "quali" : { "S" : "caster"},
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "250" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                         },
+                "task" :  { "L" : [
+                            { "M" :  {
+                                  "txt" : { "S" : "Whisk {measure} {quali} {ingrd} into chocolate mix until disolved" },
+                                  "say" : { "S" : "Whisk {measure} {quali} {ingrd} into chocolate mix until disolved"},
+                                  "time" : { "N" : "1" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "ChochMixBowl" ] }
+                                  }
+                         }]}
+                    }
+                }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-1" },
+                "SortK" : { "N": "70"},
+                "label" : { "S": "AddEggs"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "eggs"},
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "2" } ,
+                                      "size" : { "S" : "large" }
+                                      }
+                         },
+                "prep" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "lightly beat {measure} {ingrd}" },
+                                  "say" : { "S" : "lightly beat {measure} {ingrd}" },
+                                  "time" : { "N" : "5" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : ["SAB-M"] }
+                                    }
+                        }]},
+                "task" : { "L" : [ 
+                                { "M" :  {
+                                  "txt" : { "S" : "Whisk beaten {ingrd} into chocolate mix" },
+                                  "say" : { "S" : "Whisk beaten {ingrd} into chocolate mix"},
+                                  "time" : { "N" : "3" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "sourceC": { "SS" : [ "SAB-M" ] },
+                                  "addToC" : { "SS" : [ "ChochMixBowl"  ] }
+                                  }
+                         }]}
+                   }
+                }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-1" },
+                "SortK" : { "N": "80"},
+                "label" : { "S": "AddFlour"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "flour"},
+                "quali" : { "S" : "self raising"},
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "240" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                         },
+                "prep" :  { "L" : [
+                                { "M" :  {
+                                  "txt" : { "S" : "sift {measure} of  {quali} {ingrd}" },
+                                  "say" : { "S" : "sift {measure} of {ingrd}" },
+                                  "time" : { "N" : "2" },
+                                  "unit" : { "S" : "min" },
+                                  "useC" : { "SS" : [ "SAB-M"] },
+                                  "useD" : { "M" : {
+                                               "type" : { "S": "sifter" }
+                                                }
+                                    },
+                                    "link" : { "BOOL" : true }
+                                    }
+                                }]
+                        },
+                "task" :  { "L" : [
+                                { "M" :  {
+                                  "txt" : { "S" : "Combine the dry ingredients (the {ingrd} etc) prepared earlier and mix well." },
+                                  "say" : { "S" : "Combine the dry ingredients (the {ingrd} etc) prepared earlier and mix well."},
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "sourceC" : { "S"  : "SAB-M" },
+                                  "addToC" : { "SS" : [ "ChochMixBowl" ] }
+                                  }
+                        }]}
+                    }
+                }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-1" },
+                "SortK" : { "N": "90"},
+                "label" : { "S": "AddSalt"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "salt"},
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "1/4" } ,
+                                      "unit": { "S" : "tsp" }
+                                      }
+                         },
+                "task" : { "L" : [
+                                { "M" :  {
+                                  "txt" : { "S" : "Add a {measure} of {ingrd} to choc mixture" },
+                                  "say" : { "S" : "add {measure} of {ingrd} add choc mixture" },
+                                  "addToC" : { "SS" : [ "ChochMixBowl" ] }
+                                  }
+                        }]}
+                    }
+                }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-1" },
+                "SortK" : { "N": "95"},
+                "label" : { "S": "AddCocoa"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "ingrd" : { "S" : "cocoa powder"},
+                "iQual" : { "S" : "- Danish processed"},
+                "measure" : { "M" : { 
+                                      "qty" : { "S" : "30" } ,
+                                      "unit" : { "S" : "g" }
+                                      }
+                         },
+                "prep" : { "L" : [
+                                { "M" :  {
+                                  "txt" : { "S" : "sift {measure} of {ingrd} and set aside" },
+                                  "say" : { "S" : "sift {measure} of {ingrd} {iQual} and set aside" },
+                                  "time" : { "N" : "1" },
+                                  "unit" : { "S" : "min" },
+                                  "useD" : { "M" : {
+                                               "type" : { "S": "sifter" }
+                                               }
+                                            },
+                                  "addToC" : { "SS" : [ "SAB-S" ] },
+                                  "parallel" : { "BOOL" : false }
+                                  }
+                                 },
+                                 { "M" :  {
+                                  "txt" : { "S" : "add {ingrd} to {ingrd.80}" },
+                                  "say" : { "S" : "add {ingrd} to {ingrd.80}" },
+                                  "time" : { "N" : "30" },
+                                  "unit" : { "S" : "sec" },
+                                  "addToC" : { "SS" : [ "FlourBowl" ] },
+                                  "parallel" : { "BOOL" : false }
+                                  }
+                                }]
+                }
+                    }
+                }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-1" },
+                "SortK" : { "N": "170"},
+                "label" : { "S": "Transfer"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+
+                "prep" :  { "L" : [
+                                { "M" :  {
+                                  "txt" : { "S" : "Grease and line caketin with baking parchment" },
+                                  "say" : { "S" : "Grease and line caketin with baking parchment"},
+                                  "time" : { "N" : "3" },
+                                  "unit" : { "S" : "min" },
+                                  "addToC" : { "SS" : [ "CakeTin" ] }
+                                  }
+                        }]},
+                "task" : { "L" : [
+                                { "M" :  {
+                                  "txt" : { "S" : "Transfer chocolate mix to cake tin and place in oven" },
+                                  "say" : { "S" : "Transfer chocolate mix to cake tin and place in oven"},
+                                  "time" : { "N" : "2" },
+                                  "tplus" : { "N" : "0" },
+                                  "unit" : { "S" : "min" },
+                                  "sourceC" : { "SS" : [ "ChochMixBowl"] }, 
+                                  "addToC" : { "SS" : [ "CakeTin" ] }
+                                  }
+                        }]}
+                    }
+                }
+            },
+            {
+            "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "A-20-1" },
+                "SortK" : { "N": "180"},
+                "label" : { "S": "Cook"},
+                "coord" : { "L" : [ {"N": "13" }, {"N": "23" } ]  },
+                "prep" :  { "L" : [
+                                { "M" :  {
+                                  "txt" : { "S" : "Preheat {used} to {temp}" },
+                                  "say" : { "S" : "Preheat {used} to {temp}"},
+                                  "time" : { "N" : "10" },
+                                  "tplus" : { "N" : "5" },
+                                  "unit" : { "S" : "min" },
+                                  "useD" : { "M" : {
+                                              "type" : { "S": "oven" },
+                                              "temp" : { "N" : "170" },
+                                               "unit" : { "S" : "C" },
+                                               "set"  : { "S" : "gas mark 4"}
+                                                 }
+                                            }
+                                    }
+                            }]},
+                "task" : { "L" : [
+                                { "M" :  {
+                                  "txt" : { "S" : "cook cake for {time} to {tplus} {unit}" },
+                                  "say" : { "S" : "cook cake for {time} to {tplus} {unit}"},
+                                  "time" : { "N" : "35" },
+                                  "tplus" : { "N" : "5" },
+                                  "unit" : { "S" : "min" }
+                                  }
+                        }]}
+                    }
+                }
+            }
+    ]
+}    
