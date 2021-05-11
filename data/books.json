@@ -1,0 +1,37 @@
+{
+      "Recipe" : [ 
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "BK-River Cafe" },
+                "SortK" : { "N" : "0" },
+                "BkId"  : { "S" : "21" },
+                "Authors" : { "L": [ {"S":"Ruth Rogers"},{"S":"Rose Gray"},{"S":"Sian Wyn Owen"},{"S":"Joseph Trivelli"}]},
+                "Publisher" : { "S" : "Ebury Press" }
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "BK-SWEET" },
+                "SortK" : { "N" : "0" },
+                "BkId"  : { "S" : "20" },
+                "Authors" : { "L": [ {"S":"Yotam Ottolenghi"},{"S":"Helen Goh"}]},
+                "Publisher" : { "S" : "Ebury Press" }
+            }
+        }
+        },
+        {
+        "PutRequest": { 
+            "Item": { 
+                "PKey" : { "S": "BK-NOPI" },
+                "SortK" : { "N": "0"},
+                "BkId"  : { "S" : "22" },
+                "Authors" : { "L": [ {"S":"Yotam Ottolenghi"},{"S":"Ramael Scully"}]},
+                "Publisher" : { "S" : "Ebury Press" }
+            }
+        }
+        }
+        ]
+}

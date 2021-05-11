@@ -1,0 +1,787 @@
+{
+    "interactionModel": {
+        "languageModel": {
+            "invocationName": "get me alex",
+            "intents": [
+                {
+                    "name": "AMAZON.FallbackIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.CancelIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.HelpIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.StopIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.NavigateHomeIntent",
+                    "samples": []
+                },
+                {
+                    "name": "TaskIntent",
+                    "slots": [],
+                    "samples": [
+                        "list instructions",
+                        "list tasks",
+                        "instructions",
+                        "instructions please",
+                        "tasks",
+                        "tasks please",
+                        "let's start cooking",
+                        "cooking please",
+                        "Let's cook",
+                        "Cook"
+                    ]
+                },
+                {
+                    "name": "BookIntent",
+                    "slots": [
+                        {
+                            "name": "BookName",
+                            "type": "BookST"
+                        }
+                    ],
+                    "samples": [
+                        "open book {BookName}",
+                        "open {BookName}"
+                    ]
+                },
+                {
+                    "name": "GotoIntent",
+                    "slots": [
+                        {
+                            "name": "gotoId",
+                            "type": "integers"
+                        }
+                    ],
+                    "samples": [
+                        "go to {gotoId}",
+                        "go to instruction {gotoId}",
+                        "go to record {gotoId}",
+                        "nigel go to step {gotoId}",
+                        "nigel go to {gotoId}"
+                    ]
+                },
+                {
+                    "name": "PrevIntent",
+                    "slots": [],
+                    "samples": [
+                        "previous one",
+                        "previous please",
+                        "previous"
+                    ]
+                },
+                {
+                    "name": "NextIntent",
+                    "slots": [],
+                    "samples": [
+                        "next"
+                    ]
+                },
+                {
+                    "name": "RepeatIntent",
+                    "slots": [],
+                    "samples": [
+                        "say again",
+                        "what was that",
+                        "and again",
+                        "repeat please",
+                        "repeat"
+                    ]
+                },
+                {
+                    "name": "YesNoIntent",
+                    "slots": [
+                        {
+                            "name": "YesNo",
+                            "type": "YesNoST"
+                        }
+                    ],
+                    "samples": [
+                        "{YesNo} please",
+                        "{YesNo} Nigel",
+                        "{YesNo}"
+                    ]
+                },
+                {
+                    "name": "SearchIntent",
+                    "slots": [
+                        {
+                            "name": "opentext",
+                            "type": "AMAZON.SearchQuery"
+                        }
+                    ],
+                    "samples": [
+                        "search for {opentext} recipes",
+                        "search {opentext}",
+                        "search for {opentext} recipe",
+                        "search {opentext} recipes",
+                        "search {opentext} recipe"
+                    ]
+                },
+                {
+                    "name": "SelectIntent",
+                    "slots": [
+                        {
+                            "name": "integerValue",
+                            "type": "integers"
+                        },
+                        {
+                            "name": "actionString",
+                            "type": "ActionST"
+                        }
+                    ],
+                    "samples": [
+                        "select {actionString}",
+                        "select size container",
+                        "start cooking",
+                        "select containers",
+                        "select ingredients",
+                        "select {integerValue}"
+                    ]
+                },
+                {
+                    "name": "CloseBookIntent",
+                    "slots": [],
+                    "samples": [
+                        "close",
+                        "book close",
+                        "close book"
+                    ]
+                },
+                {
+                    "name": "VersionIntent",
+                    "slots": [
+                        {
+                            "name": "version",
+                            "type": "integers"
+                        }
+                    ],
+                    "samples": [
+                        "version {version}",
+                        "{version}"
+                    ]
+                },
+                {
+                    "name": "AMAZON.MoreIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.NavigateSettingsIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.NextIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.PageUpIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.PageDownIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.PreviousIntent",
+                    "samples": [
+                        "previous"
+                    ]
+                },
+                {
+                    "name": "AMAZON.ScrollRightIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.ScrollDownIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.ScrollLeftIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.ScrollUpIntent",
+                    "samples": []
+                },
+                {
+                    "name": "backIntent",
+                    "slots": [],
+                    "samples": [
+                        "nigel go back",
+                        "go back",
+                        "back"
+                    ]
+                },
+                {
+                    "name": "TestIntent",
+                    "slots": [],
+                    "samples": [
+                        "test"
+                    ]
+                },
+                {
+                    "name": "ResumeIntent",
+                    "slots": [],
+                    "samples": [
+                        "resume"
+                    ]
+                },
+                {
+                    "name": "ScaleIntent",
+                    "slots": [
+                        {
+                            "name": "percent",
+                            "type": "percentST"
+                        }
+                    ],
+                    "samples": [
+                        "scale {percent}",
+                        "scale {percent} percent"
+                    ]
+                },
+                {
+                    "name": "GetAddressIntent",
+                    "slots": [],
+                    "samples": [
+                        "get my address",
+                        "get my address please"
+                    ]
+                },
+                {
+                    "name": "GetEmailIntent",
+                    "slots": [],
+                    "samples": [
+                        "get my email please",
+                        "get my email"
+                    ]
+                },
+                {
+                    "name": "XYZIntent",
+                    "slots": [],
+                    "samples": [
+                        "get me zoo"
+                    ]
+                },
+                {
+                    "name": "RestartIntent",
+                    "slots": [],
+                    "samples": [
+                        "please restart",
+                        "restart now",
+                        "restart please",
+                        "restart"
+                    ]
+                },
+                {
+                    "name": "ListIntent",
+                    "slots": [
+                        {
+                            "name": "actionString",
+                            "type": "ActionST"
+                        }
+                    ],
+                    "samples": [
+                        "List {actionString}"
+                    ]
+                },
+                {
+                    "name": "startcookingIntent",
+                    "slots": [],
+                    "samples": [
+                        "start cooking"
+                    ]
+                },
+                {
+                    "name": "ResizeIntent",
+                    "slots": [
+                        {
+                            "name": "integer",
+                            "type": "integers"
+                        }
+                    ],
+                    "samples": [
+                        "size {integer}",
+                        "resize {integer}"
+                    ]
+                }
+            ],
+            "types": [
+                {
+                    "name": "BookST",
+                    "values": [
+                        {
+                            "id": "22",
+                            "name": {
+                                "value": "NOPI"
+                            }
+                        },
+                        {
+                            "id": "21",
+                            "name": {
+                                "value": "River Cafe"
+                            }
+                        },
+                        {
+                            "id": "20",
+                            "name": {
+                                "value": "Sweet"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "integers",
+                    "values": [
+                        {
+                            "id": "32",
+                            "name": {
+                                "value": "thirty two"
+                            }
+                        },
+                        {
+                            "id": "31",
+                            "name": {
+                                "value": "thirty one"
+                            }
+                        },
+                        {
+                            "id": "30",
+                            "name": {
+                                "value": "thirty"
+                            }
+                        },
+                        {
+                            "id": "29",
+                            "name": {
+                                "value": "twenty nine"
+                            }
+                        },
+                        {
+                            "id": "28",
+                            "name": {
+                                "value": "twenty eight"
+                            }
+                        },
+                        {
+                            "id": "27",
+                            "name": {
+                                "value": "twenty seven"
+                            }
+                        },
+                        {
+                            "id": "26",
+                            "name": {
+                                "value": "twenty six"
+                            }
+                        },
+                        {
+                            "id": "25",
+                            "name": {
+                                "value": "twenty five"
+                            }
+                        },
+                        {
+                            "id": "24",
+                            "name": {
+                                "value": "twenty four"
+                            }
+                        },
+                        {
+                            "id": "23",
+                            "name": {
+                                "value": "twenty three"
+                            }
+                        },
+                        {
+                            "id": "22",
+                            "name": {
+                                "value": "twenty two"
+                            }
+                        },
+                        {
+                            "id": "21",
+                            "name": {
+                                "value": "twenty one"
+                            }
+                        },
+                        {
+                            "id": "20",
+                            "name": {
+                                "value": "twenty"
+                            }
+                        },
+                        {
+                            "id": "19",
+                            "name": {
+                                "value": "nineteen"
+                            }
+                        },
+                        {
+                            "id": "18",
+                            "name": {
+                                "value": "eighteen"
+                            }
+                        },
+                        {
+                            "id": "17",
+                            "name": {
+                                "value": "seventeen"
+                            }
+                        },
+                        {
+                            "id": "16",
+                            "name": {
+                                "value": "sixteen"
+                            }
+                        },
+                        {
+                            "id": "15",
+                            "name": {
+                                "value": "fifteen"
+                            }
+                        },
+                        {
+                            "id": "14",
+                            "name": {
+                                "value": "fourteen"
+                            }
+                        },
+                        {
+                            "id": "13",
+                            "name": {
+                                "value": "thirteen"
+                            }
+                        },
+                        {
+                            "id": "12",
+                            "name": {
+                                "value": "twelve"
+                            }
+                        },
+                        {
+                            "id": "11",
+                            "name": {
+                                "value": "eleven"
+                            }
+                        },
+                        {
+                            "id": "10",
+                            "name": {
+                                "value": "ten"
+                            }
+                        },
+                        {
+                            "id": "9",
+                            "name": {
+                                "value": "nine"
+                            }
+                        },
+                        {
+                            "id": "8",
+                            "name": {
+                                "value": "eight"
+                            }
+                        },
+                        {
+                            "id": "7",
+                            "name": {
+                                "value": "seven"
+                            }
+                        },
+                        {
+                            "id": "6",
+                            "name": {
+                                "value": "six"
+                            }
+                        },
+                        {
+                            "id": "5",
+                            "name": {
+                                "value": "five"
+                            }
+                        },
+                        {
+                            "id": "4",
+                            "name": {
+                                "value": "four"
+                            }
+                        },
+                        {
+                            "id": "3",
+                            "name": {
+                                "value": "three"
+                            }
+                        },
+                        {
+                            "id": "2",
+                            "name": {
+                                "value": "two"
+                            }
+                        },
+                        {
+                            "id": "1",
+                            "name": {
+                                "value": "one"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "YesNoST",
+                    "values": [
+                        {
+                            "id": "0",
+                            "name": {
+                                "value": "No"
+                            }
+                        },
+                        {
+                            "id": "1",
+                            "name": {
+                                "value": "Yes"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "fractionST",
+                    "values": [
+                        {
+                            "id": "0.4",
+                            "name": {
+                                "value": "two fifths"
+                            }
+                        },
+                        {
+                            "id": "0.6",
+                            "name": {
+                                "value": "three fifths"
+                            }
+                        },
+                        {
+                            "id": "0.8",
+                            "name": {
+                                "value": "four fifths"
+                            }
+                        },
+                        {
+                            "id": "1.0",
+                            "name": {
+                                "value": "one"
+                            }
+                        },
+                        {
+                            "id": "0.667",
+                            "name": {
+                                "value": "two thirds"
+                            }
+                        },
+                        {
+                            "id": "0.75",
+                            "name": {
+                                "value": "three quaters"
+                            }
+                        },
+                        {
+                            "id": "0.5",
+                            "name": {
+                                "value": "one half"
+                            }
+                        },
+                        {
+                            "id": "0.333",
+                            "name": {
+                                "value": "one third"
+                            }
+                        },
+                        {
+                            "id": "0.25",
+                            "name": {
+                                "value": "one quater"
+                            }
+                        },
+                        {
+                            "id": "0.2",
+                            "name": {
+                                "value": "one fifth"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "percentST",
+                    "values": [
+                        {
+                            "id": "1.0",
+                            "name": {
+                                "value": "one hundred"
+                            }
+                        },
+                        {
+                            "id": "0.7",
+                            "name": {
+                                "value": "seventy"
+                            }
+                        },
+                        {
+                            "id": "0.333",
+                            "name": {
+                                "value": "thirty three"
+                            }
+                        },
+                        {
+                            "id": "0.85",
+                            "name": {
+                                "value": "eighty five"
+                            }
+                        },
+                        {
+                            "id": "0.8",
+                            "name": {
+                                "value": "eighty"
+                            }
+                        },
+                        {
+                            "id": "0.75",
+                            "name": {
+                                "value": "seventy five"
+                            }
+                        },
+                        {
+                            "id": "0.6",
+                            "name": {
+                                "value": "sixty"
+                            }
+                        },
+                        {
+                            "id": "0.5",
+                            "name": {
+                                "value": "fifty"
+                            }
+                        },
+                        {
+                            "id": "0.4",
+                            "name": {
+                                "value": "forty"
+                            }
+                        },
+                        {
+                            "id": "0.3",
+                            "name": {
+                                "value": "thirty "
+                            }
+                        },
+                        {
+                            "id": "0.25",
+                            "name": {
+                                "value": "twenty five"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "ActionST",
+                    "values": [
+                        {
+                            "name": {
+                                "value": "cooking parts"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "cooking steps"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "cooking instructions"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "parts"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "start cooking"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "size"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "instructions"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "containers"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "container"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "ingredients"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "ingredient"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "ContainerST",
+                    "values": [
+                        {
+                            "id": "999",
+                            "name": {
+                                "value": "container"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        "dialog": {
+            "intents": [
+                {
+                    "name": "backIntent",
+                    "confirmationRequired": true,
+                    "prompts": {
+                        "confirmation": "Confirm.Intent.1152744269273"
+                    },
+                    "slots": []
+                }
+            ],
+            "delegationStrategy": "SKILL_RESPONSE"
+        },
+        "prompts": [
+            {
+                "id": "Confirm.Intent.1152744269273",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "I will go back then"
+                    }
+                ]
+            }
+        ]
+    }
+}
