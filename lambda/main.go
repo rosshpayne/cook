@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cook/global"
+	"github.com/rosshpayne/cook/global"
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-lambda-go/lambdacontext"

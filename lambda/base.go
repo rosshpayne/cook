@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cook/global"
+	"github.com/rosshpayne/cook/global"
 
 	_ "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"

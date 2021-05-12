@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cook/global"
+	"github.com/rosshpayne/cook/global"
 )
 
 type WelcomeT struct {

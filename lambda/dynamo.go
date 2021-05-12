@@ -8,7 +8,7 @@ import (
 	"strings"
 	_ "time"
 
-	"github.com/cook/global"
+	"github.com/rosshpayne/cook/global"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
